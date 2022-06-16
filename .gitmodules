@@ -1,0 +1,3 @@
+[submodule "contracts/liquidity_hub/pool-network"]
+	path = contracts/liquidity_hub/pool-network
+	url = git@github.com:White-Whale-Defi-Platform/pool-network.git
