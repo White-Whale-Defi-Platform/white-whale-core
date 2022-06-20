@@ -7,7 +7,7 @@ it's not only about writing code. In this document we go through different ways 
 ## Crafting Code
 
 If you are a software developer and want to contribute writing code, the first step is to get familiar with 
-the Migaloo architecture, which you can learn about in our docs.
+the Migaloo architecture, which you can learn about in our [docs](https://white-whale-defi-platform.github.io/docs/).
 
 Before you can write any code, please take a look at the list of prerequisites below.  
 
