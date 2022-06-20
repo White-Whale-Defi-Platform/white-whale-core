@@ -105,8 +105,9 @@ If the issue or feature request already exists, please add a reaction and leave 
 
 Code quality and security are two things we take seriously at White Whale. We strive for having high test coverage, and 
 we make sure our code is safe by auditing via third party security firms. Nevertheless, we believe there's always room for improvement. 
-If you find a vulnerability, or you see there are edge cases not being covered, please feel free to reach out or even 
-submit a pull request with the changes.
+
+If you find a critical vulnerability, please do not report it publicly on the Github issues tracker. Instead, reach out to us 
+in private where we will discuss it in details.
 
 ## Engaging with the community
 
