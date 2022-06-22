@@ -27,6 +27,10 @@ $ rustup update stable
 
 $ rustup target list --installed
 $ rustup target add wasm32-unknown-unknown
+
+# for generating contract
+$ cargo install cargo-generate --features vendored-openssl
+$ cargo install cargo-run-script
 ```
 - An IDE. We recommend either [Intellij Idea](https://www.jetbrains.com/idea/download/) or [VS Code](https://code.visualstudio.com/download), 
 but feel free to use your preferred code editor.
