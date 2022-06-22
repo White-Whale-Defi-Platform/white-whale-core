@@ -682,9 +682,9 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.6.1"
+version = "2.7.0"
+source = "git+https://github.com/terraswap/terraswap.git?tag=v2.7.0#d0353b20b92c1543cc000487fd587a36bbcd6704"
 dependencies = [
- "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw20",
