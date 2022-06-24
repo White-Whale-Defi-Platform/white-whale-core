@@ -113,6 +113,8 @@ we make sure our code is safe by auditing via third party security firms. Nevert
 If you find a critical vulnerability, please do not report it publicly on the Github issues tracker. Instead, reach out to us 
 in private where we will discuss it in details.
 
+See how to [report security bugs](https://github.com/White-Whale-Defi-Platform/migaloo-core/blob/main/SECURITY.md).
+
 ## Engaging with the community
 
 If you are interested in developer relations, a great way to contribute is answering people's questions on our 
