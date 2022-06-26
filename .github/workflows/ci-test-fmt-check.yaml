@@ -30,7 +30,7 @@ jobs:
       # Checkout all the relevant submodules for the migaloo project to do a complete test
       - name: Checkout submodules
         run: git submodule update --init --recursive
-      # Enable caching for cargo deps to improve run time 
+      # Enable caching for cargo deps to improve run time
       - uses: actions/cache@v2
         with:
           path: |
@@ -55,6 +55,12 @@ jobs:
         with:
           python-version: 3.9.7
 
+      - name: Install cargo-dylint
+        run: cargo install cargo-dylint
+
+      - name: Install dylint-link
+        run: cargo install dylint-link
+
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
@@ -68,7 +74,10 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-          
+
+      - name: Run cosmwasm linter
+        run: cargo dylint cw_lint --workspace
+
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
