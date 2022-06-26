@@ -20,16 +20,17 @@ jobs:
 
     steps:
       # Cancel any existing runs to save on CI time
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-      # Checkout code
+      # - name: Cancel Previous Runs
+      #   uses: styfle/cancel-workflow-action@0.9.1
+      #   with:
+      #     access_token: ${{ github.token }}
+      # Checkout code, with submodules using PAT
       - name: Checkout sources
         uses: actions/checkout@v2
-      # Checkout all the relevant submodules for the migaloo project to do a complete test
-      - name: Checkout submodules
-        run: git submodule update --init --recursive
+        with:
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
+
       # Enable caching for cargo deps to improve run time
       - uses: actions/cache@v2
         with:
