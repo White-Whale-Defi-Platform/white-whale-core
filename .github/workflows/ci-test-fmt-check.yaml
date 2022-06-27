@@ -1,0 +1,86 @@
+name: Contract tests and checks
+
+# Conditions/Triggers
+# This workflow will currently run on these conditions
+# *pull_request:* when a pull request is opened or when another push is done to a currently open pull request
+# *push - branches - main* Any push to the main branch after a PR is merged for example
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test_and_check:
+    name: Test and check
+    runs-on: ubuntu-latest
+
+    steps:
+      # Cancel any existing runs to save on CI time
+      # - name: Cancel Previous Runs
+      #   uses: styfle/cancel-workflow-action@0.9.1
+      #   with:
+      #     access_token: ${{ github.token }}
+      # Checkout code, with submodules using PAT
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
+
+      # Enable caching for cargo deps to improve run time
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/git/checkouts
+            ~/.cargo/git/db
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      # Install rust
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.60.0
+          override: true
+          components: rustfmt, clippy
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9.7
+
+      - name: Install cargo-dylint
+        run: cargo install cargo-dylint
+
+      - name: Install dylint-link
+        run: cargo install dylint-link
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast --locked
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+      - name: Run cosmwasm linter
+        run: cargo dylint cw_lint --workspace
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
