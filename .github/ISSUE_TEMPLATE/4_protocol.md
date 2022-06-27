@@ -1,7 +1,6 @@
 ---
 name: Migaloo's architecture has an issue or can be improved
-about: You found an issue with the protocol's architecture, or have ideas
-on how to make further improvements.
+about: You found an issue with the protocol's architecture, or have ideas on how to make further improvements.
 title: ''
 labels: 'protocol architecture'
 assignees: ''
