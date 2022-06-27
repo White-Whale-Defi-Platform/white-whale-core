@@ -1,7 +1,6 @@
 ---
 name: Bug on migaloo-core contracts.
-about: You are interacting with White Whale's contracts, and you are getting an 
-unexpected behavior, an exception, or something looks wrong.
+about: You are interacting with White Whale's contracts, and you are getting an unexpected behavior, an exception, or something looks wrong.
 title: ''
 labels: 'bug'
 assignees: ''
