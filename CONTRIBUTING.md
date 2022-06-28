@@ -100,10 +100,7 @@ to report an issue or have a feature request, please fill the issue template and
 Before you create a new issue, please search through the open issues and make sure the issue or feature request has not 
 been made by someone else already.
 
-If the issue or feature request already exists, please add a reaction and leave your comments on it, that way we can prioritize accordingly:
-
-* 👍 - upvote
-* 👎 - downvote 
+If the issue or feature request already exists, please add a 👍 reaction to show your support and leave your comments on it, that way we can prioritize accordingly.
 
 ## Quality Assurance
 
