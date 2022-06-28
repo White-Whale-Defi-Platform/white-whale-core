@@ -81,7 +81,7 @@ can be difficult! If you are not sure how to create tests, please refer to exist
 [discord](https://discordapp.com/channels/908044702794801233/987301947440767006). Please note that **Untested code will be rejected**
     - `cargo test`
 9. Push your changes to your repository.
-    - `git push --set-upstream $YOUR_ORIGIN $YOUR_BRANCH_NAME"`
+    - `git push --set-upstream $YOUR_ORIGIN $YOUR_BRANCH_NAME`
 10. Create a pull request. Go to your [repository](https://github.com/$USER/migaloo-core.git) and create a pull request 
 against Migaloo's repository **main branch** as base.
     - Please fill in the template presented to you when creating the pull request, as it helps everybody understand what the PR is trying to achieve.
