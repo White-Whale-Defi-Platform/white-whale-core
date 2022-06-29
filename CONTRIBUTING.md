@@ -58,7 +58,7 @@ The following are the steps to fork the repository to your GitHub account and cl
     - Click on your GitHub account where you want to fork the repo.
 2. Clone your fork to your local machine, preferably using the SSH URL. If you have issues cloning this repo, look at the 
 [GitHub docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
-    - `git clone git@github.com:$USER/migaloo-core.git` or `git clone https://github.com/$USER/migaloo-core.git`
+    - `git clone --recurse-submodules git@github.com:$USER/migaloo-core.git` or `git clone --recurse-submodules https://github.com/$USER/migaloo-core.git`
 3. Set up your git user locally if you haven't already.
     - `git config --global user.name "your name or alias"`
     - `git config --global user.email "your email address"`
