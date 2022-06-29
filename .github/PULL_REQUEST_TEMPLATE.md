@@ -35,6 +35,6 @@
 - [ ] My pull request has a sound title and description (not a vague title like `Update index.md`)
 - [ ] All existing and new tests are passing.
 - [ ] I updated/added relevant documentation.
-- [ ] The code is formatted properly `cargo fmt --all -- --check`.
+- [ ] The code is formatted properly `cargo fmt --all --`.
 - [ ] Clippy doesn't report any issues `cargo clippy -- -D warnings`.
 - [ ] I have regenerated the schemas if needed `cargo schema`.
