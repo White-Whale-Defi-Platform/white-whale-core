@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "packages/*",
     "contracts/liquidity_hub/pool-network/terraswap_factory",
     "contracts/liquidity_hub/pool-network/terraswap_pair",
     "contracts/liquidity_hub/pool-network/terraswap_router",
