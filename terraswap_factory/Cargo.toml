@@ -1,7 +1,7 @@
 [package]
 name = "terraswap-factory"
-version = "0.0.0"
-authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
+version = "0.1.0"
+authors = ["Terraform Labs, PTE.", "DELIGHT LABS", "Kerber0x <kerber0x@protonmail.com>"]
 edition = "2018"
 description = "A Terraswap factory contract - auto pair contract generator and also directory for all pairs"
 license = "MIT"
@@ -24,6 +24,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 terraswap = { git = "https://github.com/terraswap/terraswap.git", tag = 'v2.7.0'}
+terraswap-helpers = { version = "0.1.0", path = "../../../../packages/terraswap-helpers" }
 cosmwasm-std = { version = "1.0.0" }
 cw-storage-plus = { version = "0.13.4" }
 schemars = "0.8.10"

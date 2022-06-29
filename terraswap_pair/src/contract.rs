@@ -23,6 +23,7 @@ use terraswap::pair::{
 };
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use terraswap_helpers::asset_helper::get_asset_label;
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -47,14 +48,22 @@ pub fn instantiate(
 
     PAIR_INFO.save(deps.storage, pair_info)?;
 
+    let asset0_label = get_asset_label(&deps, pair_info.asset_infos[0].to_normal(deps.api)?)?;
+    let asset1_label = get_asset_label(&deps, pair_info.asset_infos[1].to_normal(deps.api)?)?;
+    let lp_token_name = format!(
+        "terraswap {}-{} liquidity token",
+        asset0_label, asset1_label
+    );
+    let lp_token_symbol = format!("{}-{}-LP", asset0_label, asset1_label);
+
     Ok(Response::new().add_submessage(SubMsg {
         // Create LP token
         msg: WasmMsg::Instantiate {
             admin: None,
             code_id: msg.token_code_id,
             msg: to_binary(&TokenInstantiateMsg {
-                name: "terraswap liquidity token".to_string(),
-                symbol: "uLP".to_string(),
+                name: lp_token_name,
+                symbol: lp_token_symbol.clone(),
                 decimals: 6,
                 initial_balances: vec![],
                 mint: Some(MinterResponse {
@@ -63,7 +72,7 @@ pub fn instantiate(
                 }),
             })?,
             funds: vec![],
-            label: "lp".to_string(),
+            label: lp_token_symbol,
         }
         .into(),
         gas_limit: None,

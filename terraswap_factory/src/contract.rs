@@ -4,14 +4,6 @@ use cosmwasm_std::{
     to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, SubMsg, WasmMsg,
 };
-use terraswap::querier::{query_balance, query_pair_info_from_pair};
-
-use crate::response::MsgInstantiateContractResponse;
-use crate::state::{
-    add_allow_native_token, pair_key, read_pairs, Config, TmpPairInfo, ALLOW_NATIVE_TOKENS, CONFIG,
-    PAIRS, TMP_PAIR_INFO,
-};
-
 use protobuf::Message;
 use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::factory::{
@@ -19,6 +11,14 @@ use terraswap::factory::{
     PairsResponse, QueryMsg,
 };
 use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
+use terraswap::querier::{query_balance, query_pair_info_from_pair};
+use terraswap_helpers::asset_helper::get_asset_label;
+
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{
+    add_allow_native_token, pair_key, read_pairs, Config, TmpPairInfo, ALLOW_NATIVE_TOKENS, CONFIG,
+    PAIRS, TMP_PAIR_INFO,
+};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -135,10 +135,16 @@ pub fn execute_create_pair(
         },
     )?;
 
+    // prepare labels for creating the pair token with a meaningful name
+    let asset0_label = get_asset_label(&deps, asset_infos[0].clone())?;
+    let asset1_label = get_asset_label(&deps, asset_infos[1].clone())?;
+    let pair_label = format!("{}-{} pair", asset0_label, asset1_label);
+
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
             ("pair", &format!("{}-{}", asset_infos[0], asset_infos[1])),
+            ("pair_label", pair_label.as_str()),
         ])
         .add_submessage(SubMsg {
             id: 1,
@@ -147,7 +153,7 @@ pub fn execute_create_pair(
                 code_id: config.pair_code_id,
                 funds: vec![],
                 admin: Some(env.contract.address.to_string()),
-                label: "pair".to_string(),
+                label: pair_label,
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
