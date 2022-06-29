@@ -1,10 +1,3 @@
-use crate::contract::{
-    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
-    query_simulation, reply,
-};
-use crate::error::ContractError;
-use terraswap::mock_querier::mock_dependencies;
-
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
@@ -12,15 +5,27 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
+use terraswap::mock_querier::mock_dependencies;
 use terraswap::pair::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
+use crate::contract::{
+    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
+    query_simulation, reply,
+};
+use crate::error::ContractError;
+
 #[test]
 fn proper_initialization() {
     let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[(
+        &"asset0000".to_string(),
+        &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+    )]);
 
     let msg = InstantiateMsg {
         asset_infos: [
@@ -45,8 +50,8 @@ fn proper_initialization() {
             msg: WasmMsg::Instantiate {
                 code_id: 10u64,
                 msg: to_binary(&TokenInstantiateMsg {
-                    name: "terraswap liquidity token".to_string(),
-                    symbol: "uLP".to_string(),
+                    name: "terraswap uusd-mAAPL liquidity token".to_string(),
+                    symbol: "uusd-mAAPL-LP".to_string(),
                     decimals: 6,
                     initial_balances: vec![],
                     mint: Some(MinterResponse {
@@ -56,7 +61,7 @@ fn proper_initialization() {
                 })
                 .unwrap(),
                 funds: vec![],
-                label: "lp".to_string(),
+                label: "uusd-mAAPL-LP".to_string(),
                 admin: None,
             }
             .into(),

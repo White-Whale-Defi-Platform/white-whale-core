@@ -1,8 +1,3 @@
-use crate::contract::{execute, instantiate, query, reply};
-use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
-
-use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
-
 use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
@@ -14,7 +9,11 @@ use terraswap::asset::{AssetInfo, PairInfo};
 use terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
+use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
 use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
+
+use crate::contract::{execute, instantiate, query, reply};
+use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
 
 #[test]
 fn proper_initialization() {
@@ -151,7 +150,8 @@ fn create_pair() {
         res.attributes,
         vec![
             attr("action", "create_pair"),
-            attr("pair", "uusd-asset0001")
+            attr("pair", "uusd-asset0001"),
+            attr("pair_label", "uusd-mAAPL pair")
         ]
     );
     assert_eq!(
@@ -169,7 +169,7 @@ fn create_pair() {
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
-                label: "pair".to_string(),
+                label: "uusd-mAAPL pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
@@ -221,7 +221,11 @@ fn create_pair_native_token_and_ibc_token() {
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
         res.attributes,
-        vec![attr("action", "create_pair"), attr("pair", "uusd-ibc/HASH")]
+        vec![
+            attr("action", "create_pair"),
+            attr("pair", "uusd-ibc/HASH"),
+            attr("pair_label", "uusd-ibc/HASH pair"),
+        ]
     );
     assert_eq!(
         res.messages,
@@ -238,7 +242,7 @@ fn create_pair_native_token_and_ibc_token() {
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
-                label: "pair".to_string(),
+                label: "uusd-ibc/HASH pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into()
