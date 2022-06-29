@@ -32,7 +32,7 @@
 -->
 
 - [ ] I have read [Migaloo's contribution guidelines](https://github.com/White-Whale-Defi-Platform/migaloo-core/blob/main/CONTRIBUTING.md).
-- [ ] My pull request has a sound title and description (not a vague title like `Update index.md`)
+- [ ] My pull request has a sound title and description (not something vague like `Update index.md`)
 - [ ] All existing and new tests are passing.
 - [ ] I updated/added relevant documentation.
 - [ ] The code is formatted properly `cargo fmt --all --`.
