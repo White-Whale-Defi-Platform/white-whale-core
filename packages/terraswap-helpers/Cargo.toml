@@ -3,11 +3,11 @@ name = "terraswap-helpers"
 version = "0.1.0"
 edition = "2021"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
-description = "Common helpers for other white whale"
+description = "Common helpers for Terraswap types"
 license = "MIT"
 repository = "https://github.com/White-Whale-DeFi-Platform/migaloo-core"
-homepage = "https://whitewhale.finance"
-documentation = "https://whitewhale.finance"
+homepage = "https://whitewhale.money"
+documentation = "https://whitewhale.money"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
