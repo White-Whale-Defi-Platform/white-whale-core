@@ -50,8 +50,8 @@ fn proper_initialization() {
             msg: WasmMsg::Instantiate {
                 code_id: 10u64,
                 msg: to_binary(&TokenInstantiateMsg {
-                    name: "terraswap uusd-mAAPL liquidity token".to_string(),
-                    symbol: "uusd-mAAPL-LP".to_string(),
+                    name: "uusd-mAAPL-LP".to_string(),
+                    symbol: "uLP".to_string(),
                     decimals: 6,
                     initial_balances: vec![],
                     mint: Some(MinterResponse {
