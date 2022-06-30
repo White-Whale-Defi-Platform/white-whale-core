@@ -40,15 +40,23 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    // Only the owner can execute messages on the factory
+    let config: Config = CONFIG.load(deps.storage)?;
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
     match msg {
         ExecuteMsg::UpdateConfig {
             owner,
             token_code_id,
             pair_code_id,
-        } => execute_update_config(deps, env, info, owner, token_code_id, pair_code_id),
-        ExecuteMsg::CreatePair { asset_infos } => execute_create_pair(deps, env, info, asset_infos),
+        } => execute_update_config(deps, env, config, owner, token_code_id, pair_code_id),
+        ExecuteMsg::CreatePair { asset_infos } => {
+            execute_create_pair(deps, env, config, asset_infos)
+        }
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            execute_add_native_token_decimals(deps, env, info, denom, decimals)
+            execute_add_native_token_decimals(deps, env, denom, decimals)
         }
     }
 }
@@ -57,18 +65,11 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 pub fn execute_update_config(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    mut config: Config,
     owner: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
 ) -> StdResult<Response> {
-    let mut config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     if let Some(owner) = owner {
         // validate address format
         let _ = deps.api.addr_validate(&owner)?;
@@ -89,15 +90,13 @@ pub fn execute_update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-// Anyone can execute it to create swap pair
+// Only the admin can execute it to create swap pair
 pub fn execute_create_pair(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    config: Config,
     asset_infos: [AssetInfo; 2],
 ) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
     if asset_infos[0] == asset_infos[1] {
         return Err(StdError::generic_err("same asset"));
     }
@@ -167,17 +166,9 @@ pub fn execute_create_pair(
 pub fn execute_add_native_token_decimals(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
     denom: String,
     decimals: u8,
 ) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
     if balance.is_zero() {
         return Err(StdError::generic_err(
