@@ -49,18 +49,12 @@ jobs:
           profile: minimal
           toolchain: 1.60.0
           override: true
-          components: rustfmt, clippy
+          components: rustfmt, clippy, cargo-dylint, dylint-link
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.9.7
-
-      - name: Install cargo-dylint
-        run: cargo install cargo-dylint
-
-      - name: Install dylint-link
-        run: cargo install dylint-link
 
       - name: Run tests
         uses: actions-rs/cargo@v1
