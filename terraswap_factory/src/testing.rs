@@ -594,3 +594,63 @@ fn append_add_allow_native_token_with_already_exist_token() {
     let res: NativeTokenDecimalsResponse = from_binary(&res).unwrap();
     assert_eq!(7u8, res.decimals)
 }
+
+#[test]
+fn execute_transactions_unauthorized() {
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+    deps = init(deps);
+    deps.querier
+        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+    ];
+    let env = mock_env();
+    // unauthorized user
+    let info = mock_info("unauthorized", &[]);
+
+    // Try executing ExecuteMsg::CreatePair
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos.clone(),
+    };
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+
+    match res {
+        Ok(_) => panic!("Must return StdError::GenericErr"),
+        Err(StdError::GenericErr { .. }) => (),
+        _ => panic!("this should error"),
+    }
+
+    // Try executing ExecuteMsg::AddNativeTokenDecimals
+    let msg = ExecuteMsg::AddNativeTokenDecimals {
+        denom: "any".to_string(),
+        decimals: 6,
+    };
+
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+
+    match res {
+        Ok(_) => panic!("Must return StdError::GenericErr"),
+        Err(StdError::GenericErr { .. }) => (),
+        _ => panic!("this should error"),
+    }
+
+    // Try executing ExecuteMsg::UpdateConfig
+    let msg = ExecuteMsg::UpdateConfig {
+        owner: None,
+        token_code_id: None,
+        pair_code_id: None,
+    };
+
+    let res = execute(deps.as_mut(), env, info, msg);
+
+    match res {
+        Ok(_) => panic!("Must return StdError::GenericErr"),
+        Err(StdError::GenericErr { .. }) => (),
+        _ => panic!("this should error"),
+    }
+}
