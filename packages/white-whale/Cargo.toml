@@ -1,0 +1,22 @@
+[package]
+name = "white-whale"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kerber0x <kerber0x@protonmail.com>"]
+description = "Common White Whale types and utils"
+license = "MIT"
+repository = "https://github.com/White-Whale-DeFi-Platform/contracts"
+homepage = "https://whitewhale.finance"
+documentation = "https://whitewhale.finance"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { version = "1.0.0" }
+schemars = "0.8.10"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
