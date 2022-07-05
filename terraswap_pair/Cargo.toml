@@ -33,8 +33,9 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.20" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
-terraswap = { git = "https://github.com/terraswap/terraswap.git", tag = 'v2.7.0'}
+terraswap = { version = "2.7.0", path = "../../../../packages/terraswap"}
 terraswap-helpers = { version = "0.1.0", path = "../../../../packages/terraswap-helpers" }
+white-whale = { version = "0.1.0", path = "../../../../packages/white-whale" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }

@@ -1,39 +1,37 @@
-use crate::error::ContractError;
-use crate::response::MsgInstantiateContractResponse;
-use crate::state::PAIR_INFO;
-
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
-};
+use std::cmp::Ordering;
+use std::str::FromStr;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_std::{
+    Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary,
+    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg,
+};
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
-use std::cmp::Ordering;
-use std::str::FromStr;
+
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
-use terraswap::pair::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, PoolResponse, QueryMsg,
-    ReverseSimulationResponse, SimulationResponse,
-};
+use terraswap::pair::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PoolFee, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse};
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use terraswap_helpers::asset_helper::get_asset_label;
+
+use crate::error::ContractError;
+use crate::response::MsgInstantiateContractResponse;
+use crate::state::{CONFIG, Config, ConfigResponse, PAIR_INFO};
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: &str = "0.003";
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     let pair_info: &PairInfoRaw = &PairInfoRaw {
@@ -51,6 +49,18 @@ pub fn instantiate(
     let asset0_label = get_asset_label(&deps, pair_info.asset_infos[0].to_normal(deps.api)?)?;
     let asset1_label = get_asset_label(&deps, pair_info.asset_infos[1].to_normal(deps.api)?)?;
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
+
+    // Set owner and initial pool fees
+    let config = Config {
+        owner: deps.api.addr_validate(info.sender.as_str())?,
+        pool_fees: msg.pool_fees,
+        feature_toggle: FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: true,
+            swaps_enabled: true,
+        },
+    };
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_submessage(SubMsg {
         // Create LP token
@@ -70,7 +80,7 @@ pub fn instantiate(
             funds: vec![],
             label: lp_token_name,
         }
-        .into(),
+            .into(),
         gas_limit: None,
         id: INSTANTIATE_REPLY_ID,
         reply_on: ReplyOn::Success,
@@ -97,6 +107,12 @@ pub fn execute(
             max_spread,
             to,
         } => {
+            // check if the swap feature is enabled
+            let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
+            if !feature_toggle.swaps_enabled {
+                return Err(ContractError::OperationDisabled("swap".to_string()));
+            }
+
             if !offer_asset.is_native_token() {
                 return Err(ContractError::Unauthorized {});
             }
@@ -118,7 +134,39 @@ pub fn execute(
                 to_addr,
             )
         }
+        ExecuteMsg::UpdateConfig { owner, pool_fees, feature_toggle } => update_config(deps, info, owner, pool_fees, feature_toggle),
     }
+}
+
+pub fn update_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    owner: Option<String>,
+    pool_fees: Option<PoolFee>,
+    feature_toggle: Option<FeatureToggle>,
+) -> Result<Response, ContractError> {
+    let mut config: Config = CONFIG.load(deps.storage)?;
+    if deps.api.addr_validate(info.sender.as_str())? != config.owner {
+        return Err(ContractError::Std(StdError::generic_err("unauthorized")));
+    }
+
+    if let Some(owner) = owner {
+        // validate address format
+        let _ = deps.api.addr_validate(&owner)?;
+        config.owner = deps.api.addr_validate(&owner)?;
+    }
+
+    if let Some(pool_fees) = pool_fees {
+        config.pool_fees = pool_fees;
+    }
+
+    if let Some(feature_toggle) = feature_toggle {
+        config.feature_toggle = feature_toggle;
+    }
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attribute("action", "update_config"))
 }
 
 pub fn receive_cw20(
@@ -128,13 +176,19 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let contract_addr = info.sender.clone();
+    let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
 
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
-            belief_price,
-            max_spread,
-            to,
-        }) => {
+               belief_price,
+               max_spread,
+               to,
+           }) => {
+            // check if the swap feature is enabled
+            if !feature_toggle.swaps_enabled {
+                return Err(ContractError::OperationDisabled("swap".to_string()));
+            }
+
             // only asset contract can execute this message
             let mut authorized: bool = false;
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -175,6 +229,11 @@ pub fn receive_cw20(
             )
         }
         Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
+            // check if the withdrawal feature is enabled
+            if !feature_toggle.withdrawals_enabled {
+                return Err(ContractError::OperationDisabled("withdraw_liquidity".to_string()));
+            }
+
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
             if deps.api.addr_canonicalize(info.sender.as_str())? != config.liquidity_token {
                 return Err(ContractError::Unauthorized {});
@@ -215,6 +274,12 @@ pub fn provide_liquidity(
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
+    // check if the deposit feature is enabled
+    let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
+    if !feature_toggle.deposits_enabled {
+        return Err(ContractError::OperationDisabled("provide_liquidity".to_string()));
+    }
+
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
     }
@@ -451,6 +516,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::ReverseSimulation { ask_asset } => {
             Ok(to_binary(&query_reverse_simulation(deps, ask_asset)?)?)
         }
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?)
     }
 }
 
@@ -469,7 +535,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         &deps.querier,
         deps.api.addr_humanize(&pair_info.liquidity_token)?,
     )?
-    .total_supply;
+        .total_supply;
 
     let resp = PoolResponse {
         assets,
@@ -539,6 +605,11 @@ pub fn query_reverse_simulation(
         spread_amount,
         commission_amount,
     })
+}
+
+pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    Ok(config)
 }
 
 pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
@@ -724,7 +795,7 @@ fn assert_slippage_tolerance(
         if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
             > Decimal256::from_ratio(pools[0], pools[1])
             || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
+            > Decimal256::from_ratio(pools[1], pools[0])
         {
             return Err(ContractError::MaxSlippageAssertion {});
         }
