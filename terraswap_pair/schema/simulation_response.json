@@ -4,18 +4,22 @@
   "description": "SimulationResponse returns swap simulation response",
   "type": "object",
   "required": [
-    "commission_amount",
+    "protocol_fee_amount",
     "return_amount",
-    "spread_amount"
+    "spread_amount",
+    "swap_fee_amount"
   ],
   "properties": {
-    "commission_amount": {
+    "protocol_fee_amount": {
       "$ref": "#/definitions/Uint128"
     },
     "return_amount": {
       "$ref": "#/definitions/Uint128"
     },
     "spread_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "swap_fee_amount": {
       "$ref": "#/definitions/Uint128"
     }
   },

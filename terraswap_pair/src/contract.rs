@@ -1,31 +1,29 @@
-use std::cmp::Ordering;
-use std::str::FromStr;
-
-use cosmwasm_bignumber::{Decimal256, Uint256};
-use cosmwasm_std::{
-    Addr, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary,
-    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg,
-};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
 
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
-use terraswap::pair::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PoolFee, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse};
+use terraswap::pair::{
+    Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PoolFee, PoolResponse,
+    QueryMsg, ReverseSimulationResponse, SimulationResponse,
+};
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use terraswap_helpers::asset_helper::get_asset_label;
+use white_whale::fee::check_fee;
 
 use crate::error::ContractError;
+use crate::helpers;
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{CONFIG, Config, ConfigResponse, PAIR_INFO};
+use crate::state::{Config, ConfigResponse, CONFIG, PAIR_INFO};
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
-
-/// Commission rate == 0.3%
-const COMMISSION_RATE: &str = "0.003";
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -49,6 +47,10 @@ pub fn instantiate(
     let asset0_label = get_asset_label(&deps, pair_info.asset_infos[0].to_normal(deps.api)?)?;
     let asset1_label = get_asset_label(&deps, pair_info.asset_infos[1].to_normal(deps.api)?)?;
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
+
+    // check the fees are valid
+    check_fee(msg.pool_fees.clone().swap_fee)?;
+    check_fee(msg.pool_fees.clone().protocol_fee)?;
 
     // Set owner and initial pool fees
     let config = Config {
@@ -80,7 +82,7 @@ pub fn instantiate(
             funds: vec![],
             label: lp_token_name,
         }
-            .into(),
+        .into(),
         gas_limit: None,
         id: INSTANTIATE_REPLY_ID,
         reply_on: ReplyOn::Success,
@@ -134,7 +136,11 @@ pub fn execute(
                 to_addr,
             )
         }
-        ExecuteMsg::UpdateConfig { owner, pool_fees, feature_toggle } => update_config(deps, info, owner, pool_fees, feature_toggle),
+        ExecuteMsg::UpdateConfig {
+            owner,
+            pool_fees,
+            feature_toggle,
+        } => update_config(deps, info, owner, pool_fees, feature_toggle),
     }
 }
 
@@ -180,10 +186,10 @@ pub fn receive_cw20(
 
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
-               belief_price,
-               max_spread,
-               to,
-           }) => {
+            belief_price,
+            max_spread,
+            to,
+        }) => {
             // check if the swap feature is enabled
             if !feature_toggle.swaps_enabled {
                 return Err(ContractError::OperationDisabled("swap".to_string()));
@@ -231,7 +237,9 @@ pub fn receive_cw20(
         Ok(Cw20HookMsg::WithdrawLiquidity {}) => {
             // check if the withdrawal feature is enabled
             if !feature_toggle.withdrawals_enabled {
-                return Err(ContractError::OperationDisabled("withdraw_liquidity".to_string()));
+                return Err(ContractError::OperationDisabled(
+                    "withdraw_liquidity".to_string(),
+                ));
             }
 
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -277,7 +285,9 @@ pub fn provide_liquidity(
     // check if the deposit feature is enabled
     let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
     if !feature_toggle.deposits_enabled {
-        return Err(ContractError::OperationDisabled("provide_liquidity".to_string()));
+        return Err(ContractError::OperationDisabled(
+            "provide_liquidity".to_string(),
+        ));
     }
 
     for asset in assets.iter() {
@@ -321,7 +331,7 @@ pub fn provide_liquidity(
     }
 
     // assert slippage tolerance
-    assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
+    helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
@@ -464,21 +474,22 @@ pub fn swap(
     }
 
     let offer_amount = offer_asset.amount;
-    let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount);
+    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    let swap_computation =
+        helpers::compute_swap(offer_pool.amount, ask_pool.amount, offer_amount, pool_fees);
 
     let return_asset = Asset {
         info: ask_pool.info.clone(),
-        amount: return_amount,
+        amount: swap_computation.return_amount,
     };
 
     // check max spread limit if exist
-    assert_max_spread(
+    helpers::assert_max_spread(
         belief_price,
         max_spread,
         offer_asset.clone(),
         return_asset.clone(),
-        spread_amount,
+        swap_computation.spread_amount,
         offer_decimal,
         ask_decimal,
     )?;
@@ -486,7 +497,7 @@ pub fn swap(
     let receiver = to.unwrap_or_else(|| sender.clone());
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    if !return_amount.is_zero() {
+    if !swap_computation.return_amount.is_zero() {
         messages.push(return_asset.into_msg(receiver.clone())?);
     }
 
@@ -499,9 +510,12 @@ pub fn swap(
         ("offer_asset", &offer_asset.info.to_string()),
         ("ask_asset", &ask_pool.info.to_string()),
         ("offer_amount", &offer_amount.to_string()),
-        ("return_amount", &return_amount.to_string()),
-        ("spread_amount", &spread_amount.to_string()),
-        ("commission_amount", &commission_amount.to_string()),
+        ("return_amount", &swap_computation.return_amount.to_string()),
+        ("spread_amount", &swap_computation.spread_amount.to_string()),
+        (
+            "swap_fee_amount",
+            &swap_computation.swap_fee_amount.to_string(),
+        ),
     ]))
 }
 
@@ -516,7 +530,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::ReverseSimulation { ask_asset } => {
             Ok(to_binary(&query_reverse_simulation(deps, ask_asset)?)?)
         }
-        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?)
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
     }
 }
 
@@ -535,7 +549,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         &deps.querier,
         deps.api.addr_humanize(&pair_info.liquidity_token)?,
     )?
-        .total_supply;
+    .total_supply;
 
     let resp = PoolResponse {
         assets,
@@ -566,13 +580,19 @@ pub fn query_simulation(
         return Err(ContractError::AssetMismatch {});
     }
 
-    let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount);
+    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    let swap_computation = helpers::compute_swap(
+        offer_pool.amount,
+        ask_pool.amount,
+        offer_asset.amount,
+        pool_fees,
+    );
 
     Ok(SimulationResponse {
-        return_amount,
-        spread_amount,
-        commission_amount,
+        return_amount: swap_computation.return_amount,
+        spread_amount: swap_computation.spread_amount,
+        swap_fee_amount: swap_computation.swap_fee_amount,
+        protocol_fee_amount: swap_computation.protocol_fee_amount,
     })
 }
 
@@ -597,211 +617,26 @@ pub fn query_reverse_simulation(
         return Err(ContractError::AssetMismatch {});
     }
 
-    let (offer_amount, spread_amount, commission_amount) =
-        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount);
+    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    //let (offer_amount, spread_amount, commission_amount) =
+    let offer_amount_computation = helpers::compute_offer_amount(
+        offer_pool.amount,
+        ask_pool.amount,
+        ask_asset.amount,
+        pool_fees,
+    );
 
     Ok(ReverseSimulationResponse {
-        offer_amount,
-        spread_amount,
-        commission_amount,
+        offer_amount: offer_amount_computation.offer_amount,
+        spread_amount: offer_amount_computation.spread_amount,
+        swap_fee_amount: offer_amount_computation.swap_fee_amount,
+        protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
     })
 }
 
 pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
-}
-
-pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
-    match coins.iter().find(|x| x.denom == denom) {
-        Some(coin) => coin.amount,
-        None => Uint128::zero(),
-    }
-}
-
-fn compute_swap(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
-    offer_amount: Uint128,
-) -> (Uint128, Uint128, Uint128) {
-    let offer_pool: Uint256 = Uint256::from(offer_pool);
-    let ask_pool: Uint256 = ask_pool.into();
-    let offer_amount: Uint256 = offer_amount.into();
-
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
-
-    // offer => ask
-    // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let cp: Uint256 = offer_pool * ask_pool;
-    let return_amount: Uint256 = (Decimal256::from_uint256(ask_pool)
-        - Decimal256::from_ratio(cp, offer_pool + offer_amount))
-        * Uint256::one();
-
-    // calculate spread & commission
-    let spread_amount: Uint256 =
-        (offer_amount * Decimal256::from_ratio(ask_pool, offer_pool)) - return_amount;
-    let commission_amount: Uint256 = return_amount * commission_rate;
-
-    // commission will be absorbed to pool
-    let return_amount: Uint256 = return_amount - commission_amount;
-    (
-        return_amount.into(),
-        spread_amount.into(),
-        commission_amount.into(),
-    )
-}
-
-#[test]
-fn test_compute_swap_with_huge_pool_variance() {
-    let offer_pool = Uint128::from(395451850234u128);
-    let ask_pool = Uint128::from(317u128);
-
-    assert_eq!(
-        compute_swap(offer_pool, ask_pool, Uint128::from(1u128)).0,
-        Uint128::zero()
-    );
-}
-
-fn compute_offer_amount(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
-    ask_amount: Uint128,
-) -> (Uint128, Uint128, Uint128) {
-    let offer_pool: Uint256 = offer_pool.into();
-    let ask_pool: Uint256 = ask_pool.into();
-    let ask_amount: Uint256 = ask_amount.into();
-
-    let commission_rate = Decimal256::from_str(COMMISSION_RATE).unwrap();
-
-    // ask => offer
-    // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
-    let cp: Uint256 = offer_pool * ask_pool;
-
-    let one_minus_commission = Decimal256::one() - commission_rate;
-    let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
-
-    let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
-        - offer_pool;
-
-    let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
-    let before_spread_deduction: Uint256 =
-        offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
-
-    let spread_amount = if before_spread_deduction > before_commission_deduction {
-        before_spread_deduction - before_commission_deduction
-    } else {
-        Uint256::zero()
-    };
-
-    let commission_amount = before_commission_deduction * commission_rate;
-
-    (
-        offer_amount.into(),
-        spread_amount.into(),
-        commission_amount.into(),
-    )
-}
-
-/// If `belief_price` and `max_spread` both are given,
-/// we compute new spread else we just use terraswap
-/// spread to check `max_spread`
-pub fn assert_max_spread(
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    offer_asset: Asset,
-    return_asset: Asset,
-    spread_amount: Uint128,
-    offer_decimal: u8,
-    return_decimal: u8,
-) -> Result<(), ContractError> {
-    let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
-        match offer_decimal.cmp(&return_decimal) {
-            Ordering::Greater => {
-                let diff_decimal = 10u64.pow((offer_decimal - return_decimal).into());
-
-                (
-                    offer_asset.amount.into(),
-                    return_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    spread_amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                )
-            }
-            Ordering::Less => {
-                let diff_decimal = 10u64.pow((return_decimal - offer_decimal).into());
-
-                (
-                    offer_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    return_asset.amount.into(),
-                    spread_amount.into(),
-                )
-            }
-            Ordering::Equal => (
-                offer_asset.amount.into(),
-                return_asset.amount.into(),
-                spread_amount.into(),
-            ),
-        };
-
-    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
-        let belief_price: Decimal256 = belief_price.into();
-        let max_spread: Decimal256 = max_spread.into();
-
-        let expected_return = offer_amount / belief_price;
-        let spread_amount = if expected_return > return_amount {
-            expected_return - return_amount
-        } else {
-            Uint256::zero()
-        };
-
-        if return_amount < expected_return
-            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
-        {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    } else if let Some(max_spread) = max_spread {
-        let max_spread: Decimal256 = max_spread.into();
-        if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    }
-
-    Ok(())
-}
-
-fn assert_slippage_tolerance(
-    slippage_tolerance: &Option<Decimal>,
-    deposits: &[Uint128; 2],
-    pools: &[Asset; 2],
-) -> Result<(), ContractError> {
-    if let Some(slippage_tolerance) = *slippage_tolerance {
-        let slippage_tolerance: Decimal256 = slippage_tolerance.into();
-        if slippage_tolerance > Decimal256::one() {
-            return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
-        }
-
-        let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
-        let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
-
-        // Ensure each prices are not dropped as much as slippage tolerance rate
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[1], pools[0])
-        {
-            return Err(ContractError::MaxSlippageAssertion {});
-        }
-    }
-
-    Ok(())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

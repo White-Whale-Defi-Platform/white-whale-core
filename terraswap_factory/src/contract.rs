@@ -10,7 +10,7 @@ use terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse,
     PairsResponse, QueryMsg,
 };
-use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
+use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, PoolFee};
 use terraswap::querier::{query_balance, query_pair_info_from_pair};
 use terraswap_helpers::asset_helper::get_asset_label;
 
@@ -46,7 +46,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             token_code_id,
             pair_code_id,
         } => execute_update_config(deps, env, info, owner, token_code_id, pair_code_id),
-        ExecuteMsg::CreatePair { asset_infos } => execute_create_pair(deps, env, info, asset_infos),
+        ExecuteMsg::CreatePair {
+            asset_infos,
+            pool_fees,
+        } => execute_create_pair(deps, env, info, asset_infos, pool_fees),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             execute_add_native_token_decimals(deps, env, info, denom, decimals)
         }
@@ -95,6 +98,7 @@ pub fn execute_create_pair(
     env: Env,
     _info: MessageInfo,
     asset_infos: [AssetInfo; 2],
+    pool_fees: PoolFee,
 ) -> StdResult<Response> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -158,6 +162,7 @@ pub fn execute_create_pair(
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
+                    pool_fees,
                 })?,
             }),
             reply_on: ReplyOn::Success,

@@ -4,18 +4,22 @@
   "description": "ReverseSimulationResponse returns reverse swap simulation response",
   "type": "object",
   "required": [
-    "commission_amount",
     "offer_amount",
-    "spread_amount"
+    "protocol_fee_amount",
+    "spread_amount",
+    "swap_fee_amount"
   ],
   "properties": {
-    "commission_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
     "offer_amount": {
       "$ref": "#/definitions/Uint128"
     },
+    "protocol_fee_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
     "spread_amount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "swap_fee_amount": {
       "$ref": "#/definitions/Uint128"
     }
   },
