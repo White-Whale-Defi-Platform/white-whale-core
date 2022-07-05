@@ -475,6 +475,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "once_cell"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
+
+[[package]]
 name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -507,6 +513,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf7e6d18738ecd0902d30d1ad232c9125985a3422929b16c65517b38adc14f96"
 dependencies = [
  "bytes",
+]
+
+[[package]]
+name = "protobuf"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ee4a7d8b91800c8f167a6268d1a1026607368e1adc84e98fe044aeb905302f7"
+dependencies = [
+ "bytes",
+ "once_cell",
+ "protobuf-support",
+ "thiserror",
+]
+
+[[package]]
+name = "protobuf-support"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ca157fe12fc7ee2e315f2f735e27df41b3d97cdd70ea112824dac1ffb08ee1c"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]
@@ -711,7 +738,7 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw20",
- "protobuf",
+ "protobuf 2.27.1",
  "schemars",
  "serde",
  "white-whale",
@@ -726,7 +753,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw20",
- "protobuf",
+ "protobuf 2.27.1",
  "schemars",
  "serde",
  "terraswap",
@@ -745,7 +772,7 @@ dependencies = [
  "cw2",
  "cw20",
  "integer-sqrt",
- "protobuf",
+ "protobuf 2.27.1",
  "schemars",
  "serde",
  "terraswap",
@@ -829,6 +856,50 @@ name = "unicode-ident"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bd2fe26506023ed7b5e1e315add59d6f584c621d037f9368fea9cfb988f368c"
+
+[[package]]
+name = "vault"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "schemars",
+ "serde",
+ "terraswap",
+ "thiserror",
+ "vault-network",
+]
+
+[[package]]
+name = "vault-network"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "terraswap",
+]
+
+[[package]]
+name = "vault_factory"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "protobuf 3.1.0",
+ "schemars",
+ "semver",
+ "serde",
+ "terraswap",
+ "thiserror",
+ "vault-network",
+]
 
 [[package]]
 name = "version_check"

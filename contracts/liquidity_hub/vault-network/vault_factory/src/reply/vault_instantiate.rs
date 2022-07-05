@@ -1,0 +1,42 @@
+use cosmwasm_std::{DepsMut, Env, Reply, Response, StdError};
+use protobuf::Message;
+
+use crate::{
+    err::StdResult,
+    response::MsgInstantiateContractResponse,
+    state::{TMP_VAULT_ASSET, VAULTS},
+};
+
+pub fn vault_instantiate(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    let data = msg
+        .result
+        .into_result()
+        .map_err(|_| StdError::GenericErr {
+            msg: "Failed to get result of vault instantiation".to_string(),
+        })?
+        .data
+        .ok_or_else(|| StdError::GenericErr {
+            msg: "Failed to read binary data of vault instantiation".to_string(),
+        })?;
+
+    let res: MsgInstantiateContractResponse =
+        Message::parse_from_bytes(data.as_slice()).map_err(|_| {
+            StdError::parse_err(
+                "MsgInstantiateContractResponse",
+                "Failed to parse instantiate response",
+            )
+        })?;
+
+    let vault_address = deps.api.addr_validate(&res.contract_address)?;
+
+    // retrieve stored key from temp storage
+    let asset_info_key = TMP_VAULT_ASSET.load(deps.storage)?;
+
+    // save to vault storage
+    VAULTS.save(deps.storage, asset_info_key.as_slice(), &vault_address)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "reply_vault_instantiate"),
+        ("vault_address", &vault_address.into_string()),
+    ]))
+}
