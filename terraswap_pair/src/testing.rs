@@ -1,22 +1,23 @@
-use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use std::ops::Add;
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, to_binary, Uint128, WasmMsg,
 };
+use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
+
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolResponse, ReverseSimulationResponse,
-    SimulationResponse,
-};
+use terraswap::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, PoolResponse, ReverseSimulationResponse, SimulationResponse};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::fee::Fee;
 
 use crate::contract::{
-    assert_max_spread, execute, instantiate, query_pair_info, query_pool, query_reverse_simulation,
-    query_simulation, reply,
+    execute, instantiate, query_pair_info, query_pool, query_reverse_simulation, query_simulation,
+    reply,
 };
 use crate::error::ContractError;
+use crate::helpers::{assert_max_spread, compute_swap};
 
 #[test]
 fn proper_initialization() {
@@ -38,6 +39,7 @@ fn proper_initialization() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -59,12 +61,12 @@ fn proper_initialization() {
                         cap: None,
                     }),
                 })
-                .unwrap(),
+                    .unwrap(),
                 funds: vec![],
                 label: "uusd-mAAPL-LP".to_string(),
                 admin: None,
             }
-            .into(),
+                .into(),
             gas_limit: None,
             id: 1,
             reply_on: ReplyOn::Success,
@@ -80,7 +82,7 @@ fn proper_initialization() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -129,6 +131,7 @@ fn provide_liquidity() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
     };
 
     let env = mock_env();
@@ -145,7 +148,7 @@ fn provide_liquidity() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -192,7 +195,7 @@ fn provide_liquidity() {
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(100u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -204,7 +207,7 @@ fn provide_liquidity() {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(100u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -273,7 +276,7 @@ fn provide_liquidity() {
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(100u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -285,7 +288,7 @@ fn provide_liquidity() {
                 recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
                 amount: Uint128::from(50u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -536,6 +539,7 @@ fn withdraw_liquidity() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
     };
 
     let env = mock_env();
@@ -552,7 +556,7 @@ fn withdraw_liquidity() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -592,7 +596,7 @@ fn withdraw_liquidity() {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(100u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -603,7 +607,7 @@ fn withdraw_liquidity() {
             msg: to_binary(&Cw20ExecuteMsg::Burn {
                 amount: Uint128::from(100u128),
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -628,7 +632,8 @@ fn try_native_to_token() {
 
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
-        amount: collateral_pool_amount + offer_amount, /* user deposit must be pre-applied */
+        amount: collateral_pool_amount + offer_amount,
+        /* user deposit must be pre-applied */
     }]);
 
     deps.querier.with_token_balances(&[
@@ -653,6 +658,7 @@ fn try_native_to_token() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Default::default() } },
     };
 
     let env = mock_env();
@@ -669,7 +675,7 @@ fn try_native_to_token() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -714,7 +720,8 @@ fn try_native_to_token() {
         &MOCK_CONTRACT_ADDR.to_string(),
         vec![Coin {
             denom: "uusd".to_string(),
-            amount: collateral_pool_amount, /* user deposit must be pre-applied */
+            amount: collateral_pool_amount,
+            /* user deposit must be pre-applied */
         }],
     )]);
 
@@ -727,9 +734,9 @@ fn try_native_to_token() {
             amount: offer_amount,
         },
     )
-    .unwrap();
+        .unwrap();
     assert_eq!(expected_return_amount, simulation_res.return_amount);
-    assert_eq!(expected_commission_amount, simulation_res.commission_amount);
+    assert_eq!(expected_commission_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
 
     // check reverse simulation res
@@ -742,7 +749,7 @@ fn try_native_to_token() {
             amount: expected_return_amount,
         },
     )
-    .unwrap();
+        .unwrap();
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
@@ -750,7 +757,7 @@ fn try_native_to_token() {
     );
     assert!(
         (expected_commission_amount.u128() as i128
-            - reverse_simulation_res.commission_amount.u128() as i128)
+            - reverse_simulation_res.swap_fee_amount.u128() as i128)
             .abs()
             < 3i128
     );
@@ -783,7 +790,7 @@ fn try_native_to_token() {
                 recipient: "addr0000".to_string(),
                 amount: expected_return_amount,
             })
-            .unwrap(),
+                .unwrap(),
             funds: vec![],
         })),
         msg_transfer,
@@ -792,11 +799,11 @@ fn try_native_to_token() {
 
 #[test]
 fn try_token_to_native() {
-    let total_share = Uint128::from(20000000000u128);
-    let asset_pool_amount = Uint128::from(30000000000u128);
-    let collateral_pool_amount = Uint128::from(20000000000u128);
+    let total_share = Uint128::from(20_000_000_000u128);
+    let asset_pool_amount = Uint128::from(30_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(20_000_000_000u128);
     let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
-    let offer_amount = Uint128::from(1500000000u128);
+    let offer_amount = Uint128::from(1_500_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
@@ -827,6 +834,7 @@ fn try_token_to_native() {
         ],
         token_code_id: 10u64,
         asset_decimals: [8u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio( 1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
     };
 
     let env = mock_env();
@@ -843,7 +851,7 @@ fn try_token_to_native() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -879,7 +887,7 @@ fn try_token_to_native() {
             max_spread: None,
             to: None,
         })
-        .unwrap(),
+            .unwrap(),
     });
     let env = mock_env();
     let info = mock_info("asset0000", &[]);
@@ -887,16 +895,31 @@ fn try_token_to_native() {
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     let msg_transfer = res.messages.get(0).expect("no message");
 
+    // let total_share = Uint128::from(20_000_000_000u128);
+    // let asset_pool_amount = Uint128::from(30_000_000_000u128);
+    // let collateral_pool_amount = Uint128::from(20_000_000_000u128);
+    // let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
+    // let offer_amount = Uint128::from(1_500_000_000u128);
+    // offer => ask
+    // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - swap_fee - protocol_fee)
     // current price is 1.5, so expected return without spread is 1000
-    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
+    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500) - swap_fee - protocol_fee
+
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
+    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_return_amount = expected_ret_amount
-        .checked_sub(expected_commission_amount)
+        .checked_sub(expected_swap_fee_amount)
+        .unwrap()
+        .checked_sub(expected_protocol_fee_amount)
         .unwrap();
+
+    println!("heree : {}", expected_return_amount);
     // check simulation res
     // return asset token balance as normal
     deps.querier.with_token_balances(&[
@@ -919,10 +942,17 @@ fn try_token_to_native() {
             },
         },
     )
-    .unwrap();
+        .unwrap();
+
+    println!("simulation_res.return_amount: {}", simulation_res.return_amount);
+    println!("simulation_res.spread_amount: {}", simulation_res.spread_amount);
+    println!("simulation_res.swap_fee_amount: {}", simulation_res.swap_fee_amount);
+    println!("simulation_res.protocol_fee_amount: {}", simulation_res.protocol_fee_amount);
+
     assert_eq!(expected_return_amount, simulation_res.return_amount);
-    assert_eq!(expected_commission_amount, simulation_res.commission_amount);
+    assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
+    assert_eq!(expected_protocol_fee_amount, simulation_res.protocol_fee_amount);
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = query_reverse_simulation(
@@ -934,14 +964,21 @@ fn try_token_to_native() {
             },
         },
     )
-    .unwrap();
+        .unwrap();
+
+    println!("reverse_simulation_res.offer_amount: {}", reverse_simulation_res.offer_amount);
+    println!("reverse_simulation_res.protocol_fee_amount: {}", reverse_simulation_res.protocol_fee_amount);
+    println!("reverse_simulation_res.spread_amount: {}", reverse_simulation_res.spread_amount);
+    println!("reverse_simulation_res.swap_fee_amount: {}", reverse_simulation_res.swap_fee_amount);
+
+
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
             < 3i128
     );
     assert!(
-        (expected_commission_amount.u128() as i128
-            - reverse_simulation_res.commission_amount.u128() as i128)
+        (expected_swap_fee_amount.u128() as i128
+            - reverse_simulation_res.swap_fee_amount.u128() as i128)
             .abs()
             < 3i128
     );
@@ -963,7 +1000,8 @@ fn try_token_to_native() {
             attr("offer_amount", offer_amount.to_string()),
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
-            attr("commission_amount", expected_commission_amount.to_string()),
+            attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
+            attr("protocol_fee_amount", expected_protocol_fee_amount.to_string()),
         ]
     );
 
@@ -972,7 +1010,7 @@ fn try_token_to_native() {
             to_address: "addr0000".to_string(),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
-                amount: expected_return_amount
+                amount: expected_return_amount,
             }],
         })),
         msg_transfer,
@@ -987,7 +1025,7 @@ fn try_token_to_native() {
             max_spread: None,
             to: None,
         })
-        .unwrap(),
+            .unwrap(),
     });
     let env = mock_env();
     let info = mock_info("liquidity0000", &[]);
@@ -1022,7 +1060,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-    .unwrap_err();
+        .unwrap_err();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1039,7 +1077,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-    .unwrap();
+        .unwrap();
 
     assert_max_spread(
         None,
@@ -1056,7 +1094,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-    .unwrap_err();
+        .unwrap_err();
 
     assert_max_spread(
         None,
@@ -1073,7 +1111,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-    .unwrap();
+        .unwrap();
 }
 
 #[test]
@@ -1110,7 +1148,7 @@ fn test_max_spread_with_diff_decimal() {
         6u8,
         8u8,
     )
-    .unwrap();
+        .unwrap();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1127,7 +1165,7 @@ fn test_max_spread_with_diff_decimal() {
         6u8,
         8u8,
     )
-    .unwrap_err();
+        .unwrap_err();
 
     let offer_asset_info = AssetInfo::Token {
         contract_addr: token_addr,
@@ -1151,7 +1189,7 @@ fn test_max_spread_with_diff_decimal() {
         8u8,
         6u8,
     )
-    .unwrap();
+        .unwrap();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1168,7 +1206,7 @@ fn test_max_spread_with_diff_decimal() {
         8u8,
         6u8,
     )
-    .unwrap_err();
+        .unwrap_err();
 }
 
 #[test]
@@ -1203,6 +1241,7 @@ fn test_query_pool() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
     };
 
     let env = mock_env();
@@ -1219,7 +1258,7 @@ fn test_query_pool() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                .into(),
+                    .into(),
             ),
         }),
     };
@@ -1235,15 +1274,27 @@ fn test_query_pool() {
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                amount: asset_0_amount
+                amount: asset_0_amount,
             },
             Asset {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: asset_1_amount
+                amount: asset_1_amount,
             }
         ]
     );
     assert_eq!(res.total_share, total_share_amount);
+}
+
+#[test]
+fn test_compute_swap_with_huge_pool_variance() {
+    let offer_pool = Uint128::from(395451850234u128);
+    let ask_pool = Uint128::from(317u128);
+    let pool_fees = PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } };
+
+    assert_eq!(
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees).return_amount,
+        Uint128::zero()
+    );
 }

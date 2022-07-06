@@ -390,6 +390,7 @@ pub fn withdraw_liquidity(
 
     let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     let total_share: Uint128 = query_token_info(&deps.querier, liquidity_addr)?.total_supply;
+    //let protocol_fee = CONFIG.load(deps.storage)?.pool_fees.protocol_fee;
 
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
     let refund_assets: Vec<Asset> = pools
@@ -444,6 +445,7 @@ pub fn swap(
 
     let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
 
+    // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Asset;
     let ask_pool: Asset;
 
@@ -515,6 +517,9 @@ pub fn swap(
         (
             "swap_fee_amount",
             &swap_computation.swap_fee_amount.to_string(),
+        ), (
+            "protocol_fee_amount",
+            &swap_computation.protocol_fee_amount.to_string(),
         ),
     ]))
 }

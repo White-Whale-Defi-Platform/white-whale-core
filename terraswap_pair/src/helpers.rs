@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::ops::Mul;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_std::{Decimal, StdError, Uint128};
@@ -21,19 +22,17 @@ pub fn compute_swap(
     let offer_amount: Uint256 = offer_amount.into();
 
     // offer => ask
-    // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - swap_fee)
-    let cp: Uint256 = offer_pool * ask_pool;
-    let return_amount: Uint256 = (Decimal256::from_uint256(ask_pool)
-        - Decimal256::from_ratio(cp, offer_pool + offer_amount))
-        * Uint256::one();
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee
+    let return_amount: Uint256 = Uint256::one() *
+        Decimal256::from_ratio(ask_pool.mul(offer_amount) , offer_pool + offer_amount);
 
-    // calculate spread, swap and protocl fees
-    let spread_amount: Uint256 =
-        (offer_amount * Decimal256::from_ratio(ask_pool, offer_pool)) - return_amount;
+    // calculate spread, swap and protocol fees
+    let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
+    let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
 
-    // swap fee will be absorbed to pool
+    // swap and protocol fee will be absorbed by the pool
     let return_amount: Uint256 = return_amount - swap_fee_amount - protocol_fee_amount;
 
     SwapComputation {
@@ -64,17 +63,17 @@ pub fn compute_offer_amount(
     let ask_amount: Uint256 = ask_amount.into();
 
     // ask => offer
-    // offer_amount = cp / (ask_pool - ask_amount / (1 - swap_fee)) - offer_pool - protocol_fee
-    let cp: Uint256 = offer_pool * ask_pool;
+    // offer_amount = collateral_pool / (ask_pool - ask_amount / (1 - swap_fee - protocol_fee)) - offer_pool
+    let collateral_pool: Uint256 = offer_pool * ask_pool;
 
-    let one_minus_swap_fee = Decimal256::one() - pool_fees.swap_fee.to_decimal_256();
-    let inv_one_minus_swap_fee = Decimal256::one() / one_minus_swap_fee;
+    let one_minus_fees = Decimal256::one() - pool_fees.swap_fee.to_decimal_256() - pool_fees.protocol_fee.to_decimal_256() ;
+    let inv_one_minus_fees = Decimal256::one() / one_minus_fees;
 
     let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_swap_fee)
+        .multiply_ratio(collateral_pool, ask_pool - ask_amount * inv_one_minus_fees)
         - offer_pool;
 
-    let before_swap_fee_deduction: Uint256 = ask_amount * inv_one_minus_swap_fee;
+    let before_swap_fee_deduction: Uint256 = ask_amount * inv_one_minus_fees;
     let before_spread_deduction: Uint256 =
         offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
 
@@ -86,9 +85,6 @@ pub fn compute_offer_amount(
 
     let swap_fee_amount = pool_fees.swap_fee.compute(before_swap_fee_deduction);
     let protocol_fee_amount = pool_fees.protocol_fee.compute(before_swap_fee_deduction);
-
-    // protocol fee will be absorbed to pool
-    let offer_amount = offer_amount - protocol_fee_amount;
 
     OfferAmountComputation {
         offer_amount: offer_amount.into(),
