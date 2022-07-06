@@ -1,12 +1,13 @@
+use cosmwasm_std::{
+    Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary, MessageInfo,
+    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg,
+};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
-};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
+use schemars::_private::NoSerialize;
 
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::pair::{
@@ -15,13 +16,13 @@ use terraswap::pair::{
 };
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use terraswap_helpers::asset_helper::get_asset_label;
+use terraswap_helpers::asset_helper::{get_asset_id, get_asset_label};
 use white_whale::fee::check_fee;
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{Config, ConfigResponse, CONFIG, PAIR_INFO};
+use crate::state::{COLLECTED_PROTOCOL_FEES, Config, CONFIG, ConfigResponse, PAIR_INFO, store_protocol_fee};
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -44,8 +45,11 @@ pub fn instantiate(
 
     PAIR_INFO.save(deps.storage, pair_info)?;
 
-    let asset0_label = get_asset_label(&deps, pair_info.asset_infos[0].to_normal(deps.api)?)?;
-    let asset1_label = get_asset_label(&deps, pair_info.asset_infos[1].to_normal(deps.api)?)?;
+    let asset_info_0 = pair_info.asset_infos[0].to_normal(deps.api)?;
+    let asset_info_1 = pair_info.asset_infos[1].to_normal(deps.api)?;
+
+    let asset0_label = get_asset_label(&deps, asset_info_0.clone())?;
+    let asset1_label = get_asset_label(&deps, asset_info_1.clone())?;
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
 
     // check the fees are valid
@@ -63,6 +67,12 @@ pub fn instantiate(
         },
     };
     CONFIG.save(deps.storage, &config)?;
+
+    // Instantiate the collected protocol fees
+    COLLECTED_PROTOCOL_FEES.save(deps.storage, &vec![
+        Asset { info: asset_info_0, amount: Uint128::zero() },
+        Asset { info: asset_info_1, amount: Uint128::zero() },
+    ])?;
 
     Ok(Response::new().add_submessage(SubMsg {
         // Create LP token
@@ -82,7 +92,7 @@ pub fn instantiate(
             funds: vec![],
             label: lp_token_name,
         }
-        .into(),
+            .into(),
         gas_limit: None,
         id: INSTANTIATE_REPLY_ID,
         reply_on: ReplyOn::Success,
@@ -186,10 +196,10 @@ pub fn receive_cw20(
 
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
-            belief_price,
-            max_spread,
-            to,
-        }) => {
+               belief_price,
+               max_spread,
+               to,
+           }) => {
             // check if the swap feature is enabled
             if !feature_toggle.swaps_enabled {
                 return Err(ContractError::OperationDisabled("swap".to_string()));
@@ -388,16 +398,35 @@ pub fn withdraw_liquidity(
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
 
-    let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
+    let pool_assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     let total_share: Uint128 = query_token_info(&deps.querier, liquidity_addr)?.total_supply;
-    //let protocol_fee = CONFIG.load(deps.storage)?.pool_fees.protocol_fee;
+
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
-    let refund_assets: Vec<Asset> = pools
+    let refund_assets: Vec<Asset> = pool_assets
         .iter()
-        .map(|a| Asset {
-            info: a.info.clone(),
-            amount: a.amount * share_ratio,
+        .map(|pool_asset| {
+            let pool_asset_id = get_asset_id(pool_asset.clone().info);
+            let protocol_fee_asset = collected_protocol_fees
+                .iter()
+                .find(|&protocol_fee_asset| {
+                    let protocol_fee_asset_id = get_asset_id(protocol_fee_asset.clone().info);
+                    protocol_fee_asset_id == pool_asset_id
+                }).cloned();
+
+            // get the protocol fee for the given pool_asset
+            let protocol_fee = if let Some(protocol_fee_asset) = protocol_fee_asset {
+                protocol_fee_asset.amount
+            } else {
+                Uint128::zero()
+            };
+
+            // subtract the protocol_fee from the amount of the pool_asset
+            Asset {
+                info: pool_asset.info.clone(),
+                amount: (pool_asset.amount - protocol_fee) * share_ratio,
+            }
         })
         .collect();
 
@@ -503,6 +532,10 @@ pub fn swap(
         messages.push(return_asset.into_msg(receiver.clone())?);
     }
 
+    // Store the protocol fees generated by this swap. The protocol fees are collected on the ask
+    // asset as shown in [compute_swap]
+    store_protocol_fee(deps.storage, swap_computation.protocol_fee_amount, ask_pool.clone())?;
+
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(Response::new().add_messages(messages).add_attributes(vec![
@@ -554,7 +587,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         &deps.querier,
         deps.api.addr_humanize(&pair_info.liquidity_token)?,
     )?
-    .total_supply;
+        .total_supply;
 
     let resp = PoolResponse {
         assets,

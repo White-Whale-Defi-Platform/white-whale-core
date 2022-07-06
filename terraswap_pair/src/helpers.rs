@@ -24,7 +24,7 @@ pub fn compute_swap(
     // offer => ask
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee
     let return_amount: Uint256 = Uint256::one() *
-        Decimal256::from_ratio(ask_pool.mul(offer_amount) , offer_pool + offer_amount);
+        Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
 
     // calculate spread, swap and protocol fees
     let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
@@ -63,28 +63,28 @@ pub fn compute_offer_amount(
     let ask_amount: Uint256 = ask_amount.into();
 
     // ask => offer
-    // offer_amount = collateral_pool / (ask_pool - ask_amount / (1 - swap_fee - protocol_fee)) - offer_pool
-    let collateral_pool: Uint256 = offer_pool * ask_pool;
+    // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool
+    let fees = pool_fees.swap_fee.to_decimal_256() + pool_fees.protocol_fee.to_decimal_256();
+    let one_minus_commission = Decimal256::one() - fees;
+    let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
-    let one_minus_fees = Decimal256::one() - pool_fees.swap_fee.to_decimal_256() - pool_fees.protocol_fee.to_decimal_256() ;
-    let inv_one_minus_fees = Decimal256::one() / one_minus_fees;
-
+    let cp: Uint256 = offer_pool * ask_pool;
     let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(collateral_pool, ask_pool - ask_amount * inv_one_minus_fees)
+        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
         - offer_pool;
 
-    let before_swap_fee_deduction: Uint256 = ask_amount * inv_one_minus_fees;
+    let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
     let before_spread_deduction: Uint256 =
         offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
 
-    let spread_amount = if before_spread_deduction > before_swap_fee_deduction {
-        before_spread_deduction - before_swap_fee_deduction
+    let spread_amount = if before_spread_deduction > before_commission_deduction {
+        before_spread_deduction - before_commission_deduction
     } else {
         Uint256::zero()
     };
 
-    let swap_fee_amount = pool_fees.swap_fee.compute(before_swap_fee_deduction);
-    let protocol_fee_amount = pool_fees.protocol_fee.compute(before_swap_fee_deduction);
+    let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
+    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
 
     OfferAmountComputation {
         offer_amount: offer_amount.into(),
@@ -195,7 +195,7 @@ pub fn assert_slippage_tolerance(
         if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
             > Decimal256::from_ratio(pools[0], pools[1])
             || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
+            > Decimal256::from_ratio(pools[1], pools[0])
         {
             return Err(ContractError::MaxSlippageAssertion {});
         }
