@@ -7,9 +7,12 @@ jobs:
     name: Style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout sources
+        uses: actions/checkout@v2
         with:
-          fetch-depth: 1
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
+
       - name: Install stable toolchain and check style
         uses: actions-rs/toolchain@v1
         with:
@@ -21,8 +24,11 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout sources
+        uses: actions/checkout@v2
         with:
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
           # A PR should not contain too many commits
           fetch-depth: 25
       - name: Validate commit messages

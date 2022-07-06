@@ -9,7 +9,11 @@ jobs:
   release-artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
       - name: Build Artifacts
         run: |
           $GITHUB_WORKSPACE/scripts/build_release.sh
