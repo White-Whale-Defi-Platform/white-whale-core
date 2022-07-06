@@ -80,14 +80,15 @@ you are trying to achieve:
 can be difficult! If you are not sure how to create tests, please refer to existing ones or just ask us on our 
 [discord](https://discordapp.com/channels/908044702794801233/987301947440767006). Please note that **Untested code will be rejected**
     - `cargo test`
-9. Push your changes to your repository.
+10. Setup and use the provided githooks! These help speed up the review process pointing out common issues before a CI check like lints. To install the hook, run `scripts/hooks/pre-commit.sh --install`
+11. Push your changes to your repository.
     - `git push --set-upstream $YOUR_ORIGIN $YOUR_BRANCH_NAME`
-10. Create a pull request. Go to your [repository](https://github.com/$USER/migaloo-core.git) and create a pull request 
+12. Create a pull request. Go to your [repository](https://github.com/$USER/migaloo-core.git) and create a pull request 
 against Migaloo's repository **main branch** as base.
     - Please fill in the template presented to you when creating the pull request, as it helps everybody understand what the PR is trying to achieve.
     - Follow the instructions on the PR template. Consider that a pull request that doesn't follow the template or is not filled in properly *will be considered incomplete*.
-11. Follow up the discussions on the PR as there might be requests from other members.
-12. Wait for your PR to be approved and merged.
+13. Follow up the discussions on the PR as there might be requests from other members.
+14. Wait for your PR to be approved and merged.
 
 ## Helping out in the issue tracker
 
