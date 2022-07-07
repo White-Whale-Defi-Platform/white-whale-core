@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ pub type ConfigResponse = Config;
 pub fn store_protocol_fee(storage: &mut dyn Storage, protocol_fee: Uint128, asset: Asset) -> StdResult<()> {
     let asset_id = get_asset_id(asset.clone().info);
 
-    let protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?
+    let protocol_fees = COLLECTED_PROTOCOL_FEES.load(storage)?
         .iter()
         .map(|protocol_fee_asset| {
             let protocol_fee_asset_id = get_asset_id(protocol_fee_asset.clone().info);
@@ -34,7 +34,7 @@ pub fn store_protocol_fee(storage: &mut dyn Storage, protocol_fee: Uint128, asse
                     amount: protocol_fee_asset.amount + protocol_fee,
                 }
             } else {
-                protocol_fee_asset
+                protocol_fee_asset.clone()
             }
         }).collect();
 

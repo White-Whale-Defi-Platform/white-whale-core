@@ -658,7 +658,7 @@ fn try_native_to_token() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Default::default() } },
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio( 1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
     };
 
     let env = mock_env();
@@ -706,14 +706,18 @@ fn try_native_to_token() {
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
-    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500)
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
+    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_commission_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_return_amount = expected_ret_amount
-        .checked_sub(expected_commission_amount)
+        .checked_sub(expected_swap_fee_amount)
+        .unwrap()
+        .checked_sub(expected_protocol_fee_amount)
         .unwrap();
     // check simulation res
     deps.querier.with_balance(&[(
@@ -736,8 +740,9 @@ fn try_native_to_token() {
     )
         .unwrap();
     assert_eq!(expected_return_amount, simulation_res.return_amount);
-    assert_eq!(expected_commission_amount, simulation_res.swap_fee_amount);
+    assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
+    assert_eq!(expected_protocol_fee_amount, simulation_res.protocol_fee_amount);
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = query_reverse_simulation(
@@ -756,7 +761,7 @@ fn try_native_to_token() {
             < 3i128
     );
     assert!(
-        (expected_commission_amount.u128() as i128
+        (expected_swap_fee_amount.u128() as i128
             - reverse_simulation_res.swap_fee_amount.u128() as i128)
             .abs()
             < 3i128
@@ -764,6 +769,12 @@ fn try_native_to_token() {
     assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
+    assert!(
+        (expected_protocol_fee_amount.u128() as i128
+            - reverse_simulation_res.protocol_fee_amount.u128() as i128)
             .abs()
             < 3i128
     );
@@ -779,7 +790,8 @@ fn try_native_to_token() {
             attr("offer_amount", offer_amount.to_string()),
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
-            attr("commission_amount", expected_commission_amount.to_string()),
+            attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
+            attr("protocol_fee_amount", expected_protocol_fee_amount.to_string()),
         ]
     );
 
@@ -895,16 +907,7 @@ fn try_token_to_native() {
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     let msg_transfer = res.messages.get(0).expect("no message");
 
-    // let total_share = Uint128::from(20_000_000_000u128);
-    // let asset_pool_amount = Uint128::from(30_000_000_000u128);
-    // let collateral_pool_amount = Uint128::from(20_000_000_000u128);
-    // let exchange_rate = Decimal::from_ratio(collateral_pool_amount, asset_pool_amount);
-    // let offer_amount = Uint128::from(1_500_000_000u128);
-    // offer => ask
-    // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - swap_fee - protocol_fee)
     // current price is 1.5, so expected return without spread is 1000
-    // 952.380952 = 20000 - 20000 * 30000 / (30000 + 1500) - swap_fee - protocol_fee
-
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
     // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
@@ -919,7 +922,6 @@ fn try_token_to_native() {
         .checked_sub(expected_protocol_fee_amount)
         .unwrap();
 
-    println!("heree : {}", expected_return_amount);
     // check simulation res
     // return asset token balance as normal
     deps.querier.with_token_balances(&[
@@ -944,11 +946,6 @@ fn try_token_to_native() {
     )
         .unwrap();
 
-    println!("simulation_res.return_amount: {}", simulation_res.return_amount);
-    println!("simulation_res.spread_amount: {}", simulation_res.spread_amount);
-    println!("simulation_res.swap_fee_amount: {}", simulation_res.swap_fee_amount);
-    println!("simulation_res.protocol_fee_amount: {}", simulation_res.protocol_fee_amount);
-
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
@@ -966,12 +963,6 @@ fn try_token_to_native() {
     )
         .unwrap();
 
-    println!("reverse_simulation_res.offer_amount: {}", reverse_simulation_res.offer_amount);
-    println!("reverse_simulation_res.protocol_fee_amount: {}", reverse_simulation_res.protocol_fee_amount);
-    println!("reverse_simulation_res.spread_amount: {}", reverse_simulation_res.spread_amount);
-    println!("reverse_simulation_res.swap_fee_amount: {}", reverse_simulation_res.swap_fee_amount);
-
-
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
             < 3i128
@@ -985,6 +976,13 @@ fn try_token_to_native() {
     assert!(
         (expected_spread_amount.u128() as i128
             - reverse_simulation_res.spread_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
+
+    assert!(
+        (expected_protocol_fee_amount.u128() as i128
+            - reverse_simulation_res.protocol_fee_amount.u128() as i128)
             .abs()
             < 3i128
     );
