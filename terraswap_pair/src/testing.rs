@@ -1,21 +1,17 @@
 use std::ops::Add;
-use cosmwasm_std::{
-    attr, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg, SubMsgResponse,
-    SubMsgResult, to_binary, Uint128, WasmMsg,
-};
+
+use cosmwasm_std::{Addr, attr, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult, to_binary, Uint128, WasmMsg};
 use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, PoolResponse, ReverseSimulationResponse, SimulationResponse};
+use terraswap::pair::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee, PoolResponse, ReverseSimulationResponse, SimulationResponse};
+use terraswap::pair::ExecuteMsg::UpdateConfig;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::fee::Fee;
 
-use crate::contract::{
-    execute, instantiate, query_pair_info, query_pool, query_reverse_simulation, query_simulation,
-    reply,
-};
+use crate::contract::{execute, instantiate, query_config, query_pair_info, query_pool, query_reverse_simulation, query_simulation, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, compute_swap};
 
@@ -658,7 +654,7 @@ fn try_native_to_token() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio( 1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio(1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
     };
 
     let env = mock_env();
@@ -846,7 +842,7 @@ fn try_token_to_native() {
         ],
         token_code_id: 10u64,
         asset_decimals: [8u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio( 1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio(1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
     };
 
     let env = mock_env();
@@ -1295,4 +1291,377 @@ fn test_compute_swap_with_huge_pool_variance() {
         compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees).return_amount,
         Uint128::zero()
     );
+}
+
+#[test]
+fn test_update_cofig_unsuccessful() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    // an unauthorized party tries to update the config
+    let info = mock_info("unauthorized", &[]);
+    let update_config_message = UpdateConfig {
+        owner: Some("unauthorized".to_string()),
+        pool_fees: None,
+        feature_toggle: None,
+    };
+
+    let res = execute(deps.as_mut(), env, info, update_config_message);
+    match res {
+        Ok(_) => panic!("should return Std(GenericErr -> msg: unauthorized)"),
+        Err(ContractError::Std { .. }) => (),
+        _ => panic!("should return Std(GenericErr -> msg: unauthorized)"),
+    }
+}
+
+#[test]
+fn test_update_cofig_successful() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::zero() }, swap_fee: Fee { share: Decimal::zero() } },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let config = query_config(deps.as_ref()).unwrap();
+
+    // check for original config
+    assert_eq!(config.owner, Addr::unchecked("addr0000"));
+    assert_eq!(config.feature_toggle.swaps_enabled, true);
+    assert_eq!(config.pool_fees.swap_fee.share, Decimal::zero());
+
+    let update_config_message = UpdateConfig {
+        owner: Some("new_admin".to_string()),
+        pool_fees: Some(PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(3u64) } }),
+        feature_toggle: None,
+    };
+
+    execute(deps.as_mut(), env, info, update_config_message).unwrap();
+
+    let config = query_config(deps.as_ref()).unwrap();
+
+    // check for new config
+    assert_eq!(config.owner, Addr::unchecked("new_admin"));
+    assert_eq!(config.pool_fees.swap_fee.share, Decimal::percent(3u64));
+}
+
+#[test]
+fn test_feature_toggle_swap_disabled() {
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: Uint128::from(200u128),
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(3u64) } },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    // all features are enabled by default, let's disable swaps
+    let update_config_message = UpdateConfig {
+        owner: None,
+        pool_fees: None,
+        feature_toggle: Some(FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: true,
+            swaps_enabled: false,
+        }),
+    };
+    execute(deps.as_mut(), env.clone(), info, update_config_message).unwrap();
+
+    // swap offering NativeToken should fail
+    let offer_amount = Uint128::from(1500000000u128);
+    let msg = ExecuteMsg::Swap {
+        offer_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: offer_amount,
+        },
+        belief_price: None,
+        max_spread: None,
+        to: None,
+    };
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: offer_amount,
+        }],
+    );
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
+
+    match res {
+        Ok(_) => panic!("should return ContractError::OperationDisabled(swap)"),
+        Err(ContractError::OperationDisabled { .. }) => (),
+        _ => panic!("should return ContractError::OperationDisabled(swap)"),
+    }
+
+    // swap offering Token should fail
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: offer_amount,
+        msg: to_binary(&Cw20HookMsg::Swap {
+            belief_price: None,
+            max_spread: None,
+            to: None,
+        })
+            .unwrap(),
+    });
+    let res = execute(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return ContractError::OperationDisabled(swap)"),
+        Err(ContractError::OperationDisabled { .. }) => (),
+        _ => panic!("should return ContractError::OperationDisabled(swap)"),
+    }
+}
+
+#[test]
+fn test_feature_toggle_withdrawals_disabled() {
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: Uint128::from(100u128),
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&"addr0000".to_string(), &Uint128::from(100u128))],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                    .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // all features are enabled by default, let's disable withdrawals
+    let update_config_message = UpdateConfig {
+        owner: None,
+        pool_fees: None,
+        feature_toggle: Some(FeatureToggle {
+            withdrawals_enabled: false,
+            deposits_enabled: true,
+            swaps_enabled: true,
+        }),
+    };
+    execute(deps.as_mut(), env.clone(), info.clone(), update_config_message).unwrap();
+
+    // withdraw liquidity should fail
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        amount: Uint128::from(100u128),
+    });
+
+    let env = mock_env();
+    let info = mock_info("liquidity0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return OperationDisabled(withdraw_liquidity)"),
+        Err(ContractError::OperationDisabled { .. }) => (),
+        _ => panic!("should return OperationDisabled(withdraw_liquidity)"),
+    }
+}
+
+#[test]
+fn test_feature_toggle_deposits_disabled() {
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: Uint128::from(200u128),
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+        ),
+        (&"asset0000".to_string(), &[]),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                    .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // all features are enabled by default, let's disable deposits
+    let update_config_message = UpdateConfig {
+        owner: None,
+        pool_fees: None,
+        feature_toggle: Some(FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: false,
+            swaps_enabled: true,
+        }),
+    };
+    execute(deps.as_mut(), env.clone(), info.clone(), update_config_message).unwrap();
+
+    // provide liquidity should fail
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                amount: Uint128::from(100u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(100u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(100u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return OperationDisabled(provide_liquidity)"),
+        Err(ContractError::OperationDisabled { .. }) => (),
+        _ => panic!("should return OperationDisabled(provide_liquidity)"),
+    }
 }
