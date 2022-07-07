@@ -1,17 +1,24 @@
-use std::ops::Add;
-
-use cosmwasm_std::{Addr, attr, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult, to_binary, Uint128, WasmMsg};
-use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info};
+use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    attr, to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee, PoolResponse, ReverseSimulationResponse, SimulationResponse};
 use terraswap::pair::ExecuteMsg::UpdateConfig;
+use terraswap::pair::{
+    Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee, PoolResponse,
+    ReverseSimulationResponse, SimulationResponse,
+};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::fee::Fee;
 
-use crate::contract::{execute, instantiate, query_config, query_pair_info, query_pool, query_reverse_simulation, query_simulation, reply};
+use crate::contract::{
+    execute, instantiate, query_config, query_pair_info, query_pool, query_protocol_fees,
+    query_reverse_simulation, query_simulation, reply,
+};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, compute_swap};
 
@@ -35,7 +42,14 @@ fn proper_initialization() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -57,12 +71,12 @@ fn proper_initialization() {
                         cap: None,
                     }),
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
                 label: "uusd-mAAPL-LP".to_string(),
                 admin: None,
             }
-                .into(),
+            .into(),
             gas_limit: None,
             id: 1,
             reply_on: ReplyOn::Success,
@@ -78,7 +92,7 @@ fn proper_initialization() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -127,7 +141,14 @@ fn provide_liquidity() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -144,7 +165,7 @@ fn provide_liquidity() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -191,7 +212,7 @@ fn provide_liquidity() {
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -203,7 +224,7 @@ fn provide_liquidity() {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -272,7 +293,7 @@ fn provide_liquidity() {
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -284,7 +305,7 @@ fn provide_liquidity() {
                 recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
                 amount: Uint128::from(50u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -535,7 +556,14 @@ fn withdraw_liquidity() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -552,7 +580,7 @@ fn withdraw_liquidity() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -592,7 +620,7 @@ fn withdraw_liquidity() {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -603,7 +631,7 @@ fn withdraw_liquidity() {
             msg: to_binary(&Cw20ExecuteMsg::Burn {
                 amount: Uint128::from(100u128),
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -654,7 +682,14 @@ fn try_native_to_token() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio(1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+        },
     };
 
     let env = mock_env();
@@ -671,7 +706,7 @@ fn try_native_to_token() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -734,11 +769,30 @@ fn try_native_to_token() {
             amount: offer_amount,
         },
     )
-        .unwrap();
+    .unwrap();
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
-    assert_eq!(expected_protocol_fee_amount, simulation_res.protocol_fee_amount);
+    assert_eq!(
+        expected_protocol_fee_amount,
+        simulation_res.protocol_fee_amount
+    );
+
+    // as we swapped native to token, we accumulate the protocol fees in token
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        expected_protocol_fee_amount
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = query_reverse_simulation(
@@ -750,7 +804,7 @@ fn try_native_to_token() {
             amount: expected_return_amount,
         },
     )
-        .unwrap();
+    .unwrap();
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
@@ -787,7 +841,10 @@ fn try_native_to_token() {
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
-            attr("protocol_fee_amount", expected_protocol_fee_amount.to_string()),
+            attr(
+                "protocol_fee_amount",
+                expected_protocol_fee_amount.to_string()
+            ),
         ]
     );
 
@@ -798,7 +855,7 @@ fn try_native_to_token() {
                 recipient: "addr0000".to_string(),
                 amount: expected_return_amount,
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         })),
         msg_transfer,
@@ -842,7 +899,14 @@ fn try_token_to_native() {
         ],
         token_code_id: 10u64,
         asset_decimals: [8u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::from_ratio(1u128, 1000u128) }, swap_fee: Fee { share: Decimal::from_ratio(3u128, 1000u128) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+        },
     };
 
     let env = mock_env();
@@ -859,7 +923,7 @@ fn try_token_to_native() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -895,7 +959,7 @@ fn try_token_to_native() {
             max_spread: None,
             to: None,
         })
-            .unwrap(),
+        .unwrap(),
     });
     let env = mock_env();
     let info = mock_info("asset0000", &[]);
@@ -940,12 +1004,31 @@ fn try_token_to_native() {
             },
         },
     )
-        .unwrap();
+    .unwrap();
 
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
-    assert_eq!(expected_protocol_fee_amount, simulation_res.protocol_fee_amount);
+    assert_eq!(
+        expected_protocol_fee_amount,
+        simulation_res.protocol_fee_amount
+    );
+
+    // as we swapped token to native, we accumulate the protocol fees in native
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        expected_protocol_fee_amount
+    );
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        Uint128::zero()
+    );
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = query_reverse_simulation(
@@ -957,7 +1040,7 @@ fn try_token_to_native() {
             },
         },
     )
-        .unwrap();
+    .unwrap();
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
@@ -995,7 +1078,10 @@ fn try_token_to_native() {
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
-            attr("protocol_fee_amount", expected_protocol_fee_amount.to_string()),
+            attr(
+                "protocol_fee_amount",
+                expected_protocol_fee_amount.to_string()
+            ),
         ]
     );
 
@@ -1019,7 +1105,7 @@ fn try_token_to_native() {
             max_spread: None,
             to: None,
         })
-            .unwrap(),
+        .unwrap(),
     });
     let env = mock_env();
     let info = mock_info("liquidity0000", &[]);
@@ -1054,7 +1140,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-        .unwrap_err();
+    .unwrap_err();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1071,7 +1157,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-        .unwrap();
+    .unwrap();
 
     assert_max_spread(
         None,
@@ -1088,7 +1174,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-        .unwrap_err();
+    .unwrap_err();
 
     assert_max_spread(
         None,
@@ -1105,7 +1191,7 @@ fn test_max_spread() {
         6u8,
         6u8,
     )
-        .unwrap();
+    .unwrap();
 }
 
 #[test]
@@ -1142,7 +1228,7 @@ fn test_max_spread_with_diff_decimal() {
         6u8,
         8u8,
     )
-        .unwrap();
+    .unwrap();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1159,7 +1245,7 @@ fn test_max_spread_with_diff_decimal() {
         6u8,
         8u8,
     )
-        .unwrap_err();
+    .unwrap_err();
 
     let offer_asset_info = AssetInfo::Token {
         contract_addr: token_addr,
@@ -1183,7 +1269,7 @@ fn test_max_spread_with_diff_decimal() {
         8u8,
         6u8,
     )
-        .unwrap();
+    .unwrap();
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200u128, 1u128)),
@@ -1200,7 +1286,7 @@ fn test_max_spread_with_diff_decimal() {
         8u8,
         6u8,
     )
-        .unwrap_err();
+    .unwrap_err();
 }
 
 #[test]
@@ -1235,7 +1321,14 @@ fn test_query_pool() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1252,7 +1345,7 @@ fn test_query_pool() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -1285,7 +1378,14 @@ fn test_query_pool() {
 fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
     let ask_pool = Uint128::from(317u128);
-    let pool_fees = PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } };
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+    };
 
     assert_eq!(
         compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees).return_amount,
@@ -1316,7 +1416,14 @@ fn test_update_cofig_unsuccessful() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1363,7 +1470,14 @@ fn test_update_cofig_successful() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::zero() }, swap_fee: Fee { share: Decimal::zero() } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1380,7 +1494,14 @@ fn test_update_cofig_successful() {
 
     let update_config_message = UpdateConfig {
         owner: Some("new_admin".to_string()),
-        pool_fees: Some(PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(3u64) } }),
+        pool_fees: Some(PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(3u64),
+            },
+        }),
         feature_toggle: None,
     };
 
@@ -1419,7 +1540,14 @@ fn test_feature_toggle_swap_disabled() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(3u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(3u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1476,7 +1604,7 @@ fn test_feature_toggle_swap_disabled() {
             max_spread: None,
             to: None,
         })
-            .unwrap(),
+        .unwrap(),
     });
     let res = execute(deps.as_mut(), env, info, msg);
     match res {
@@ -1515,7 +1643,14 @@ fn test_feature_toggle_withdrawals_disabled() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1532,7 +1667,7 @@ fn test_feature_toggle_withdrawals_disabled() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -1549,7 +1684,13 @@ fn test_feature_toggle_withdrawals_disabled() {
             swaps_enabled: true,
         }),
     };
-    execute(deps.as_mut(), env.clone(), info.clone(), update_config_message).unwrap();
+    execute(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        update_config_message,
+    )
+    .unwrap();
 
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -1594,7 +1735,14 @@ fn test_feature_toggle_deposits_disabled() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee { protocol_fee: Fee { share: Decimal::percent(1u64) }, swap_fee: Fee { share: Decimal::percent(1u64) } },
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -1611,7 +1759,7 @@ fn test_feature_toggle_deposits_disabled() {
                 vec![
                     10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
                 ]
-                    .into(),
+                .into(),
             ),
         }),
     };
@@ -1628,7 +1776,13 @@ fn test_feature_toggle_deposits_disabled() {
             swaps_enabled: true,
         }),
     };
-    execute(deps.as_mut(), env.clone(), info.clone(), update_config_message).unwrap();
+    execute(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        update_config_message,
+    )
+    .unwrap();
 
     // provide liquidity should fail
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -1663,5 +1817,471 @@ fn test_feature_toggle_deposits_disabled() {
         Ok(_) => panic!("should return OperationDisabled(provide_liquidity)"),
         Err(ContractError::OperationDisabled { .. }) => (),
         _ => panic!("should return OperationDisabled(provide_liquidity)"),
+    }
+}
+
+#[test]
+fn test_protocol_fees() {
+    let total_share = Uint128::from(30_000_000_000u128);
+    let asset_pool_amount = Uint128::from(20_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
+    let offer_amount = Uint128::from(1_500_000_000u128);
+
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: collateral_pool_amount + offer_amount,
+        /* user deposit must be pre-applied */
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &total_share)],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // first swap
+    let msg = ExecuteMsg::Swap {
+        offer_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: offer_amount,
+        },
+        belief_price: None,
+        max_spread: None,
+        to: None,
+    };
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: offer_amount,
+        }],
+    );
+    execute(deps.as_mut(), env, info, msg).unwrap();
+
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
+    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(952_380_952u128);
+    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+
+    // as we swapped native to token, we accumulate the protocol fees in token. Native token fees should be 0
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        expected_protocol_fee_amount
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
+
+    // second swap
+    let msg = ExecuteMsg::Swap {
+        offer_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: offer_amount,
+        },
+        belief_price: None,
+        max_spread: None,
+        to: None,
+    };
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: offer_amount,
+        }],
+    );
+    execute(deps.as_mut(), env, info, msg).unwrap();
+
+    let expected_ret_amount = Uint128::from(1_904_760_000u128);
+    let new_expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+
+    // the new protocol fees should have increased from the previous time
+    let new_protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+            .unwrap()
+            .fees;
+    assert!(new_protocol_fees_for_token.first().unwrap().amount > expected_protocol_fee_amount);
+    assert_eq!(
+        new_protocol_fees_for_token.first().unwrap().amount,
+        new_expected_protocol_fee_amount
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
+}
+
+#[test]
+fn test_collect_protocol_fees_successful() {
+    let total_share = Uint128::from(30_000_000_000u128);
+    let asset_pool_amount = Uint128::from(20_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
+    let offer_amount = Uint128::from(1_500_000_000u128);
+
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: collateral_pool_amount + offer_amount,
+        /* user deposit must be pre-applied */
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &total_share)],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // first swap, native -> token
+    let msg = ExecuteMsg::Swap {
+        offer_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: offer_amount,
+        },
+        belief_price: None,
+        max_spread: None,
+        to: None,
+    };
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: offer_amount,
+        }],
+    );
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
+    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(952_380_952u128);
+    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+
+    // second swap, token -> native
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: offer_amount,
+        msg: to_binary(&Cw20HookMsg::Swap {
+            belief_price: None,
+            max_spread: None,
+            to: None,
+        })
+        .unwrap(),
+    });
+    let info = mock_info("asset0000", &[]);
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    let expected_ret_amount = Uint128::from(787_500_000u128);
+    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
+
+    // as we swapped both native and token, we should have collected fees in both of them
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        expected_protocol_fee_token_amount
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        expected_protocol_fee_native_amount
+    );
+
+    // collect the fees
+    let info = mock_info("addr0000", &[]);
+    let msg = ExecuteMsg::CollectProtocolFees {};
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    // make sure two messages were sent, one for the native token and one for the cw20
+    assert_eq!(res.messages.len(), 2);
+
+    let transfer_native_token_msg = res.messages.get(0).expect("no message");
+    let transfer_cw20_token_msg = res.messages.get(1).expect("no message");
+    assert_eq!(
+        transfer_native_token_msg,
+        &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
+            to_address: "addr0000".to_string(),
+            amount: vec![Coin {
+                denom: "uusd".to_string(),
+                amount: protocol_fees_for_native.clone().first().unwrap().amount,
+            }],
+        }))
+    );
+    assert_eq!(
+        transfer_cw20_token_msg,
+        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "addr0000".to_string(),
+                amount: protocol_fees_for_token.clone().first().unwrap().amount,
+            })
+            .unwrap(),
+            funds: vec![],
+        }))
+    );
+
+    // now collected protocol fees should be reset to zero
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        Uint128::zero()
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
+}
+
+#[test]
+fn test_collect_protocol_fees_unsuccessful() {
+    let total_share = Uint128::from(30_000_000_000u128);
+    let asset_pool_amount = Uint128::from(20_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
+    let offer_amount = Uint128::from(1_500_000_000u128);
+
+    let mut deps = mock_dependencies(&[Coin {
+        denom: "uusd".to_string(),
+        amount: collateral_pool_amount + offer_amount,
+        /* user deposit must be pre-applied */
+    }]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"liquidity0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &total_share)],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // store liquidity token
+    let reply_msg = Reply {
+        id: 1,
+        result: SubMsgResult::Ok(SubMsgResponse {
+            events: vec![],
+            data: Some(
+                vec![
+                    10, 13, 108, 105, 113, 117, 105, 100, 105, 116, 121, 48, 48, 48, 48,
+                ]
+                .into(),
+            ),
+        }),
+    };
+
+    let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
+
+    // first swap, native -> token
+    let msg = ExecuteMsg::Swap {
+        offer_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            amount: offer_amount,
+        },
+        belief_price: None,
+        max_spread: None,
+        to: None,
+    };
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: offer_amount,
+        }],
+    );
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
+    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(952_380_952u128);
+    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+
+    // second swap, token -> native
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: offer_amount,
+        msg: to_binary(&Cw20HookMsg::Swap {
+            belief_price: None,
+            max_spread: None,
+            to: None,
+        })
+        .unwrap(),
+    });
+    let info = mock_info("asset0000", &[]);
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    let expected_ret_amount = Uint128::from(787_500_000u128);
+    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
+
+    // as we swapped both native and token, we should have collected fees in both of them
+    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        expected_protocol_fee_token_amount
+    );
+    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
+        .unwrap()
+        .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        expected_protocol_fee_native_amount
+    );
+
+    // try collecting the fees by an unauthorized address
+    let info = mock_info("unauthorized", &[]);
+    let msg = ExecuteMsg::CollectProtocolFees {};
+    let res = execute(deps.as_mut(), env, info, msg);
+
+    match res {
+        Ok(_) => panic!("should return Std(GenericErr -> msg: unauthorized)"),
+        Err(ContractError::Std { .. }) => (),
+        _ => panic!("should return Std(GenericErr -> msg: unauthorized)"),
     }
 }

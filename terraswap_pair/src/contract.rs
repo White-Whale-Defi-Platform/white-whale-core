@@ -1,9 +1,9 @@
-use cosmwasm_std::{
-    Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary, MessageInfo,
-    Reply, ReplyOn, Response, StdError, StdResult, SubMsg, to_binary, Uint128, WasmMsg,
-};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Binary, CanonicalAddr, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Reply, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg, MinterResponse};
 use integer_sqrt::IntegerSquareRoot;
 use protobuf::Message;
@@ -11,7 +11,7 @@ use protobuf::Message;
 use terraswap::asset::{Asset, AssetInfo, PairInfo, PairInfoRaw};
 use terraswap::pair::{
     Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PoolFee, PoolResponse,
-    QueryMsg, ReverseSimulationResponse, SimulationResponse,
+    ProtocolFeesResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
 };
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
@@ -21,7 +21,10 @@ use white_whale::fee::check_fee;
 use crate::error::ContractError;
 use crate::helpers;
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{COLLECTED_PROTOCOL_FEES, Config, CONFIG, ConfigResponse, PAIR_INFO, store_protocol_fee};
+use crate::state::{
+    get_protocol_fees_for_asset, store_protocol_fee, Config, ConfigResponse,
+    COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO,
+};
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -68,10 +71,19 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
-    COLLECTED_PROTOCOL_FEES.save(deps.storage, &vec![
-        Asset { info: asset_info_0, amount: Uint128::zero() },
-        Asset { info: asset_info_1, amount: Uint128::zero() },
-    ])?;
+    COLLECTED_PROTOCOL_FEES.save(
+        deps.storage,
+        &vec![
+            Asset {
+                info: asset_info_0,
+                amount: Uint128::zero(),
+            },
+            Asset {
+                info: asset_info_1,
+                amount: Uint128::zero(),
+            },
+        ],
+    )?;
 
     Ok(Response::new().add_submessage(SubMsg {
         // Create LP token
@@ -91,7 +103,7 @@ pub fn instantiate(
             funds: vec![],
             label: lp_token_name,
         }
-            .into(),
+        .into(),
         gas_limit: None,
         id: INSTANTIATE_REPLY_ID,
         reply_on: ReplyOn::Success,
@@ -150,7 +162,44 @@ pub fn execute(
             pool_fees,
             feature_toggle,
         } => update_config(deps, info, owner, pool_fees, feature_toggle),
+        ExecuteMsg::CollectProtocolFees {} => collect_protocol_fees(deps, info),
     }
+}
+
+pub fn collect_protocol_fees(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+    // only the owner can collect protocol fees
+    let config = CONFIG.load(deps.storage)?;
+    if deps.api.addr_validate(info.sender.as_str())? != config.owner {
+        return Err(ContractError::Std(StdError::generic_err("unauthorized")));
+    }
+
+    // get the collected protocol fees so far
+    let protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    if protocol_fees.len() != 2 {
+        return Err(ContractError::AssetMismatch {});
+    }
+
+    // reset the collected protocol fees
+    COLLECTED_PROTOCOL_FEES.save(
+        deps.storage,
+        &vec![
+            Asset {
+                info: protocol_fees[0].clone().info,
+                amount: Uint128::zero(),
+            },
+            Asset {
+                info: protocol_fees[1].clone().info,
+                amount: Uint128::zero(),
+            },
+        ],
+    )?;
+
+    Ok(Response::new()
+        .add_attribute("action", "collect_protocol_fees")
+        .add_messages([
+            protocol_fees[0].clone().into_msg(info.sender.clone())?,
+            protocol_fees[1].clone().into_msg(info.sender)?,
+        ]))
 }
 
 pub fn update_config(
@@ -195,10 +244,10 @@ pub fn receive_cw20(
 
     match from_binary(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
-               belief_price,
-               max_spread,
-               to,
-           }) => {
+            belief_price,
+            max_spread,
+            to,
+        }) => {
             // check if the swap feature is enabled
             if !feature_toggle.swaps_enabled {
                 return Err(ContractError::OperationDisabled("swap".to_string()));
@@ -397,7 +446,8 @@ pub fn withdraw_liquidity(
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
 
-    let pool_assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
+    let pool_assets: [Asset; 2] =
+        pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
     let total_share: Uint128 = query_token_info(&deps.querier, liquidity_addr)?.total_supply;
 
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
@@ -412,7 +462,8 @@ pub fn withdraw_liquidity(
                 .find(|&protocol_fee_asset| {
                     let protocol_fee_asset_id = get_asset_id(protocol_fee_asset.clone().info);
                     protocol_fee_asset_id == pool_asset_id
-                }).cloned();
+                })
+                .cloned();
 
             // get the protocol fee for the given pool_asset
             let protocol_fee = if let Some(protocol_fee_asset) = protocol_fee_asset {
@@ -533,7 +584,11 @@ pub fn swap(
 
     // Store the protocol fees generated by this swap. The protocol fees are collected on the ask
     // asset as shown in [compute_swap]
-    store_protocol_fee(deps.storage, swap_computation.protocol_fee_amount, ask_pool.clone())?;
+    store_protocol_fee(
+        deps.storage,
+        swap_computation.protocol_fee_amount,
+        ask_pool.clone(),
+    )?;
 
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
@@ -549,7 +604,8 @@ pub fn swap(
         (
             "swap_fee_amount",
             &swap_computation.swap_fee_amount.to_string(),
-        ), (
+        ),
+        (
             "protocol_fee_amount",
             &swap_computation.protocol_fee_amount.to_string(),
         ),
@@ -568,6 +624,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             Ok(to_binary(&query_reverse_simulation(deps, ask_asset)?)?)
         }
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
+        QueryMsg::ProtocolFees { asset_id } => {
+            Ok(to_binary(&query_protocol_fees(deps, asset_id)?)?)
+        }
     }
 }
 
@@ -586,7 +645,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         &deps.querier,
         deps.api.addr_humanize(&pair_info.liquidity_token)?,
     )?
-        .total_supply;
+    .total_supply;
 
     let resp = PoolResponse {
         assets,
@@ -618,6 +677,7 @@ pub fn query_simulation(
     }
 
     let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
         ask_pool.amount,
@@ -674,6 +734,19 @@ pub fn query_reverse_simulation(
 pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
+}
+
+pub fn query_protocol_fees(
+    deps: Deps,
+    asset_id: Option<String>,
+) -> Result<ProtocolFeesResponse, ContractError> {
+    if let Some(asset_id) = asset_id {
+        let fee = get_protocol_fees_for_asset(deps.storage, asset_id)?;
+        return Ok(ProtocolFeesResponse { fees: vec![fee] });
+    }
+
+    let fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    Ok(ProtocolFeesResponse { fees })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

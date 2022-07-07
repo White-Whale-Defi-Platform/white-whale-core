@@ -23,8 +23,8 @@ pub fn compute_swap(
 
     // offer => ask
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee
-    let return_amount: Uint256 = Uint256::one() *
-        Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
+    let return_amount: Uint256 = Uint256::one()
+        * Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
 
     // calculate spread, swap and protocol fees
     let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
@@ -195,7 +195,7 @@ pub fn assert_slippage_tolerance(
         if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
             > Decimal256::from_ratio(pools[0], pools[1])
             || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[1], pools[0])
+                > Decimal256::from_ratio(pools[1], pools[0])
         {
             return Err(ContractError::MaxSlippageAssertion {});
         }
