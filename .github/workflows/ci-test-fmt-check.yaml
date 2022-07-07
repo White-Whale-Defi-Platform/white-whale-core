@@ -74,7 +74,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --locked -- -D warnings
 
       - name: Run cosmwasm linter
         run: cargo dylint cw_lint --workspace

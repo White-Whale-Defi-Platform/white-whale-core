@@ -17,9 +17,9 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
-          components: rustfmt
-      - run: cargo +nightly fmt -- --check
+          toolchain: 1.60.0
+          override: true
+      - run: cargo fmt -- --check
   check:
     name: Check
     runs-on: ubuntu-latest
