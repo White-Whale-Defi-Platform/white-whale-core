@@ -1,6 +1,7 @@
-use cosmwasm_std::{Decimal, Uint128};
-use serde::{Deserialize, Serialize};
+use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_std::{Decimal, StdError, StdResult};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Fee {
@@ -8,16 +9,23 @@ pub struct Fee {
 }
 
 impl Fee {
-    pub fn compute(&self, amount: Uint128) -> Uint128 {
-        amount * self.share
+    /// Computes the fee for the given amount
+    pub fn compute(&self, amount: Uint256) -> Uint256 {
+        amount * Decimal256::from(self.share)
     }
-}
 
-/// Fees used by the pools on the pool network
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct PoolFee {
-    pub protocol_fee: Fee,
-    pub swap_fee: Fee,
+    /// Computes the fee for the given amount
+    pub fn to_decimal_256(&self) -> Decimal256 {
+        Decimal256::from(self.share)
+    }
+
+    /// Checks that the given [Fee] is valid, i.e. it's lower or equal to 100%
+    pub fn is_valid(&self) -> StdResult<()> {
+        if self.share >= Decimal::percent(100) {
+            return Err(StdError::generic_err("Invalid fee"));
+        }
+        Ok(())
+    }
 }
 
 /// Fees used by the flashloan vaults on the liquidity hub
@@ -25,4 +33,62 @@ pub struct PoolFee {
 pub struct VaultFee {
     pub protocol_fee: Fee,
     pub flash_loan_fee: Fee,
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::{Decimal, Uint128};
+
+    use crate::fee::Fee;
+
+    #[test]
+    fn valid_fee() {
+        let fee = Fee {
+            share: Decimal::from_ratio(9u128, 10u128),
+        };
+        let res = fee.is_valid();
+        match res {
+            Ok(_) => (),
+            Err(_) => panic!("this fee shouldn't fail"),
+        }
+
+        let fee = Fee {
+            share: Decimal::from_ratio(Uint128::new(2u128), Uint128::new(100u128)),
+        };
+        let res = fee.is_valid();
+        match res {
+            Ok(_) => (),
+            Err(_) => panic!("this fee shouldn't fail"),
+        }
+
+        let fee = Fee {
+            share: Decimal::zero(),
+        };
+        let res = fee.is_valid();
+        match res {
+            Ok(_) => (),
+            Err(_) => panic!("this fee shouldn't fail"),
+        }
+    }
+
+    #[test]
+    fn invalid_fee() {
+        let fee = Fee {
+            share: Decimal::one(),
+        };
+        let res = fee.is_valid();
+        match res {
+            Ok(_) => panic!("this fee should fail"),
+            Err(_) => (),
+        }
+
+        let fee = Fee {
+            share: Decimal::from_ratio(Uint128::new(2u128), Uint128::new(1u128)),
+        };
+        let res = fee.is_valid();
+        match res {
+            Ok(_) => panic!("this fee should fail"),
+            Err(_) => (),
+        }
+    }
 }
