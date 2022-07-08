@@ -21,6 +21,7 @@ use crate::contract::{
 };
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, compute_swap};
+use crate::state::{get_protocol_fees_for_asset, store_protocol_fee};
 
 #[test]
 fn proper_initialization() {
@@ -587,6 +588,20 @@ fn withdraw_liquidity() {
 
     let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
+    // store some protocol fees in both native and token
+    store_protocol_fee(
+        deps.as_mut().storage,
+        Uint128::from(10u8),
+        "uusd".to_string(),
+    )
+    .unwrap();
+    store_protocol_fee(
+        deps.as_mut().storage,
+        Uint128::from(20u8),
+        "asset0000".to_string(),
+    )
+    .unwrap();
+
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
@@ -596,19 +611,32 @@ fn withdraw_liquidity() {
 
     let env = mock_env();
     let info = mock_info("liquidity0000", &[]);
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
     let log_withdrawn_share = res.attributes.get(2).expect("no log");
     let log_refund_assets = res.attributes.get(3).expect("no log");
     let msg_refund_0 = res.messages.get(0).expect("no message");
     let msg_refund_1 = res.messages.get(1).expect("no message");
     let msg_burn_liquidity = res.messages.get(2).expect("no message");
+
+    let protocol_fee_native =
+        get_protocol_fees_for_asset(deps.as_mut().storage, "uusd".to_string()).unwrap();
+    let expected_native_refund_amount: Uint128 = Uint128::from(100u128)
+        .checked_sub(protocol_fee_native.amount)
+        .unwrap();
+
+    let protocol_fee_token =
+        get_protocol_fees_for_asset(deps.as_mut().storage, "asset0000".to_string()).unwrap();
+    let expected_token_refund_amount: Uint128 = Uint128::from(100u128)
+        .checked_sub(protocol_fee_token.amount)
+        .unwrap();
+
     assert_eq!(
         msg_refund_0,
         &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
             to_address: "addr0000".to_string(),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
-                amount: Uint128::from(100u128),
+                amount: expected_native_refund_amount,
             }],
         }))
     );
@@ -618,7 +646,7 @@ fn withdraw_liquidity() {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
-                amount: Uint128::from(100u128),
+                amount: expected_token_refund_amount,
             })
             .unwrap(),
             funds: vec![],
@@ -642,7 +670,7 @@ fn withdraw_liquidity() {
     );
     assert_eq!(
         log_refund_assets,
-        &attr("refund_assets", "100uusd, 100asset0000")
+        &attr("refund_assets", "90uusd, 80asset0000")
     );
 }
 
@@ -843,7 +871,7 @@ fn try_native_to_token() {
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
             attr(
                 "protocol_fee_amount",
-                expected_protocol_fee_amount.to_string()
+                expected_protocol_fee_amount.to_string(),
             ),
         ]
     );
@@ -1080,7 +1108,7 @@ fn try_token_to_native() {
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
             attr(
                 "protocol_fee_amount",
-                expected_protocol_fee_amount.to_string()
+                expected_protocol_fee_amount.to_string(),
             ),
         ]
     );

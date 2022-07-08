@@ -24,10 +24,8 @@ pub type ConfigResponse = Config;
 pub fn store_protocol_fee(
     storage: &mut dyn Storage,
     protocol_fee: Uint128,
-    asset: Asset,
+    asset_id: String,
 ) -> StdResult<()> {
-    let asset_id = get_asset_id(asset.info);
-
     let protocol_fees = COLLECTED_PROTOCOL_FEES
         .load(storage)?
         .iter()
