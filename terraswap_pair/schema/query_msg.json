@@ -29,6 +29,26 @@
     {
       "type": "object",
       "required": [
+        "protocol_fees"
+      ],
+      "properties": {
+        "protocol_fees": {
+          "type": "object",
+          "properties": {
+            "asset_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
         "pool"
       ],
       "properties": {

@@ -16,7 +16,6 @@ use terraswap::pair::{
 };
 use terraswap::querier::query_token_info;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::fee::check_fee;
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -55,8 +54,8 @@ pub fn instantiate(
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
 
     // check the fees are valid
-    check_fee(msg.pool_fees.clone().swap_fee)?;
-    check_fee(msg.pool_fees.clone().protocol_fee)?;
+    msg.pool_fees.swap_fee.is_valid()?;
+    msg.pool_fees.protocol_fee.is_valid()?;
 
     // Set owner and initial pool fees
     let config = Config {

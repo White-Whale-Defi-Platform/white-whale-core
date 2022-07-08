@@ -143,6 +143,19 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Collects the Protocol fees",
+      "type": "object",
+      "required": [
+        "collect_protocol_fees"
+      ],
+      "properties": {
+        "collect_protocol_fees": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
