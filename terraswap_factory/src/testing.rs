@@ -2,15 +2,17 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, OwnedDeps, Reply, ReplyOn, Response, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, Decimal, OwnedDeps, Reply, ReplyOn, Response, StdError,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
+
 use terraswap::asset::{AssetInfo, PairInfo};
 use terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
 use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
-use terraswap::pair::InstantiateMsg as PairInstantiateMsg;
+use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, PoolFee};
+use white_whale::fee::Fee;
 
 use crate::contract::{execute, instantiate, query, reply};
 use crate::state::{pair_key, TmpPairInfo, TMP_PAIR_INFO};
@@ -141,6 +143,14 @@ fn create_pair() {
 
     let msg = ExecuteMsg::CreatePair {
         asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -151,7 +161,7 @@ fn create_pair() {
         vec![
             attr("action", "create_pair"),
             attr("pair", "uusd-asset0001"),
-            attr("pair_label", "uusd-mAAPL pair")
+            attr("pair_label", "uusd-mAAPL pair"),
         ]
     );
     assert_eq!(
@@ -164,7 +174,15 @@ fn create_pair() {
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos: asset_infos.clone(),
                     token_code_id: 123u64,
-                    asset_decimals: [6u8, 8u8]
+                    asset_decimals: [6u8, 8u8],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                    }
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -172,7 +190,7 @@ fn create_pair() {
                 label: "uusd-mAAPL pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
-            .into()
+            .into(),
         },]
     );
 
@@ -186,7 +204,7 @@ fn create_pair() {
         TmpPairInfo {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
-            asset_decimals: [6u8, 8u8]
+            asset_decimals: [6u8, 8u8],
         }
     );
 }
@@ -214,6 +232,14 @@ fn create_pair_native_token_and_ibc_token() {
 
     let msg = ExecuteMsg::CreatePair {
         asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
 
     let env = mock_env();
@@ -237,7 +263,15 @@ fn create_pair_native_token_and_ibc_token() {
                 msg: to_binary(&PairInstantiateMsg {
                     asset_infos: asset_infos.clone(),
                     token_code_id: 123u64,
-                    asset_decimals: [6u8, 6u8]
+                    asset_decimals: [6u8, 6u8],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                    }
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -245,7 +279,7 @@ fn create_pair_native_token_and_ibc_token() {
                 label: "uusd-ibc/HASH pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
-            .into()
+            .into(),
         },]
     );
 
@@ -259,7 +293,7 @@ fn create_pair_native_token_and_ibc_token() {
         TmpPairInfo {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
-            asset_decimals: [6u8, 6u8]
+            asset_decimals: [6u8, 6u8],
         }
     );
 }
@@ -278,7 +312,17 @@ fn fail_to_create_same_pair() {
         },
     ];
 
-    let msg = ExecuteMsg::CreatePair { asset_infos };
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos,
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -299,7 +343,17 @@ fn fail_to_create_pair_with_unactive_denoms() {
         },
     ];
 
-    let msg = ExecuteMsg::CreatePair { asset_infos };
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos,
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -320,7 +374,17 @@ fn fail_to_create_pair_with_invalid_denom() {
         },
     ];
 
-    let msg = ExecuteMsg::CreatePair { asset_infos };
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos,
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -351,7 +415,17 @@ fn fail_to_create_pair_with_unknown_token() {
         },
     ];
 
-    let msg = ExecuteMsg::CreatePair { asset_infos };
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos,
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -382,7 +456,17 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
         },
     ];
 
-    let msg = ExecuteMsg::CreatePair { asset_infos };
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos,
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -474,7 +558,7 @@ fn reply_test() {
             liquidity_token: "liquidity0000".to_string(),
             contract_addr: "0000".to_string(),
             asset_infos,
-            asset_decimals: [8u8, 8u8]
+            asset_decimals: [8u8, 8u8],
         }
     );
 }

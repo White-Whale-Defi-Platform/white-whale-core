@@ -12,7 +12,6 @@ use terraswap::factory::{
 };
 use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, PoolFee};
 use terraswap::querier::{query_balance, query_pair_info_from_pair};
-use terraswap_helpers::asset_helper::get_asset_label;
 
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
@@ -140,8 +139,8 @@ pub fn execute_create_pair(
     )?;
 
     // prepare labels for creating the pair token with a meaningful name
-    let asset0_label = get_asset_label(&deps, asset_infos[0].clone())?;
-    let asset1_label = get_asset_label(&deps, asset_infos[1].clone())?;
+    let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
+    let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
     let pair_label = format!("{}-{} pair", asset0_label, asset1_label);
 
     Ok(Response::new()

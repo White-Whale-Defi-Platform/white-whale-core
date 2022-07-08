@@ -117,6 +117,47 @@ fn proper_initialization() {
 }
 
 #[test]
+fn test_initialization_invalid_fees() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[(
+        &"asset0000".to_string(),
+        &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+    )]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(Uint128::from(2u8), Uint128::from(1u8)),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
+
+    // we can just call .unwrap() to assert this was a success
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return StdError::generic_err(Invalid fee)"),
+        Err(StdError::GenericErr { .. }) => (),
+        _ => panic!("should return StdError::generic_err(Invalid fee)"),
+    }
+}
+
+#[test]
 fn provide_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
