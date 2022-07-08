@@ -61,10 +61,17 @@ pub enum Cw20HookMsg {
 pub enum QueryMsg {
     Pair {},
     Config {},
-    ProtocolFees { asset_id: Option<String> },
+    ProtocolFees {
+        asset_id: Option<String>,
+        all_time: Option<bool>,
+    },
     Pool {},
-    Simulation { offer_asset: Asset },
-    ReverseSimulation { ask_asset: Asset },
+    Simulation {
+        offer_asset: Asset,
+    },
+    ReverseSimulation {
+        ask_asset: Asset,
+    },
 }
 
 // Pool feature toggle
