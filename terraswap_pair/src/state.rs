@@ -9,6 +9,8 @@ use terraswap::pair::{FeatureToggle, PoolFee};
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> = Item::new("collected_protocol_fees");
+pub const ALL_TIME_COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> =
+    Item::new("all_time_collected_protocol_fees");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -24,8 +26,9 @@ pub fn store_protocol_fee(
     storage: &mut dyn Storage,
     protocol_fee: Uint128,
     asset_id: String,
+    protocol_fees_storage_item: Item<Vec<Asset>>,
 ) -> StdResult<()> {
-    let protocol_fees = COLLECTED_PROTOCOL_FEES
+    let protocol_fees = protocol_fees_storage_item
         .load(storage)?
         .iter()
         .map(|protocol_fee_asset| {
@@ -40,7 +43,7 @@ pub fn store_protocol_fee(
         })
         .collect();
 
-    COLLECTED_PROTOCOL_FEES.save(storage, &protocol_fees)
+    protocol_fees_storage_item.save(storage, &protocol_fees)
 }
 
 /// Stores the protocol fee for a given asset

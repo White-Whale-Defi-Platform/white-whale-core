@@ -15,13 +15,14 @@ use terraswap::pair::{
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::fee::Fee;
 
-use crate::contract::{
-    execute, instantiate, query_config, query_pair_info, query_pool, query_protocol_fees,
-    query_reverse_simulation, query_simulation, reply,
-};
+use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, compute_swap};
-use crate::state::{get_protocol_fees_for_asset, store_protocol_fee};
+use crate::queries::{
+    query_config, query_pair_info, query_pool, query_protocol_fees, query_reverse_simulation,
+    query_simulation,
+};
+use crate::state::{get_protocol_fees_for_asset, store_protocol_fee, COLLECTED_PROTOCOL_FEES};
 
 #[test]
 fn proper_initialization() {
@@ -634,12 +635,14 @@ fn withdraw_liquidity() {
         deps.as_mut().storage,
         Uint128::from(10u8),
         "uusd".to_string(),
+        COLLECTED_PROTOCOL_FEES,
     )
     .unwrap();
     store_protocol_fee(
         deps.as_mut().storage,
         Uint128::from(20u8),
         "asset0000".to_string(),
+        COLLECTED_PROTOCOL_FEES,
     )
     .unwrap();
 
@@ -848,16 +851,18 @@ fn try_native_to_token() {
     );
 
     // as we swapped native to token, we accumulate the protocol fees in token
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
@@ -1084,16 +1089,18 @@ fn try_token_to_native() {
     );
 
     // as we swapped token to native, we accumulate the protocol fees in native
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
@@ -1983,16 +1990,18 @@ fn test_protocol_fees() {
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as we swapped native to token, we accumulate the protocol fees in token. Native token fees should be 0
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
@@ -2025,7 +2034,7 @@ fn test_protocol_fees() {
 
     // the new protocol fees should have increased from the previous time
     let new_protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
             .unwrap()
             .fees;
     assert!(new_protocol_fees_for_token.first().unwrap().amount > expected_protocol_fee_amount);
@@ -2033,9 +2042,10 @@ fn test_protocol_fees() {
         new_protocol_fees_for_token.first().unwrap().amount,
         new_expected_protocol_fee_amount
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
@@ -2153,16 +2163,18 @@ fn test_collect_protocol_fees_successful() {
     let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
 
     // as we swapped both native and token, we should have collected fees in both of them
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_token_amount
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         expected_protocol_fee_native_amount
@@ -2201,19 +2213,35 @@ fn test_collect_protocol_fees_successful() {
     );
 
     // now collected protocol fees should be reset to zero
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
+    );
+
+    // all time collected protocol fees should remain intact
+    let all_time_protocol_fees = query_protocol_fees(deps.as_ref(), None, Some(true))
+        .unwrap()
+        .fees;
+
+    assert_eq!(
+        all_time_protocol_fees[0].amount,
+        expected_protocol_fee_native_amount
+    );
+    assert_eq!(
+        all_time_protocol_fees[1].amount,
+        expected_protocol_fee_token_amount
     );
 }
 
@@ -2328,16 +2356,18 @@ fn test_collect_protocol_fees_unsuccessful() {
     let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
 
     // as we swapped both native and token, we should have collected fees in both of them
-    let protocol_fees_for_token = query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_token_amount
     );
-    let protocol_fees_for_native = query_protocol_fees(deps.as_ref(), Some("uusd".to_string()))
-        .unwrap()
-        .fees;
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         expected_protocol_fee_native_amount

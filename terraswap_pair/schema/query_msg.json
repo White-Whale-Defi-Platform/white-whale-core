@@ -35,6 +35,12 @@
         "protocol_fees": {
           "type": "object",
           "properties": {
+            "all_time": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
             "asset_id": {
               "type": [
                 "string",
