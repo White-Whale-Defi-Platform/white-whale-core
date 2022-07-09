@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Deposits a given amount into the vault.",
+      "type": "object",
+      "required": [
+        "Deposit"
+      ],
+      "properties": {
+        "Deposit": {
+          "type": "object",
+          "required": [
+            "amount"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Withdraws a given amount from the vault.",
+      "type": "object",
+      "required": [
+        "Withdraw"
+      ],
+      "properties": {
+        "Withdraw": {
+          "type": "object",
+          "required": [
+            "amount"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Flash-loans a given amount from the vault.",
+      "type": "object",
+      "required": [
+        "FlashLoan"
+      ],
+      "properties": {
+        "FlashLoan": {
+          "type": "object",
+          "required": [
+            "amount",
+            "msg"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "msg": {
+              "$ref": "#/definitions/Binary"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates the configuration of the contract. If a field is not specified, it will not be modified.",
+      "type": "object",
+      "required": [
+        "UpdateConfig"
+      ],
+      "properties": {
+        "UpdateConfig": {
+          "type": "object",
+          "properties": {
+            "deposit_enabled": {
+              "description": "If users should be able to deposit funds to the contract.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "flash_loan_enabled": {
+              "description": "If users should be allowed to perform flash-loans.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "new_owner": {
+              "description": "The new owner of the contract.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "withdraw_enabled": {
+              "description": "if users should be able to withdraw funds from the contract.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "Callback"
+      ],
+      "properties": {
+        "Callback": {
+          "$ref": "#/definitions/CallbackMsg"
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "CallbackMsg": {
+      "description": "The callback messages available. Only callable by the vault contract itself.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "AfterTrade"
+          ],
+          "properties": {
+            "AfterTrade": {
+              "type": "object",
+              "required": [
+                "old_balance"
+              ],
+              "properties": {
+                "old_balance": {
+                  "$ref": "#/definitions/Uint128"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Uint128": {
+      "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+      "type": "string"
+    }
+  }
+}
