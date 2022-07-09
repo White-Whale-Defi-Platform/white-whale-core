@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "description": "The instantiation message",
+  "type": "object",
+  "required": [
+    "owner",
+    "vault_id"
+  ],
+  "properties": {
+    "owner": {
+      "description": "The owner of the factory",
+      "type": "string"
+    },
+    "vault_id": {
+      "description": "The code ID for the vault contract",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  }
+}
