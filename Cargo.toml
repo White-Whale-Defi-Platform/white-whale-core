@@ -9,6 +9,7 @@ members = [
     "contracts/liquidity_hub/fee-collector",
     "contracts/liquidity_hub/vault-network/vault_factory/",
     "contracts/liquidity_hub/vault-network/vault",
+    "contracts/liquidity_hub/vault-network/*",
 ]
 
 [workspace.metadata.dylint]
