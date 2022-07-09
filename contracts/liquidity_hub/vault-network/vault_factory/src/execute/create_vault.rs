@@ -30,7 +30,7 @@ pub fn create_vault(
     let vault_instantiate_msg: SubMsg = SubMsg {
         id: INSTANTIATE_VAULT_REPLY_ID,
         msg: WasmMsg::Instantiate {
-            admin: Some(env.contract.address),
+            admin: Some(env.contract.address.clone().into_string()),
             code_id: config.vault_id,
             msg: to_binary(&InstantiateMsg {
                 owner: env.contract.address.into_string(),
