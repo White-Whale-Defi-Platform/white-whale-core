@@ -15,6 +15,7 @@ pub struct InstantiateMsg {
     pub token_code_id: u64,
     pub asset_decimals: [u8; 2],
     pub pool_fees: PoolFee,
+    pub fee_collector_addr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,6 +38,7 @@ pub enum ExecuteMsg {
     /// Updates the pair pool config
     UpdateConfig {
         owner: Option<String>,
+        fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
     },

@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     /// Pair contract code ID, which is used to
     pub pair_code_id: u64,
     pub token_code_id: u64,
+    pub fee_collector_addr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -17,6 +18,7 @@ pub enum ExecuteMsg {
     /// UpdateConfig update relevant code IDs
     UpdateConfig {
         owner: Option<String>,
+        fee_collector_addr: Option<String>,
         token_code_id: Option<u64>,
         pair_code_id: Option<u64>,
     },
@@ -52,6 +54,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub owner: String,
+    pub fee_collector_addr: String,
     pub pair_code_id: u64,
     pub token_code_id: u64,
 }
