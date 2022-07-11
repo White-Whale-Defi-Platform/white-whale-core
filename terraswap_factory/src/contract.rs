@@ -1,16 +1,17 @@
-use crate::{commands, queries};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use protobuf::Message;
+
 use terraswap::asset::PairInfoRaw;
 use terraswap::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use terraswap::querier::query_pair_info_from_pair;
 
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{Config, CONFIG, PAIRS, TMP_PAIR_INFO};
+use crate::{commands, queries};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -23,6 +24,7 @@ pub fn instantiate(
         owner: deps.api.addr_canonicalize(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -35,9 +37,18 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     match msg {
         ExecuteMsg::UpdateConfig {
             owner,
+            fee_collector_addr,
             token_code_id,
             pair_code_id,
-        } => commands::update_config(deps, env, info, owner, token_code_id, pair_code_id),
+        } => commands::update_config(
+            deps,
+            env,
+            info,
+            owner,
+            fee_collector_addr,
+            token_code_id,
+            pair_code_id,
+        ),
         ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,

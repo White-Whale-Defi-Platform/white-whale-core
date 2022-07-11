@@ -15,6 +15,7 @@ pub fn update_config(
     _env: Env,
     info: MessageInfo,
     owner: Option<String>,
+    fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
 ) -> StdResult<Response> {
@@ -38,6 +39,10 @@ pub fn update_config(
 
     if let Some(pair_code_id) = pair_code_id {
         config.pair_code_id = pair_code_id;
+    }
+
+    if let Some(fee_collector_addr) = fee_collector_addr {
+        config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
     }
 
     CONFIG.save(deps.storage, &config)?;
@@ -116,6 +121,7 @@ pub fn create_pair(
                     token_code_id: config.token_code_id,
                     asset_decimals,
                     pool_fees,
+                    fee_collector_addr: config.fee_collector_addr.to_string(),
                 })?,
             }),
             reply_on: ReplyOn::Success,

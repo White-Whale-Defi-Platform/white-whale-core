@@ -5,11 +5,12 @@ use terraswap::factory::{ConfigResponse, NativeTokenDecimalsResponse, PairsRespo
 
 /// Queries [Config]
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let state: Config = CONFIG.load(deps.storage)?;
+    let config: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
-        owner: deps.api.addr_humanize(&state.owner)?.to_string(),
-        token_code_id: state.token_code_id,
-        pair_code_id: state.pair_code_id,
+        owner: deps.api.addr_humanize(&config.owner)?.to_string(),
+        token_code_id: config.token_code_id,
+        pair_code_id: config.pair_code_id,
+        fee_collector_addr: config.fee_collector_addr.to_string(),
     };
 
     Ok(resp)

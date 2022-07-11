@@ -15,6 +15,7 @@ pub const ALL_TIME_COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> =
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: Addr,
+    pub fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
 }

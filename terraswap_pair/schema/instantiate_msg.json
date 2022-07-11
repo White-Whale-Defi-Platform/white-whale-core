@@ -5,6 +5,7 @@
   "required": [
     "asset_decimals",
     "asset_infos",
+    "fee_collector_addr",
     "pool_fees",
     "token_code_id"
   ],
@@ -27,6 +28,9 @@
       },
       "maxItems": 2,
       "minItems": 2
+    },
+    "fee_collector_addr": {
+      "type": "string"
     },
     "pool_fees": {
       "$ref": "#/definitions/PoolFee"

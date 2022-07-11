@@ -24,6 +24,7 @@ fn proper_initialization() {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
     };
 
     let info = mock_info("addr0000", &[]);
@@ -45,6 +46,7 @@ fn update_config() {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
     };
 
     let info = mock_info("addr0000", &[]);
@@ -58,6 +60,7 @@ fn update_config() {
         owner: Some("addr0001".to_string()),
         pair_code_id: None,
         token_code_id: None,
+        fee_collector_addr: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -69,6 +72,7 @@ fn update_config() {
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
     assert_eq!("addr0001".to_string(), config_res.owner);
+    assert_eq!("collector".to_string(), config_res.fee_collector_addr);
 
     // update left items
     let env = mock_env();
@@ -77,6 +81,7 @@ fn update_config() {
         owner: None,
         pair_code_id: Some(100u64),
         token_code_id: Some(200u64),
+        fee_collector_addr: Some("new_collector".to_string()),
     };
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
@@ -88,12 +93,14 @@ fn update_config() {
     assert_eq!(200u64, config_res.token_code_id);
     assert_eq!(100u64, config_res.pair_code_id);
     assert_eq!("addr0001".to_string(), config_res.owner);
+    assert_eq!("new_collector".to_string(), config_res.fee_collector_addr);
 
     // Unauthorized err
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::UpdateConfig {
         owner: None,
+        fee_collector_addr: None,
         pair_code_id: None,
         token_code_id: None,
     };
@@ -111,6 +118,7 @@ fn init(
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -182,7 +190,8 @@ fn create_pair() {
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
                         },
-                    }
+                    },
+                    fee_collector_addr: "collector".to_string()
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -271,7 +280,8 @@ fn create_pair_native_token_and_ibc_token() {
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
                         },
-                    }
+                    },
+                    fee_collector_addr: "collector".to_string()
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -398,6 +408,7 @@ fn fail_to_create_pair_with_unknown_token() {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -439,6 +450,7 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();

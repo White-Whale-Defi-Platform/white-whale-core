@@ -12,6 +12,12 @@
         "update_config": {
           "type": "object",
           "properties": {
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "owner": {
               "type": [
                 "string",

@@ -4,12 +4,16 @@
   "type": "object",
   "required": [
     "feature_toggle",
+    "fee_collector_addr",
     "owner",
     "pool_fees"
   ],
   "properties": {
     "feature_toggle": {
       "$ref": "#/definitions/FeatureToggle"
+    },
+    "fee_collector_addr": {
+      "$ref": "#/definitions/Addr"
     },
     "owner": {
       "$ref": "#/definitions/Addr"

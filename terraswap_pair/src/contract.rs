@@ -54,6 +54,7 @@ pub fn instantiate(
     // Set owner and initial pool fees
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
         pool_fees: msg.pool_fees,
         feature_toggle: FeatureToggle {
             withdrawals_enabled: true,
@@ -172,9 +173,17 @@ pub fn execute(
         }
         ExecuteMsg::UpdateConfig {
             owner,
+            fee_collector_addr,
             pool_fees,
             feature_toggle,
-        } => commands::update_config(deps, info, owner, pool_fees, feature_toggle),
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        ),
         ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps, info),
     }
 }

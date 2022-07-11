@@ -52,6 +52,7 @@ fn proper_initialization() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -145,6 +146,7 @@ fn test_initialization_invalid_fees() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -192,6 +194,7 @@ fn provide_liquidity() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -607,6 +610,7 @@ fn withdraw_liquidity() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -762,6 +766,7 @@ fn try_native_to_token() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -981,6 +986,7 @@ fn try_token_to_native() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1405,6 +1411,7 @@ fn test_query_pool() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1500,6 +1507,7 @@ fn test_update_cofig_unsuccessful() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1511,6 +1519,7 @@ fn test_update_cofig_unsuccessful() {
     let info = mock_info("unauthorized", &[]);
     let update_config_message = UpdateConfig {
         owner: Some("unauthorized".to_string()),
+        fee_collector_addr: None,
         pool_fees: None,
         feature_toggle: None,
     };
@@ -1554,6 +1563,7 @@ fn test_update_cofig_successful() {
                 share: Decimal::zero(),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1570,6 +1580,7 @@ fn test_update_cofig_successful() {
 
     let update_config_message = UpdateConfig {
         owner: Some("new_admin".to_string()),
+        fee_collector_addr: Some("new_collector".to_string()),
         pool_fees: Some(PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),
@@ -1587,6 +1598,7 @@ fn test_update_cofig_successful() {
 
     // check for new config
     assert_eq!(config.owner, Addr::unchecked("new_admin"));
+    assert_eq!(config.fee_collector_addr, Addr::unchecked("new_collector"));
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::percent(3u64));
 }
 
@@ -1624,6 +1636,7 @@ fn test_feature_toggle_swap_disabled() {
                 share: Decimal::percent(3u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1634,6 +1647,7 @@ fn test_feature_toggle_swap_disabled() {
     // all features are enabled by default, let's disable swaps
     let update_config_message = UpdateConfig {
         owner: None,
+        fee_collector_addr: None,
         pool_fees: None,
         feature_toggle: Some(FeatureToggle {
             withdrawals_enabled: true,
@@ -1727,6 +1741,7 @@ fn test_feature_toggle_withdrawals_disabled() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1753,6 +1768,7 @@ fn test_feature_toggle_withdrawals_disabled() {
     // all features are enabled by default, let's disable withdrawals
     let update_config_message = UpdateConfig {
         owner: None,
+        fee_collector_addr: None,
         pool_fees: None,
         feature_toggle: Some(FeatureToggle {
             withdrawals_enabled: false,
@@ -1819,6 +1835,7 @@ fn test_feature_toggle_deposits_disabled() {
                 share: Decimal::percent(1u64),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -1845,6 +1862,7 @@ fn test_feature_toggle_deposits_disabled() {
     // all features are enabled by default, let's disable deposits
     let update_config_message = UpdateConfig {
         owner: None,
+        fee_collector_addr: None,
         pool_fees: None,
         feature_toggle: Some(FeatureToggle {
             withdrawals_enabled: true,
@@ -1939,6 +1957,7 @@ fn test_protocol_fees() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -2095,6 +2114,7 @@ fn test_collect_protocol_fees_successful() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();
@@ -2288,6 +2308,7 @@ fn test_collect_protocol_fees_unsuccessful() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
         },
+        fee_collector_addr: "collector".to_string(),
     };
 
     let env = mock_env();

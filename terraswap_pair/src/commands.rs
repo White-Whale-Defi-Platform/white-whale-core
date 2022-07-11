@@ -1,18 +1,20 @@
-use crate::error::ContractError;
-use crate::helpers;
-use crate::state::{
-    store_protocol_fee, Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
-    PAIR_INFO,
-};
 use cosmwasm_std::{
     from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
     Response, StdError, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use integer_sqrt::IntegerSquareRoot;
+
 use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
 use terraswap::pair::{Cw20HookMsg, FeatureToggle, PoolFee};
 use terraswap::querier::query_token_info;
+
+use crate::error::ContractError;
+use crate::helpers;
+use crate::state::{
+    store_protocol_fee, Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    PAIR_INFO,
+};
 
 /// Receives cw20 tokens. Used to swap and withdraw from the pool.
 pub fn receive_cw20(
@@ -391,6 +393,7 @@ pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     owner: Option<String>,
+    fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
 ) -> Result<Response, ContractError> {
@@ -411,6 +414,10 @@ pub fn update_config(
 
     if let Some(feature_toggle) = feature_toggle {
         config.feature_toggle = feature_toggle;
+    }
+
+    if let Some(fee_collector_addr) = fee_collector_addr {
+        config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
     }
 
     CONFIG.save(deps.storage, &config)?;

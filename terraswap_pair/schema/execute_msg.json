@@ -123,6 +123,12 @@
                 }
               ]
             },
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "owner": {
               "type": [
                 "string",
