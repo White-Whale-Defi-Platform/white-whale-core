@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FeatureToggle",
+  "type": "object",
+  "required": [
+    "deposits_enabled",
+    "swaps_enabled",
+    "withdrawals_enabled"
+  ],
+  "properties": {
+    "deposits_enabled": {
+      "type": "boolean"
+    },
+    "swaps_enabled": {
+      "type": "boolean"
+    },
+    "withdrawals_enabled": {
+      "type": "boolean"
+    }
+  }
+}

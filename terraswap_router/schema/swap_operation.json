@@ -1,39 +1,32 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "PairInfo",
-  "type": "object",
-  "required": [
-    "asset_decimals",
-    "asset_infos",
-    "contract_addr",
-    "liquidity_token"
-  ],
-  "properties": {
-    "asset_decimals": {
-      "type": "array",
-      "items": {
-        "type": "integer",
-        "format": "uint8",
-        "minimum": 0.0
+  "title": "SwapOperation",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "terra_swap"
+      ],
+      "properties": {
+        "terra_swap": {
+          "type": "object",
+          "required": [
+            "ask_asset_info",
+            "offer_asset_info"
+          ],
+          "properties": {
+            "ask_asset_info": {
+              "$ref": "#/definitions/AssetInfo"
+            },
+            "offer_asset_info": {
+              "$ref": "#/definitions/AssetInfo"
+            }
+          }
+        }
       },
-      "maxItems": 2,
-      "minItems": 2
-    },
-    "asset_infos": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/AssetInfo"
-      },
-      "maxItems": 2,
-      "minItems": 2
-    },
-    "contract_addr": {
-      "type": "string"
-    },
-    "liquidity_token": {
-      "type": "string"
+      "additionalProperties": false
     }
-  },
+  ],
   "definitions": {
     "AssetInfo": {
       "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
