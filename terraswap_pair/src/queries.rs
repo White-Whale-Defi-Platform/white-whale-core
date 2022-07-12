@@ -101,7 +101,6 @@ pub fn query_reverse_simulation(
     }
 
     let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
-    //let (offer_amount, spread_amount, commission_amount) =
     let offer_amount_computation = helpers::compute_offer_amount(
         offer_pool.amount,
         ask_pool.amount,
