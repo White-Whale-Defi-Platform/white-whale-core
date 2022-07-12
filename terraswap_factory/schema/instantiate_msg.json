@@ -3,10 +3,14 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
+    "fee_collector_addr",
     "pair_code_id",
     "token_code_id"
   ],
   "properties": {
+    "fee_collector_addr": {
+      "type": "string"
+    },
     "pair_code_id": {
       "description": "Pair contract code ID, which is used to",
       "type": "integer",

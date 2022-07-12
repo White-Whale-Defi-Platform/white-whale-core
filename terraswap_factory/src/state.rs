@@ -1,13 +1,14 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Api, CanonicalAddr, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Api, CanonicalAddr, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
 use terraswap::asset::{AssetInfoRaw, PairInfo, PairInfoRaw};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: CanonicalAddr,
+    pub fee_collector_addr: Addr,
     pub pair_code_id: u64,
     pub token_code_id: u64,
 }

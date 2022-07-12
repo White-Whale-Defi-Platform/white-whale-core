@@ -12,6 +12,12 @@
         "update_config": {
           "type": "object",
           "properties": {
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "owner": {
               "type": [
                 "string",
@@ -49,7 +55,8 @@
         "create_pair": {
           "type": "object",
           "required": [
-            "asset_infos"
+            "asset_infos",
+            "pool_fees"
           ],
           "properties": {
             "asset_infos": {
@@ -60,6 +67,9 @@
               },
               "maxItems": 2,
               "minItems": 2
+            },
+            "pool_fees": {
+              "$ref": "#/definitions/PoolFee"
             }
           }
         }
@@ -138,6 +148,37 @@
           "additionalProperties": false
         }
       ]
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "Fee": {
+      "type": "object",
+      "required": [
+        "share"
+      ],
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "PoolFee": {
+      "description": "Fees used by the pools on the pool network",
+      "type": "object",
+      "required": [
+        "protocol_fee",
+        "swap_fee"
+      ],
+      "properties": {
+        "protocol_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "swap_fee": {
+          "$ref": "#/definitions/Fee"
+        }
+      }
     }
   }
 }

@@ -3,11 +3,15 @@
   "title": "ConfigResponse",
   "type": "object",
   "required": [
+    "fee_collector_addr",
     "owner",
     "pair_code_id",
     "token_code_id"
   ],
   "properties": {
+    "fee_collector_addr": {
+      "type": "string"
+    },
     "owner": {
       "type": "string"
     },

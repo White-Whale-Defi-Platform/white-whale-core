@@ -26,4 +26,7 @@ pub enum ContractError {
 
     #[error("Too small offer amount")]
     TooSmallOfferAmount {},
+
+    #[error("Operation disabled, {0}")]
+    OperationDisabled(String),
 }

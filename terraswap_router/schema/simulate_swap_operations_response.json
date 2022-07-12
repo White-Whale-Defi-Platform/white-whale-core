@@ -1,25 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ReverseSimulationResponse",
-  "description": "ReverseSimulationResponse returns reverse swap simulation response",
+  "title": "SimulateSwapOperationsResponse",
   "type": "object",
   "required": [
-    "offer_amount",
-    "protocol_fee_amount",
-    "spread_amount",
-    "swap_fee_amount"
+    "amount"
   ],
   "properties": {
-    "offer_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "protocol_fee_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "spread_amount": {
-      "$ref": "#/definitions/Uint128"
-    },
-    "swap_fee_amount": {
+    "amount": {
       "$ref": "#/definitions/Uint128"
     }
   },

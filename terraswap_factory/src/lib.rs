@@ -1,4 +1,6 @@
+mod commands;
 pub mod contract;
+mod queries;
 pub mod state;
 
 mod response;
