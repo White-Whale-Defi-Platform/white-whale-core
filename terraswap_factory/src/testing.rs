@@ -712,6 +712,14 @@ fn execute_transactions_unauthorized() {
     // Try executing ExecuteMsg::CreatePair
     let msg = ExecuteMsg::CreatePair {
         asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
     };
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
@@ -738,6 +746,7 @@ fn execute_transactions_unauthorized() {
     // Try executing ExecuteMsg::UpdateConfig
     let msg = ExecuteMsg::UpdateConfig {
         owner: None,
+        fee_collector_addr: None,
         token_code_id: None,
         pair_code_id: None,
     };
