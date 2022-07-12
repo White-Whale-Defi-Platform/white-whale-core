@@ -34,6 +34,12 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    // Only the owner can execute messages on the factory
+    let config: Config = CONFIG.load(deps.storage)?;
+    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+        return Err(StdError::generic_err("unauthorized"));
+    }
+
     match msg {
         ExecuteMsg::UpdateConfig {
             owner,
@@ -58,6 +64,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         }
     }
 }
+
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
