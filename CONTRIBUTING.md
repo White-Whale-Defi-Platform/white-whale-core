@@ -65,7 +65,7 @@ The following are the steps to fork the repository to your GitHub account and cl
 4. Install our pre-commit hook. **Do not skip this step**. This will make sure that your code doesn't have any issues and
 is formatted correctly before you even commit. If you don't install this, you risk your future pull request to fail on CI, 
 which you will need to fix before we review it.
-    - `./scripts/git_hooks/pre-commit.sh --install`
+    - `./scripts/hooks/pre-commit.sh --install`
 5. Make your contributions locally. The following are recommendations so that it is easier for anyone to understand what 
 you are trying to achieve:
     - Please make sure to use clear commit messages.
