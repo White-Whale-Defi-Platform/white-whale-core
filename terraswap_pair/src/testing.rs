@@ -2212,7 +2212,7 @@ fn test_collect_protocol_fees_successful() {
     assert_eq!(
         transfer_native_token_msg,
         &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
-            to_address: "addr0000".to_string(),
+            to_address: "collector".to_string(),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
                 amount: protocol_fees_for_native.clone().first().unwrap().amount,
@@ -2224,7 +2224,7 @@ fn test_collect_protocol_fees_successful() {
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "addr0000".to_string(),
+                recipient: "collector".to_string(),
                 amount: protocol_fees_for_token.clone().first().unwrap().amount,
             })
             .unwrap(),
@@ -2266,7 +2266,7 @@ fn test_collect_protocol_fees_successful() {
 }
 
 #[test]
-fn test_collect_protocol_fees_unsuccessful() {
+fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(30_000_000_000u128);
     let asset_pool_amount = Uint128::from(20_000_000_000u128);
     let collateral_pool_amount = Uint128::from(30_000_000_000u128);
@@ -2332,7 +2332,7 @@ fn test_collect_protocol_fees_unsuccessful() {
 
     let _res = reply(deps.as_mut(), mock_env(), reply_msg).unwrap();
 
-    // first swap, native -> token
+    // swap native -> token
     let msg = ExecuteMsg::Swap {
         offer_asset: Asset {
             info: AssetInfo::NativeToken {
@@ -2359,31 +2359,40 @@ fn test_collect_protocol_fees_unsuccessful() {
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
-    // second swap, token -> native
-    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
-        sender: "addr0000".to_string(),
-        amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
-            belief_price: None,
-            max_spread: None,
-            to: None,
-        })
-        .unwrap(),
-    });
-    let info = mock_info("asset0000", &[]);
-    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    // as did only one swap from native -> token, we should have collected fees in token
+    let protocol_fees = query_protocol_fees(deps.as_ref(), None, None).unwrap().fees;
+    assert_eq!(protocol_fees[0].amount, Uint128::zero());
+    assert_eq!(protocol_fees[1].amount, expected_protocol_fee_token_amount);
 
-    let expected_ret_amount = Uint128::from(787_500_000u128);
-    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
+    // collect the fees
+    let info = mock_info("addr0000", &[]);
+    let msg = ExecuteMsg::CollectProtocolFees {};
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    // make sure one message was sent, as there is only one fee to collect, the other one is zero
+    assert_eq!(res.messages.len(), 1);
 
-    // as we swapped both native and token, we should have collected fees in both of them
+    let transfer_cw20_token_msg = res.messages.get(0).expect("no message");
+    assert_eq!(
+        transfer_cw20_token_msg,
+        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "collector".to_string(),
+                amount: protocol_fees[1].amount,
+            })
+            .unwrap(),
+            funds: vec![],
+        }))
+    );
+
+    // now collected protocol fees should be reset to zero
     let protocol_fees_for_token =
         query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
             .unwrap()
             .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
-        expected_protocol_fee_token_amount
+        Uint128::zero()
     );
     let protocol_fees_for_native =
         query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
@@ -2391,17 +2400,17 @@ fn test_collect_protocol_fees_unsuccessful() {
             .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
-        expected_protocol_fee_native_amount
+        Uint128::zero()
     );
 
-    // try collecting the fees by an unauthorized address
-    let info = mock_info("unauthorized", &[]);
-    let msg = ExecuteMsg::CollectProtocolFees {};
-    let res = execute(deps.as_mut(), env, info, msg);
+    // all time collected protocol fees should remain intact
+    let all_time_protocol_fees = query_protocol_fees(deps.as_ref(), None, Some(true))
+        .unwrap()
+        .fees;
 
-    match res {
-        Ok(_) => panic!("should return Std(GenericErr -> msg: unauthorized)"),
-        Err(ContractError::Std { .. }) => (),
-        _ => panic!("should return Std(GenericErr -> msg: unauthorized)"),
-    }
+    assert_eq!(all_time_protocol_fees[0].amount, Uint128::zero());
+    assert_eq!(
+        all_time_protocol_fees[1].amount,
+        expected_protocol_fee_token_amount
+    );
 }

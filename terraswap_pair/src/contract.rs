@@ -184,7 +184,7 @@ pub fn execute(
             pool_fees,
             feature_toggle,
         ),
-        ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps, info),
+        ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps),
     }
 }
 
