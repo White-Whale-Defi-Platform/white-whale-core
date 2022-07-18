@@ -1,0 +1,24 @@
+name: Release Artifacts
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "v[0-9]+.[0-9]+.[0-9]+-rc*" # Push events to matching v*, i.e. v1.0-rc1, v20.15.10-rc5
+
+jobs:
+  release-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.WW_REPO_READ_PAT }}
+          submodules: recursive
+      - name: Build Artifacts
+        run: |
+          $GITHUB_WORKSPACE/scripts/build_release.sh
+          tar -zcvf cosmwasm-artifacts.tar.gz artifacts
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: cosmwasm-artifacts.tar.gz
