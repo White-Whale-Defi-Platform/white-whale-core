@@ -6,6 +6,7 @@ members = [
     "contracts/liquidity_hub/pool-network/terraswap_pair",
     "contracts/liquidity_hub/pool-network/terraswap_router",
     "contracts/liquidity_hub/pool-network/terraswap_token",
+    "contracts/liquidity_hub/fee-collector"
 ]
 
 [workspace.metadata.dylint]

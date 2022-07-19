@@ -5,9 +5,9 @@ edition = "2021"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 description = "Common White Whale types and utils"
 license = "MIT"
-repository = "https://github.com/White-Whale-DeFi-Platform/contracts"
-homepage = "https://whitewhale.finance"
-documentation = "https://whitewhale.finance"
+repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
+homepage = "https://whitewhale.money"
+documentation = "https://whitewhale.money"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
