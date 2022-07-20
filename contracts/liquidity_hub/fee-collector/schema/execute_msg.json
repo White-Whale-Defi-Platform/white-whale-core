@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Adds a factory to the fee collector so it can be queried when collecting fees",
+      "type": "object",
+      "required": [
+        "add_factory"
+      ],
+      "properties": {
+        "add_factory": {
+          "type": "object",
+          "required": [
+            "factory_addr"
+          ],
+          "properties": {
+            "factory_addr": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Removes a factory from the fee collector",
+      "type": "object",
+      "required": [
+        "remove_factory"
+      ],
+      "properties": {
+        "remove_factory": {
+          "type": "object",
+          "required": [
+            "factory_addr"
+          ],
+          "properties": {
+            "factory_addr": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Collects all the fees accrued by the children of the registered factories. If a factory is provided, only the fees of that factory's children will be collected.",
+      "type": "object",
+      "required": [
+        "collect_fees"
+      ],
+      "properties": {
+        "collect_fees": {
+          "type": "object",
+          "properties": {
+            "factory_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "object",
+              "required": [
+                "contract_addr"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

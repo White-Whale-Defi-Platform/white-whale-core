@@ -1,0 +1,17 @@
+{
+  "pairs": {
+    "start_after": [
+      {
+        "token": {
+          "contract_addr": "terra1rzvdn9cc7efpqsgl4ha7q5egqlpnyfdkgu0at6fkzmmj9dr7aspsy4a5js"
+        }
+      },
+      {
+        "native_token": {
+          "denom": "uluna"
+        }
+      }
+    ],
+    "limit": 30
+  }
+}

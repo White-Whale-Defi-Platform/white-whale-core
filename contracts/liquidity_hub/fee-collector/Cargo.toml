@@ -1,0 +1,40 @@
+[package]
+name = "fee-collector"
+version = "0.2.0"
+authors = ["Kerber0x <kerber0x@protonmail.com>"]
+edition = "2021"
+description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
+license = "MIT"
+repository = "https://github.com/White-Whale-DeFi-Platform/contracts"
+homepage = "https://whitewhale.money"
+documentation = "https://whitewhale.money"
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = "1.0.0"
+cosmwasm-storage = "1.0.0"
+cw-storage-plus = "0.13.4"
+cw2 = "0.13.4"
+schemars = "0.8.10"
+semver = "1.0.12"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0.31" }
+white-whale = { version = "0.1.0", path = "../../../packages/white-whale" }
+terraswap = { version = "2.7.0", path = "../../../packages/terraswap"}
+
+[dev-dependencies]
+cosmwasm-schema = "1.0.0"
