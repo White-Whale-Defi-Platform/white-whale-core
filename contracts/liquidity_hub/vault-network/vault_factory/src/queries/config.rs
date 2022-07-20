@@ -8,3 +8,26 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
 
     Ok(to_binary(&config)?)
 }
+
+#[cfg(test)]
+mod test {
+    use vault_network::vault_factory::QueryMsg;
+
+    use crate::{
+        state::Config,
+        tests::{mock_creator, mock_query},
+    };
+
+    #[test]
+    fn does_get_config() {
+        let (config, ..) = mock_query::<Config>(5, 6, QueryMsg::Config {});
+        assert_eq!(
+            config,
+            Config {
+                owner: mock_creator().sender,
+                vault_id: 5,
+                token_id: 6,
+            }
+        )
+    }
+}

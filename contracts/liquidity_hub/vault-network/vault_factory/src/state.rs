@@ -9,6 +9,7 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub struct Config {
     pub owner: Addr,
     pub vault_id: u64,
+    pub token_id: u64,
 }
 
 pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");

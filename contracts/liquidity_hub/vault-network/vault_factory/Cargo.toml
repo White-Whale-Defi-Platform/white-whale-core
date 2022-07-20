@@ -30,3 +30,6 @@ vault-network = { path = "../../../../packages/vault-network" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
+cw-multi-test = "0.13.4"
+cw20-base = "0.13.4"
+vault = { path = "../vault" }

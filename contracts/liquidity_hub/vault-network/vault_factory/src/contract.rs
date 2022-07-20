@@ -5,7 +5,7 @@ use vault_network::vault_factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, Query
 
 use crate::err::{StdResult, VaultFactoryError};
 use crate::execute::{create_vault, update_config};
-use crate::queries::get_config;
+use crate::queries::{get_config, get_vault};
 use crate::state::{Config, CONFIG};
 
 const CONTRACT_NAME: &str = "vault_factory";
@@ -23,6 +23,7 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(&msg.owner)?,
         vault_id: msg.vault_id,
+        token_id: msg.token_id,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -53,9 +54,31 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
     Ok(Response::default())
 }
 
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::Response;
+    use vault_network::vault_factory::MigrateMsg;
+
+    use crate::tests::mock_instantiate::mock_instantiate;
+
+    use super::migrate;
+
+    #[test]
+    fn can_migrate() {
+        // instantiate contract
+        let (mut deps, env) = mock_instantiate(5, 6);
+
+        // migrate contract
+        let res = migrate(deps.as_mut(), env, MigrateMsg {}).unwrap();
+
+        assert_eq!(res, Response::new());
+    }
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => get_config(deps),
+        QueryMsg::Vault { asset_info } => get_vault(deps, asset_info),
     }
 }

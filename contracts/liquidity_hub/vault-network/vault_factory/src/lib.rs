@@ -8,3 +8,6 @@ pub mod response;
 pub mod state;
 
 pub mod err;
+
+#[cfg(test)]
+pub mod tests;
