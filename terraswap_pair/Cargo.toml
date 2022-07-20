@@ -30,7 +30,7 @@ cw-storage-plus = { version = "0.13.4" }
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.20" }
+thiserror = { version = "1.0.31" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 terraswap = { version = "2.7.0", path = "../../../../packages/terraswap"}

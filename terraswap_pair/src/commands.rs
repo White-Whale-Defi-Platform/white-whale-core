@@ -425,13 +425,9 @@ pub fn update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-/// Collects all protocol fees accrued by the pool. Only the owner of the contract can do this.
-pub fn collect_protocol_fees(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    // only the owner can collect protocol fees
+/// Collects all protocol fees accrued by the pool
+pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    if deps.api.addr_validate(info.sender.as_str())? != config.owner {
-        return Err(ContractError::Std(StdError::generic_err("unauthorized")));
-    }
 
     // get the collected protocol fees so far
     let protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
@@ -454,10 +450,15 @@ pub fn collect_protocol_fees(deps: DepsMut, info: MessageInfo) -> Result<Respons
         ],
     )?;
 
+    let mut messages: Vec<CosmosMsg> = Vec::new();
+    for protocol_fee in protocol_fees {
+        // prevents trying to send 0 coins, which errors
+        if protocol_fee.amount != Uint128::zero() {
+            messages.push(protocol_fee.into_msg(config.fee_collector_addr.clone())?);
+        }
+    }
+
     Ok(Response::new()
         .add_attribute("action", "collect_protocol_fees")
-        .add_messages([
-            protocol_fees[0].clone().into_msg(info.sender.clone())?,
-            protocol_fees[1].clone().into_msg(info.sender)?,
-        ]))
+        .add_messages(messages))
 }
