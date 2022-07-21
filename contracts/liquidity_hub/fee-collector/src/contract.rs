@@ -46,9 +46,11 @@ pub fn execute(
         }
         ExecuteMsg::CollectFees {
             factory_addr,
+            contracts,
             start_after,
             limit,
-        } => commands::collect_fees(deps, info, factory_addr, start_after, limit),
+        } => commands::collect_fees(deps, info, factory_addr, contracts, start_after, limit),
+        ExecuteMsg::UpdateConfig { owner } => commands::update_config(deps, info, owner),
     }
 }
 

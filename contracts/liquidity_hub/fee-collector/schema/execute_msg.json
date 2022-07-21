@@ -54,6 +54,15 @@
         "collect_fees": {
           "type": "object",
           "properties": {
+            "contracts": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
             "factory_addr": {
               "type": [
                 "string",
@@ -78,6 +87,27 @@
               },
               "maxItems": 2,
               "minItems": 2
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates the config",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           }
         }

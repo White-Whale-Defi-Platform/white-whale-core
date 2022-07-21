@@ -18,9 +18,12 @@ pub enum ExecuteMsg {
     /// provided, only the fees of that factory's children will be collected.
     CollectFees {
         factory_addr: Option<String>,
+        contracts: Option<Vec<String>>,
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
     },
+    /// Updates the config
+    UpdateConfig { owner: Option<String> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

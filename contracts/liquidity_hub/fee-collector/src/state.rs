@@ -14,7 +14,9 @@ pub type ConfigResponse = Config;
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const FACTORIES: Map<&[u8], Addr> = Map::new("factories");
 
-// settings for pagination
+// Settings for pagination
+// Unless we modify our architecture, we will only have 2 factories per liquidity hub, i.e.
+// i.e. a pool factory and a vault factory
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 2;
 
