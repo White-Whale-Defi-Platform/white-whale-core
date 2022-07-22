@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "asset_info",
-    "owner"
+    "owner",
+    "token_id"
   ],
   "properties": {
     "asset_info": {
@@ -18,6 +19,12 @@
     "owner": {
       "description": "The owner of the contract.",
       "type": "string"
+    },
+    "token_id": {
+      "description": "The code ID of the liquidity token to instantiate",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
     }
   },
   "definitions": {
