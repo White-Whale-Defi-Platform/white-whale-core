@@ -30,10 +30,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Queries factories added to the fee collector
-    Factories {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
+    Factories { limit: Option<u32> },
     /// Queries the configuration of this contract
     Config {},
 }

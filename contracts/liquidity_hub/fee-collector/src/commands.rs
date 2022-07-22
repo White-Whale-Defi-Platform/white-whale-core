@@ -1,15 +1,14 @@
 use cosmwasm_std::{
-    Addr, CosmosMsg, DepsMut, MessageInfo, QueryRequest, Response, StdResult, Storage, to_binary,
+    to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, QueryRequest, Response, StdResult, Storage,
     WasmMsg, WasmQuery,
 };
-use cosmwasm_std::OverflowOperation::Add;
 
 use terraswap::asset::AssetInfo;
 use terraswap::factory::{PairsResponse, QueryMsg};
 use terraswap::pair::ExecuteMsg::CollectProtocolFees;
 
+use crate::state::{read_factories, Config, CONFIG, FACTORIES};
 use crate::ContractError;
-use crate::state::{CONFIG, Config, FACTORIES, read_factories};
 
 /// Adds a factory to the list of factories so it can be queried when collecting fees
 pub fn add_factory(
@@ -71,14 +70,14 @@ pub fn collect_fees(
         let factory = deps.api.addr_validate(factory_addr.as_str())?;
         collect_fees_messages = collect_fees_for_factory(&deps, &factory, start_after, limit)?;
     } else {
-        let factories = read_factories(deps.as_ref(), None, None)?;
+        let factories = read_factories(deps.as_ref(), None)?;
 
         for factory in factories {
             collect_fees_messages.append(&mut collect_fees_for_factory(
                 &deps,
                 &factory,
                 start_after.clone(),
-                limit.clone(),
+                limit,
             )?);
         }
     }
@@ -130,7 +129,11 @@ fn validate_owner(storage: &dyn Storage, sender: Addr) -> Result<(), ContractErr
     Ok(())
 }
 
-pub fn update_config(deps: DepsMut, info: MessageInfo, owner: Option<String>) -> Result<Response, ContractError> {
+pub fn update_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    owner: Option<String>,
+) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
     // permission check

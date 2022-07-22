@@ -1,13 +1,13 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
+use cw2::{get_contract_version, ContractVersion};
 
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, instantiate, migrate, query};
 use terraswap::mock_querier::mock_dependencies;
 
-use crate::msg::{ExecuteMsg, FactoriesResponse, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, FactoriesResponse, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::ConfigResponse;
 use crate::ContractError;
-use crate::queries::query_config;
 
 pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = InstantiateMsg {};
@@ -43,10 +43,7 @@ fn add_factory_successful() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -93,10 +90,7 @@ fn remove_factory_successful() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -112,10 +106,7 @@ fn remove_factory_successful() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -137,10 +128,7 @@ fn remove_factory_unsuccessful_unauthorized() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -174,10 +162,7 @@ fn remove_unknown_factory() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -192,10 +177,7 @@ fn remove_unknown_factory() {
     let query_res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Factories {
-            start_after: None,
-            limit: None,
-        },
+        QueryMsg::Factories { limit: None },
     )
     .unwrap();
     let factories_response: FactoriesResponse = from_binary(&query_res).unwrap();
@@ -214,7 +196,7 @@ fn collect_fees_unsuccessfully_unauthorized() {
         factory_addr: None,
         contracts: None,
         start_after: None,
-        limit: None
+        limit: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
@@ -232,12 +214,7 @@ fn test_update_config_successfully() {
     let info = mock_info("owner", &[]);
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
-    let query_res = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Config {},
-    )
-        .unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
@@ -247,16 +224,10 @@ fn test_update_config_successfully() {
 
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    let query_res = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Config {},
-    )
-        .unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
 }
-
 
 #[test]
 fn test_update_config_unsuccessfully_unauthorized() {
@@ -264,12 +235,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
     let info = mock_info("owner", &[]);
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
-    let query_res = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Config {},
-    )
-        .unwrap();
+    let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
@@ -287,3 +253,19 @@ fn test_update_config_unsuccessfully_unauthorized() {
     }
 }
 
+#[test]
+fn test_migration() {
+    let mut deps = mock_dependencies(&[]);
+    let info = mock_info("owner", &[]);
+    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+
+    assert_eq!(
+        get_contract_version(&deps.storage),
+        Ok(ContractVersion {
+            contract: "crates.io:ww-fee-collector".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string()
+        })
+    );
+
+    migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+}

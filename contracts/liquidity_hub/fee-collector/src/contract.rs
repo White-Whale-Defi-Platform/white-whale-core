@@ -57,9 +57,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Factories { start_after, limit } => {
-            to_binary(&queries::query_factories(deps, start_after, limit)?)
-        }
+        QueryMsg::Factories { limit } => to_binary(&queries::query_factories(deps, limit)?),
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
     }
 }
