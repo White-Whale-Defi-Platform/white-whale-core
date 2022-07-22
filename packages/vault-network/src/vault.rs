@@ -9,22 +9,36 @@ pub struct InstantiateMsg {
     pub owner: String,
     /// The asset info the vault should manage.
     pub asset_info: AssetInfo,
+    /// The code ID of the liquidity token to instantiate
+    pub token_id: u64,
 }
 
 /// The callback messages available. Only callable by the vault contract itself.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum CallbackMsg {
     AfterTrade { old_balance: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Cw20HookMsg {
+    /// Withdraws a given amount from the vault.
+    Withdraw {},
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct Cw20ReceiveMsg {
+    pub sender: String,
+    pub amount: Uint128,
+    pub msg: Binary,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     /// Deposits a given amount into the vault.
     Deposit {
-        amount: Uint128,
-    },
-    /// Withdraws a given amount from the vault.
-    Withdraw {
         amount: Uint128,
     },
     /// Flash-loans a given amount from the vault.
@@ -44,11 +58,21 @@ pub enum ExecuteMsg {
         /// The new owner of the contract.
         new_owner: Option<String>,
     },
+    Receive(Cw20ReceiveMsg),
     Callback(CallbackMsg),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub enum QueryMsg {}
+#[serde(rename_all = "snake_case")]
+pub enum QueryMsg {
+    /// Retrieves the configuration of the contract in a [`Config`] response.
+    Config {},
+    /// Retrieves the share of the assets stored in the vault that a given `amount` of lp tokens is entitled to in a [`Uint128`] response.
+    Share { amount: Uint128 },
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MigrateMsg {}
+
+/// The `reply` code ID for the submessage after instantiating the LP token.
+pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1;

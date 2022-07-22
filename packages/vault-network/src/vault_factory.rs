@@ -9,6 +9,8 @@ pub struct InstantiateMsg {
     pub owner: String,
     /// The code ID for the vault contract
     pub vault_id: u64,
+    /// The code ID for the liquidity token contract
+    pub token_id: u64,
 }
 
 /// The execution message
@@ -26,6 +28,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Retrieves the configuration of the vault. Returns a [`Config`] struct.
     Config {},
+    /// Retrieves the address of a given vault. Returns an [`Option<String>`].
+    Vault { asset_info: AssetInfo },
 }
 
 /// The migrate message

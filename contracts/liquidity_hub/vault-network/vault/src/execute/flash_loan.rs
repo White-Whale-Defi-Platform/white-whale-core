@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
-use vault_network::vault::CallbackMsg;
+use vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::state::CONFIG;
 
@@ -75,7 +75,9 @@ pub fn flash_loan(
     messages.push(
         WasmMsg::Execute {
             contract_addr: env.contract.address.into_string(),
-            msg: to_binary(&CallbackMsg::AfterTrade { old_balance })?,
+            msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
+                old_balance,
+            }))?,
             funds: vec![],
         }
         .into(),
@@ -85,4 +87,187 @@ pub fn flash_loan(
         ("method", "flash_loan"),
         ("amount", &amount.to_string()),
     ]))
+}
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::{
+        coins,
+        testing::{mock_dependencies, mock_dependencies_with_balance, mock_env},
+        to_binary, Addr, BankMsg, Response, StdError, Uint128, WasmMsg,
+    };
+    use terraswap::asset::AssetInfo;
+
+    use crate::{
+        contract::{execute, instantiate},
+        state::{Config, CONFIG},
+        tests::{mock_creator, mock_dependencies_lp},
+    };
+
+    #[test]
+    fn cannot_loan_when_disabled() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        CONFIG
+            .save(
+                &mut deps.storage,
+                &Config {
+                    owner: mock_creator().sender,
+                    liquidity_token: Addr::unchecked("lp_token"),
+                    asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    flash_loan_enabled: false,
+                    deposit_enabled: true,
+                    withdraw_enabled: true,
+                },
+            )
+            .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            env,
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::FlashLoan {
+                amount: Uint128::new(5_000),
+                msg: to_binary(&BankMsg::Burn { amount: vec![] }).unwrap(),
+            },
+        );
+
+        assert_eq!(
+            res.unwrap_err(),
+            StdError::generic_err("Flash-loans are not enabled")
+        )
+    }
+
+    #[test]
+    fn can_loan_native() {
+        let mut deps = mock_dependencies_with_balance(&coins(10_000, "uluna"));
+        let env = mock_env();
+
+        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+
+        instantiate(
+            deps.as_mut(),
+            env.clone(),
+            mock_creator(),
+            vault_network::vault::InstantiateMsg {
+                owner: mock_creator().sender.into_string(),
+                token_id: 2,
+                asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+        )
+        .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            env.clone(),
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::FlashLoan {
+                amount: Uint128::new(5_000),
+                msg: callback_msg.clone(),
+            },
+        );
+
+        // check old balance
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attributes(vec![("method", "flash_loan"), ("amount", "5000")])
+                .add_messages(vec![
+                    WasmMsg::Execute {
+                        contract_addr: mock_creator().sender.into_string(),
+                        msg: callback_msg,
+                        funds: coins(5_000, "uluna")
+                    },
+                    WasmMsg::Execute {
+                        contract_addr: env.contract.address.into_string(),
+                        funds: vec![],
+                        msg: to_binary(&vault_network::vault::ExecuteMsg::Callback(
+                            vault_network::vault::CallbackMsg::AfterTrade {
+                                old_balance: Uint128::new(10_000)
+                            }
+                        ))
+                        .unwrap()
+                    }
+                ])
+        );
+    }
+
+    #[test]
+    fn can_loan_token() {
+        let env = mock_env();
+        let mut deps = mock_dependencies_lp(
+            &[],
+            &[(
+                env.clone().contract.address.into_string(),
+                &[("vault_token".to_string(), Uint128::new(10_000))],
+            )],
+            vec![],
+        );
+
+        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+
+        CONFIG
+            .save(
+                &mut deps.storage,
+                &Config {
+                    owner: mock_creator().sender,
+                    liquidity_token: Addr::unchecked("lp_token"),
+                    asset_info: AssetInfo::Token {
+                        contract_addr: "vault_token".to_string(),
+                    },
+                    deposit_enabled: true,
+                    flash_loan_enabled: true,
+                    withdraw_enabled: true,
+                },
+            )
+            .unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            env.clone(),
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::FlashLoan {
+                amount: Uint128::new(5_000),
+                msg: callback_msg.clone(),
+            },
+        );
+
+        // check old balance
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attributes(vec![("method", "flash_loan"), ("amount", "5000")])
+                .add_messages(vec![
+                    WasmMsg::Execute {
+                        contract_addr: "vault_token".to_string(),
+                        funds: vec![],
+                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                            recipient: mock_creator().sender.into_string(),
+                            amount: Uint128::new(5_000)
+                        })
+                        .unwrap()
+                    },
+                    WasmMsg::Execute {
+                        contract_addr: mock_creator().sender.into_string(),
+                        msg: callback_msg,
+                        funds: vec![]
+                    },
+                    WasmMsg::Execute {
+                        contract_addr: env.contract.address.into_string(),
+                        funds: vec![],
+                        msg: to_binary(&vault_network::vault::ExecuteMsg::Callback(
+                            vault_network::vault::CallbackMsg::AfterTrade {
+                                old_balance: Uint128::new(10_000)
+                            }
+                        ))
+                        .unwrap()
+                    }
+                ])
+        );
+    }
 }

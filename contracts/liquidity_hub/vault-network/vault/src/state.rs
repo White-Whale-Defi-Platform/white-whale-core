@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, Uint128};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::Addr;
+use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use terraswap::asset::AssetInfo;
@@ -18,7 +18,6 @@ pub struct Config {
     pub deposit_enabled: bool,
     /// If withdrawals are enabled
     pub withdraw_enabled: bool,
+    /// The address of the liquidity token
+    pub liquidity_token: Addr,
 }
-
-/// A key-value pair of the user's address to their deposited balance amount
-pub const BALANCES: Map<Addr, Uint128> = Map::new("balances");

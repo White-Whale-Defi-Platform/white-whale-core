@@ -27,6 +27,7 @@ pub fn store_cw20_token_code(app: &mut App) -> u64 {
     app.store_code(contract)
 }
 
+/// Stores the vault contract to the app.
 pub fn store_vault_code(app: &mut App) -> u64 {
     let contract = Box::new(
         ContractWrapper::new(
