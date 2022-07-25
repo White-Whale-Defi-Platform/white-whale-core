@@ -5,7 +5,9 @@ use cw2::{get_contract_version, ContractVersion};
 use crate::contract::{execute, instantiate, migrate, query};
 use terraswap::mock_querier::mock_dependencies;
 
-use crate::msg::{ExecuteMsg, FactoriesResponse, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{
+    CollectFeesFor, ExecuteMsg, FactoriesResponse, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use crate::state::ConfigResponse;
 use crate::ContractError;
 
@@ -193,10 +195,7 @@ fn collect_fees_unsuccessfully_unauthorized() {
     // unauthorized tries collecting fees
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::CollectFees {
-        factory_addr: None,
-        contracts: None,
-        start_after: None,
-        limit: None,
+        collect_fees_for: CollectFeesFor::All {},
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);

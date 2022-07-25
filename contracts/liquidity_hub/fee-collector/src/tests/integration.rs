@@ -11,7 +11,7 @@ use terraswap::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
 use white_whale::fee::Fee;
 
 use crate::msg::ExecuteMsg::{AddFactory, CollectFees};
-use crate::msg::InstantiateMsg;
+use crate::msg::{CollectFeesFor, InstantiateMsg};
 use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator, store_fee_collector_code,
     store_pair_code, store_pool_factory_code, store_token_code,
@@ -332,382 +332,11 @@ fn collect_all_factories_cw20_fees_successfully() {
         creator.sender.clone(),
         fee_collector_address.clone(),
         &CollectFees {
-            factory_addr: Some(pool_factory_address.to_string()),
-            contracts: None,
-            start_after: None,
-            limit: Some(u32::try_from(TOKEN_AMOUNT).unwrap()),
-        },
-        &[],
-    )
-    .unwrap();
-
-    // Make sure the fee collector's balance for the tokens in which fees were collected increased,
-    // and matches the amount the pool reported to have collected
-    for (asset_addr, asset) in assets_collected.clone() {
-        let balance_res: BalanceResponse = app
-            .wrap()
-            .query_wasm_smart(
-                &asset_addr,
-                &cw20::Cw20QueryMsg::Balance {
-                    address: fee_collector_address.clone().to_string(),
-                },
-            )
-            .unwrap();
-        assert!(balance_res.balance > Uint128::zero());
-        assert_eq!(balance_res.balance, asset.amount);
-    }
-
-    // Make sure protocol fees in the pools are zero, as they have been collected
-    for pair_token in pair_tokens {
-        let protocol_fees_res: ProtocolFeesResponse = app
-            .wrap()
-            .query_wasm_smart(
-                &pair_token.clone(),
-                &terraswap::pair::QueryMsg::ProtocolFees {
-                    asset_id: None,
-                    all_time: None,
-                },
-            )
-            .unwrap();
-
-        for fee in protocol_fees_res.fees {
-            assert_eq!(fee.amount, Uint128::zero());
-        }
-    }
-}
-
-#[test]
-fn collect_cw20_fees_for_factory_successfully() {
-    const TOKEN_AMOUNT: usize = 30;
-
-    let mut app = mock_app();
-    let creator = mock_creator();
-
-    let fee_collector_id = store_fee_collector_code(&mut app);
-    let pool_factory_id = store_pool_factory_code(&mut app);
-    let pair_id = store_pair_code(&mut app);
-    let token_id = store_token_code(&mut app);
-
-    let fee_collector_address = app
-        .instantiate_contract(
-            fee_collector_id,
-            creator.clone().sender,
-            &InstantiateMsg {},
-            &[],
-            "fee_collector",
-            None,
-        )
-        .unwrap();
-
-    let pool_factory_address = app
-        .instantiate_contract(
-            pool_factory_id,
-            creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
-                pair_code_id: pair_id,
-                token_code_id: token_id,
-                fee_collector_addr: fee_collector_address.to_string(),
+            collect_fees_for: CollectFeesFor::Factory {
+                factory_addr: pool_factory_address.to_string(),
+                start_after: None,
+                limit: Some(u32::try_from(TOKEN_AMOUNT).unwrap()),
             },
-            &[],
-            "fee_collector",
-            None,
-        )
-        .unwrap();
-
-    // add factory to the fee collector
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &AddFactory {
-            factory_addr: pool_factory_address.to_string(),
-        },
-        &[],
-    )
-    .unwrap();
-
-    /*    app.execute_contract(
-        creator.sender.clone(),
-        pool_factory_address.clone(),
-        &AddNativeTokenDecimals {
-            denom: "native".to_string(),
-            decimals: 6,
-        },
-        &[Coin {
-            denom: "native".to_string(),
-            amount: Uint128::new(10u128),
-        }],
-    ).unwrap();*/
-
-    // Create few tokens to create pools with
-    let mut cw20_tokens: Vec<Addr> = Vec::new();
-    for i in 0..TOKEN_AMOUNT {
-        let token_address = app
-            .instantiate_contract(
-                token_id,
-                creator.clone().sender,
-                &terraswap::token::InstantiateMsg {
-                    name: format!("token{}", i),
-                    symbol: "token".to_string(),
-                    decimals: 6,
-                    initial_balances: vec![Cw20Coin {
-                        address: creator.clone().sender.to_string(),
-                        amount: Uint128::new(1_000_000_000_000u128),
-                    }],
-                    mint: Some(MinterResponse {
-                        minter: creator.clone().sender.to_string(),
-                        cap: None,
-                    }),
-                },
-                &[],
-                "cw20 token",
-                None,
-            )
-            .unwrap();
-
-        cw20_tokens.push(token_address);
-    }
-
-    // Create few pools
-    let mut pair_tokens: Vec<Addr> = Vec::new();
-    for i in 0..TOKEN_AMOUNT - 1 {
-        let res = app
-            .execute_contract(
-                creator.sender.clone(),
-                pool_factory_address.clone(),
-                &CreatePair {
-                    asset_infos: [
-                        AssetInfo::Token {
-                            contract_addr: cw20_tokens[i].to_string(),
-                        },
-                        AssetInfo::Token {
-                            contract_addr: cw20_tokens[i + 1].to_string(),
-                        },
-                    ],
-                    pool_fees: PoolFee {
-                        protocol_fee: Fee {
-                            share: Decimal::percent(5u64),
-                        },
-                        swap_fee: Fee {
-                            share: Decimal::percent(7u64),
-                        },
-                    },
-                },
-                &[],
-            )
-            .unwrap();
-
-        pair_tokens.push(Addr::unchecked(
-            res.events
-                .last()
-                .unwrap()
-                .attributes
-                .clone()
-                .get(1)
-                .unwrap()
-                .clone()
-                .value,
-        ));
-    }
-
-    // Increase allowance for the tokens on the pools
-    for i in 0..TOKEN_AMOUNT {
-        // first and last token in array exist only in one pool, while the rest in two
-        if i == 0 {
-            increase_allowance(
-                &mut app,
-                creator.sender.clone(),
-                cw20_tokens[i].clone(),
-                pair_tokens[i].clone(),
-            );
-        } else if i == TOKEN_AMOUNT - 1 {
-            increase_allowance(
-                &mut app,
-                creator.sender.clone(),
-                cw20_tokens[i].clone(),
-                pair_tokens[i - 1].clone(),
-            );
-        } else {
-            increase_allowance(
-                &mut app,
-                creator.sender.clone(),
-                cw20_tokens[i].clone(),
-                pair_tokens[i].clone(),
-            );
-
-            increase_allowance(
-                &mut app,
-                creator.sender.clone(),
-                cw20_tokens[i].clone(),
-                pair_tokens[i - 1].clone(),
-            );
-        }
-    }
-
-    // Provide liquidity into pools
-    for i in 0..TOKEN_AMOUNT - 1 {
-        app.execute_contract(
-            creator.sender.clone(),
-            pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::ProvideLiquidity {
-                assets: [
-                    Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: cw20_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(500_000u128),
-                    },
-                    Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: cw20_tokens[i + 1].to_string(),
-                        },
-                        amount: Uint128::new(500_000u128),
-                    },
-                ],
-                slippage_tolerance: None,
-                receiver: None,
-            },
-            &[],
-        )
-        .unwrap();
-    }
-
-    let mut assets_collected: HashMap<String, Asset> = HashMap::new();
-
-    // Perform some swaps
-    for i in 1..TOKEN_AMOUNT - 1 {
-        app.execute_contract(
-            creator.sender.clone(),
-            cw20_tokens[i].clone(),
-            &Cw20ExecuteMsg::Send {
-                contract: pair_tokens[i - 1].to_string(),
-                amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i - 1].to_string(),
-                        },
-                        amount: Uint128::new(100_000_000u128),
-                    },
-                    belief_price: None,
-                    max_spread: None,
-                    to: None,
-                })
-                .unwrap(),
-            },
-            &[],
-        )
-        .unwrap();
-
-        app.execute_contract(
-            creator.sender.clone(),
-            cw20_tokens[i].clone(),
-            &Cw20ExecuteMsg::Send {
-                contract: pair_tokens[i].to_string(),
-                amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(200_000_000_000u128),
-                    },
-                    belief_price: None,
-                    max_spread: None,
-                    to: None,
-                })
-                .unwrap(),
-            },
-            &[],
-        )
-        .unwrap();
-
-        // Verify the fees are being collected
-        let query_protocol_fees_res: ProtocolFeesResponse = app
-            .wrap()
-            .query_wasm_smart(
-                &pair_tokens[i - 1],
-                &terraswap::pair::QueryMsg::ProtocolFees {
-                    asset_id: None,
-                    all_time: None,
-                },
-            )
-            .unwrap();
-
-        let protocol_fees = query_protocol_fees_res
-            .fees
-            .iter()
-            .filter(|&asset| {
-                let asset_addr = match asset.clone().info {
-                    AssetInfo::Token { contract_addr } => contract_addr,
-                    AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
-                };
-                // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
-            })
-            .next()
-            .unwrap()
-            .clone();
-
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
-
-        assert!(protocol_fees.amount > Uint128::zero());
-
-        let query_protocol_fees_res: ProtocolFeesResponse = app
-            .wrap()
-            .query_wasm_smart(
-                &pair_tokens[i],
-                &terraswap::pair::QueryMsg::ProtocolFees {
-                    asset_id: None,
-                    all_time: None,
-                },
-            )
-            .unwrap();
-
-        let protocol_fees = query_protocol_fees_res
-            .fees
-            .iter()
-            .filter(|&asset| {
-                let asset_addr = match asset.clone().info {
-                    AssetInfo::Token { contract_addr } => contract_addr,
-                    AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
-                };
-                // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
-            })
-            .next()
-            .unwrap()
-            .clone();
-
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
-
-        // Verify fees are being collected
-        assert!(protocol_fees.amount > Uint128::zero());
-    }
-
-    // Make sure the fee collector's balance for the tokens in which fees were collected is zero
-    for (asset_addr, _) in assets_collected.clone() {
-        let balance_res: BalanceResponse = app
-            .wrap()
-            .query_wasm_smart(
-                &asset_addr,
-                &cw20::Cw20QueryMsg::Balance {
-                    address: fee_collector_address.clone().to_string(),
-                },
-            )
-            .unwrap();
-
-        assert_eq!(balance_res.balance, Uint128::zero());
-    }
-
-    // Collect the fees
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &CollectFees {
-            factory_addr: None,
-            contracts: None,
-            start_after: None,
-            limit: Some(u32::try_from(TOKEN_AMOUNT).unwrap()),
         },
         &[],
     )
@@ -1095,10 +724,9 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         creator.sender.clone(),
         fee_collector_address.clone(),
         &CollectFees {
-            factory_addr: None,
-            contracts: Some(pair_tokens.clone()),
-            start_after: None,
-            limit: None,
+            collect_fees_for: CollectFeesFor::Contracts {
+                contracts: pair_tokens.clone(),
+            },
         },
         &[],
     )
@@ -1407,10 +1035,7 @@ fn collect_native_fees_successfully() {
         creator.sender.clone(),
         fee_collector_address.clone(),
         &CollectFees {
-            factory_addr: None,
-            contracts: None,
-            start_after: None,
-            limit: None,
+            collect_fees_for: CollectFeesFor::All {},
         },
         &[],
     )
@@ -1755,10 +1380,11 @@ fn collect_fees_with_pagination_successfully() {
             creator.sender.clone(),
             fee_collector_address.clone(),
             &CollectFees {
-                factory_addr: Some(pool_factory_address.to_string()),
-                contracts: None,
-                start_after: start_after.clone(),
-                limit: Some(u32::try_from(TOKEN_AMOUNT / 2).unwrap()),
+                collect_fees_for: CollectFeesFor::Factory {
+                    factory_addr: pool_factory_address.to_string(),
+                    start_after: start_after.clone(),
+                    limit: Some(u32::try_from(TOKEN_AMOUNT / 2).unwrap()),
+                },
             },
             &[],
         )

@@ -7,6 +7,7 @@ use terraswap::asset::AssetInfo;
 use terraswap::factory::{PairsResponse, QueryMsg};
 use terraswap::pair::ExecuteMsg::CollectProtocolFees;
 
+use crate::msg::CollectFeesFor;
 use crate::state::{read_factories, Config, CONFIG, FACTORIES};
 use crate::ContractError;
 
@@ -50,35 +51,36 @@ pub fn remove_factory(
 pub fn collect_fees(
     deps: DepsMut,
     info: MessageInfo,
-    factory_addr: Option<String>,
-    contracts: Option<Vec<String>>,
-    start_after: Option<[AssetInfo; 2]>,
-    limit: Option<u32>,
+    collect_fees_for: CollectFeesFor,
 ) -> Result<Response, ContractError> {
     // only the owner can trigger the fees collection
     validate_owner(deps.storage, info.sender)?;
 
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
-    if let Some(contracts) = contracts {
-        for contract in contracts {
-            collect_fees_messages.push(collect_fees_for_contract(
-                deps.api.addr_validate(contract.as_str())?,
-            )?);
+    match collect_fees_for {
+        CollectFeesFor::Contracts { contracts } => {
+            for contract in contracts {
+                collect_fees_messages.push(collect_fees_for_contract(
+                    deps.api.addr_validate(contract.as_str())?,
+                )?);
+            }
         }
-    } else if let Some(factory_addr) = factory_addr {
-        let factory = deps.api.addr_validate(factory_addr.as_str())?;
-        collect_fees_messages = collect_fees_for_factory(&deps, &factory, start_after, limit)?;
-    } else {
-        let factories = read_factories(deps.as_ref(), None)?;
+        CollectFeesFor::Factory {
+            factory_addr,
+            start_after,
+            limit,
+        } => {
+            let factory = deps.api.addr_validate(factory_addr.as_str())?;
+            collect_fees_messages = collect_fees_for_factory(&deps, &factory, start_after, limit)?;
+        }
+        CollectFeesFor::All {} => {
+            let factories = read_factories(deps.as_ref(), None)?;
 
-        for factory in factories {
-            collect_fees_messages.append(&mut collect_fees_for_factory(
-                &deps,
-                &factory,
-                start_after.clone(),
-                limit,
-            )?);
+            for factory in factories {
+                collect_fees_messages
+                    .append(&mut collect_fees_for_factory(&deps, &factory, None, None)?);
+            }
         }
     }
 

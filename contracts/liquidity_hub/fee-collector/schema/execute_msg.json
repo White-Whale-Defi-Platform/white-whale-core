@@ -45,7 +45,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Collects all the fees accrued by the children of the registered factories. If a factory is provided, only the fees of that factory's children will be collected.",
+      "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor].",
       "type": "object",
       "required": [
         "collect_fees"
@@ -53,40 +53,12 @@
       "properties": {
         "collect_fees": {
           "type": "object",
+          "required": [
+            "collect_fees_for"
+          ],
           "properties": {
-            "contracts": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
-              }
-            },
-            "factory_addr": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "limit": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "start_after": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "$ref": "#/definitions/AssetInfo"
-              },
-              "maxItems": 2,
-              "minItems": 2
+            "collect_fees_for": {
+              "$ref": "#/definitions/CollectFeesFor"
             }
           }
         }
@@ -155,6 +127,87 @@
                   "type": "string"
                 }
               }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "CollectFeesFor": {
+      "oneOf": [
+        {
+          "description": "Collects the fees accumulated by the given contracts",
+          "type": "object",
+          "required": [
+            "contracts"
+          ],
+          "properties": {
+            "contracts": {
+              "type": "object",
+              "required": [
+                "contracts"
+              ],
+              "properties": {
+                "contracts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Collects the fees accumulated by the contracts the given factory created. Contains parameters for pagination, i.e. start_after and limit, imposed by the terraswap_factory",
+          "type": "object",
+          "required": [
+            "factory"
+          ],
+          "properties": {
+            "factory": {
+              "type": "object",
+              "required": [
+                "factory_addr"
+              ],
+              "properties": {
+                "factory_addr": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0.0
+                },
+                "start_after": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "$ref": "#/definitions/AssetInfo"
+                  },
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Collects the fees accumulated by all the contracts created by the different factories on the liquidity hub",
+          "type": "object",
+          "required": [
+            "all"
+          ],
+          "properties": {
+            "all": {
+              "type": "object"
             }
           },
           "additionalProperties": false
