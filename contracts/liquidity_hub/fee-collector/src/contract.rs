@@ -44,20 +44,17 @@ pub fn execute(
         ExecuteMsg::RemoveFactory { factory_addr } => {
             commands::remove_factory(deps, info, factory_addr)
         }
-        ExecuteMsg::CollectFees {
-            factory_addr,
-            start_after,
-            limit,
-        } => commands::collect_fees(deps, info, factory_addr, start_after, limit),
+        ExecuteMsg::CollectFees { collect_fees_for } => {
+            commands::collect_fees(deps, info, collect_fees_for)
+        }
+        ExecuteMsg::UpdateConfig { owner } => commands::update_config(deps, info, owner),
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Factories { start_after, limit } => {
-            to_binary(&queries::query_factories(deps, start_after, limit)?)
-        }
+        QueryMsg::Factories { limit } => to_binary(&queries::query_factories(deps, limit)?),
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
     }
 }

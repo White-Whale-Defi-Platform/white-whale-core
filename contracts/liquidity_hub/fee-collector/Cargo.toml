@@ -34,7 +34,14 @@ semver = "1.0.12"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 white-whale = { version = "0.1.0", path = "../../../packages/white-whale" }
-terraswap = { version = "2.7.0", path = "../../../packages/terraswap"}
+terraswap = { version = "2.7.0", path = "../../../packages/terraswap" }
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
+cw-multi-test = "0.13.4"
+terraswap-factory = { path = "../pool-network/terraswap_factory" }
+terraswap-pair = { path = "../pool-network/terraswap_pair" }
+terraswap-token = { path = "../pool-network/terraswap_token" }
+terraswap = { version = "2.7.0", path = "../../../packages/terraswap" }
+cw20 = {version = "0.13.4"}
+

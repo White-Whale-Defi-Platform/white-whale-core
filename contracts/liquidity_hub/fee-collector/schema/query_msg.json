@@ -3,7 +3,7 @@
   "title": "QueryMsg",
   "oneOf": [
     {
-      "description": "Queries factories whitelisted on the fee collector",
+      "description": "Queries factories added to the fee collector",
       "type": "object",
       "required": [
         "factories"
@@ -19,12 +19,6 @@
               ],
               "format": "uint32",
               "minimum": 0.0
-            },
-            "start_after": {
-              "type": [
-                "string",
-                "null"
-              ]
             }
           }
         }
