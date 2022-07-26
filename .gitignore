@@ -17,3 +17,5 @@ artifacts
 
 # Auto-gen
 .cargo-ok
+
+/scripts/deployment/deploy_env/mnemonics/
