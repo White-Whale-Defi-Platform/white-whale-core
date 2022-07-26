@@ -1,8 +1,11 @@
-use cosmwasm_std::{DepsMut, Env, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{DepsMut, Env, Response, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 pub fn after_trade(deps: DepsMut, env: Env, old_balance: Uint128) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -27,11 +30,10 @@ pub fn after_trade(deps: DepsMut, env: Env, old_balance: Uint128) -> StdResult<R
 
     // check for profit
     if new_balance < old_balance {
-        return Err(StdError::generic_err(format!(
-            "Final amount of {new_balance} is less than initial balance of {old_balance}",
-            new_balance = new_balance,
-            old_balance = old_balance
-        )));
+        return Err(VaultError::NegativeProfit {
+            old_balance,
+            new_balance,
+        });
     }
 
     let profit = new_balance.checked_sub(old_balance)?;
@@ -47,12 +49,13 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        Addr, Response, StdError, Uint128,
+        Addr, Response, Uint128,
     };
     use terraswap::asset::AssetInfo;
 
     use crate::{
         contract::{execute, instantiate},
+        error::VaultError,
         state::{Config, CONFIG},
         tests::{mock_creator, mock_dependencies_lp},
     };
@@ -188,7 +191,10 @@ mod test {
 
         assert_eq!(
             res,
-            StdError::generic_err("Final amount of 2500 is less than initial balance of 5000")
+            VaultError::NegativeProfit {
+                new_balance: Uint128::new(2_500),
+                old_balance: Uint128::new(5_000)
+            }
         );
     }
 
@@ -235,7 +241,10 @@ mod test {
 
         assert_eq!(
             res,
-            StdError::generic_err("Final amount of 2500 is less than initial balance of 5000")
+            VaultError::NegativeProfit {
+                new_balance: Uint128::new(2_500),
+                old_balance: Uint128::new(5_000)
+            }
         );
     }
 }

@@ -1,12 +1,14 @@
 use cosmwasm_std::{
-    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
-    Uint128, WasmMsg,
+    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
 use vault_network::vault::{CallbackMsg, ExecuteMsg};
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 pub fn flash_loan(
     deps: DepsMut,
@@ -18,7 +20,7 @@ pub fn flash_loan(
     // check that flash loans are enabled
     let config = CONFIG.load(deps.storage)?;
     if !config.flash_loan_enabled {
-        return Err(StdError::generic_err("Flash-loans are not enabled"));
+        return Err(VaultError::FlashLoansDisabled {});
     }
 
     // store current balance for after trade profit check
@@ -94,12 +96,13 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_dependencies_with_balance, mock_env},
-        to_binary, Addr, BankMsg, Response, StdError, Uint128, WasmMsg,
+        to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
     };
     use terraswap::asset::AssetInfo;
 
     use crate::{
         contract::{execute, instantiate},
+        error::VaultError,
         state::{Config, CONFIG},
         tests::{mock_creator, mock_dependencies_lp},
     };
@@ -135,10 +138,7 @@ mod test {
             },
         );
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Flash-loans are not enabled")
-        )
+        assert_eq!(res.unwrap_err(), VaultError::FlashLoansDisabled {})
     }
 
     #[test]

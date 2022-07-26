@@ -1,9 +1,9 @@
-use cosmwasm_std::{to_binary, Binary, Deps, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps};
 
-use crate::state::CONFIG;
+use crate::{error::StdResult, state::CONFIG};
 
 pub fn get_config(deps: Deps) -> StdResult<Binary> {
-    to_binary(&CONFIG.load(deps.storage)?)
+    Ok(to_binary(&CONFIG.load(deps.storage)?)?)
 }
 
 #[cfg(test)]

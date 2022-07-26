@@ -2,8 +2,10 @@ mod after_trade;
 
 pub use after_trade::after_trade;
 
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 use vault_network::vault::CallbackMsg;
+
+use crate::error::{StdResult, VaultError};
 
 pub fn callback(
     deps: DepsMut,
@@ -13,9 +15,7 @@ pub fn callback(
 ) -> StdResult<Response> {
     // callback can only be called by contract
     if info.sender != env.contract.address {
-        return Err(StdError::GenericErr {
-            msg: "Attempt to call callback function outside contract".to_string(),
-        });
+        return Err(VaultError::ExternalCallback {});
     }
 
     match msg {
@@ -25,14 +25,17 @@ pub fn callback(
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{StdError, Uint128};
+    use cosmwasm_std::Uint128;
     use cw_multi_test::Executor;
     use terraswap::asset::AssetInfo;
 
-    use crate::tests::{
-        mock_app::mock_app,
-        mock_creator, mock_execute,
-        store_code::{store_cw20_token_code, store_vault_code},
+    use crate::{
+        error::VaultError,
+        tests::{
+            mock_app::mock_app,
+            mock_creator, mock_execute,
+            store_code::{store_cw20_token_code, store_vault_code},
+        },
     };
 
     #[test]
@@ -49,10 +52,7 @@ mod test {
             ),
         );
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Attempt to call callback function outside contract")
-        )
+        assert_eq!(res.unwrap_err(), VaultError::ExternalCallback {})
     }
 
     #[test]

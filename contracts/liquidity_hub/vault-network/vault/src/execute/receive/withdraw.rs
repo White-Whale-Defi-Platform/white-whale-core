@@ -1,11 +1,13 @@
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, StdError, StdResult,
-    Uint128, WasmMsg,
+    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
 use terraswap::asset::AssetInfo;
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 pub fn withdraw(deps: DepsMut, env: Env, sender: String, amount: Uint128) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
@@ -15,7 +17,7 @@ pub fn withdraw(deps: DepsMut, env: Env, sender: String, amount: Uint128) -> Std
 
     // check that withdrawals are enabled
     if !config.withdraw_enabled {
-        return Err(StdError::generic_err("Withdrawals are not enabled"));
+        return Err(VaultError::WithdrawsDisabled {});
     }
 
     // calculate the size of vault and the amount of assets to withdraw
@@ -79,7 +81,7 @@ mod tests {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        to_binary, Addr, BankMsg, Response, StdError, SubMsg, Uint128, WasmMsg,
+        to_binary, Addr, BankMsg, Response, SubMsg, Uint128, WasmMsg,
     };
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
@@ -87,6 +89,7 @@ mod tests {
 
     use crate::{
         contract::execute,
+        error::VaultError,
         state::{Config, CONFIG},
         tests::{
             mock_app::{mock_app, mock_app_with_balance},
@@ -109,10 +112,7 @@ mod tests {
                 msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
             }),
         );
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Attempt to call receive callback outside the liquidity token")
-        )
+        assert_eq!(res.unwrap_err(), VaultError::ExternalCallback {})
     }
 
     #[test]
@@ -143,10 +143,7 @@ mod tests {
             }),
         );
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Withdrawals are not enabled")
-        );
+        assert_eq!(res.unwrap_err(), VaultError::WithdrawsDisabled {});
     }
 
     #[test]

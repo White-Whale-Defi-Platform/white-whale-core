@@ -1,7 +1,10 @@
-use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response};
 use vault_network::vault::{Cw20HookMsg, Cw20ReceiveMsg};
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 mod withdraw;
 
@@ -18,9 +21,7 @@ pub fn receive(
     let config = CONFIG.load(deps.storage)?;
 
     if info.sender != config.liquidity_token {
-        return Err(StdError::GenericErr {
-            msg: "Attempt to call receive callback outside the liquidity token".to_string(),
-        });
+        return Err(VaultError::ExternalCallback {});
     }
 
     match from_binary(&msg.msg)? {
@@ -30,9 +31,12 @@ pub fn receive(
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{to_binary, StdError, Uint128};
+    use cosmwasm_std::{to_binary, Uint128};
 
-    use crate::tests::{mock_creator, mock_instantiate::mock_instantiate};
+    use crate::{
+        error::VaultError,
+        tests::{mock_creator, mock_instantiate::mock_instantiate},
+    };
 
     use super::receive;
 
@@ -56,9 +60,6 @@ mod test {
             },
         );
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Attempt to call receive callback outside the liquidity token")
-        )
+        assert_eq!(res.unwrap_err(), VaultError::ExternalCallback {})
     }
 }

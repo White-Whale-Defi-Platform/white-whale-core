@@ -1,10 +1,10 @@
 use cosmwasm_std::{
     testing::{MockApi, MockQuerier, MockStorage},
-    Env, OwnedDeps, Response, StdResult,
+    Env, OwnedDeps, Response,
 };
 use terraswap::asset::AssetInfo;
 
-use crate::contract::execute;
+use crate::{contract::execute, error::StdResult};
 
 use super::{mock_creator, mock_instantiate::mock_instantiate};
 

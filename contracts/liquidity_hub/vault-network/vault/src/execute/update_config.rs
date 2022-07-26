@@ -1,6 +1,9 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 pub fn update_config(
     deps: DepsMut,
@@ -13,7 +16,7 @@ pub fn update_config(
     let mut config = CONFIG.load(deps.storage)?;
 
     if config.owner != info.sender {
-        return Err(StdError::generic_err("Unauthorized"));
+        return Err(VaultError::Unauthorized {});
     }
 
     // if user leaves as None, do not perform change operation
@@ -45,12 +48,13 @@ pub fn update_config(
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Response, StdError,
+        Addr, Response,
     };
     use terraswap::asset::AssetInfo;
 
     use crate::{
         contract::execute,
+        error::VaultError,
         state::{Config, CONFIG},
         tests::{mock_creator, mock_instantiate::mock_instantiate},
     };
@@ -76,7 +80,7 @@ mod test {
             },
         );
 
-        assert_eq!(res.unwrap_err(), StdError::generic_err("Unauthorized"));
+        assert_eq!(res.unwrap_err(), VaultError::Unauthorized {});
     }
 
     #[test]

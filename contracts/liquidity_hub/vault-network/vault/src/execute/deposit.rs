@@ -1,18 +1,18 @@
-use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
-    WasmMsg,
-};
+use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 use terraswap::asset::AssetInfo;
 
-use crate::state::CONFIG;
+use crate::{
+    error::{StdResult, VaultError},
+    state::CONFIG,
+};
 
 pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     // check that deposits are enabled
     if !config.deposit_enabled {
-        return Err(StdError::generic_err("Deposits are not enabled"));
+        return Err(VaultError::DepositsDisabled {});
     }
 
     // check that user sent assets they said they did
@@ -36,10 +36,10 @@ pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> S
         }
     };
     if sent_funds != amount {
-        return Err(StdError::generic_err(format!(
-            "mismatch of sent {} but specified deposit amount of {}",
-            sent_funds, amount
-        )));
+        return Err(VaultError::FundsMismatch {
+            sent: sent_funds,
+            wanted: amount,
+        });
     }
 
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -89,6 +89,7 @@ mod test {
 
     use crate::{
         contract::execute,
+        error::VaultError,
         state::{Config, CONFIG},
         tests::{
             mock_creator, mock_dependencies_lp, mock_execute, mock_instantiate::mock_instantiate,
@@ -222,7 +223,10 @@ mod test {
 
         assert_eq!(
             res.unwrap_err(),
-            StdError::generic_err("mismatch of sent 0 but specified deposit amount of 5000")
+            VaultError::FundsMismatch {
+                sent: Uint128::new(0),
+                wanted: Uint128::new(5_000)
+            }
         );
     }
 
@@ -259,7 +263,10 @@ mod test {
 
         assert_eq!(
             res.unwrap_err(),
-            StdError::generic_err("mismatch of sent 0 but specified deposit amount of 5000")
+            VaultError::FundsMismatch {
+                sent: Uint128::new(0),
+                wanted: Uint128::new(5_000)
+            }
         );
     }
 
@@ -294,9 +301,6 @@ mod test {
             },
         );
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::generic_err("Deposits are not enabled")
-        );
+        assert_eq!(res.unwrap_err(), VaultError::DepositsDisabled {});
     }
 }

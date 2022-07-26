@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, SubMsg, WasmMsg,
+    SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::{Cw20QueryMsg, MinterResponse, TokenInfoResponse};
@@ -11,6 +11,7 @@ use vault_network::vault::{
 };
 
 use crate::{
+    error::{StdResult, VaultError},
     execute::{callback, deposit, flash_loan, receive, update_config},
     queries::{get_config, get_share},
     state::{Config, CONFIG},
@@ -128,10 +129,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
         .map_err(|_| StdError::parse_err("Version", "Failed to parse storage_version"))?;
 
     if storage_version > version {
-        return Err(StdError::generic_err(format!(
-            "Attempt to migrate to version \"{}\" which is lower than current version \"{}\"",
-            storage_version, version
-        )));
+        return Err(VaultError::MigrateInvalidVersion {
+            new_version: storage_version,
+            current_version: version,
+        });
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

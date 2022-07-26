@@ -1,8 +1,8 @@
-use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, StdResult, Uint128};
+use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use terraswap::asset::AssetInfo;
 
-use crate::state::CONFIG;
+use crate::{error::StdResult, state::CONFIG};
 
 pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;
@@ -31,7 +31,7 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
     let asset_share = Decimal::from_ratio(amount, lp_amount.total_supply) * balance;
-    to_binary(&asset_share)
+    Ok(to_binary(&asset_share)?)
 }
 
 #[cfg(test)]
