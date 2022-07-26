@@ -42,14 +42,30 @@ pub fn instantiate(
 
     // create the LP token for the vault
     let token_name = match &msg.asset_info {
-        AssetInfo::NativeToken { denom } => denom.chars().take(4).collect(),
+        AssetInfo::NativeToken { denom } => denom.to_owned(),
         AssetInfo::Token { contract_addr } => {
             let token_info: TokenInfoResponse = deps
                 .querier
                 .query_wasm_smart(contract_addr, &Cw20QueryMsg::TokenInfo {})?;
-            token_info.symbol
+            token_info.name
         }
     };
+
+    // cw20 asset symbols are 3-12 characters,
+    // so we take the first 8 characters of the symbol and append "uLP-" to it
+    let lp_symbol = format!(
+        "uLP-{}",
+        msg.asset_info
+            .get_label(&deps.as_ref())?
+            .chars()
+            .take(8)
+            .collect::<String>()
+    );
+
+    let lp_label = format!(
+        "WW Vault {} LP token",
+        token_name.chars().take(32).collect::<String>()
+    );
 
     let lp_instantiate_msg = SubMsg {
         id: INSTANTIATE_LP_TOKEN_REPLY_ID,
@@ -59,8 +75,8 @@ pub fn instantiate(
             admin: None,
             code_id: msg.token_id,
             msg: to_binary(&cw20_base::msg::InstantiateMsg {
-                name: token_name,
-                symbol: "uLP".to_string(),
+                name: lp_label.clone(),
+                symbol: lp_symbol,
                 decimals: 6,
                 initial_balances: vec![],
                 mint: Some(MinterResponse {
@@ -70,7 +86,7 @@ pub fn instantiate(
                 marketing: None,
             })?,
             funds: vec![],
-            label: String::from("WW Vault LP token"),
+            label: lp_label,
         }
         .into(),
     };
