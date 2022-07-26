@@ -25,7 +25,7 @@ protobuf = { version = "3.1.0", features = ["with-bytes"] }
 schemars = "0.8.3"
 semver = "1.0.12"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-terraswap = { git = "https://github.com/terraswap/terraswap.git", tag = 'v2.7.0'}
+terraswap = { path = "../../../../packages/terraswap" }
 thiserror = "1.0.21"
 vault-network = { path = "../../../../packages/vault-network" }
 

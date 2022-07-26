@@ -11,6 +11,6 @@ documentation = "https://whitewhale.money"
 
 [dependencies]
 cosmwasm-std = { version = "1.0.0" }
-terraswap = { git = "https://github.com/terraswap/terraswap.git", tag = 'v2.7.0'}
+terraswap = { path = "../terraswap" }
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 schemars = "0.8.3"

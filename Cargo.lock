@@ -393,7 +393,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "terraswap 2.7.0",
+ "terraswap",
  "thiserror",
  "white-whale",
 ]
@@ -819,19 +819,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terraswap"
-version = "2.7.0"
-source = "git+https://github.com/terraswap/terraswap.git?tag=v2.7.0#d0353b20b92c1543cc000487fd587a36bbcd6704"
-dependencies = [
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw20",
- "protobuf 2.27.1",
- "schemars",
- "serde",
-]
-
-[[package]]
 name = "terraswap-factory"
 version = "0.1.0"
 dependencies = [
@@ -843,7 +830,7 @@ dependencies = [
  "protobuf 2.27.1",
  "schemars",
  "serde",
- "terraswap 2.7.0",
+ "terraswap",
  "white-whale",
 ]
 
@@ -862,7 +849,7 @@ dependencies = [
  "protobuf 2.27.1",
  "schemars",
  "serde",
- "terraswap 2.7.0",
+ "terraswap",
  "thiserror",
  "white-whale",
 ]
@@ -879,7 +866,7 @@ dependencies = [
  "integer-sqrt",
  "schemars",
  "serde",
- "terraswap 2.7.0",
+ "terraswap",
 ]
 
 [[package]]
@@ -896,7 +883,7 @@ dependencies = [
  "cw20-base",
  "schemars",
  "serde",
- "terraswap 2.7.0",
+ "terraswap",
  "thiserror",
 ]
 
@@ -959,7 +946,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "terraswap 2.7.0 (git+https://github.com/terraswap/terraswap.git?tag=v2.7.0)",
+ "terraswap",
  "thiserror",
  "vault-network",
 ]
@@ -971,7 +958,7 @@ dependencies = [
  "cosmwasm-std",
  "schemars",
  "serde",
- "terraswap 2.7.0 (git+https://github.com/terraswap/terraswap.git?tag=v2.7.0)",
+ "terraswap",
 ]
 
 [[package]]
@@ -989,7 +976,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "terraswap 2.7.0 (git+https://github.com/terraswap/terraswap.git?tag=v2.7.0)",
+ "terraswap",
  "thiserror",
  "vault",
  "vault-network",
