@@ -38,7 +38,10 @@ pub fn create_vault(
                 token_id: config.token_id,
             })?,
             funds: vec![],
-            label: "white whale vault".to_string(),
+            label: format!(
+                "white whale {} vault",
+                asset_info.clone().get_label(&deps.as_ref())?
+            ),
         }
         .into(),
         gas_limit: None,
@@ -102,7 +105,7 @@ mod tests {
                         })
                         .unwrap(),
                         funds: vec![],
-                        label: "white whale vault".to_string()
+                        label: "white whale uluna vault".to_string()
                     }
                     .into()
                 })
