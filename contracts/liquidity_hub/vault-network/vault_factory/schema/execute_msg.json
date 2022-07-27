@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "description": "The execution message",
+  "oneOf": [
+    {
+      "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for",
+      "type": "object",
+      "required": [
+        "CreateVault"
+      ],
+      "properties": {
+        "CreateVault": {
+          "type": "object",
+          "required": [
+            "asset_info"
+          ],
+          "properties": {
+            "asset_info": {
+              "$ref": "#/definitions/AssetInfo"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates the configuration of the vault factory. If the owner is not passed, it will not be modified.",
+      "type": "object",
+      "required": [
+        "UpdateConfig"
+      ],
+      "properties": {
+        "UpdateConfig": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "object",
+              "required": [
+                "contract_addr"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

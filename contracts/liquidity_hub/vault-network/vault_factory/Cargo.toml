@@ -1,0 +1,35 @@
+[package]
+name = "vault_factory"
+version = "1.0.0"
+authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
+edition = "2021"
+description = "Contract to facilitate the vault network"
+license = "MIT"
+repository = "https://github.com/White-Whale-DeFi-Platform/migaloo-core"
+homepage = "https://whitewhale.money"
+documentation = "https://whitewhale.money"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { version = "1.0.0", features = ["iterator"] }
+cw2 = "0.13.4"
+cw20 = "0.13.4"
+cw-storage-plus = "0.13.4"
+protobuf = { version = "3.1.0", features = ["with-bytes"] }
+schemars = "0.8.3"
+semver = "1.0.12"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+terraswap = { path = "../../../../packages/terraswap" }
+thiserror = "1.0.21"
+vault-network = { path = "../../../../packages/vault-network" }
+
+[dev-dependencies]
+cosmwasm-schema = { version = "1.0.0" }
+cw-multi-test = "0.13.4"
+cw20-base = "0.13.4"
+vault = { path = "../vault" }
