@@ -19,4 +19,4 @@ artifacts
 .cargo-ok
 
 /scripts/deployment/deploy_env/mnemonics/
-/scripts/deployment/deploy_env/output/
+/scripts/deployment/output/
