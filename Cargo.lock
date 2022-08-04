@@ -382,8 +382,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "fee-collector"
-version = "0.2.0"
+name = "fee_collector"
+version = "0.8.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
