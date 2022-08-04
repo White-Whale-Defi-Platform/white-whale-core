@@ -57,6 +57,11 @@ terra-testnet)
   source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/terra.env)
   ;;
 
+archway-testnet)
+  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/archway.env)
+  ;;
+
+
 *)
   echo "Network $chain not defined"
   exit 1
