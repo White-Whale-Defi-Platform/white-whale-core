@@ -9,6 +9,7 @@ pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     new_owner: Option<String>,
+    new_fee_collector_addr: Option<String>,
 ) -> StdResult<Response> {
     let new_config = CONFIG.update::<_, VaultFactoryError>(deps.storage, |mut config| {
         // check that sender is the owner
@@ -20,12 +21,20 @@ pub fn update_config(
             config.owner = deps.api.addr_validate(&new_owner)?;
         };
 
+        if let Some(new_fee_collector_addr) = new_fee_collector_addr {
+            config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
+        }
+
         Ok(config)
     })?;
 
     Ok(Response::new().add_attributes(vec![
         ("method", "update_config"),
         ("owner", &new_config.owner.into_string()),
+        (
+            "fee_collector_addr",
+            &new_config.fee_collector_addr.into_string(),
+        ),
     ]))
 }
 
@@ -48,14 +57,18 @@ mod tests {
             2,
             ExecuteMsg::UpdateConfig {
                 owner: Some("other_acc".to_string()),
+                fee_collector_addr: None,
             },
         );
 
         // check response
         assert_eq!(
             res.unwrap(),
-            Response::new()
-                .add_attributes(vec![("method", "update_config"), ("owner", "other_acc")])
+            Response::new().add_attributes(vec![
+                ("method", "update_config"),
+                ("owner", "other_acc"),
+                ("fee_collector_addr", "fee_collector")
+            ])
         );
 
         // check query
@@ -69,26 +82,72 @@ mod tests {
     }
 
     #[test]
-    fn does_allow_empty_owner_update() {
-        let (res, deps, env) = mock_execute(1, 2, ExecuteMsg::UpdateConfig { owner: None });
+    fn does_update_fee_collector_addr() {
+        let (res, deps, env) = mock_execute(
+            1,
+            2,
+            ExecuteMsg::UpdateConfig {
+                owner: None,
+                fee_collector_addr: Some("other_acc".to_string()),
+            },
+        );
 
         // check response
         assert_eq!(
             res.unwrap(),
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
-                ("owner", &mock_creator().sender.to_string())
+                ("owner", &mock_creator().sender.into_string()),
+                ("fee_collector_addr", "other_acc")
             ])
         );
 
         // check query
         let config: Config =
             from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
-        assert_eq!(config.owner, mock_creator().sender);
+        assert_eq!(config.fee_collector_addr, Addr::unchecked("other_acc"));
 
         // check storage
         let config = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(config.owner, mock_creator().sender);
+        assert_eq!(config.fee_collector_addr, Addr::unchecked("other_acc"));
+    }
+
+    #[test]
+    fn does_allow_empty_update() {
+        let (res, deps, env) = mock_execute(
+            1,
+            2,
+            ExecuteMsg::UpdateConfig {
+                owner: None,
+                fee_collector_addr: None,
+            },
+        );
+
+        // check response
+        assert_eq!(
+            res.unwrap(),
+            Response::new().add_attributes(vec![
+                ("method", "update_config"),
+                ("owner", &mock_creator().sender.to_string()),
+                ("fee_collector_addr", "fee_collector")
+            ])
+        );
+
+        // check query
+        let desired_config = Config {
+            fee_collector_addr: Addr::unchecked("fee_collector"),
+            owner: mock_creator().sender,
+            vault_id: 1,
+            token_id: 2,
+        };
+
+        let config: Config =
+            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+        assert_eq!(config, desired_config);
+
+        // check storage
+        let config = CONFIG.load(&deps.storage).unwrap();
+        assert_eq!(config, desired_config);
     }
 
     #[test]
@@ -102,7 +161,8 @@ mod tests {
             env,
             unauthorized_sender.clone(),
             ExecuteMsg::UpdateConfig {
-                owner: Some(unauthorized_sender.sender.to_string()),
+                owner: Some(unauthorized_sender.sender.clone().into_string()),
+                fee_collector_addr: Some(unauthorized_sender.sender.into_string()),
             },
         )
         .unwrap_err();

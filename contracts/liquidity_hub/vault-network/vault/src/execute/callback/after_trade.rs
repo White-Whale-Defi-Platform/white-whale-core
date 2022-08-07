@@ -1,13 +1,18 @@
-use cosmwasm_std::{DepsMut, Env, Response, Uint128};
+use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
 
 use crate::{
     error::{StdResult, VaultError},
-    state::CONFIG,
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
 };
 
-pub fn after_trade(deps: DepsMut, env: Env, old_balance: Uint128) -> StdResult<Response> {
+pub fn after_trade(
+    deps: DepsMut,
+    env: Env,
+    old_balance: Uint128,
+    loan_amount: Uint128,
+) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
     // query balance
@@ -28,19 +33,53 @@ pub fn after_trade(deps: DepsMut, env: Env, old_balance: Uint128) -> StdResult<R
         }
     };
 
-    // check for profit
-    if new_balance < old_balance {
+    // check that balance is greater than expected
+    let protocol_fee = Uint128::from(
+        config
+            .fees
+            .protocol_fee
+            .compute(cosmwasm_bignumber::Uint256::from(loan_amount)),
+    );
+    let flash_loan_fee = Uint128::from(
+        config
+            .fees
+            .flash_loan_fee
+            .compute(cosmwasm_bignumber::Uint256::from(loan_amount)),
+    );
+
+    let required_amount = old_balance
+        .checked_add(protocol_fee)?
+        .checked_add(flash_loan_fee)?;
+
+    if required_amount > new_balance {
         return Err(VaultError::NegativeProfit {
             old_balance,
-            new_balance,
+            required_amount,
         });
     }
 
-    let profit = new_balance.checked_sub(old_balance)?;
+    let profit = new_balance
+        .checked_sub(old_balance)?
+        .checked_sub(protocol_fee)?
+        .checked_sub(flash_loan_fee)?;
+
+    // increment protocol fees
+    COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
+        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
+
+        Ok(protocol_fees)
+    })?;
+    ALL_TIME_COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
+        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
+
+        Ok(protocol_fees)
+    })?;
 
     Ok(Response::new().add_attributes(vec![
         ("method", "after_trade".to_string()),
         ("profit", profit.to_string()),
+        ("protocol_fee", protocol_fee.to_string()),
+        ("flash_loan_fee", flash_loan_fee.to_string()),
     ]))
 }
 
@@ -51,13 +90,13 @@ mod test {
         testing::{mock_env, mock_info},
         Addr, Response, Uint128,
     };
-    use terraswap::asset::AssetInfo;
+    use terraswap::asset::{Asset, AssetInfo};
 
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
-        state::{Config, CONFIG},
-        tests::{mock_creator, mock_dependencies_lp},
+        state::{Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+        tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 
     #[test]
@@ -82,6 +121,8 @@ mod test {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
+                fee_collector_addr: "fee_collector".to_string(),
+                vault_fees: get_fees(),
             },
         )
         .unwrap();
@@ -93,6 +134,7 @@ mod test {
             vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(1_000),
                 },
             ),
         )
@@ -100,7 +142,36 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![("method", "after_trade"), ("profit", "2500")])
+            Response::new().add_attributes(vec![
+                ("method", "after_trade"),
+                ("profit", "2490"),
+                ("protocol_fee", "5"),
+                ("flash_loan_fee", "5")
+            ])
+        );
+
+        // should have updated the protocol fee and all time fee
+        let protocol_fee = COLLECTED_PROTOCOL_FEES.load(&deps.storage).unwrap();
+        assert_eq!(
+            protocol_fee,
+            Asset {
+                amount: Uint128::new(5),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                }
+            }
+        );
+        let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
+            .load(&deps.storage)
+            .unwrap();
+        assert_eq!(
+            protocol_fee,
+            Asset {
+                amount: Uint128::new(5),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                }
+            }
         );
     }
 
@@ -111,7 +182,7 @@ mod test {
             &[],
             &[(
                 env.clone().contract.address.into_string(),
-                &[("vault_token".to_string(), Uint128::new(7500))],
+                &[("vault_token".to_string(), Uint128::new(7_500))],
             )],
             vec![],
         );
@@ -129,6 +200,32 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
+                },
+            )
+            .unwrap();
+
+        // inject protocol fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+        ALL_TIME_COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
                 },
             )
             .unwrap();
@@ -140,6 +237,7 @@ mod test {
             vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(1_000),
                 },
             ),
         )
@@ -147,7 +245,36 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![("method", "after_trade"), ("profit", "2500")])
+            Response::new().add_attributes(vec![
+                ("method", "after_trade"),
+                ("profit", "2490"),
+                ("protocol_fee", "5"),
+                ("flash_loan_fee", "5")
+            ])
+        );
+
+        // should have updated the protocol fee and all time fee
+        let protocol_fee = COLLECTED_PROTOCOL_FEES.load(&deps.storage).unwrap();
+        assert_eq!(
+            protocol_fee,
+            Asset {
+                amount: Uint128::new(5),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                }
+            }
+        );
+        let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
+            .load(&deps.storage)
+            .unwrap();
+        assert_eq!(
+            protocol_fee,
+            Asset {
+                amount: Uint128::new(5),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                }
+            }
         );
     }
 
@@ -157,7 +284,7 @@ mod test {
         let mut deps = mock_dependencies_lp(
             &[(
                 &env.clone().contract.address.into_string(),
-                &coins(2_500, "uluna"),
+                &coins(5_005, "uluna"),
             )],
             &[],
             vec![],
@@ -173,6 +300,8 @@ mod test {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
+                fee_collector_addr: "fee_collector".to_string(),
+                vault_fees: get_fees(),
             },
         )
         .unwrap();
@@ -184,6 +313,7 @@ mod test {
             vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(1_000),
                 },
             ),
         )
@@ -192,7 +322,7 @@ mod test {
         assert_eq!(
             res,
             VaultError::NegativeProfit {
-                new_balance: Uint128::new(2_500),
+                required_amount: Uint128::new(5_010),
                 old_balance: Uint128::new(5_000)
             }
         );
@@ -205,7 +335,7 @@ mod test {
             &[],
             &[(
                 env.clone().contract.address.into_string(),
-                &[("vault_token".to_string(), Uint128::new(2_500))],
+                &[("vault_token".to_string(), Uint128::new(5_005))],
             )],
             vec![],
         );
@@ -223,6 +353,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -234,6 +366,7 @@ mod test {
             vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(1_000),
                 },
             ),
         )
@@ -242,7 +375,7 @@ mod test {
         assert_eq!(
             res,
             VaultError::NegativeProfit {
-                new_balance: Uint128::new(2_500),
+                required_amount: Uint128::new(5_010),
                 old_balance: Uint128::new(5_000)
             }
         );

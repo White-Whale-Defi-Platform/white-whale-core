@@ -10,6 +10,7 @@ pub struct Config {
     pub owner: Addr,
     pub vault_id: u64,
     pub token_id: u64,
+    pub fee_collector_addr: Addr,
 }
 
 pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");

@@ -19,20 +19,24 @@ pub fn callback(
     }
 
     match msg {
-        CallbackMsg::AfterTrade { old_balance } => after_trade(deps, env, old_balance),
+        CallbackMsg::AfterTrade {
+            old_balance,
+            loan_amount,
+        } => after_trade(deps, env, old_balance, loan_amount),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Uint128;
+    use cosmwasm_std::{coins, Uint128};
     use cw_multi_test::Executor;
     use terraswap::asset::AssetInfo;
 
     use crate::{
         error::VaultError,
         tests::{
-            mock_app::mock_app,
+            get_fees,
+            mock_app::mock_app_with_balance,
             mock_creator, mock_execute,
             store_code::{store_cw20_token_code, store_vault_code},
         },
@@ -48,6 +52,7 @@ mod test {
             vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(2_500),
                 },
             ),
         );
@@ -57,7 +62,7 @@ mod test {
 
     #[test]
     fn does_succeed_on_internal_request() {
-        let mut app = mock_app();
+        let mut app = mock_app_with_balance(vec![(mock_creator().sender, coins(1_000, "uluna"))]);
 
         let vault_id = store_vault_code(&mut app);
         let token_id = store_cw20_token_code(&mut app);
@@ -73,8 +78,10 @@ mod test {
                     asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },
+                    fee_collector_addr: "fee_collector".to_string(),
+                    vault_fees: get_fees(),
                 },
-                &[],
+                &coins(1_000, "uluna"),
                 "vault",
                 None,
             )
@@ -87,6 +94,7 @@ mod test {
             &vault_network::vault::ExecuteMsg::Callback(
                 vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(0),
+                    loan_amount: Uint128::new(1_000),
                 },
             ),
             &[],

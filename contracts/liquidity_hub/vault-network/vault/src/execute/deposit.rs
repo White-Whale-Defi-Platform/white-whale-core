@@ -92,7 +92,8 @@ mod test {
         error::VaultError,
         state::{Config, CONFIG},
         tests::{
-            mock_creator, mock_dependencies_lp, mock_execute, mock_instantiate::mock_instantiate,
+            get_fees, mock_creator, mock_dependencies_lp, mock_execute,
+            mock_instantiate::mock_instantiate,
         },
     };
 
@@ -168,6 +169,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -248,6 +251,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -288,6 +293,8 @@ mod test {
                     deposit_enabled: false,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector_addr"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();

@@ -40,3 +40,14 @@ pub fn store_vault_code(app: &mut App) -> u64 {
 
     app.store_code(contract)
 }
+
+/// Stores the fee collector contract to the app
+pub fn store_fee_collector_code(app: &mut App) -> u64 {
+    let contract = Box::new(ContractWrapper::new(
+        fee_collector::contract::execute,
+        fee_collector::contract::instantiate,
+        fee_collector::contract::query,
+    ));
+
+    app.store_code(contract)
+}

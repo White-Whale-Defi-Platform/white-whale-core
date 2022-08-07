@@ -28,7 +28,10 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 terraswap = { path = "../../../../packages/terraswap" }
 thiserror = "1.0.21"
 vault-network = { path = "../../../../packages/vault-network" }
+white-whale = { path = "../../../../packages/white-whale" }
+cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
 cw-multi-test = "0.13.4"
+fee_collector = { path = "../../fee_collector" }

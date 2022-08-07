@@ -11,6 +11,7 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::Addr;
     use vault_network::vault_factory::QueryMsg;
 
     use crate::{
@@ -27,6 +28,7 @@ mod test {
                 owner: mock_creator().sender,
                 vault_id: 5,
                 token_id: 6,
+                fee_collector_addr: Addr::unchecked("fee_collector")
             }
         )
     }
