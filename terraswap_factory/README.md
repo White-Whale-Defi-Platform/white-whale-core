@@ -1,6 +1,6 @@
 # TerraSwap Factory
 
-The factory contract can create instances of the Terraswap Pair contract. It is also used as directory contract for all
+The factory contract can create instances of the Terraswap Pair contract. It is also used as a directory contract for all
 pools ever created.
 
 The Factory is permissioned.
