@@ -1,6 +1,9 @@
 # TerraSwap Factory
 
-The factory contract can perform creation of terraswap pair contract and also be used as directory contract for all pairs.
+The factory contract can create instances of the Terraswap Pair contract. It is also used as a directory contract for all
+pools ever created.
+
+The Factory is permissioned.
 
 ## InstantiateMsg
 
@@ -8,10 +11,7 @@ The factory contract can perform creation of terraswap pair contract and also be
 {
   "pair_code_id": 123,
   "token_code_id": 123,
-  "init_hook": {
-    "msg": "123",
-    "contract_addr": "terra..."
-  }
+  "fee_collector_addr": "juno1..."
 }
 ```
 
@@ -22,7 +22,8 @@ The factory contract can perform creation of terraswap pair contract and also be
 ```json
 {
   "update_config": {
-    "owner": "terra...",
+    "owner": "juno1...",
+    "fee_collector_addr": "juno1...",
     "token_id": 123,
     "pair_code_id": 123
   }
@@ -37,36 +38,25 @@ The factory contract can perform creation of terraswap pair contract and also be
     "asset_infos": [
       {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "juno1..."
         }
       },
       {
         "native_token": {
-          "denom": "uusd"
+          "denom": "ujuno"
         }
       }
     ]
   }
 }
 ```
-
-### `register`
+### `add_native_token_decimals`
 
 ```json
 {
-  "register": {
-    "asset_infos": [
-      {
-        "token": {
-          "contract_addr": "terra..."
-        }
-      },
-      {
-        "native_token": {
-          "denom": "uusd"
-        }
-      }
-    ]
+  "add_native_token_decimals": {
+    "denom": "ujuno",
+    "decimals": 6
   }
 }
 ```
@@ -89,12 +79,12 @@ The factory contract can perform creation of terraswap pair contract and also be
     "asset_infos": [
       {
         "token": {
-          "contract_addr": "terra..."
+          "contract_addr": "juno1..."
         }
       },
       {
         "native_token": {
-          "denom": "uusd"
+          "denom": "ujuno"
         }
       }
     ]
@@ -102,71 +92,34 @@ The factory contract can perform creation of terraswap pair contract and also be
 }
 ```
 
-Register verified pair contract and token contract for pair contract creation. The sender will be the owner of the factory contract.
-
-```rust
-{
-    /// Pair contract code ID, which is used to
-    pub pair_code_id: u64,
-    pub token_code_id: u64,
-    pub init_hook: Option<InitHook>,
-}
-```
-
-### UpdateConfig
-
-The factory contract owner can change relevant code IDs for future pair contract creation.
+### `pairs`
 
 ```json
 {
-    "update_config":
-    {
-        "owner": Option<HumanAddr>,
-        "pair_code_id": Option<u64>,
-        "token_code_id": Option<u64>,
-    }
-}
-```
-
-### Create Pair
-
-When a user execute `CreatePair` operation, it creates `Pair` contract and `LP(liquidity provider)` token contract. It also creates not fully initialized `PairInfo`, which will be initialized with `Register` operation from the pair contract's `InitHook`.
-
-```json
-{
-  "create_pair": {
-    "asset_infos": [
+  "pairs": {
+    "start_after": [
       {
         "token": {
-          "contract_addr": "terra1~~"
+          "contract_addr": "juno1..."
         }
       },
       {
         "native_token": {
-          "denom": "uusd"
+          "denom": "ujuno"
         }
       }
-    ]
+    ],
+    "limit": 30
   }
 }
 ```
 
-### Register
-
-When a user executes `CreatePair` operation, it passes `InitHook` to `Pair` contract and `Pair` contract will invoke passed `InitHook` registering created `Pair` contract to the factory. This operation is only allowed for a pair, which is not fully initialized.
-
-Once a `Pair` contract invokes it, the sender address is registered as `Pair` contract address for the given asset_infos.
+### `native_token_decimals`
 
 ```json
-{ "register":
-    "asset_infos": [{
-        "token": {
-            "contract_addr": "terra1~~",
-            }
-        }, {
-            "native_token": {
-                "denom": "uusd",
-            }
-    }],
+{
+  "native_token_decimals": {
+    "denom": "ujuno"
+  }
 }
 ```

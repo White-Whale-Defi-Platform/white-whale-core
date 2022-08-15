@@ -1,24 +1,21 @@
 # Terraswap Router <!-- omit in toc -->
 
-The Router Contract contains the logic to facilitate multi-hop swap operations via terraswap.
+The Router Contract contains the logic to facilitate multi-hop swap operations among the liquidity pools.
 
-**Only Terraswap is supported.**
+Imagine there are three tokens, A B and C. Say a bot wants to swap A for C, but only two pools are available, A-B and B-C.
+Thus, the router can be used to swap A for B and then B for C.
 
-phoenix-1 Contract:
-- https://finder.terra.money/mainnet/address/terra13ehuhysn5mqjeaheeuew2gjs785f6k7jm8vfsqg3jhtpkwppcmzqcu7chk
+The router can handle both native and cw20 tokens, provided the corresponding `AssetInfo`:
 
-pisco-1 Contract: 
-- https://finder.terra.money/testnet/address/terra1xp6xe6uwqrspumrkazdg90876ns4h78yw03vfxghhcy03yexcrcsdaqvc8
-
-Tx: 
-- Luna => DELIGHT => TNT: https://finder.terra.money/testnet/tx/CCBE3E2C746967A03CAD13B7FCAB4BD823BE54883290F3BEE7A213DC6096A39A
-
-### Operations Assertion
-The contract will check whether the resulting token is swapped into one token.
-
+```rust
+pub enum AssetInfo {
+    Token { contract_addr: String },
+    NativeToken { denom: String },
+}
+```
 ### Example
 
-Swap Luna => DELIGHT => TNT
+Swap A => B => C
 ```
 {
    "execute_swap_operations":{
@@ -26,13 +23,13 @@ Swap Luna => DELIGHT => TNT
          {
             "terra_swap":{
                "offer_asset_info":{
-                  "native_token":{
-                     "denom":"uluna"
+                   "token":{
+                     "contract_addr":"juno1...A"
                   }
                },
                "ask_asset_info":{
                   "token":{
-                     "contract_addr":"terra1cl0kw9axzpzkw58snj6cy0hfp0xp8xh9tudpw2exvzuupn3fafwqqhjc24"
+                     "contract_addr":"juno1...B"
                   }
                }
             }
@@ -41,12 +38,12 @@ Swap Luna => DELIGHT => TNT
             "terra_swap":{
                "offer_asset_info":{
                   "token":{
-                     "contract_addr":"terra1cl0kw9axzpzkw58snj6cy0hfp0xp8xh9tudpw2exvzuupn3fafwqqhjc24"
+                     "contract_addr":"juno1...B"
                   }
                },
                "ask_asset_info":{
-                  "token":{
-                     "contract_addr":"terra1qnypzwqa03h8vqs0sxjp8hxw0xy5zfwyax26jgnl5k4lw92tjw0scdkrzm"
+                   "token":{
+                     "contract_addr":"juno1...C"
                   }
                }
             }
