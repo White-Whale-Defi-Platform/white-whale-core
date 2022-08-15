@@ -1,41 +1,55 @@
 # TerraSwap Pair
 
+The TerraSwap Pair contract is used to create token pools. It is used by the TerraSwap Factory contract and not by its own.
+
 ## Handlers
 
 ### Initialize
 
-This is mainly used from terraswap factory contract to create new terraswap pair. It initialize all swap created parameters which can be updated later with owner key.
-
-It creates liquidity token contract as init response, and execute init hook to register created liquidity token contract to self.
+It initializes the contract with the parameters required for its functioning, such as the pool fees and fee collector address.
 
 ```rust
-{
-    /// Asset infos
-    pub asset_infos: [AssetInfo; 2],
-    /// Token code ID for liqudity token creation
-    pub token_code_id: u64,
-    /// Hook for post initalization
-    pub init_hook: Option<InitHook>,
+pub struct InstantiateMsg {
+  /// Asset infos
+  pub asset_infos: [AssetInfo; 2],
+  /// Token contract code id for initialization
+  pub token_code_id: u64,
+  pub asset_decimals: [u8; 2],
+  pub pool_fees: PoolFee,
+  pub fee_collector_addr: String,
 }
+
 ```
 
-### Liquidity Provider
+### Liquidity Provision
 
-The contract has two types of pool, the one is collateral and the other is asset pool. A user can provide liquidity to each pool by sending `provide_liquidity` msgs and also can withdraw with `withdraw_liquidity` msgs.
+A user or bot can provide liquidity by sending a `provide_liquidity` message and withdraw liquidity with `withdraw_liquidity`.
+Whenever liquidity is deposited into a pool, special tokens known as liquidity (LP) tokens are minted to the provider’s address,
+in proportion to how much liquidity it contributed to the pool. These tokens are a representation of a liquidity provider’s contribution to a pool.
+Whenever a trade occurs, the `swap_fee` percentage, which is a parameter specified by the `PoolFee`, is distributed pro-rata
+to all LPs in the pool at the moment of the trade. To receive the underlying liquidity back, plus commission fees that were
+accrued while their liquidity was locked, LPs must burn their liquidity tokens.
 
-Whenever liquidity is deposited into a pool, special tokens known as liquidity tokens are minted to the provider’s address, in proportion to how much liquidity they contributed to the pool. These tokens are a representation of a liquidity provider’s contribution to a pool. Whenever a trade occurs, the `lp_commission%` of fee is distributed pro-rata to all LPs in the pool at the moment of the trade. To receive the underlying liquidity back, plus commission fees that were accrued while their liquidity was locked, LPs must burn their liquidity tokens.
+> Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of
+> asset in the token contract.
 
-When providing liquidity from a smart contract, the most important thing to keep in mind is that tokens deposited into a pool at any rate other than the current oracle price ratio are vulnerable to being arbitraged. As an example, if the ratio of x:y in a pair is 10:2 (i.e. the price is 5), and someone naively adds liquidity at 5:2 (a price of 2.5), the contract will simply accept all tokens (changing the price to 3.75 and opening up the market to arbitrage), but only issue pool tokens entitling the sender to the amount of assets sent at the proper ratio, in this case 5:1. To avoid donating to arbitrageurs, it is imperative to add liquidity at the current price. Luckily, it’s easy to ensure that this condition is met!
+#### Slippage Tolerance
 
-> Note before executing the `provide_liqudity` operation, a user must allow the contract to use the liquidity amount of asset in the token contract.
-
-#### Slipage Tolerance
-
-If a user specify the slipage tolerance at provide liquidity msg, the contract restricts the operation when the exchange rate is dropped more than the tolerance.
-
-So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 ASSET, amountUSTMin should be set to e.g. 198 UST, and amountASSETMin should be set to .99 ASSET. This means that, at worst, liquidity will be added at a rate between 198 ASSET/1 UST and 202.02 UST/1 ASSET (200 UST/.99 ASSET).
+If a user or bot specifies the slippage tolerance when providing liquidity, the contract restricts the operation when the
+exchange rate is dropped more than the tolerance.
 
 #### Request Format
+
+- Increase allowance (to be executed on the cw20 token to be provided)
+
+  ```json
+  {
+    "increase_allowance": {
+      "spender": "juno1...",
+      "amount": "1000000"
+    }
+  }
+  ```
 
 - Provide Liquidity
 
@@ -48,7 +62,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "juno1..."
             }
           },
           "amount": "1000000"
@@ -56,7 +70,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "ujuno"
             }
           },
           "amount": "1000000"
@@ -75,7 +89,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "juno1..."
             }
           },
           "amount": "1000000"
@@ -83,7 +97,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "native_token": {
-              "denom": "uusd"
+              "denom": "ujuno"
             }
           },
           "amount": "1000000"
@@ -94,7 +108,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
   }
   ```
 
-- Withdraw Liquidity (must be sent to liquidity token contract)
+- Withdraw Liquidity (must be sent to liquidity (LP) token contract)
   ```json
   {
     "withdraw_liquidity": {}
@@ -103,9 +117,10 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
 
 ### Swap
 
-Any user can swap an asset by sending `swap` or invoking `send` msg to token contract with `swap` hook message.
+Any user or bot can swap an asset by sending `swap` or invoking `send` message on the token contract with the `swap` hook
+message.
 
-- Native Token => Token
+- Native Token => cw20 Token
 
   ```json
   {
@@ -127,7 +142,7 @@ Any user can swap an asset by sending `swap` or invoking `send` msg to token con
 
 - Token => Native Token
 
-  **Must be sent to token contract**
+  **Must be sent to LP token contract**
 
   ```json
   {
@@ -150,26 +165,44 @@ Any user can swap an asset by sending `swap` or invoking `send` msg to token con
 The spread is determined with following uniswap mechanism:
 
 ```rust
-// -max_minus_spread < spread < max_spread
-// minus_spread means discount rate.
-// Ensure `asset pool * collateral pool = constant product`
-let cp = Uint128(offer_pool.u128() * ask_pool.u128());
-let return_amount = offer_amount * exchange_rate;
-let return_amount = (ask_pool - cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
+pub fn compute_swap(
+  offer_pool: Uint128,
+  ask_pool: Uint128,
+  offer_amount: Uint128,
+  pool_fees: PoolFee,
+) -> SwapComputation {
+  let offer_pool: Uint256 = Uint256::from(offer_pool);
+  let ask_pool: Uint256 = ask_pool.into();
+  let offer_amount: Uint256 = offer_amount.into();
 
+  // offer => ask
+  // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee
+  let return_amount: Uint256 = Uint256::one()
+    * Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
 
-// calculate spread & commission
-let spread_amount: Uint128 =
-    (offer_amount * Decimal::from_ratio(ask_pool, offer_pool) - return_amount)?;
-let lp_commission: Uint128 = return_amount * config.lp_commission;
-let owner_commission: Uint128 = return_amount * config.owner_commission;
+  // calculate spread, swap and protocol fees
+  let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
+  let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
+  let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
+  let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
 
-// commission will be absorbed to pool
-let return_amount: Uint128 =
-    (return_amount - (lp_commission + owner_commission)).unwrap();
+  // swap and protocol fee will be absorbed by the pool
+  let return_amount: Uint256 = return_amount - swap_fee_amount - protocol_fee_amount;
+
+  SwapComputation {
+    return_amount: return_amount.into(),
+    spread_amount: spread_amount.into(),
+    swap_fee_amount: swap_fee_amount.into(),
+    protocol_fee_amount: protocol_fee_amount.into(),
+  }
+}
 ```
 
-#### Commission
+#### Fees
 
-The `lp_commission` remains in the swap pool, which is fixed to `0.3%`, causing a permanent increase in the constant product K. The value of this permanently increased pool goes to all LPs.
+There are two fees associated to the pools, namely `swap_fee` and `protocol_fee`.
 
+The `swap_fee` remains in the swap pool, causing a permanent increase in the constant product K. The value of this
+permanently increased pool goes to all LPs.
+
+The `protocol_fee` goes to the protocol, and it is to be collected by the Fee Collector contract of the Liquidity Hub.
