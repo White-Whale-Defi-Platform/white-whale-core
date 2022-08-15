@@ -66,4 +66,4 @@ style PN fill:#0000
 style VN fill:#0000
 ```
 
-For more info about the Liquidity Hub, please refer to the (Litepaper)[https://whitewhale.money/LitepaperV2.pdf].
+For more info about the Liquidity Hub, please refer to the [Litepaper](https://whitewhale.money/LitepaperV2.pdf).
