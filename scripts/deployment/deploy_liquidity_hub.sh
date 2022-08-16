@@ -178,9 +178,7 @@ echo -e "\nInitializing the Vault Factory..."
 # Prepare the instantiation message
 vault_id=$(jq -r '.contracts[] | select (.wasm == "vault.wasm") | .code_id' $output_path)
 
-init='{"owner": "'$deployer_address'", "vault_id": '"$vault_id"', "token_id": '"$token_code_id"'}'
-
-echo $init
+init='{"owner": "'$deployer_address'", "vault_id": '"$vault_id"', "token_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
 
 # Instantiate the contract
 code_id=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .code_id' $output_path)
