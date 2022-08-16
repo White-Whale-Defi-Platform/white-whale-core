@@ -17,7 +17,7 @@ This repo is a submodule of [Migaloo Core](https://github.com/White-Whale-Defi-P
 
 You will need Rust 1.44.1+ with wasm32-unknown-unknown target installed.
 
-You can run unit tests on this on each contracts directory via:
+You can run unit tests on each contract directory via:
 
 ```
 cargo test
