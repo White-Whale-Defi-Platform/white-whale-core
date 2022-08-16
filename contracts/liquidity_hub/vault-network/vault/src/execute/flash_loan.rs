@@ -79,6 +79,7 @@ pub fn flash_loan(
             contract_addr: env.contract.address.into_string(),
             msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
                 old_balance,
+                loan_amount: amount,
             }))?,
             funds: vec![],
         }
@@ -104,7 +105,7 @@ mod test {
         contract::{execute, instantiate},
         error::VaultError,
         state::{Config, CONFIG},
-        tests::{mock_creator, mock_dependencies_lp},
+        tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 
     #[test]
@@ -124,6 +125,8 @@ mod test {
                     flash_loan_enabled: false,
                     deposit_enabled: true,
                     withdraw_enabled: true,
+                    fees: get_fees(),
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
                 },
             )
             .unwrap();
@@ -158,6 +161,8 @@ mod test {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
+                fee_collector_addr: "fee_collector".to_string(),
+                vault_fees: get_fees(),
             },
         )
         .unwrap();
@@ -188,7 +193,8 @@ mod test {
                         funds: vec![],
                         msg: to_binary(&vault_network::vault::ExecuteMsg::Callback(
                             vault_network::vault::CallbackMsg::AfterTrade {
-                                old_balance: Uint128::new(10_000)
+                                old_balance: Uint128::new(10_000),
+                                loan_amount: Uint128::new(5_000)
                             }
                         ))
                         .unwrap()
@@ -223,6 +229,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -262,7 +270,8 @@ mod test {
                         funds: vec![],
                         msg: to_binary(&vault_network::vault::ExecuteMsg::Callback(
                             vault_network::vault::CallbackMsg::AfterTrade {
-                                old_balance: Uint128::new(10_000)
+                                old_balance: Uint128::new(10_000),
+                                loan_amount: Uint128::new(5_000)
                             }
                         ))
                         .unwrap()

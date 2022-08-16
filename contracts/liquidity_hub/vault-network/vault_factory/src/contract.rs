@@ -24,6 +24,7 @@ pub fn instantiate(
         owner: deps.api.addr_validate(&msg.owner)?,
         vault_id: msg.vault_id,
         token_id: msg.token_id,
+        fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -33,8 +34,13 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::CreateVault { asset_info } => create_vault(deps, env, info, asset_info),
-        ExecuteMsg::UpdateConfig { owner } => update_config(deps, info, owner),
+        ExecuteMsg::CreateVault { asset_info, fees } => {
+            create_vault(deps, env, info, asset_info, fees)
+        }
+        ExecuteMsg::UpdateConfig {
+            owner,
+            fee_collector_addr,
+        } => update_config(deps, info, owner, fee_collector_addr),
     }
 }
 

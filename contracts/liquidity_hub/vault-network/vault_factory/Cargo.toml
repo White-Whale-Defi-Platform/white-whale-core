@@ -27,9 +27,11 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 terraswap = { path = "../../../../packages/terraswap" }
 thiserror = "1.0.21"
 vault-network = { path = "../../../../packages/vault-network" }
+white-whale = { path = "../../../../packages/white-whale" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
 cw-multi-test = "0.13.4"
 cw20-base = "0.13.4"
 vault = { path = "../vault" }
+fee_collector = { path = "../../fee_collector" }

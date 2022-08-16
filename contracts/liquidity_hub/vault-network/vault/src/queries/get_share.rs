@@ -41,7 +41,7 @@ mod test {
     use crate::{
         contract::query,
         state::{Config, CONFIG},
-        tests::{mock_creator, mock_dependencies_lp},
+        tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 
     #[test]
@@ -77,6 +77,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -130,6 +132,8 @@ mod test {
                     deposit_enabled: true,
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();

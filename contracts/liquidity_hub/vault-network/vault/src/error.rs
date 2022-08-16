@@ -30,10 +30,12 @@ pub enum VaultError {
     #[error("Attempt to call callback function outside contract")]
     ExternalCallback {},
 
-    #[error("Final amount of {new_balance} is less than initial balance of {old_balance}")]
+    #[error(
+        "Final desired amount of {required_amount} is less than initial balance of {old_balance}"
+    )]
     NegativeProfit {
         old_balance: Uint128,
-        new_balance: Uint128,
+        required_amount: Uint128,
     },
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]

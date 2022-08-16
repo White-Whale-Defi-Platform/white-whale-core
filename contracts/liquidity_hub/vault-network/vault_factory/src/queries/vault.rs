@@ -15,10 +15,7 @@ mod tests {
     use vault_network::vault_factory::{ExecuteMsg, QueryMsg};
 
     use crate::tests::{
-        mock_app, mock_creator,
-        mock_instantiate::app_mock_instantiate,
-        mock_query,
-        store_code::{store_cw20_token_code, store_factory_code, store_vault_code},
+        get_fees, mock_app, mock_creator, mock_instantiate::app_mock_instantiate, mock_query,
     };
 
     #[test]
@@ -39,13 +36,7 @@ mod tests {
     #[test]
     fn does_get_created_vault_address() {
         let mut app = mock_app();
-
-        let factory_id = store_factory_code(&mut app);
-        let vault_id = store_vault_code(&mut app);
-        let token_id = store_cw20_token_code(&mut app);
-
-        // instantiate factory
-        let factory_addr = app_mock_instantiate(&mut app, factory_id, vault_id, token_id);
+        let factory_addr = app_mock_instantiate(&mut app);
 
         let creator = mock_creator();
 
@@ -60,6 +51,7 @@ mod tests {
                 factory_addr.clone(),
                 &ExecuteMsg::CreateVault {
                     asset_info: asset_info.clone(),
+                    fees: get_fees(),
                 },
                 &[],
             )
