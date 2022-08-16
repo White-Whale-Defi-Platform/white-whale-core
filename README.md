@@ -24,7 +24,7 @@ different ways to contribute to the project.
 ## Resources
 
 1. [Website](https://whitewhale.money/)
-2. [White Paper](https://whitewhale.money/Litepaper.pdf)
+2. [LitePaper](https://whitewhale.money/LitepaperV2.pdf)
 3. [Docs](https://white-whale-defi-platform.github.io/docs/)
 4. [Discord](https://discord.com/invite/tSxyyCWgYX)
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
