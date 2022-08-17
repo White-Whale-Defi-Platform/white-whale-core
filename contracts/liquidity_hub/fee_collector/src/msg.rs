@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use terraswap::asset::AssetInfo;
+use white_whale::liquidity_hub::factory_type::FactoryType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -30,12 +31,10 @@ pub enum CollectFeesFor {
     /// Contains parameters for pagination, i.e. start_after and limit, imposed by the terraswap_factory
     Factory {
         factory_addr: String,
+        factory_type: FactoryType,
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
     },
-    /// Collects the fees accumulated by all the contracts created by the different factories
-    /// on the liquidity hub
-    All {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

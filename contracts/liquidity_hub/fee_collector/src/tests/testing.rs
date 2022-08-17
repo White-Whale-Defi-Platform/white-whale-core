@@ -195,7 +195,7 @@ fn collect_fees_unsuccessfully_unauthorized() {
     // unauthorized tries collecting fees
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::CollectFees {
-        collect_fees_for: CollectFeesFor::All {},
+        collect_fees_for: CollectFeesFor::Contracts { contracts: vec![] },
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);

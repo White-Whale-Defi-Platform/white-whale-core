@@ -20,6 +20,8 @@ use crate::{
 const CONTRACT_NAME: &str = "vault_factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub const HELLO: &str = "vault_factory";
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,

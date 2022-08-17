@@ -77,6 +77,34 @@ pub fn store_token_code(app: &mut App) -> u64 {
     app.store_code(contract)
 }
 
+/// Stores the vault factory contract to the app.
+pub fn store_vault_factory_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new_with_empty(
+            vault_factory::contract::execute,
+            vault_factory::contract::instantiate,
+            vault_factory::contract::query,
+        )
+        .with_reply(vault_factory::reply::reply)
+        .with_migrate(vault_factory::contract::migrate),
+    );
+
+    app.store_code(contract)
+}
+/// Stores the vault contract to the app.
+pub fn store_vault_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new(
+            vault::contract::execute,
+            vault::contract::instantiate,
+            vault::contract::query,
+        )
+        .with_reply(vault::reply::reply),
+    );
+
+    app.store_code(contract)
+}
+
 pub fn increase_allowance(app: &mut App, sender: Addr, contract_addr: Addr, spender: Addr) {
     app.execute_contract(
         sender,

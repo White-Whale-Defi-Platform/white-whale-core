@@ -5,7 +5,7 @@ use vault_network::vault_factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, Query
 
 use crate::err::{StdResult, VaultFactoryError};
 use crate::execute::{create_vault, update_config};
-use crate::queries::{get_config, get_vault};
+use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::{Config, CONFIG};
 
 const CONTRACT_NAME: &str = "vault_factory";
@@ -86,5 +86,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => get_config(deps),
         QueryMsg::Vault { asset_info } => get_vault(deps, asset_info),
+        QueryMsg::Vaults { start_after, limit } => get_vaults(deps, start_after, limit),
     }
 }
