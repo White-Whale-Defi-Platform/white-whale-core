@@ -15,9 +15,9 @@ use white_whale::liquidity_hub::factory_type::FactoryType;
 use crate::msg::ExecuteMsg::{AddFactory, CollectFees};
 use crate::msg::{CollectFeesFor, InstantiateMsg};
 use crate::tests::common_integration::{
-    increase_allowance, mock_app, mock_app_with_balance, mock_creator, store_fee_collector_code,
-    store_pair_code, store_pool_factory_code, store_token_code, store_vault_code,
-    store_vault_factory_code,
+    increase_allowance, mock_app, mock_app_with_balance, mock_creator,
+    store_dummy_flash_loan_contract, store_fee_collector_code, store_pair_code,
+    store_pool_factory_code, store_token_code, store_vault_code, store_vault_factory_code,
 };
 
 #[test]
@@ -1461,30 +1461,29 @@ fn collect_fees_with_pagination_successfully() {
 #[test]
 fn collect_fees_for_vault() {
     let creator = mock_creator();
-    let mut native_tokens: Vec<Coin> = Vec::new();
+    let native_tokens = vec![
+        Coin {
+            denom: "uatom".to_string(),
+            amount: Uint128::new(500_000_000u128),
+        },
+        Coin {
+            denom: "ujuno".to_string(),
+            amount: Uint128::new(500_000_000u128),
+        },
+        Coin {
+            denom: "uluna".to_string(),
+            amount: Uint128::new(500_000_000u128),
+        },
+    ];
 
-    native_tokens.push(Coin {
-        denom: "uatom".to_string(),
-        amount: Uint128::new(500_000_000u128),
-    });
-    native_tokens.push(Coin {
-        denom: "ujuno".to_string(),
-        amount: Uint128::new(500_000_000u128),
-    });
-    native_tokens.push(Coin {
-        denom: "uluna".to_string(),
-        amount: Uint128::new(500_000_000u128),
-    });
-
-    let mut balances = Vec::new();
-    balances.push((creator.clone().sender, native_tokens.clone()));
-
+    let balances = vec![(creator.clone().sender, native_tokens.clone())];
     let mut app = mock_app_with_balance(balances);
 
     let fee_collector_id = store_fee_collector_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_id = store_vault_code(&mut app);
+    let dummy_flash_loan_id = store_dummy_flash_loan_contract(&mut app);
 
     let fee_collector_address = app
         .instantiate_contract(
@@ -1509,6 +1508,17 @@ fn collect_fees_for_vault() {
             },
             &[],
             "vault_factory",
+            None,
+        )
+        .unwrap();
+
+    let dummy_flash_loan_address = app
+        .instantiate_contract(
+            dummy_flash_loan_id,
+            creator.clone().sender,
+            &crate::tests::dummy_contract::InstantiateMsg {},
+            &[],
+            "dummy flash-loan",
             None,
         )
         .unwrap();
@@ -1550,17 +1560,14 @@ fn collect_fees_for_vault() {
     println!("vaults:: {:?}", vaults);
 
     // Deposit coins into vaults
-    for (i, coin) in native_tokens.clone().iter().enumerate() {
+    for (i, coin) in native_tokens.iter().enumerate() {
         app.execute_contract(
             creator.clone().sender.clone(),
             vaults[i].clone(),
             &vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(500_000_000u128),
             },
-            &[Coin {
-                denom: coin.clone().denom,
-                amount: coin.clone().amount,
-            }],
+            &[coin.clone()],
         )
         .unwrap();
     }
@@ -1569,9 +1576,7 @@ fn collect_fees_for_vault() {
 
     // Perform some flashloans
     let mut _fees_collected: HashMap<String, Asset> = HashMap::new();
-    for (i, coin) in native_tokens.clone().iter().enumerate() {
-        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
-
+    for (i, coin) in native_tokens.iter().enumerate() {
         // verify the protocol fees are zero before the flashloan
         let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
             .wrap()
@@ -1581,10 +1586,7 @@ fn collect_fees_for_vault() {
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
-        println!(
-            "query_protocol_fees_res:: {}",
-            query_protocol_fees_res.fees.to_string()
-        );
+        println!("query_protocol_fees_res:: {}", query_protocol_fees_res.fees);
 
         let balance = app
             .wrap()
@@ -1593,12 +1595,17 @@ fn collect_fees_for_vault() {
 
         println!("balance:: {}", balance.amount);
 
+        // make a dummy message which transfers desired amount back to vault
         app.execute_contract(
-            creator.clone().sender.clone(),
+            dummy_flash_loan_address.clone(),
             vaults[i].clone(),
             &vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(500_000u128),
-                msg: callback_msg.clone(),
+                msg: to_binary(&BankMsg::Send {
+                    to_address: vaults[i].to_string(),
+                    amount: coins(500_000, coin.denom.clone()),
+                })
+                .unwrap(),
             },
             &[],
         )

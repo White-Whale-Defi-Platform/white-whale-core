@@ -4,6 +4,8 @@ use cw_multi_test::{App, AppBuilder, BankKeeper, ContractWrapper, Executor};
 
 use crate::contract::{execute, instantiate, migrate, query};
 
+use super::dummy_contract::create_dummy_flash_loan_contract;
+
 /// Mocks the App
 pub fn mock_app() -> App {
     App::default()
@@ -101,6 +103,13 @@ pub fn store_vault_code(app: &mut App) -> u64 {
         )
         .with_reply(vault::reply::reply),
     );
+
+    app.store_code(contract)
+}
+
+/// Stores the dummy flash-loan contract which performs the first ExecuteMsg it receives
+pub fn store_dummy_flash_loan_contract(app: &mut App) -> u64 {
+    let contract = Box::new(create_dummy_flash_loan_contract());
 
     app.store_code(contract)
 }
