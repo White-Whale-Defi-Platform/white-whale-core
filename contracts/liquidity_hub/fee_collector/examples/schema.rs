@@ -3,9 +3,10 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, export_schema_with_title, remove_schemas, schema_for};
 
-use fee_collector::msg::{ExecuteMsg, FactoriesResponse, InstantiateMsg, MigrateMsg, QueryMsg};
+use fee_collector::msg::{
+    ExecuteMsg, FactoriesResponse, FactoryType, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use fee_collector::state::{Config, ConfigResponse};
-use white_whale::liquidity_hub::factory_type::FactoryType;
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

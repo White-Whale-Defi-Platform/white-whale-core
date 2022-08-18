@@ -385,6 +385,7 @@ dependencies = [
 name = "fee_collector"
 version = "0.8.0"
 dependencies = [
+ "cosmwasm-bignumber",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",

@@ -10,10 +10,9 @@ use terraswap::factory::PairsResponse;
 use terraswap::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
 use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
-use white_whale::liquidity_hub::factory_type::FactoryType;
 
 use crate::msg::ExecuteMsg::{AddFactory, CollectFees};
-use crate::msg::{CollectFeesFor, InstantiateMsg};
+use crate::msg::{CollectFeesFor, FactoryType, InstantiateMsg};
 use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_pair_code,
@@ -337,9 +336,10 @@ fn collect_all_factories_cw20_fees_successfully() {
         &CollectFees {
             collect_fees_for: CollectFeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
-                factory_type: FactoryType::Pool {},
-                start_after: None,
-                limit: Some(u32::try_from(TOKEN_AMOUNT).unwrap()),
+                factory_type: FactoryType::Pool {
+                    start_after: None,
+                    limit: Some(u32::try_from(TOKEN_AMOUNT).unwrap()),
+                },
             },
         },
         &[],
@@ -1041,9 +1041,10 @@ fn collect_native_fees_successfully() {
         &CollectFees {
             collect_fees_for: CollectFeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
-                factory_type: FactoryType::Pool {},
-                start_after: None,
-                limit: None,
+                factory_type: FactoryType::Pool {
+                    start_after: None,
+                    limit: None,
+                },
             },
         },
         &[],
@@ -1391,9 +1392,10 @@ fn collect_fees_with_pagination_successfully() {
             &CollectFees {
                 collect_fees_for: CollectFeesFor::Factory {
                     factory_addr: pool_factory_address.to_string(),
-                    factory_type: FactoryType::Pool {},
-                    start_after: start_after.clone(),
-                    limit: Some(u32::try_from(TOKEN_AMOUNT / 2).unwrap()),
+                    factory_type: FactoryType::Pool {
+                        start_after: start_after.clone(),
+                        limit: Some(u32::try_from(TOKEN_AMOUNT / 2).unwrap()),
+                    },
                 },
             },
             &[],
@@ -1504,7 +1506,7 @@ fn collect_fees_for_vault() {
                 owner: creator.clone().sender.into_string(),
                 vault_id,
                 token_id,
-                fee_collector_addr: fee_collector_address.into_string(),
+                fee_collector_addr: fee_collector_address.clone().into_string(),
             },
             &[],
             "vault_factory",
@@ -1524,6 +1526,9 @@ fn collect_fees_for_vault() {
         .unwrap();
 
     // Create few vaults
+    let flash_loan_fee = Fee {
+        share: Decimal::from_ratio(100u128, 3000u128),
+    };
     let mut vaults: Vec<Addr> = Vec::new();
     for coin in native_tokens.clone() {
         let res = app
@@ -1538,9 +1543,7 @@ fn collect_fees_for_vault() {
                         flash_loan_fee: Fee {
                             share: Decimal::from_ratio(100u128, 3000u128),
                         },
-                        protocol_fee: Fee {
-                            share: Decimal::from_ratio(100u128, 3000u128),
-                        },
+                        protocol_fee: flash_loan_fee.clone(),
                     },
                 },
                 &[],
@@ -1557,25 +1560,38 @@ fn collect_fees_for_vault() {
         vaults.push(Addr::unchecked(created_vault_addr.clone().value));
     }
 
-    println!("vaults:: {:?}", vaults);
-
     // Deposit coins into vaults
-    for (i, coin) in native_tokens.iter().enumerate() {
+    for (i, coin) in native_tokens.clone().iter().enumerate() {
         app.execute_contract(
             creator.clone().sender.clone(),
             vaults[i].clone(),
             &vault_network::vault::ExecuteMsg::Deposit {
-                amount: Uint128::new(500_000_000u128),
+                amount: Uint128::new(400_000_000u128),
             },
-            &[coin.clone()],
+            &[Coin {
+                denom: coin.clone().denom,
+                amount: Uint128::new(400_000_000u128),
+            }],
         )
         .unwrap();
+
+        let transfer = BankMsg::Send {
+            to_address: dummy_flash_loan_address.clone().to_string(),
+            amount: vec![Coin {
+                denom: coin.clone().denom,
+                amount: Uint128::new(100_000_000u128),
+            }],
+        };
+        app.execute(creator.clone().sender, transfer.into())
+            .unwrap();
     }
 
-    println!("Deposits done:: ");
+    let flash_loan_value = 500_000u128;
+    let return_flash_loan_value = 600_000u128;
+    let computed_protocol_fees =
+        flash_loan_fee.compute(cosmwasm_bignumber::Uint256::from(flash_loan_value));
 
     // Perform some flashloans
-    let mut _fees_collected: HashMap<String, Asset> = HashMap::new();
     for (i, coin) in native_tokens.iter().enumerate() {
         // verify the protocol fees are zero before the flashloan
         let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
@@ -1586,24 +1602,17 @@ fn collect_fees_for_vault() {
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
-        println!("query_protocol_fees_res:: {}", query_protocol_fees_res.fees);
-
-        let balance = app
-            .wrap()
-            .query_balance(vaults[i].clone(), coin.clone().denom)
-            .unwrap();
-
-        println!("balance:: {}", balance.amount);
 
         // make a dummy message which transfers desired amount back to vault
         app.execute_contract(
             dummy_flash_loan_address.clone(),
             vaults[i].clone(),
             &vault_network::vault::ExecuteMsg::FlashLoan {
-                amount: Uint128::new(500_000u128),
+                amount: Uint128::new(flash_loan_value.clone()),
                 msg: to_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
-                    amount: coins(500_000, coin.denom.clone()),
+                    // return a higher amount than the flashloan + fees
+                    amount: coins(return_flash_loan_value, coin.denom.clone()),
                 })
                 .unwrap(),
             },
@@ -1611,13 +1620,61 @@ fn collect_fees_for_vault() {
         )
         .unwrap();
 
-        println!("FlashLoan::");
-
         // verify the protocol fees where collected after flashloan
         let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vaults[i],
+                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+            )
+            .unwrap();
+        assert!(query_protocol_fees_res.fees.amount > Uint128::zero());
+        assert_eq!(
+            computed_protocol_fees,
+            cosmwasm_bignumber::Uint256::from(query_protocol_fees_res.fees.amount)
+        );
+    }
+
+    // Collect the fees accrued by the flashloan operations
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &CollectFees {
+            collect_fees_for: CollectFeesFor::Factory {
+                factory_addr: vault_factory_address.to_string(),
+                factory_type: FactoryType::Vault {
+                    start_after: None,
+                    limit: None,
+                },
+            },
+        },
+        &[],
+    )
+    .unwrap();
+
+    // verify the fee collector got the funds
+    for native_token in native_tokens {
+        let balance_res: Coin = app
+            .wrap()
+            .query_balance(
+                fee_collector_address.clone().to_string(),
+                native_token.denom,
+            )
+            .unwrap();
+
+        assert!(balance_res.amount > Uint128::zero());
+        assert_eq!(
+            cosmwasm_bignumber::Uint256::from(balance_res.amount),
+            computed_protocol_fees
+        );
+    }
+
+    // verify the protocol fees are zero after collecting the fees from the flashloans
+    for vault in vaults {
+        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+            .wrap()
+            .query_wasm_smart(
+                &vault,
                 &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();

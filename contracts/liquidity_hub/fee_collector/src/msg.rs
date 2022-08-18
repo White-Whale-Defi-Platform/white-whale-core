@@ -3,7 +3,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use terraswap::asset::AssetInfo;
-use white_whale::liquidity_hub::factory_type::FactoryType;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -32,8 +31,6 @@ pub enum CollectFeesFor {
     Factory {
         factory_addr: String,
         factory_type: FactoryType,
-        start_after: Option<[AssetInfo; 2]>,
-        limit: Option<u32>,
     },
 }
 
@@ -55,3 +52,18 @@ pub struct FactoriesResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct MigrateMsg {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum FactoryType {
+    /// Vault Factory
+    Vault {
+        start_after: Option<Vec<u8>>,
+        limit: Option<u32>,
+    },
+    /// Pool Factory
+    Pool {
+        start_after: Option<[AssetInfo; 2]>,
+        limit: Option<u32>,
+    },
+}

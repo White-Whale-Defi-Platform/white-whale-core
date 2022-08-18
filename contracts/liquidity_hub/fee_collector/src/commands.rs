@@ -3,13 +3,11 @@ use cosmwasm_std::{
     WasmMsg, WasmQuery,
 };
 
-use terraswap::asset::AssetInfo;
 use terraswap::factory::{PairsResponse, QueryMsg};
 use terraswap::pair::ExecuteMsg::CollectProtocolFees;
 use vault_network::vault_factory::VaultsResponse;
-use white_whale::liquidity_hub::factory_type::FactoryType;
 
-use crate::msg::CollectFeesFor;
+use crate::msg::{CollectFeesFor, FactoryType};
 use crate::state::{Config, CONFIG, FACTORIES};
 use crate::ContractError;
 
@@ -71,12 +69,9 @@ pub fn collect_fees(
         CollectFeesFor::Factory {
             factory_addr,
             factory_type,
-            start_after,
-            limit,
         } => {
             let factory = deps.api.addr_validate(factory_addr.as_str())?;
-            collect_fees_messages =
-                collect_fees_for_factory(&deps, &factory, &factory_type, start_after, limit)?;
+            collect_fees_messages = collect_fees_for_factory(&deps, &factory, factory_type)?;
         }
     }
 
@@ -98,18 +93,19 @@ fn collect_fees_for_contract(contract: Addr) -> StdResult<CosmosMsg> {
 fn collect_fees_for_factory(
     deps: &DepsMut,
     factory: &Addr,
-    factory_type: &FactoryType,
-    start_after: Option<[AssetInfo; 2]>,
-    limit: Option<u32>,
+    factory_type: FactoryType,
 ) -> StdResult<Vec<CosmosMsg>> {
     let mut result: Vec<CosmosMsg> = Vec::new();
 
     match factory_type {
-        FactoryType::Vault {} => {
+        FactoryType::Vault { start_after, limit } => {
             let response: VaultsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
-                    msg: to_binary(&QueryMsg::Pairs { start_after, limit })?,
+                    msg: to_binary(&vault_network::vault_factory::QueryMsg::Vaults {
+                        start_after,
+                        limit,
+                    })?,
                 }))?;
 
             for vault_info in response.vaults {
@@ -118,7 +114,7 @@ fn collect_fees_for_factory(
                 )?);
             }
         }
-        FactoryType::Pool {} => {
+        FactoryType::Pool { start_after, limit } => {
             let response: PairsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
