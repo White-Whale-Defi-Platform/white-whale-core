@@ -37,7 +37,7 @@ pub struct VaultFee {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Decimal, Uint128};
+    use cosmwasm_std::{Decimal, StdError, Uint128};
 
     use crate::fee::Fee;
 
@@ -76,19 +76,11 @@ mod tests {
         let fee = Fee {
             share: Decimal::one(),
         };
-        let res = fee.is_valid();
-        match res {
-            Ok(_) => panic!("this fee should fail"),
-            Err(_) => (),
-        }
+        assert_eq!(fee.is_valid(), Err(StdError::generic_err("Invalid fee")));
 
         let fee = Fee {
             share: Decimal::from_ratio(Uint128::new(2u128), Uint128::new(1u128)),
         };
-        let res = fee.is_valid();
-        match res {
-            Ok(_) => panic!("this fee should fail"),
-            Err(_) => (),
-        }
+        assert_eq!(fee.is_valid(), Err(StdError::generic_err("Invalid fee")));
     }
 }

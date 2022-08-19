@@ -4,11 +4,16 @@
   "description": "The instantiation message",
   "type": "object",
   "required": [
+    "fee_collector_addr",
     "owner",
     "token_id",
     "vault_id"
   ],
   "properties": {
+    "fee_collector_addr": {
+      "description": "The address where fees get collected",
+      "type": "string"
+    },
     "owner": {
       "description": "The owner of the factory",
       "type": "string"

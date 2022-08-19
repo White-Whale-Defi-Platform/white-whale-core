@@ -1,7 +1,9 @@
-use cosmwasm_std::Addr;
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
+use cw_storage_plus::{Bound, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use vault_network::vault_factory::VaultInfo;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
@@ -17,3 +19,38 @@ pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");
 
 /// Used to temporarily store the asset being instantiated between `create_vault` and `reply` callback
 pub const TMP_VAULT_ASSET: Item<Vec<u8>> = Item::new("tmp_vault_asset");
+
+// settings for pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
+
+pub fn read_vaults(
+    storage: &dyn Storage,
+    _api: &dyn Api,
+    start_after: Option<Vec<u8>>,
+    limit: Option<u32>,
+) -> StdResult<Vec<VaultInfo>> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
+
+    VAULTS
+        .range(storage, start, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            let (key, v) = item?;
+            Ok(VaultInfo {
+                vault: v.to_string(),
+                asset_info_reference: key,
+            })
+        })
+        .collect()
+}
+
+// this will set the first key after the provided key, by appending a 1 byte
+fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    start_after.map(|asset_info| {
+        let mut v = asset_info;
+        v.push(1);
+        v
+    })
+}

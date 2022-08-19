@@ -36,6 +36,40 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the addresses for all the vaults. Returns an [`Option<Vec<String>>`].",
+      "type": "object",
+      "required": [
+        "Vaults"
+      ],
+      "properties": {
+        "Vaults": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

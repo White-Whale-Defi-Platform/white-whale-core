@@ -30,12 +30,8 @@ pub enum CollectFeesFor {
     /// Contains parameters for pagination, i.e. start_after and limit, imposed by the terraswap_factory
     Factory {
         factory_addr: String,
-        start_after: Option<[AssetInfo; 2]>,
-        limit: Option<u32>,
+        factory_type: FactoryType,
     },
-    /// Collects the fees accumulated by all the contracts created by the different factories
-    /// on the liquidity hub
-    All {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -56,3 +52,18 @@ pub struct FactoriesResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct MigrateMsg {}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum FactoryType {
+    /// Vault Factory
+    Vault {
+        start_after: Option<Vec<u8>>,
+        limit: Option<u32>,
+    },
+    /// Pool Factory
+    Pool {
+        start_after: Option<[AssetInfo; 2]>,
+        limit: Option<u32>,
+    },
+}

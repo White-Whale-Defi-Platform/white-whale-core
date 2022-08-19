@@ -190,12 +190,12 @@ fn remove_unknown_factory() {
 fn collect_fees_unsuccessfully_unauthorized() {
     let mut deps = mock_dependencies(&[]);
     let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+    mock_instantiation(deps.as_mut(), info).unwrap();
 
     // unauthorized tries collecting fees
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::CollectFees {
-        collect_fees_for: CollectFeesFor::All {},
+        collect_fees_for: CollectFeesFor::Contracts { contracts: vec![] },
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
@@ -232,7 +232,7 @@ fn test_update_config_successfully() {
 fn test_update_config_unsuccessfully_unauthorized() {
     let mut deps = mock_dependencies(&[]);
     let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+    mock_instantiation(deps.as_mut(), info).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
@@ -256,7 +256,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
 fn test_migration() {
     let mut deps = mock_dependencies(&[]);
     let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+    mock_instantiation(deps.as_mut(), info).unwrap();
 
     assert_eq!(
         get_contract_version(&deps.storage),

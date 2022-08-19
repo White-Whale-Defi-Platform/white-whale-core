@@ -1,5 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 use terraswap::asset::AssetInfo;
 use white_whale::fee::VaultFee;
 
@@ -40,6 +41,11 @@ pub enum QueryMsg {
     Config {},
     /// Retrieves the address of a given vault. Returns an [`Option<String>`].
     Vault { asset_info: AssetInfo },
+    /// Retrieves the addresses for all the vaults. Returns an [`Option<Vec<String>>`].
+    Vaults {
+        start_after: Option<Vec<u8>>,
+        limit: Option<u32>,
+    },
 }
 
 /// The migrate message
@@ -48,3 +54,16 @@ pub struct MigrateMsg {}
 
 /// The `reply` code ID for the submessage after instantiating the vault.
 pub const INSTANTIATE_VAULT_REPLY_ID: u64 = 1;
+
+/// Response for the vaults query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct VaultsResponse {
+    pub vaults: Vec<VaultInfo>,
+}
+
+/// Response for the vaults query
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct VaultInfo {
+    pub vault: String,
+    pub asset_info_reference: Vec<u8>,
+}

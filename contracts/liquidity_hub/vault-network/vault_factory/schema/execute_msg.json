@@ -4,7 +4,7 @@
   "description": "The execution message",
   "oneOf": [
     {
-      "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for",
+      "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for and the fees",
       "type": "object",
       "required": [
         "CreateVault"
@@ -13,11 +13,15 @@
         "CreateVault": {
           "type": "object",
           "required": [
-            "asset_info"
+            "asset_info",
+            "fees"
           ],
           "properties": {
             "asset_info": {
               "$ref": "#/definitions/AssetInfo"
+            },
+            "fees": {
+              "$ref": "#/definitions/VaultFee"
             }
           }
         }
@@ -25,7 +29,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Updates the configuration of the vault factory. If the owner is not passed, it will not be modified.",
+      "description": "Updates the configuration of the vault factory. If a field is not specified, it will not be modified.",
       "type": "object",
       "required": [
         "UpdateConfig"
@@ -34,6 +38,12 @@
         "UpdateConfig": {
           "type": "object",
           "properties": {
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "owner": {
               "type": [
                 "string",
@@ -91,6 +101,37 @@
           "additionalProperties": false
         }
       ]
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "Fee": {
+      "type": "object",
+      "required": [
+        "share"
+      ],
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "VaultFee": {
+      "description": "Fees used by the flashloan vaults on the liquidity hub",
+      "type": "object",
+      "required": [
+        "flash_loan_fee",
+        "protocol_fee"
+      ],
+      "properties": {
+        "flash_loan_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "protocol_fee": {
+          "$ref": "#/definitions/Fee"
+        }
+      }
     }
   }
 }
