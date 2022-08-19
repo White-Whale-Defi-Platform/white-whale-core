@@ -93,13 +93,11 @@ mod tests {
 
         let creator = mock_creator();
 
-        // create a vault
-
-        let alphabet = vec!["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"];
+        // create some vaults
         let mut vault_addresses: Vec<String> = Vec::new();
         for i in 0..7 {
             let asset_info = terraswap::asset::AssetInfo::NativeToken {
-                denom: format!("uluna{}", alphabet[i]),
+                denom: format!("uluna-{}", (i + b'a') as char),
             };
 
             let res = app
@@ -113,15 +111,13 @@ mod tests {
                     &[],
                 )
                 .unwrap();
-            println!("here");
+
             let created_vault_addr = res
                 .events
                 .iter()
                 .flat_map(|event| &event.attributes)
                 .find(|attribute| attribute.key == "vault_address")
                 .unwrap();
-
-            println!("created_vault_addr:: {}", created_vault_addr.value);
 
             vault_addresses.push(created_vault_addr.value.clone());
         }
@@ -139,16 +135,20 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(vaults_response.vaults.len(), 7usize);
-        assert_eq!(vaults_response.vaults[0].vault, vault_addresses[0]);
-        assert_eq!(vaults_response.vaults[5].vault, vault_addresses[5]);
+        assert_eq!(
+            vaults_response
+                .vaults
+                .into_iter()
+                .map(|r| r.vault)
+                .collect::<Vec<_>>(),
+            vault_addresses
+        );
 
         // check that the addresses were stored, with pagination
         let mut paginated_vault_addresses: Vec<String> = Vec::new();
         let mut start_after: Option<Vec<u8>> = None;
-        let mut i = 0;
         // there are 7 vaults in the factory, let's take 4 vaults at a time so we query 2 times
-        while i < 2 {
+        for _ in 0..2 {
             let vaults_response: VaultsResponse = app
                 .wrap()
                 .query_wasm_smart(
@@ -170,21 +170,17 @@ mod tests {
                     .clone(),
             );
 
-            let vaults: Vec<String> = vaults_response
+            let vaults = vaults_response
                 .vaults
-                .iter()
-                .map(|vault_info| vault_info.vault.clone())
-                .collect();
+                .into_iter()
+                .map(|vault_info| vault_info.vault);
 
             paginated_vault_addresses = paginated_vault_addresses
                 .into_iter()
                 .chain(vaults.into_iter())
                 .collect();
-            i += 1;
         }
 
-        assert_eq!(paginated_vault_addresses.len(), 7usize);
-        assert_eq!(paginated_vault_addresses[0], vault_addresses[0]);
-        assert_eq!(paginated_vault_addresses[5], vault_addresses[5]);
+        assert_eq!(paginated_vault_addresses, vault_addresses);
     }
 }
