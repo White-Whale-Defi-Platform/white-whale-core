@@ -266,15 +266,14 @@ fn collect_all_factories_cw20_fees_successfully() {
         let protocol_fees = query_protocol_fees_res
             .fees
             .iter()
-            .filter(|&asset| {
+            .find(|&asset| {
                 let asset_addr = match asset.clone().info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
+                asset_addr != cw20_tokens[i]
             })
-            .next()
             .unwrap()
             .clone();
 
@@ -296,15 +295,14 @@ fn collect_all_factories_cw20_fees_successfully() {
         let protocol_fees = query_protocol_fees_res
             .fees
             .iter()
-            .filter(|&asset| {
+            .find(|&asset| {
                 let asset_addr = match asset.clone().info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
+                asset_addr != cw20_tokens[i]
             })
-            .next()
             .unwrap()
             .clone();
 
@@ -331,7 +329,7 @@ fn collect_all_factories_cw20_fees_successfully() {
 
     // Collect the fees
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
             collect_fees_for: CollectFeesFor::Factory {
@@ -630,15 +628,14 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         let protocol_fees = query_protocol_fees_res
             .fees
             .iter()
-            .filter(|&asset| {
+            .find(|&asset| {
                 let asset_addr = match asset.clone().info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
+                asset_addr != cw20_tokens[i]
             })
-            .next()
             .unwrap()
             .clone();
 
@@ -660,15 +657,14 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         let protocol_fees = query_protocol_fees_res
             .fees
             .iter()
-            .filter(|&asset| {
+            .find(|&asset| {
                 let asset_addr = match asset.clone().info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i].to_string()
+                asset_addr != cw20_tokens[i]
             })
-            .next()
             .unwrap()
             .clone();
 
@@ -725,11 +721,11 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
 
     // collect the fees
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
             collect_fees_for: CollectFeesFor::Contracts {
-                contracts: pair_tokens.clone(),
+                contracts: pair_tokens,
             },
         },
         &[],
@@ -765,11 +761,10 @@ fn collect_native_fees_successfully() {
     const TOKEN_AMOUNT: usize = 3;
 
     let creator = mock_creator();
-    let mut balances = Vec::new();
-    balances.push((
+    let balances = vec![(
         creator.clone().sender,
         coins(1_000_000_000u128, "native".to_string()),
-    ));
+    )];
 
     let mut app = mock_app_with_balance(balances);
 
@@ -1036,7 +1031,7 @@ fn collect_native_fees_successfully() {
 
     // Collect the fees
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
             collect_fees_for: CollectFeesFor::Factory {
@@ -1100,11 +1095,10 @@ fn collect_fees_with_pagination_successfully() {
     const TOKEN_AMOUNT: usize = 10;
 
     let creator = mock_creator();
-    let mut balances = Vec::new();
-    balances.push((
+    let balances = vec![(
         creator.clone().sender,
         coins(1_000_000_000u128, "native".to_string()),
-    ));
+    )];
 
     let mut app = mock_app_with_balance(balances);
 
@@ -1561,7 +1555,7 @@ fn collect_fees_for_vault() {
     }
 
     // Deposit coins into vaults
-    for (i, coin) in native_tokens.clone().iter().enumerate() {
+    for (i, coin) in native_tokens.iter().enumerate() {
         app.execute_contract(
             creator.clone().sender.clone(),
             vaults[i].clone(),
@@ -1608,7 +1602,7 @@ fn collect_fees_for_vault() {
             dummy_flash_loan_address.clone(),
             vaults[i].clone(),
             &vault_network::vault::ExecuteMsg::FlashLoan {
-                amount: Uint128::new(flash_loan_value.clone()),
+                amount: Uint128::new(flash_loan_value),
                 msg: to_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
                     // return a higher amount than the flashloan + fees
@@ -1637,7 +1631,7 @@ fn collect_fees_for_vault() {
 
     // Collect the fees accrued by the flashloan operations
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
             collect_fees_for: CollectFeesFor::Factory {
@@ -1686,10 +1680,10 @@ fn accumulate_fee(assets_collected: &mut HashMap<String, Asset>, asset: Asset) {
     let asset_id = asset.clone().get_id();
     if let Some(collected) = assets_collected.clone().get(asset_id.clone().as_str()) {
         assets_collected.insert(
-            asset_id.clone(),
+            asset_id,
             Asset {
                 info: asset.info.clone(),
-                amount: collected.amount.checked_add(asset.clone().amount).unwrap(),
+                amount: collected.amount.checked_add(asset.amount).unwrap(),
             },
         )
     } else {

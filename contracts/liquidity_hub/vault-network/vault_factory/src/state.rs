@@ -43,7 +43,7 @@ pub fn read_vaults(
                 asset_info_reference: key,
             })
         })
-        .collect::<StdResult<Vec<VaultInfo>>>()
+        .collect()
 }
 
 // this will set the first key after the provided key, by appending a 1 byte
