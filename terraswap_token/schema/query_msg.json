@@ -110,6 +110,41 @@
       "additionalProperties": false
     },
     {
+      "description": "Only with \"enumerable\" extension (and \"allowances\") Returns all allowances this spender has been granted. Supports pagination. Return type: AllSpenderAllowancesResponse.",
+      "type": "object",
+      "required": [
+        "all_spender_allowances"
+      ],
+      "properties": {
+        "all_spender_allowances": {
+          "type": "object",
+          "required": [
+            "spender"
+          ],
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "spender": {
+              "type": "string"
+            },
+            "start_after": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Only with \"enumerable\" extension Returns all accounts that have balances. Supports pagination. Return type: AllAccountsResponse.",
       "type": "object",
       "required": [

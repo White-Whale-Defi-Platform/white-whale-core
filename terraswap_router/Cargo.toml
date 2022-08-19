@@ -1,7 +1,7 @@
 [package]
 name = "terraswap-router"
-version = "0.1.0"
-authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
+version = "1.0.0"
+authors = ["Terraform Labs, PTE.", "DELIGHT LABS", "Kerber0x <kerber0x@protonmail.com>"]
 edition = "2018"
 description = "A Terraswap router contract - provides multi-step operations to facilitate single sign operation"
 license = "Apache-2.0"
@@ -23,10 +23,11 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw20 = { version = "0.13.4" }
+cw2 = { version = "0.14.0" }
+cw20 = { version = "0.14.0" }
 cosmwasm-std = { version = "1.0.0" }
-terraswap = { version = "2.7.0", path = "../../../../packages/terraswap"}
-cw-storage-plus = { version = "0.13.4"}
+terraswap = { version = "2.8.0", path = "../../../../packages/terraswap"}
+cw-storage-plus = { version = "0.14.0"}
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }

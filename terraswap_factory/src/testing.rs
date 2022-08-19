@@ -2,8 +2,8 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Decimal, OwnedDeps, Reply, ReplyOn, Response, StdError,
-    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, CosmosMsg, Decimal, OwnedDeps, Reply, ReplyOn, Response,
+    StdError, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
 use terraswap::asset::{AssetInfo, PairInfo};
@@ -11,7 +11,10 @@ use terraswap::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
 use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
-use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, PoolFee};
+use terraswap::pair::{
+    InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
+};
+
 use white_whale::fee::Fee;
 
 use crate::contract::{execute, instantiate, query, reply};
@@ -758,4 +761,66 @@ fn execute_transactions_unauthorized() {
         Err(StdError::GenericErr { .. }) => (),
         _ => panic!("this should error"),
     }
+}
+
+#[test]
+fn normal_migrate_pair() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::MigratePair {
+        code_id: Some(123u64),
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 123u64,
+            msg: to_binary(&PairMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
+fn normal_migrate_pair_with_none_code_id_will_config_code_id() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::MigratePair {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 321u64,
+            msg: to_binary(&PairMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
+fn failed_migrate_pair_with_no_admin() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::MigratePair {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("noadmin", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg),
+        Err(StdError::generic_err("unauthorized")),
+    );
 }

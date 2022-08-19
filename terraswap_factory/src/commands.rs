@@ -6,7 +6,9 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 use terraswap::asset::AssetInfo;
-use terraswap::pair::{InstantiateMsg as PairInstantiateMsg, PoolFee};
+use terraswap::pair::{
+    InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
+};
 use terraswap::querier::query_balance;
 
 /// Updates the contract's [Config]
@@ -157,4 +159,23 @@ pub fn add_native_token_decimals(
         ("denom", &denom),
         ("decimals", &decimals.to_string()),
     ]))
+}
+
+pub fn execute_migrate_pair(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    contract: String,
+    code_id: Option<u64>,
+) -> StdResult<Response> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let code_id = code_id.unwrap_or(config.pair_code_id);
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: contract,
+            new_code_id: code_id,
+            msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
 }

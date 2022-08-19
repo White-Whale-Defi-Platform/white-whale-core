@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-pair"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS", "Kerber0x <kerber0x@protonmail.com>"]
 edition = "2018"
 description = "A Terraswap pair contract"
@@ -23,18 +23,18 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw2 = { version = "0.13.4" }
-cw20 = { version = "0.13.4" }
+cw2 = { version = "0.14.0" }
+cw20 = { version = "0.14.0" }
 cosmwasm-std = { version = "1.0.0" }
-cw-storage-plus = { version = "0.13.4" }
+cw-storage-plus = { version = "0.14.0" }
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
-terraswap = { version = "2.7.0", path = "../../../../packages/terraswap"}
-white-whale = { version = "0.1.0", path = "../../../../packages/white-whale" }
+terraswap = { version = "2.8.0", path = "../../../../packages/terraswap"}
+white-whale = { version = "1.0.0", path = "../../../../packages/white-whale" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
