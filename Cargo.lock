@@ -203,9 +203,9 @@ dependencies = [
 
 [[package]]
 name = "cw-multi-test"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3f9a8ab7c3c29ec93cb7a39ce4b14a05e053153b4a17ef7cf2246af1b7c087e"
+checksum = "ca153120cf5b91af88be106b0c6c0263423d959bc813b1592982c02c4691a4ae"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -222,9 +222,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "648b1507290bbc03a8d88463d7cd9b04b1fa0155e5eef366c4fa052b9caaac7a"
+checksum = "1c8b264257c4f44c49b7ce09377af63aa040768ecd3fd7bdd2d48a09323a1e90"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -233,12 +233,14 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dbaecb78c8e8abfd6b4258c7f4fbeb5c49a5e45ee4d910d3240ee8e1d714e1b"
+checksum = "414b91f3d7a619bb26c835119d7095804596a1382ddc1d184c33c1d2c17f6c5e"
 dependencies = [
  "cosmwasm-std",
+ "cw2",
  "schemars",
+ "semver",
  "serde",
  "thiserror",
 ]
@@ -257,9 +259,9 @@ dependencies = [
 
 [[package]]
 name = "cw2"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04cf4639517490dd36b333bbd6c4fbd92e325fd0acf4683b41753bc5eb63bfc1"
+checksum = "aa74c324af8e3506fd8d50759a265bead3f87402e413c840042af5d2808463d6"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
@@ -269,9 +271,9 @@ dependencies = [
 
 [[package]]
 name = "cw20"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb782b8f110819a4eb5dbbcfed25ffba49ec16bbe32b4ad8da50a5ce68fec05"
+checksum = "4f446f59c519fbac5ab8b9f6c7f8dcaa05ee761703971406b28221ea778bb737"
 dependencies = [
  "cosmwasm-std",
  "cw-utils",
@@ -281,9 +283,9 @@ dependencies = [
 
 [[package]]
 name = "cw20-base"
-version = "0.13.4"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0306e606581f4fb45e82bcbb7f0333179ed53dd949c6523f01a99b4bfc1475a0"
+checksum = "e39bf97c985a50f2e340833137b3f14999f58708c4ca9928cd8f87d530c4109c"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
@@ -291,6 +293,7 @@ dependencies = [
  "cw2",
  "cw20",
  "schemars",
+ "semver",
  "serde",
  "thiserror",
 ]
@@ -383,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "fee_collector"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -815,7 +818,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap"
-version = "2.7.0"
+version = "2.8.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -829,12 +832,13 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
+ "cw2",
  "cw20",
  "protobuf 2.27.1",
  "schemars",
@@ -845,7 +849,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -865,12 +869,13 @@ dependencies = [
 
 [[package]]
 name = "terraswap-router"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
+ "cw2",
  "cw20",
  "integer-sqrt",
  "schemars",
@@ -880,7 +885,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-token"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -965,7 +970,7 @@ dependencies = [
 
 [[package]]
 name = "vault-network"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -1017,7 +1022,7 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 
 [[package]]
 name = "white-whale"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-std",
