@@ -4,6 +4,7 @@ use cosmwasm_std::{
     to_binary, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
+use cw2::set_contract_version;
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 use protobuf::Message;
@@ -19,6 +20,10 @@ use crate::state::{
 };
 use crate::{commands, queries};
 
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -28,6 +33,8 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
         liquidity_token: CanonicalAddr::from(vec![]),
@@ -226,6 +233,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     Ok(Response::default())
 }

@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
+use cw2::set_contract_version;
 use protobuf::Message;
 
 use terraswap::asset::PairInfoRaw;
@@ -13,6 +14,10 @@ use crate::response::MsgInstantiateContractResponse;
 use crate::state::{Config, CONFIG, PAIRS, TMP_PAIR_INFO};
 use crate::{commands, queries};
 
+// version info for migration info
+const CONTRACT_NAME: &str = "crates.io:terraswap-factory";
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -20,6 +25,8 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let config = Config {
         owner: deps.api.addr_canonicalize(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
@@ -61,6 +68,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         } => commands::create_pair(deps, env, info, asset_infos, pool_fees),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             commands::add_native_token_decimals(deps, env, info, denom, decimals)
+        }
+        ExecuteMsg::MigratePair { contract, code_id } => {
+            commands::execute_migrate_pair(deps, env, info, contract, code_id)
         }
     }
 }
@@ -110,6 +120,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     Ok(Response::default())
 }

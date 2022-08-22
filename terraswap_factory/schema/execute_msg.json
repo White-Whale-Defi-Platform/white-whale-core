@@ -3,7 +3,7 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
-      "description": "UpdateConfig update relevant code IDs",
+      "description": "Updates contract's config, i.e. relevant code_ids, fee_collector address and owner",
       "type": "object",
       "required": [
         "update_config"
@@ -46,7 +46,7 @@
       "additionalProperties": false
     },
     {
-      "description": "CreatePair instantiates pair contract",
+      "description": "Instantiates pair contract",
       "type": "object",
       "required": [
         "create_pair"
@@ -77,6 +77,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
       "type": "object",
       "required": [
         "add_native_token_decimals"
@@ -95,6 +96,35 @@
               "minimum": 0.0
             },
             "denom": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Migrates a pair contract to a given code_id",
+      "type": "object",
+      "required": [
+        "migrate_pair"
+      ],
+      "properties": {
+        "migrate_pair": {
+          "type": "object",
+          "required": [
+            "contract"
+          ],
+          "properties": {
+            "code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "contract": {
               "type": "string"
             }
           }

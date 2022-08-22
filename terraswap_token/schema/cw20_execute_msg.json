@@ -260,6 +260,27 @@
       "additionalProperties": false
     },
     {
+      "description": "Only with the \"mintable\" extension. The current minter may set a new minter. Setting the minter to None will remove the token's minter forever.",
+      "type": "object",
+      "required": [
+        "update_minter"
+      ],
+      "properties": {
+        "update_minter": {
+          "type": "object",
+          "properties": {
+            "new_minter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Only with the \"marketing\" extension. If authorized, updates marketing metadata. Setting None/null for any of these will leave it unchanged. Setting Some(\"\") will clear this field on the contract storage",
       "type": "object",
       "required": [
