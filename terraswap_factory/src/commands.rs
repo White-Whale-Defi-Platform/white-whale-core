@@ -107,7 +107,7 @@ pub fn create_pair(
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
-            ("pair", &format!("{}-{}", asset_infos[0], asset_infos[1])),
+            ("pair", &format!("{}-{}", asset0_label, asset1_label)),
             ("pair_label", pair_label.as_str()),
         ])
         .add_submessage(SubMsg {

@@ -171,7 +171,7 @@ fn create_pair() {
         res.attributes,
         vec![
             attr("action", "create_pair"),
-            attr("pair", "uusd-asset0001"),
+            attr("pair", "uusd-mAAPL"),
             attr("pair_label", "uusd-mAAPL pair"),
         ]
     );
@@ -225,12 +225,21 @@ fn create_pair() {
 fn create_pair_native_token_and_ibc_token() {
     let mut deps = mock_dependencies(&[
         coin(10u128, "uusd".to_string()),
-        coin(10u128, "ibc/HASH".to_string()),
+        coin(
+            10u128,
+            "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+        ),
     ]);
     deps = init(deps);
     deps.querier.with_terraswap_factory(
         &[],
-        &[("uusd".to_string(), 6u8), ("ibc/HASH".to_string(), 6u8)],
+        &[
+            ("uusd".to_string(), 6u8),
+            (
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+                6u8,
+            ),
+        ],
     );
 
     let asset_infos = [
@@ -238,7 +247,8 @@ fn create_pair_native_token_and_ibc_token() {
             denom: "uusd".to_string(),
         },
         AssetInfo::NativeToken {
-            denom: "ibc/HASH".to_string(),
+            denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+                .to_string(),
         },
     ];
 
@@ -261,8 +271,8 @@ fn create_pair_native_token_and_ibc_token() {
         res.attributes,
         vec![
             attr("action", "create_pair"),
-            attr("pair", "uusd-ibc/HASH"),
-            attr("pair_label", "uusd-ibc/HASH pair"),
+            attr("pair", "uusd-ibc/2739...5EB2"),
+            attr("pair_label", "uusd-ibc/2739...5EB2 pair"),
         ]
     );
     assert_eq!(
@@ -289,7 +299,114 @@ fn create_pair_native_token_and_ibc_token() {
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
-                label: "uusd-ibc/HASH pair".to_string(),
+                label: "uusd-ibc/2739...5EB2 pair".to_string(),
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
+            }
+            .into(),
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_PAIR_INFO.load(&deps.storage).unwrap(),
+        TmpPairInfo {
+            asset_infos: raw_infos.clone(),
+            pair_key: pair_key(&raw_infos),
+            asset_decimals: [6u8, 6u8],
+        }
+    );
+}
+
+#[test]
+fn create_ibc_tokens_pair() {
+    let mut deps = mock_dependencies(&[
+        coin(
+            10u128,
+            "ibc/4CD525F166D32B0132C095F353F4C6F033B0FF5C49141470D1EFDA1D63303D04".to_string(),
+        ),
+        coin(
+            10u128,
+            "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+        ),
+    ]);
+    deps = init(deps);
+    deps.querier.with_terraswap_factory(
+        &[],
+        &[
+            (
+                "ibc/4CD525F166D32B0132C095F353F4C6F033B0FF5C49141470D1EFDA1D63303D04".to_string(),
+                6u8,
+            ),
+            (
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+                6u8,
+            ),
+        ],
+    );
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "ibc/4CD525F166D32B0132C095F353F4C6F033B0FF5C49141470D1EFDA1D63303D04"
+                .to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+                .to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_pair"),
+            attr("pair", "ibc/4CD5...3D04-ibc/2739...5EB2"),
+            attr("pair_label", "ibc/4CD5...3D04-ibc/2739...5EB2 pair"),
+        ]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 1,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                    asset_decimals: [6u8, 6u8],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                    },
+                    fee_collector_addr: "collector".to_string()
+                })
+                .unwrap(),
+                code_id: 321u64,
+                funds: vec![],
+                label: "ibc/4CD5...3D04-ibc/2739...5EB2 pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into(),
