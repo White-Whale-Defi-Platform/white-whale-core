@@ -8,6 +8,7 @@ use cosmwasm_std::{
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
+use regex::Regex;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
@@ -20,6 +21,8 @@ impl fmt::Display for Asset {
         write!(f, "{}{}", self.amount, self.info)
     }
 }
+
+const IBC_HASH_TAKE: usize = 4usize;
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -192,9 +195,35 @@ impl AssetInfo {
                 deps.api.addr_validate(contract_addr.as_str())?,
             )?
             .symbol),
-            AssetInfo::NativeToken { denom } => Ok(denom),
+            AssetInfo::NativeToken { denom } => {
+                let ibc_token_regex = Regex::new(r"^ibc/[A-Z|\d]{64}$")
+                    .map_err(|error| StdError::generic_err(error.to_string()))?;
+                if ibc_token_regex.is_match(denom.as_str()) {
+                    get_ibc_token_label(denom)
+                } else {
+                    Ok(denom)
+                }
+            }
         }
     }
+}
+
+/// Builds the label for an ibc token denom in such way that it returns a label like "ibc/1234...5678"
+fn get_ibc_token_label(denom: String) -> StdResult<String> {
+    let ibc_token_separator =
+        Regex::new(r"/").map_err(|error| StdError::generic_err(error.to_string()))?;
+    let splits: Vec<_> = ibc_token_separator
+        .split(denom.as_str())
+        .into_iter()
+        .collect();
+    let mut token_hash = splits
+        .last()
+        .ok_or_else(|| StdError::generic_err("Splitting ibc token denom failed"))?
+        .to_string();
+    token_hash.drain(IBC_HASH_TAKE..token_hash.len() - IBC_HASH_TAKE);
+    token_hash.insert_str(IBC_HASH_TAKE, "...");
+    token_hash.insert_str(0, "ibc/");
+    Ok(token_hash)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
