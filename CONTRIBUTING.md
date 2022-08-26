@@ -116,7 +116,7 @@ See how to [report security bugs](https://github.com/White-Whale-Defi-Platform/m
 ## Engaging with the community
 
 If you are interested in developer relations, a great way to contribute is answering people's questions on our 
-[Discord](https://discord.com/invite/tSxyyCWgYX), [Twitter](https://twitter.com/WhiteWhaleTerra) or [Telegram](https://t.me/whitewhaleofficial) 
+[Discord](https://discord.com/invite/tSxyyCWgYX), [Twitter](https://twitter.com/WhiteWhaleDefi) or [Telegram](https://t.me/whitewhaleofficial) 
 channels, creating documentation in our Wiki, creating medium articles or even creating YouTube tutorials on how to use our flashloans!
 
 ## Providing Suggestions
