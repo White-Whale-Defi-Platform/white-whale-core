@@ -34,6 +34,10 @@ different ways to contribute to the project.
 
 To build Migaloo´s smart contracts, you can run the rust workspace optimizer on the root folder of the project. Alternatively, you can run `scripts/build_release.sh` to build the project artifacts.
 
+## Testing
+
+To run the tests, run `cargo test`. You can also run `cargo tarpaulin -v` to get test code coverage.
+
 ## Contributing
 
 [Contributing Guide](./CONTRIBUTING.md)
