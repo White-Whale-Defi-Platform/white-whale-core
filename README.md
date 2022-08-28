@@ -30,6 +30,10 @@ different ways to contribute to the project.
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
 6. [Telegram](https://t.me/whitewhaleofficial)
 
+## Building Migaloo
+
+To build Migaloo´s smart contracts, you can run the rust workspace optimizer on the root folder of the project. Alternatively, you can run `scripts/build_release.sh` to build the project artifacts.
+
 ## Contributing
 
 [Contributing Guide](./CONTRIBUTING.md)
