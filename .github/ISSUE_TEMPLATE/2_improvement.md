@@ -1,6 +1,6 @@
 ---
 name: Improvement proposal
-about: Improvements to the contracts, the website, the copy... Anything that is working well but could be enhanced.
+about: General improvements to the protocol. Anything that exists on Migaloo, is working well but could be enhanced or optimized.
 title: ''
 labels: 'enhancement'
 assignees: ''

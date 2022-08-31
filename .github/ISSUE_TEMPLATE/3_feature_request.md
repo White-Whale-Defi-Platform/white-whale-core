@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest a new idea for White Whale Migaloo.
+about: Suggest a new idea for White Whale Migaloo. This is something that doesn't exist currently, and you want to see.
 title: ''
 labels: 'enhancement'
 assignees: ''
