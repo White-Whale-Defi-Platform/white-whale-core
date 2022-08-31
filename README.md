@@ -38,6 +38,12 @@ To build Migaloo´s smart contracts, you can run the rust workspace optimizer on
 
 To run the tests, run `cargo test`. You can also run `cargo tarpaulin -v` to get test code coverage.
 
+## Disclaimer
+
+Migaloo core contracts are not audited yet in their current form, though most of the code has been audited and heavily used in the past, namely White Whale's v1 and TerraSwap. We plan the audit the code once the IBC components are ready, as they can potentialy introduce changes on the existing contracts.
+
+**Use the contracts and the White Whale app at your own risk!**
+
 ## Contributing
 
 [Contributing Guide](./CONTRIBUTING.md)
