@@ -1,8 +1,8 @@
 ---
-name: Bug on migaloo-core contracts
-about: You are interacting with White Whale's contracts, and you are getting an unexpected behavior, an exception, or something looks wrong.
+name: Improvement proposal
+about: General improvements to the protocol. Anything that exists on Migaloo, is working well but could be enhanced or optimized.
 title: ''
-labels: 'bug'
+labels: 'enhancement'
 assignees: ''
 
 ---
@@ -22,22 +22,17 @@ assignees: ''
 If you want to report a security issue, please follow our security policy: `https://github.com/White-Whale-Defi-Platform/migaloo-core/blob/main/SECURITY.md`
 
 ---
-## Steps to Reproduce
+## Improvement description
 
-<!-- Please include full steps to reproduce so that we can reproduce the problem. -->
-
-1. Execute `X` transaction on the `vault` contract <!-- (see "Code sample" section below) -->
-2. ... <!-- describe steps to demonstrate bug -->
-3. ... <!-- for example "Query X data and get an exception" -->
-
-**Expected results:** <!-- what did you expect to happen? -->
-
-**Actual results:** <!-- what did you actually happen? -->
+<!--
+      What is it that you think can be improved? Give a clear explanation of what element can be done better and how
+      the protocol can benefit from it.
+-->
 
 ---
 
 ### Additional context
-Add any other context about the problem here, code snippets, json responses and so on.
+Add any other context here, code snippets, json responses, screenshots and so on.
 
 <details>
 <summary>Code sample</summary>
@@ -68,10 +63,22 @@ Add any other context about the problem here, code snippets, json responses and 
 
 </details>
 
+<details>
+  <summary>Screenshots</summary>
+
 <!--
       Consider also attaching screenshots and/or videos to better
       illustrate the issue.
 
       You can upload them directly on GitHub.
       Beware that video file size is limited to 10MB.
+-->
+
+```
+```
+
+</details>
+
+<!--
+      Include any additional resource that doesn't fit the categories previously listed.
 -->
