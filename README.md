@@ -10,6 +10,8 @@
 [![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
 [![Discord badge][]][Discord invite]
 [![Twitter handle][]][Twitter badge]
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6401/badge)](https://bestpractices.coreinfrastructure.org/projects/6401)
+
 
 [Discord invite]: https://discord.com/invite/tSxyyCWgYX
 [Discord badge]: https://img.shields.io/discord/908044702794801233
