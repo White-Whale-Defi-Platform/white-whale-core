@@ -10,6 +10,8 @@ pub fn update_config(
     info: MessageInfo,
     new_owner: Option<String>,
     new_fee_collector_addr: Option<String>,
+    new_vault_id: Option<u64>,
+    new_token_id: Option<u64>,
 ) -> StdResult<Response> {
     let new_config = CONFIG.update::<_, VaultFactoryError>(deps.storage, |mut config| {
         // check that sender is the owner
@@ -25,6 +27,14 @@ pub fn update_config(
             config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
         }
 
+        if let Some(new_vault_id) = new_vault_id {
+            config.vault_id = new_vault_id;
+        }
+
+        if let Some(new_token_id) = new_token_id {
+            config.token_id = new_token_id;
+        }
+
         Ok(config)
     })?;
 
@@ -35,6 +45,8 @@ pub fn update_config(
             "fee_collector_addr",
             &new_config.fee_collector_addr.into_string(),
         ),
+        ("vault_id", &new_config.vault_id.to_string()),
+        ("token_id", &new_config.token_id.to_string()),
     ]))
 }
 
@@ -58,6 +70,8 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: Some("other_acc".to_string()),
                 fee_collector_addr: None,
+                vault_id: None,
+                token_id: None,
             },
         );
 
@@ -67,7 +81,9 @@ mod tests {
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
                 ("owner", "other_acc"),
-                ("fee_collector_addr", "fee_collector")
+                ("fee_collector_addr", "fee_collector"),
+                ("vault_id", "1"),
+                ("token_id", "2")
             ])
         );
 
@@ -89,6 +105,8 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: None,
                 fee_collector_addr: Some("other_acc".to_string()),
+                vault_id: None,
+                token_id: None,
             },
         );
 
@@ -98,7 +116,9 @@ mod tests {
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
                 ("owner", &mock_creator().sender.into_string()),
-                ("fee_collector_addr", "other_acc")
+                ("fee_collector_addr", "other_acc"),
+                ("vault_id", "1"),
+                ("token_id", "2")
             ])
         );
 
@@ -113,13 +133,15 @@ mod tests {
     }
 
     #[test]
-    fn does_allow_empty_update() {
+    fn does_update_vault_and_token_ids() {
         let (res, deps, env) = mock_execute(
             1,
             2,
             ExecuteMsg::UpdateConfig {
                 owner: None,
                 fee_collector_addr: None,
+                vault_id: Some(3u64),
+                token_id: Some(4u64),
             },
         );
 
@@ -129,7 +151,51 @@ mod tests {
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
                 ("owner", &mock_creator().sender.to_string()),
-                ("fee_collector_addr", "fee_collector")
+                ("fee_collector_addr", "fee_collector"),
+                ("vault_id", "3"),
+                ("token_id", "4")
+            ])
+        );
+
+        // check query
+        let desired_config = Config {
+            fee_collector_addr: Addr::unchecked("fee_collector"),
+            owner: mock_creator().sender,
+            vault_id: 3,
+            token_id: 4,
+        };
+
+        let config: Config =
+            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+        assert_eq!(config, desired_config);
+
+        // check storage
+        let config = CONFIG.load(&deps.storage).unwrap();
+        assert_eq!(config, desired_config);
+    }
+
+    #[test]
+    fn does_allow_empty_update() {
+        let (res, deps, env) = mock_execute(
+            1,
+            2,
+            ExecuteMsg::UpdateConfig {
+                owner: None,
+                fee_collector_addr: None,
+                vault_id: None,
+                token_id: None,
+            },
+        );
+
+        // check response
+        assert_eq!(
+            res.unwrap(),
+            Response::new().add_attributes(vec![
+                ("method", "update_config"),
+                ("owner", &mock_creator().sender.to_string()),
+                ("fee_collector_addr", "fee_collector"),
+                ("vault_id", "1"),
+                ("token_id", "2")
             ])
         );
 
@@ -163,6 +229,8 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: Some(unauthorized_sender.sender.clone().into_string()),
                 fee_collector_addr: Some(unauthorized_sender.sender.into_string()),
+                vault_id: None,
+                token_id: None,
             },
         )
         .unwrap_err();

@@ -32,6 +32,8 @@ pub enum ExecuteMsg {
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
+        vault_id: Option<u64>,
+        token_id: Option<u64>,
     },
 }
 

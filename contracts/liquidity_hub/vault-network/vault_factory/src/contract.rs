@@ -40,7 +40,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
-        } => update_config(deps, info, owner, fee_collector_addr),
+            vault_id,
+            token_id,
+        } => update_config(deps, info, owner, fee_collector_addr, vault_id, token_id),
     }
 }
 
