@@ -1,6 +1,6 @@
 [package]
 name = "vault"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 edition = "2021"
 description = "Contract to handle a single vault that controls an asset"

@@ -7,10 +7,10 @@
       "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for and the fees",
       "type": "object",
       "required": [
-        "CreateVault"
+        "create_vault"
       ],
       "properties": {
-        "CreateVault": {
+        "create_vault": {
           "type": "object",
           "required": [
             "asset_info",
@@ -32,10 +32,10 @@
       "description": "Updates the configuration of the vault factory. If a field is not specified, it will not be modified.",
       "type": "object",
       "required": [
-        "UpdateConfig"
+        "update_config"
       ],
       "properties": {
-        "UpdateConfig": {
+        "update_config": {
           "type": "object",
           "properties": {
             "fee_collector_addr": {

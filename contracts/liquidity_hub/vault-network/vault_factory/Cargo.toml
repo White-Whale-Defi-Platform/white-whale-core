@@ -1,6 +1,6 @@
 [package]
 name = "vault_factory"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 edition = "2021"
 description = "Contract to facilitate the vault network"
