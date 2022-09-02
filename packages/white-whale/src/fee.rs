@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Fee {
     pub share: Decimal,
 }
@@ -30,6 +31,7 @@ impl Fee {
 
 /// Fees used by the flashloan vaults on the liquidity hub
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct VaultFee {
     pub protocol_fee: Fee,
     pub flash_loan_fee: Fee,

@@ -36,6 +36,7 @@ pub enum Cw20HookMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+#[serde(rename_all = "snake_case")]
 pub struct Cw20ReceiveMsg {
     pub sender: String,
     pub amount: Uint128,
@@ -43,6 +44,7 @@ pub struct Cw20ReceiveMsg {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct UpdateConfigParams {
     /// If users should be allowed to perform flash-loans.
     pub flash_loan_enabled: Option<bool>,

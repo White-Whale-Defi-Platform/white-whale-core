@@ -7,10 +7,10 @@
       "description": "Retrieves the configuration of the vault. Returns a [`Config`] struct.",
       "type": "object",
       "required": [
-        "Config"
+        "config"
       ],
       "properties": {
-        "Config": {
+        "config": {
           "type": "object"
         }
       },
@@ -20,10 +20,10 @@
       "description": "Retrieves the address of a given vault. Returns an [`Option<String>`].",
       "type": "object",
       "required": [
-        "Vault"
+        "vault"
       ],
       "properties": {
-        "Vault": {
+        "vault": {
           "type": "object",
           "required": [
             "asset_info"
@@ -41,10 +41,10 @@
       "description": "Retrieves the addresses for all the vaults. Returns an [`Option<Vec<String>>`].",
       "type": "object",
       "required": [
-        "Vaults"
+        "vaults"
       ],
       "properties": {
-        "Vaults": {
+        "vaults": {
           "type": "object",
           "properties": {
             "limit": {

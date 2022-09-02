@@ -19,6 +19,7 @@ pub struct InstantiateMsg {
 
 /// The execution message
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
     /// for and the fees
@@ -36,6 +37,7 @@ pub enum ExecuteMsg {
 
 /// The query message
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Retrieves the configuration of the vault. Returns a [`Config`] struct.
     Config {},
@@ -50,6 +52,7 @@ pub enum QueryMsg {
 
 /// The migrate message
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct MigrateMsg {}
 
 /// The `reply` code ID for the submessage after instantiating the vault.
@@ -63,6 +66,7 @@ pub struct VaultsResponse {
 
 /// Response for the vaults query
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct VaultInfo {
     pub vault: String,
     pub asset_info_reference: Vec<u8>,
