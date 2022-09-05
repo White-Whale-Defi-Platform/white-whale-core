@@ -62,24 +62,24 @@ jobs:
       - name: Install dylint-link
         run: cargo install --force dylint-link
 
-      # - name: Run tests
-      #   uses: actions-rs/cargo@v1
-      #   with:
-      #     command: test
-      #     args: --no-fail-fast --locked
-      #   env:
-      #     RUST_BACKTRACE: 1
-      - name: Run tests with coverage
-        run: |
-            mkdir -p cov
-            docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin \
-              sh -c "cargo tarpaulin --skip-clean --frozen --out Xml --output-dir cov"
-      # TODO: Can be enabled later for automated coverage reports on diffs
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: cov/cobertura.xml
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: '0.15.0'
+          args: '-- --test-threads 1'
+          out-type: 'Html'
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          fail_ci_if_error: true
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: 'target/tarpaulin/coverage.html'
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
