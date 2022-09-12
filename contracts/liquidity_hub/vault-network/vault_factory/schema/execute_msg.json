@@ -29,6 +29,35 @@
       "additionalProperties": false
     },
     {
+      "description": "Migrates vaults to the given code_id. If a [vault_addr] is provided, then migrates only that vault.",
+      "type": "object",
+      "required": [
+        "migrate_vaults"
+      ],
+      "properties": {
+        "migrate_vaults": {
+          "type": "object",
+          "required": [
+            "vault_code_id"
+          ],
+          "properties": {
+            "vault_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "vault_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Updates the configuration of the vault factory. If a field is not specified, it will not be modified.",
       "type": "object",
       "required": [
