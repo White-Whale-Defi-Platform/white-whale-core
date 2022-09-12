@@ -4,7 +4,7 @@ use semver::Version;
 use vault_network::vault_factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::err::{StdResult, VaultFactoryError};
-use crate::execute::{create_vault, update_config};
+use crate::execute::{create_vault, migrate_vaults, update_config};
 use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::{Config, CONFIG};
 
@@ -37,6 +37,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::CreateVault { asset_info, fees } => {
             create_vault(deps, env, info, asset_info, fees)
         }
+        ExecuteMsg::MigrateVaults {
+            vault_addr,
+            vault_code_id,
+        } => migrate_vaults(deps, info, vault_addr, vault_code_id),
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,

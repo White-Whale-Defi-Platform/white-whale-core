@@ -35,7 +35,8 @@ pub fn store_vault_code(app: &mut App) -> u64 {
             vault::contract::instantiate,
             vault::contract::query,
         )
-        .with_reply(vault::reply::reply),
+        .with_reply(vault::reply::reply)
+        .with_migrate(vault::contract::migrate),
     );
 
     app.store_code(contract)

@@ -27,6 +27,12 @@ pub enum ExecuteMsg {
         asset_info: AssetInfo,
         fees: VaultFee,
     },
+    /// Migrates vaults to the given code_id. If a [vault_addr] is provided, then migrates only that
+    /// vault.
+    MigrateVaults {
+        vault_addr: Option<String>,
+        vault_code_id: u64,
+    },
     /// Updates the configuration of the vault factory.
     /// If a field is not specified, it will not be modified.
     UpdateConfig {
