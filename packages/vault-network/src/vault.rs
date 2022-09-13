@@ -1,4 +1,4 @@
-use cosmwasm_std::{Binary, Uint128};
+use cosmwasm_std::{Addr, Binary, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use terraswap::asset::{Asset, AssetInfo};
@@ -101,4 +101,24 @@ pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ProtocolFeesResponse {
     pub fees: Asset,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Config {
+    /// The owner of the vault
+    pub owner: Addr,
+    /// The asset info the vault manages
+    pub asset_info: AssetInfo,
+    /// If flash-loans are enabled
+    pub flash_loan_enabled: bool,
+    /// If deposits are enabled
+    pub deposit_enabled: bool,
+    /// If withdrawals are enabled
+    pub withdraw_enabled: bool,
+    /// The address of the liquidity token
+    pub liquidity_token: Addr,
+    /// The address of the fee collector
+    pub fee_collector_addr: Addr,
+    /// The fees associated with this vault
+    pub fees: VaultFee,
 }

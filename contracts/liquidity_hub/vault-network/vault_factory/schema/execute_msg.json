@@ -58,6 +58,31 @@
       "additionalProperties": false
     },
     {
+      "description": "Updates a vault config",
+      "type": "object",
+      "required": [
+        "update_vault_config"
+      ],
+      "properties": {
+        "update_vault_config": {
+          "type": "object",
+          "required": [
+            "params",
+            "vault_addr"
+          ],
+          "properties": {
+            "params": {
+              "$ref": "#/definitions/UpdateConfigParams"
+            },
+            "vault_addr": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Updates the configuration of the vault factory. If a field is not specified, it will not be modified.",
       "type": "object",
       "required": [
@@ -159,6 +184,57 @@
       "properties": {
         "share": {
           "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "UpdateConfigParams": {
+      "type": "object",
+      "properties": {
+        "deposit_enabled": {
+          "description": "If users should be able to deposit funds to the contract.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "flash_loan_enabled": {
+          "description": "If users should be allowed to perform flash-loans.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "new_fee_collector_addr": {
+          "description": "The new address of the fee collector",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "new_owner": {
+          "description": "The new owner of the contract.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "new_vault_fees": {
+          "description": "The new fees used for the vault",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/VaultFee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withdraw_enabled": {
+          "description": "if users should be able to withdraw funds from the contract.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

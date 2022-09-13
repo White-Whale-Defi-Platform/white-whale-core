@@ -91,11 +91,12 @@ mod test {
         Addr, Response, Uint128,
     };
     use terraswap::asset::{Asset, AssetInfo};
+    use vault_network::vault::Config;
 
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
-        state::{Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+        state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
         tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 

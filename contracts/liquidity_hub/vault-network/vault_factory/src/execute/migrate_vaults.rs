@@ -14,7 +14,7 @@ pub fn migrate_vaults(
     vault_addr: Option<String>,
     vault_code_id: u64,
 ) -> StdResult<Response> {
-    // check that owner is creating vault
+    // check that owner is migrating vault
     let config = CONFIG.load(deps.storage)?;
     if config.owner != info.sender {
         return Err(VaultFactoryError::Unauthorized {});
