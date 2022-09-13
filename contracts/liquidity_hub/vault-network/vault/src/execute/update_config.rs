@@ -68,13 +68,13 @@ mod test {
         Addr, Decimal, Response,
     };
     use terraswap::asset::AssetInfo;
-    use vault_network::vault::UpdateConfigParams;
+    use vault_network::vault::{Config, UpdateConfigParams};
     use white_whale::fee::{Fee, VaultFee};
 
     use crate::{
         contract::execute,
         error::VaultError,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{get_fees, mock_creator, mock_instantiate::mock_instantiate},
     };
 

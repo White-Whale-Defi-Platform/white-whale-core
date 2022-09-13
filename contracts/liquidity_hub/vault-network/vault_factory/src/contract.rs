@@ -1,10 +1,11 @@
 use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
+
 use vault_network::vault_factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::err::{StdResult, VaultFactoryError};
-use crate::execute::{create_vault, migrate_vaults, update_config};
+use crate::execute::{create_vault, migrate_vaults, update_config, update_vault_config};
 use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::{Config, CONFIG};
 
@@ -36,6 +37,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     match msg {
         ExecuteMsg::CreateVault { asset_info, fees } => {
             create_vault(deps, env, info, asset_info, fees)
+        }
+        ExecuteMsg::UpdateVaultConfig { vault_addr, params } => {
+            update_vault_config(deps, info, vault_addr, params)
         }
         ExecuteMsg::MigrateVaults {
             vault_addr,
@@ -69,6 +73,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Response;
+
     use vault_network::vault_factory::MigrateMsg;
 
     use crate::tests::mock_instantiate::mock_instantiate;

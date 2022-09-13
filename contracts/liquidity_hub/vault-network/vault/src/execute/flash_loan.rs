@@ -100,11 +100,12 @@ mod test {
         to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
     };
     use terraswap::asset::AssetInfo;
+    use vault_network::vault::Config;
 
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 

@@ -7,14 +7,14 @@ use cw20::{Cw20QueryMsg, MinterResponse, TokenInfoResponse};
 use semver::Version;
 use terraswap::asset::{Asset, AssetInfo};
 use vault_network::vault::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
 
 use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
     queries::{get_config, get_protocol_fees, get_share},
-    state::{Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
 };
 
 const CONTRACT_NAME: &str = "vault_factory";

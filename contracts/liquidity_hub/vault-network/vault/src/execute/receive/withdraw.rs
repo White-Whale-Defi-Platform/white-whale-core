@@ -86,12 +86,12 @@ mod tests {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
     use terraswap::asset::AssetInfo;
-    use vault_network::vault::UpdateConfigParams;
+    use vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::{
         contract::execute,
         error::VaultError,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{
             get_fees,
             mock_app::{mock_app, mock_app_with_balance},

@@ -14,10 +14,11 @@ mod test {
         Addr,
     };
     use terraswap::asset::AssetInfo;
+    use vault_network::vault::Config;
 
     use crate::{
         contract::query,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{get_fees, mock_creator},
     };
 

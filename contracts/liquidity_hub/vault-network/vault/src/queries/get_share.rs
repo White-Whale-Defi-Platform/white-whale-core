@@ -37,10 +37,11 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{coins, from_binary, testing::mock_env, Addr, Uint128};
+    use vault_network::vault::Config;
 
     use crate::{
         contract::query,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 

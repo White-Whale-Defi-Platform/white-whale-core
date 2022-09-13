@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::vault;
 use terraswap::asset::AssetInfo;
 use white_whale::fee::VaultFee;
 
@@ -32,6 +33,11 @@ pub enum ExecuteMsg {
     MigrateVaults {
         vault_addr: Option<String>,
         vault_code_id: u64,
+    },
+    /// Updates a vault config
+    UpdateVaultConfig {
+        vault_addr: String,
+        params: vault::UpdateConfigParams,
     },
     /// Updates the configuration of the vault factory.
     /// If a field is not specified, it will not be modified.
