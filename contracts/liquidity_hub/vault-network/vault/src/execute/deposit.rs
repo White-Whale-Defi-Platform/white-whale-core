@@ -4,7 +4,7 @@ use terraswap::asset::AssetInfo;
 
 use crate::{
     error::{StdResult, VaultError},
-    state::CONFIG,
+    state::{CONFIG, LOAN_COUNTER},
 };
 
 pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
@@ -13,6 +13,12 @@ pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> S
     // check that deposits are enabled
     if !config.deposit_enabled {
         return Err(VaultError::DepositsDisabled {});
+    }
+
+    // check that we are not currently in a flash-loan
+    if LOAN_COUNTER.load(deps.storage)? != 0 {
+        // more than 0 loans is being performed currently
+        return Err(VaultError::DepositDuringLoan {});
     }
 
     // check that user sent assets they said they did
@@ -91,7 +97,7 @@ mod test {
     use crate::{
         contract::execute,
         error::VaultError,
-        state::CONFIG,
+        state::{CONFIG, LOAN_COUNTER},
         tests::{
             get_fees, mock_creator, mock_dependencies_lp, mock_execute,
             mock_instantiate::mock_instantiate,
@@ -115,6 +121,9 @@ mod test {
                 Ok(c)
             })
             .unwrap();
+
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &0).unwrap();
 
         let res = execute(
             deps.as_mut(),
@@ -175,6 +184,9 @@ mod test {
                 },
             )
             .unwrap();
+
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &0).unwrap();
 
         let res = execute(
             deps.as_mut(),
@@ -258,6 +270,9 @@ mod test {
             )
             .unwrap();
 
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &0).unwrap();
+
         let res = execute(
             deps.as_mut(),
             env,
@@ -310,5 +325,43 @@ mod test {
         );
 
         assert_eq!(res.unwrap_err(), VaultError::DepositsDisabled {});
+    }
+
+    #[test]
+    fn cannot_deposit_when_loan() {
+        let mut deps = mock_dependencies();
+
+        // inject config
+        CONFIG
+            .save(
+                &mut deps.storage,
+                &Config {
+                    owner: mock_creator().sender,
+                    asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    liquidity_token: Addr::unchecked("lp_token"),
+                    deposit_enabled: true,
+                    flash_loan_enabled: true,
+                    withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector_addr"),
+                    fees: get_fees(),
+                },
+            )
+            .unwrap();
+
+        // inject loan state
+        LOAN_COUNTER.save(&mut deps.storage, &2).unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(5_000),
+            },
+        );
+
+        assert_eq!(res.unwrap_err(), VaultError::DepositDuringLoan {});
     }
 }

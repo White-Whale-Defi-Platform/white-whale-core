@@ -14,7 +14,7 @@ use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
     queries::{get_config, get_protocol_fees, get_share},
-    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
 const CONTRACT_NAME: &str = "vault_factory";
@@ -110,6 +110,9 @@ pub fn instantiate(
             info: msg.asset_info,
         },
     )?;
+
+    // set loan counter to zero
+    LOAN_COUNTER.save(deps.storage, &0)?;
 
     Ok(Response::new()
         .add_attributes(vec![attr("method", "instantiate")])
