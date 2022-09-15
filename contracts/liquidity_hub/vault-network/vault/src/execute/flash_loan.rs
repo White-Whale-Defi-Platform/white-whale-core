@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
+    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
+    StdError, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
@@ -7,7 +8,7 @@ use vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::{
     error::{StdResult, VaultError},
-    state::CONFIG,
+    state::{CONFIG, LOAN_COUNTER},
 };
 
 pub fn flash_loan(
@@ -22,6 +23,12 @@ pub fn flash_loan(
     if !config.flash_loan_enabled {
         return Err(VaultError::FlashLoansDisabled {});
     }
+
+    // increment loan counter
+    LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| {
+        Ok(c.checked_add(1)
+            .ok_or_else(|| OverflowError::new(cosmwasm_std::OverflowOperation::Add, c, 1))?)
+    })?;
 
     // store current balance for after trade profit check
     let old_balance = match config.asset_info.clone() {
@@ -105,7 +112,7 @@ mod test {
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
-        state::CONFIG,
+        state::{CONFIG, LOAN_COUNTER},
         tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 
@@ -143,6 +150,47 @@ mod test {
         );
 
         assert_eq!(res.unwrap_err(), VaultError::FlashLoansDisabled {})
+    }
+
+    #[test]
+    fn does_increment_loan_counter() {
+        let mut deps = mock_dependencies_with_balance(&coins(10_000, "uluna"));
+        let env = mock_env();
+
+        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+
+        instantiate(
+            deps.as_mut(),
+            env.clone(),
+            mock_creator(),
+            vault_network::vault::InstantiateMsg {
+                owner: mock_creator().sender.into_string(),
+                token_id: 2,
+                asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                fee_collector_addr: "fee_collector".to_string(),
+                vault_fees: get_fees(),
+            },
+        )
+        .unwrap();
+
+        // should start at zero initially
+        assert_eq!(LOAN_COUNTER.load(&deps.storage).unwrap(), 0);
+
+        execute(
+            deps.as_mut(),
+            env,
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::FlashLoan {
+                amount: Uint128::new(5_000),
+                msg: callback_msg,
+            },
+        )
+        .unwrap();
+
+        // should be at one now
+        assert_eq!(LOAN_COUNTER.load(&deps.storage).unwrap(), 1);
     }
 
     #[test]
@@ -218,6 +266,7 @@ mod test {
 
         let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
 
+        // inject config
         CONFIG
             .save(
                 &mut deps.storage,
@@ -235,6 +284,9 @@ mod test {
                 },
             )
             .unwrap();
+
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &0).unwrap();
 
         let res = execute(
             deps.as_mut(),

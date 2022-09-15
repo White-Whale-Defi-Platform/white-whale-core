@@ -4,7 +4,7 @@ use terraswap::asset::AssetInfo;
 
 use crate::{
     error::{StdResult, VaultError},
-    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
 pub fn after_trade(
@@ -75,6 +75,9 @@ pub fn after_trade(
         Ok(protocol_fees)
     })?;
 
+    // deduct loan counter
+    LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))?;
+
     Ok(Response::new().add_attributes(vec![
         ("method", "after_trade".to_string()),
         ("profit", profit.to_string()),
@@ -96,7 +99,7 @@ mod test {
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
-        state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+        state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
         tests::{get_fees, mock_creator, mock_dependencies_lp},
     };
 
@@ -230,6 +233,9 @@ mod test {
                 },
             )
             .unwrap();
+
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &1).unwrap();
 
         let res = execute(
             deps.as_mut(),
@@ -380,5 +386,79 @@ mod test {
                 old_balance: Uint128::new(5_000)
             }
         );
+    }
+
+    #[test]
+    fn does_deduct_loan_counter() {
+        let env = mock_env();
+        let mut deps = mock_dependencies_lp(
+            &[],
+            &[(
+                env.clone().contract.address.into_string(),
+                &[("vault_token".to_string(), Uint128::new(7_500))],
+            )],
+            vec![],
+        );
+
+        // inject config
+        CONFIG
+            .save(
+                &mut deps.storage,
+                &Config {
+                    owner: mock_creator().sender,
+                    liquidity_token: Addr::unchecked("lp_token"),
+                    asset_info: AssetInfo::Token {
+                        contract_addr: "vault_token".to_string(),
+                    },
+                    deposit_enabled: true,
+                    flash_loan_enabled: true,
+                    withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
+                },
+            )
+            .unwrap();
+
+        // inject protocol fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+        ALL_TIME_COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+
+        // inject loan counter
+        LOAN_COUNTER.save(&mut deps.storage, &3).unwrap();
+
+        execute(
+            deps.as_mut(),
+            env.clone(),
+            mock_info(&env.contract.address.into_string(), &[]),
+            vault_network::vault::ExecuteMsg::Callback(
+                vault_network::vault::CallbackMsg::AfterTrade {
+                    old_balance: Uint128::new(5_000),
+                    loan_amount: Uint128::new(1_000),
+                },
+            ),
+        )
+        .unwrap();
+
+        assert_eq!(LOAN_COUNTER.load(&deps.storage).unwrap(), 2);
     }
 }
