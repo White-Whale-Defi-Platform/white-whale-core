@@ -90,6 +90,8 @@ pub enum QueryMsg {
     Share { amount: Uint128 },
     /// Retrieves the protocol fees that have been collected. If `all_time` is `true`, will return the all time collected fees.
     ProtocolFees { all_time: bool },
+    /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out, in a [`PaybackAmountResponse`] response.
+    GetPaybackAmount { amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -121,4 +123,14 @@ pub struct Config {
     pub fee_collector_addr: Addr,
     /// The fees associated with this vault
     pub fees: VaultFee,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PaybackAmountResponse {
+    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
+    pub payback_amount: Uint128,
+    /// The amount of fee paid to the protocol
+    pub protocol_fee: Uint128,
+    /// The amount of fee paid to vault holders
+    pub flash_loan_fee: Uint128,
 }

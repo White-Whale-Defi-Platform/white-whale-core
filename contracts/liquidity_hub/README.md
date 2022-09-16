@@ -29,6 +29,7 @@ The Vault Network is comprised by the following components:
 
 - Vaults: store tokens needed to make flash loans (e.g. Atom, Luna, and Juno)
 - Vault Factory: Manages the deployment and parameters of the vaults. Requires governance permission.
+- Vault Router: Routes request to flash-loan assets to the specific vaults
 
 ### Fee collector
 The local fee collector contract charges the fees for usage of the pool and vault network on a specific blockchain. 

@@ -1019,6 +1019,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "vault_router"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "fee_collector",
+ "protobuf 3.1.0",
+ "schemars",
+ "semver",
+ "serde",
+ "terraswap",
+ "thiserror",
+ "vault",
+ "vault-network",
+ "white-whale",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
