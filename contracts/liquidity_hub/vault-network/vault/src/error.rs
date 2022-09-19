@@ -46,4 +46,7 @@ pub enum VaultError {
 
     #[error("Withdrawals are not enabled")]
     WithdrawsDisabled {},
+
+    #[error("Cannot deposit while flash-loaning")]
+    DepositDuringLoan {},
 }

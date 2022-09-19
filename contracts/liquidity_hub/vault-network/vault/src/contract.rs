@@ -5,6 +5,7 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use cw20::{Cw20QueryMsg, MinterResponse, TokenInfoResponse};
 use semver::Version;
+
 use terraswap::asset::{Asset, AssetInfo};
 use vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
@@ -14,7 +15,7 @@ use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
     queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
-    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
 const CONTRACT_NAME: &str = "vault_factory";
@@ -111,6 +112,9 @@ pub fn instantiate(
         },
     )?;
 
+    // set loan counter to zero
+    LOAN_COUNTER.save(deps.storage, &0)?;
+
     Ok(Response::new()
         .add_attributes(vec![attr("method", "instantiate")])
         .add_submessage(lp_instantiate_msg))
@@ -130,6 +134,9 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+    // initialize the loan counter
+    LOAN_COUNTER.save(deps.storage, &0)?;
+
     let version: Version = CONTRACT_VERSION
         .parse()
         .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?;
@@ -146,6 +153,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     Ok(Response::default())
 }
 

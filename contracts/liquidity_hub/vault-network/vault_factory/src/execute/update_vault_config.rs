@@ -30,22 +30,12 @@ pub fn update_vault_config(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
-        testing::mock_info, to_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
-    };
+    use cosmwasm_std::Addr;
     use cw_multi_test::Executor;
 
-    use terraswap::asset::AssetInfo;
-    use vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
-    use white_whale::fee::{Fee, VaultFee};
-
     use crate::{
-        contract::execute,
         err::VaultFactoryError,
-        tests::{
-            get_fees, mock_app, mock_creator, mock_execute,
-            mock_instantiate::{app_mock_instantiate, mock_instantiate},
-        },
+        tests::{get_fees, mock_app, mock_creator, mock_instantiate::app_mock_instantiate},
     };
 
     #[test]
