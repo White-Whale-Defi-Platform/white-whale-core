@@ -1,16 +1,26 @@
 use cw_multi_test::{App, ContractWrapper};
 
-use crate::{
-    contract::{execute, instantiate, migrate, query},
-    reply::reply,
-};
+use crate::contract::{execute, instantiate, migrate, query};
 
-/// Stores the vault factory contract to the app.
+/// Stores the vault router contract to the app.
+pub fn store_router_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new_with_empty(execute, instantiate, query).with_migrate(migrate),
+    );
+
+    app.store_code(contract)
+}
+
+/// Stores the vault factory contract to the app
 pub fn store_factory_code(app: &mut App) -> u64 {
     let contract = Box::new(
-        ContractWrapper::new_with_empty(execute, instantiate, query)
-            .with_reply(reply)
-            .with_migrate(migrate),
+        ContractWrapper::new_with_empty(
+            vault_factory::contract::execute,
+            vault_factory::contract::instantiate,
+            vault_factory::contract::query,
+        )
+        .with_migrate(vault_factory::contract::migrate)
+        .with_reply(vault_factory::reply::reply),
     );
 
     app.store_code(contract)

@@ -100,6 +100,3 @@ pub fn complete_loan(
         .add_messages(messages.concat())
         .add_attributes(vec![("method", "complete_loan")]))
 }
-
-#[cfg(test)]
-mod tests {}

@@ -51,6 +51,3 @@ pub fn next_loan(
         .add_messages(messages)
         .add_attributes(vec![("method", "next_loan")]))
 }
-
-#[cfg(test)]
-mod tests {}

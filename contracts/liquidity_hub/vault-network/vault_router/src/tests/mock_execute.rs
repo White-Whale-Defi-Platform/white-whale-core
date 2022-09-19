@@ -8,15 +8,14 @@ use crate::{contract::execute, err::StdResult};
 use super::{mock_creator, mock_instantiate::mock_instantiate};
 
 pub fn mock_execute(
-    vault_id: u64,
-    token_id: u64,
-    msg: vault_network::vault_factory::ExecuteMsg,
+    factory_addr: String,
+    msg: vault_network::vault_router::ExecuteMsg,
 ) -> (
     StdResult<Response>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,
     Env,
 ) {
-    let (mut deps, env) = mock_instantiate(vault_id, token_id);
+    let (mut deps, env) = mock_instantiate(factory_addr);
 
     (
         execute(deps.as_mut(), env.clone(), mock_creator(), msg),

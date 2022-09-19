@@ -34,4 +34,5 @@ cosmwasm-schema = { version = "1.0.0" }
 cw-multi-test = "0.14.0"
 cw20-base = "0.14.0"
 vault = { path = "../vault" }
+vault_factory = { path = "../vault_factory" }
 fee_collector = { path = "../../fee_collector" }

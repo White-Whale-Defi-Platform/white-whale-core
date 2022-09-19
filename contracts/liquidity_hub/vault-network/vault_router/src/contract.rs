@@ -66,27 +66,6 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
     Ok(Response::default())
 }
 
-#[cfg(test)]
-mod test {
-    use cosmwasm_std::Response;
-    use vault_network::vault_router::MigrateMsg;
-
-    use crate::tests::mock_instantiate::mock_instantiate;
-
-    use super::migrate;
-
-    #[test]
-    fn can_migrate() {
-        // instantiate contract
-        let (mut deps, env) = mock_instantiate(5, 6);
-
-        // migrate contract
-        let res = migrate(deps.as_mut(), env, MigrateMsg {}).unwrap();
-
-        assert_eq!(res, Response::new());
-    }
-}
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {

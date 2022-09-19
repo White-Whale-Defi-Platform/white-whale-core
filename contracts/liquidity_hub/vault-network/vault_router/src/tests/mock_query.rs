@@ -4,21 +4,20 @@ use cosmwasm_std::{
     Env, OwnedDeps,
 };
 use serde::de::DeserializeOwned;
-use vault_network::vault_factory::QueryMsg;
+use vault_network::vault_router::QueryMsg;
 
 use crate::contract::query;
 
 use super::mock_instantiate::mock_instantiate;
 
 pub fn mock_query<T>(
-    vault_id: u64,
-    token_id: u64,
+    factory_addr: String,
     query_msg: QueryMsg,
 ) -> (T, OwnedDeps<MockStorage, MockApi, MockQuerier>, Env)
 where
     T: DeserializeOwned,
 {
-    let (deps, env) = mock_instantiate(vault_id, token_id);
+    let (deps, env) = mock_instantiate(factory_addr);
 
     let res = from_binary(&query(deps.as_ref(), env.clone(), query_msg).unwrap()).unwrap();
 

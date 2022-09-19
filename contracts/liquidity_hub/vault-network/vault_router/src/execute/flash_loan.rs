@@ -62,6 +62,3 @@ pub fn flash_loan(
         .add_messages(messages)
         .add_attributes(vec![("method", "flash_loan")]))
 }
-
-#[cfg(test)]
-mod tests {}

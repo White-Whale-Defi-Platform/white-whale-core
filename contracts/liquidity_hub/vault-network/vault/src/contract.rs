@@ -13,8 +13,8 @@ use vault_network::vault::{
 use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
-	queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
-	state::{Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
+    queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
+    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG},
 };
 
 const CONTRACT_NAME: &str = "vault_factory";
