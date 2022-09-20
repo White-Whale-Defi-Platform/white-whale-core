@@ -15,18 +15,13 @@ use terraswap::querier::query_balance;
 pub fn update_config(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
 ) -> StdResult<Response> {
     let mut config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
 
     if let Some(owner) = owner {
         // validate address format
@@ -134,17 +129,10 @@ pub fn create_pair(
 pub fn add_native_token_decimals(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     denom: String,
     decimals: u8,
 ) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
     if balance.is_zero() {
         return Err(StdError::generic_err(
