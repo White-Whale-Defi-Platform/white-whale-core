@@ -61,6 +61,9 @@ archway-testnet)
   source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/archway.env)
   ;;
 
+injective-testnet)
+  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/injective.env)
+  ;;
 
 *)
   echo "Network $chain not defined"
