@@ -2,8 +2,7 @@ use crate::state::{
     add_allow_native_token, pair_key, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO,
 };
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, StdResult,
-    SubMsg, WasmMsg,
+    to_binary, CosmosMsg, DepsMut, Env, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use terraswap::asset::AssetInfo;
 use terraswap::pair::{
@@ -14,8 +13,6 @@ use terraswap::querier::query_balance;
 /// Updates the contract's [Config]
 pub fn update_config(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
@@ -51,7 +48,6 @@ pub fn update_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
 ) -> StdResult<Response> {
@@ -129,7 +125,6 @@ pub fn create_pair(
 pub fn add_native_token_decimals(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
     denom: String,
     decimals: u8,
 ) -> StdResult<Response> {
@@ -151,8 +146,6 @@ pub fn add_native_token_decimals(
 
 pub fn execute_migrate_pair(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
     contract: String,
     code_id: Option<u64>,
 ) -> StdResult<Response> {
