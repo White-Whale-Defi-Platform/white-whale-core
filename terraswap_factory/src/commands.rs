@@ -2,8 +2,7 @@ use crate::state::{
     add_allow_native_token, pair_key, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO,
 };
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, StdError, StdResult,
-    SubMsg, WasmMsg,
+    to_binary, CosmosMsg, DepsMut, Env, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use terraswap::asset::AssetInfo;
 use terraswap::pair::{
@@ -14,19 +13,12 @@ use terraswap::querier::query_balance;
 /// Updates the contract's [Config]
 pub fn update_config(
     deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
 ) -> StdResult<Response> {
     let mut config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
 
     if let Some(owner) = owner {
         // validate address format
@@ -56,7 +48,6 @@ pub fn update_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
 ) -> StdResult<Response> {
@@ -134,17 +125,9 @@ pub fn create_pair(
 pub fn add_native_token_decimals(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
     denom: String,
     decimals: u8,
 ) -> StdResult<Response> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    // permission check
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
-    }
-
     let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
     if balance.is_zero() {
         return Err(StdError::generic_err(
@@ -163,8 +146,6 @@ pub fn add_native_token_decimals(
 
 pub fn execute_migrate_pair(
     deps: DepsMut,
-    _env: Env,
-    _info: MessageInfo,
     contract: String,
     code_id: Option<u64>,
 ) -> StdResult<Response> {

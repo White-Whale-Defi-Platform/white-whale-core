@@ -53,24 +53,16 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             fee_collector_addr,
             token_code_id,
             pair_code_id,
-        } => commands::update_config(
-            deps,
-            env,
-            info,
-            owner,
-            fee_collector_addr,
-            token_code_id,
-            pair_code_id,
-        ),
+        } => commands::update_config(deps, owner, fee_collector_addr, token_code_id, pair_code_id),
         ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,
-        } => commands::create_pair(deps, env, info, asset_infos, pool_fees),
+        } => commands::create_pair(deps, env, asset_infos, pool_fees),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            commands::add_native_token_decimals(deps, env, info, denom, decimals)
+            commands::add_native_token_decimals(deps, env, denom, decimals)
         }
         ExecuteMsg::MigratePair { contract, code_id } => {
-            commands::execute_migrate_pair(deps, env, info, contract, code_id)
+            commands::execute_migrate_pair(deps, contract, code_id)
         }
     }
 }
