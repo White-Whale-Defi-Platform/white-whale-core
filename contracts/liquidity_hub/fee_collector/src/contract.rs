@@ -56,6 +56,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Factories { limit } => to_binary(&queries::query_factories(deps, limit)?),
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
+        QueryMsg::AccruedFees { collect_fees_for } => {
+            to_binary(&queries::query_accrued_fees(deps, collect_fees_for)?)
+        }
     }
 }
 
