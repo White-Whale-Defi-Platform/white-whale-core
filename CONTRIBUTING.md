@@ -68,6 +68,7 @@ which you will need to fix before we review it.
     - `./scripts/hooks/pre-commit.sh --install`
 5. Make your contributions locally. The following are recommendations so that it is easier for anyone to understand what 
 you are trying to achieve:
+    - Please use [conventional commits](https://conventionalcommits.org) syntax.
     - Please make sure to use clear commit messages.
     - Please favor small commits instead of large ones.
 6. Make sure to update the schemas if you have modified the messages.
