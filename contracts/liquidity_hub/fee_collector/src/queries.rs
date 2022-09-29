@@ -30,15 +30,16 @@ pub fn query_fees(
             for contract in contracts {
                 match contract.contract_type {
                     ContractType::Pool {} => {
-                        let mut res =
+                        let mut pair_fee =
                             query_fees_for_pair(&deps, contract.address.clone(), accrued)?;
 
-                        query_fees_messages.append(&mut res.fees);
+                        query_fees_messages.append(&mut pair_fee);
                     }
                     ContractType::Vault {} => {
-                        let res = query_fees_for_vault(&deps, contract.address.clone(), accrued)?;
+                        let vault_fee =
+                            query_fees_for_vault(&deps, contract.address.clone(), accrued)?;
 
-                        query_fees_messages.push(res.fees);
+                        query_fees_messages.push(vault_fee);
                     }
                 }
             }
@@ -57,31 +58,73 @@ pub fn query_fees(
     Ok(query_fees_messages)
 }
 
-fn query_fees_for_vault(
-    deps: &Deps,
-    vault: String,
-    _accrued: bool,
-) -> StdResult<ProtocolVaultFeesResponse> {
-    deps.querier
+fn query_fees_for_vault(deps: &Deps, vault: String, accrued: bool) -> StdResult<Asset> {
+    let all_time = if accrued {
+        None
+    } else {
+        let fees = deps
+            .querier
+            .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: vault.clone(),
+                msg: to_binary(&vault_network::vault::QueryMsg::ProtocolFees { all_time: true })?,
+            }))?
+            .fees;
+
+        Some(fees)
+    };
+
+    let mut asset = deps
+        .querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: vault,
             msg: to_binary(&vault_network::vault::QueryMsg::ProtocolFees { all_time: false })?,
-        }))
+        }))?
+        .fees;
+
+    if let Some(all_time_fees) = all_time {
+        asset.amount = all_time_fees.amount.checked_sub(asset.amount)?;
+    }
+
+    Ok(asset)
 }
 
-fn query_fees_for_pair(
-    deps: &Deps,
-    pair: String,
-    _accrued: bool,
-) -> StdResult<ProtocolPairFeesResponse> {
-    deps.querier
+fn query_fees_for_pair(deps: &Deps, pair: String, accrued: bool) -> StdResult<Vec<Asset>> {
+    let all_time = if accrued {
+        vec![]
+    } else {
+        deps.querier
+            .query::<ProtocolPairFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: pair.clone(),
+                msg: to_binary(&terraswap::pair::QueryMsg::ProtocolFees {
+                    all_time: Some(true),
+                    asset_id: None,
+                })?,
+            }))?
+            .fees
+    };
+
+    let mut accrued = deps
+        .querier
         .query::<ProtocolPairFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: pair,
             msg: to_binary(&terraswap::pair::QueryMsg::ProtocolFees {
                 all_time: None,
                 asset_id: None,
             })?,
-        }))
+        }))?
+        .fees;
+
+    for mut asset in &mut accrued {
+        let all_time_result = all_time
+            .iter()
+            .find(|asset_all_time| asset_all_time.info == asset.info);
+
+        if let Some(all_time_asset) = all_time_result {
+            asset.amount = all_time_asset.amount.checked_sub(asset.amount)?;
+        }
+    }
+
+    Ok(accrued)
 }
 
 fn query_fees_for_factory(
@@ -104,8 +147,8 @@ fn query_fees_for_factory(
                 }))?;
 
             for vault_info in response.vaults {
-                let vault_response = query_fees_for_vault(deps, vault_info.vault, accrued)?;
-                query_fees_messages.push(vault_response.fees);
+                let vault_fee = query_fees_for_vault(deps, vault_info.vault, accrued)?;
+                query_fees_messages.push(vault_fee);
             }
         }
         FactoryType::Pool { start_after, limit } => {
@@ -116,8 +159,8 @@ fn query_fees_for_factory(
                 }))?;
 
             for pair in response.pairs {
-                let mut pair_response = query_fees_for_pair(deps, pair.contract_addr, accrued)?;
-                query_fees_messages.append(&mut pair_response.fees);
+                let mut pair_fees = query_fees_for_pair(deps, pair.contract_addr, accrued)?;
+                query_fees_messages.append(&mut pair_fees);
             }
         }
     }
