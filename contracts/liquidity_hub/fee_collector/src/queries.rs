@@ -1,11 +1,11 @@
-use cosmwasm_std::{to_binary, Addr, Deps, QueryRequest, StdError, StdResult, WasmQuery};
+use cosmwasm_std::{to_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
 use terraswap::asset::Asset;
 use terraswap::factory::{PairsResponse, QueryMsg};
 use terraswap::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
 use vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{CollectFeesFor, FactoriesResponse, FactoryType};
+use crate::msg::{ContractType, FactoriesResponse, FactoryType, QueryFeesFor};
 use crate::state::{read_factories, ConfigResponse, CONFIG};
 
 pub fn query_factories(deps: Deps, limit: Option<u32>) -> StdResult<FactoriesResponse> {
@@ -18,21 +18,37 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(config)
 }
 
-pub fn query_accrued_fees(deps: Deps, collect_fees_for: CollectFeesFor) -> StdResult<Vec<Asset>> {
+pub fn query_fees(
+    deps: Deps,
+    collect_fees_for: QueryFeesFor,
+    accrued: bool,
+) -> StdResult<Vec<Asset>> {
     let mut query_fees_messages: Vec<Asset> = Vec::new();
 
     match collect_fees_for {
-        CollectFeesFor::Contracts { .. } => {
-            return Err(StdError::GenericErr {
-                msg: "Query accrued fees for contracts is not allowed.".to_string(),
-            })
+        QueryFeesFor::Contracts { contracts } => {
+            for contract in contracts {
+                match contract.contract_type {
+                    ContractType::Pool {} => {
+                        let mut res =
+                            query_fees_for_pair(&deps, contract.address.clone(), accrued)?;
+
+                        query_fees_messages.append(&mut res.fees);
+                    }
+                    ContractType::Vault {} => {
+                        let res = query_fees_for_vault(&deps, contract.address.clone(), accrued)?;
+
+                        query_fees_messages.push(res.fees);
+                    }
+                }
+            }
         }
-        CollectFeesFor::Factory {
+        QueryFeesFor::Factory {
             factory_addr,
             factory_type,
         } => {
             let factory = deps.api.addr_validate(factory_addr.as_str())?;
-            let mut assets = query_fees_for_factory(&deps, &factory, factory_type)?;
+            let mut assets = query_fees_for_factory(&deps, &factory, factory_type, accrued)?;
 
             query_fees_messages.append(&mut assets);
         }
@@ -41,7 +57,11 @@ pub fn query_accrued_fees(deps: Deps, collect_fees_for: CollectFeesFor) -> StdRe
     Ok(query_fees_messages)
 }
 
-fn query_fees_for_vault(deps: &Deps, vault: String) -> StdResult<ProtocolVaultFeesResponse> {
+fn query_fees_for_vault(
+    deps: &Deps,
+    vault: String,
+    _accrued: bool,
+) -> StdResult<ProtocolVaultFeesResponse> {
     deps.querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: vault,
@@ -49,7 +69,11 @@ fn query_fees_for_vault(deps: &Deps, vault: String) -> StdResult<ProtocolVaultFe
         }))
 }
 
-fn query_fees_for_pair(deps: &Deps, pair: String) -> StdResult<ProtocolPairFeesResponse> {
+fn query_fees_for_pair(
+    deps: &Deps,
+    pair: String,
+    _accrued: bool,
+) -> StdResult<ProtocolPairFeesResponse> {
     deps.querier
         .query::<ProtocolPairFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: pair,
@@ -64,6 +88,7 @@ fn query_fees_for_factory(
     deps: &Deps,
     factory: &Addr,
     factory_type: FactoryType,
+    accrued: bool,
 ) -> StdResult<Vec<Asset>> {
     let mut query_fees_messages: Vec<Asset> = Vec::new();
 
@@ -79,7 +104,7 @@ fn query_fees_for_factory(
                 }))?;
 
             for vault_info in response.vaults {
-                let vault_response = query_fees_for_vault(deps, vault_info.vault)?;
+                let vault_response = query_fees_for_vault(deps, vault_info.vault, accrued)?;
                 query_fees_messages.push(vault_response.fees);
             }
         }
@@ -91,7 +116,7 @@ fn query_fees_for_factory(
                 }))?;
 
             for pair in response.pairs {
-                let mut pair_response = query_fees_for_pair(deps, pair.contract_addr)?;
+                let mut pair_response = query_fees_for_pair(deps, pair.contract_addr, accrued)?;
                 query_fees_messages.append(&mut pair_response.fees);
             }
         }

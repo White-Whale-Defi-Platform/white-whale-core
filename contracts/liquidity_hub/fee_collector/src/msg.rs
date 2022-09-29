@@ -38,13 +38,12 @@ pub enum CollectFeesFor {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     /// Queries factories added to the fee collector
-    Factories {
-        limit: Option<u32>,
-    },
+    Factories { limit: Option<u32> },
     /// Queries the configuration of this contract
     Config {},
-    AccruedFees {
-        collect_fees_for: CollectFeesFor,
+    Fees {
+        collect_fees_for: QueryFeesFor,
+        accrued: Option<bool>,
     },
 }
 
@@ -71,4 +70,30 @@ pub enum FactoryType {
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryFeesFor {
+    Contracts {
+        contracts: Vec<Contract>,
+    },
+    Factory {
+        factory_addr: String,
+        factory_type: FactoryType,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Contract {
+    pub address: String,
+    pub contract_type: ContractType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ContractType {
+    Vault {},
+    Pool {},
 }
