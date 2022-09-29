@@ -73,7 +73,7 @@ fn query_fees_for_vault(deps: &Deps, vault: String, accrued: bool) -> StdResult<
         Some(fees)
     };
 
-    let mut asset = deps
+    let mut asset_fee = deps
         .querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: vault,
@@ -82,10 +82,10 @@ fn query_fees_for_vault(deps: &Deps, vault: String, accrued: bool) -> StdResult<
         .fees;
 
     if let Some(all_time_fees) = all_time {
-        asset.amount = all_time_fees.amount.checked_sub(asset.amount)?;
+        asset_fee.amount = all_time_fees.amount.checked_sub(asset_fee.amount)?;
     }
 
-    Ok(asset)
+    Ok(asset_fee)
 }
 
 fn query_fees_for_pair(deps: &Deps, pair: String, accrued: bool) -> StdResult<Vec<Asset>> {
@@ -103,7 +103,7 @@ fn query_fees_for_pair(deps: &Deps, pair: String, accrued: bool) -> StdResult<Ve
             .fees
     };
 
-    let mut accrued = deps
+    let mut accrued_fees = deps
         .querier
         .query::<ProtocolPairFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: pair,
@@ -114,7 +114,7 @@ fn query_fees_for_pair(deps: &Deps, pair: String, accrued: bool) -> StdResult<Ve
         }))?
         .fees;
 
-    for mut asset in &mut accrued {
+    for mut asset in &mut accrued_fees {
         let all_time_result = all_time
             .iter()
             .find(|asset_all_time| asset_all_time.info == asset.info);
@@ -124,7 +124,7 @@ fn query_fees_for_pair(deps: &Deps, pair: String, accrued: bool) -> StdResult<Ve
         }
     }
 
-    Ok(accrued)
+    Ok(accrued_fees)
 }
 
 fn query_fees_for_factory(
