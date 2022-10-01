@@ -54,6 +54,7 @@ pub fn after_trade(
     if required_amount > new_balance {
         return Err(VaultError::NegativeProfit {
             old_balance,
+            current_balance: new_balance,
             required_amount,
         });
     }
@@ -329,8 +330,9 @@ mod test {
         assert_eq!(
             res,
             VaultError::NegativeProfit {
+                old_balance: Uint128::new(5_000),
+                current_balance: Uint128::new(5_005),
                 required_amount: Uint128::new(5_010),
-                old_balance: Uint128::new(5_000)
             }
         );
     }
@@ -382,8 +384,9 @@ mod test {
         assert_eq!(
             res,
             VaultError::NegativeProfit {
+                old_balance: Uint128::new(5_000),
+                current_balance: Uint128::new(5_005),
                 required_amount: Uint128::new(5_010),
-                old_balance: Uint128::new(5_000)
             }
         );
     }

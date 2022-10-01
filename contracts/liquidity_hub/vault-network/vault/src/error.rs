@@ -31,10 +31,14 @@ pub enum VaultError {
     ExternalCallback {},
 
     #[error(
-        "Final desired amount of {required_amount} is less than initial balance of {old_balance}"
+        "Final desired amount of {required_amount} is less than current balance of {current_balance} (got {old_balance} -> {current_balance}, want {old_balance} -> {required_amount})"
     )]
     NegativeProfit {
+        /// The balance before the loan occurred
         old_balance: Uint128,
+        /// The current balance of the vault
+        current_balance: Uint128,
+        /// The required return amount for the vault
         required_amount: Uint128,
     },
 
