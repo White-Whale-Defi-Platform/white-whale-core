@@ -2,6 +2,8 @@ use cw_multi_test::{App, ContractWrapper};
 
 use crate::contract::{execute, instantiate, migrate, query};
 
+use super::create_dummy_flash_loan_contract;
+
 /// Stores the vault router contract to the app.
 pub fn store_router_code(app: &mut App) -> u64 {
     let contract = Box::new(
@@ -60,4 +62,11 @@ pub fn store_fee_collector_code(app: &mut App) -> u64 {
     ));
 
     app.store_code(contract)
+}
+
+/// Stores the dummy contract to the app
+pub fn store_dummy_flash_loan_contract(app: &mut App) -> u64 {
+    let contract = create_dummy_flash_loan_contract();
+
+    app.store_code(Box::new(contract))
 }

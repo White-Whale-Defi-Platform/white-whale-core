@@ -72,8 +72,9 @@
           "type": "object",
           "required": [
             "initiator",
-            "loans",
-            "payload"
+            "loaned_assets",
+            "payload",
+            "to_loan"
           ],
           "properties": {
             "initiator": {
@@ -84,8 +85,8 @@
                 }
               ]
             },
-            "loans": {
-              "description": "The next loans to run.",
+            "loaned_assets": {
+              "description": "The assets that have been loaned",
               "type": "array",
               "items": {
                 "type": "array",
@@ -106,6 +107,23 @@
               "type": "array",
               "items": {
                 "$ref": "#/definitions/CosmosMsg_for_Empty"
+              }
+            },
+            "to_loan": {
+              "description": "The next loans to run.",
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/Asset"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
               }
             }
           }

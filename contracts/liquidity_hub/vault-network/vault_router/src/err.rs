@@ -25,7 +25,7 @@ pub enum VaultRouterError {
     #[error("Attempt to flash-loan asset \"{asset}\" that does not have a vault")]
     InvalidAsset { asset: Asset },
 
-    #[error("Negative profits when attempting to flash-loan asset \"{input}\" (got {output_amount}, needed {output_amount})")]
+    #[error("Negative profits when attempting to flash-loan asset \"{input}\" (got {output_amount}, needed {required_amount})")]
     NegativeProfit {
         input: Asset,
         output_amount: Uint128,

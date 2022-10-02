@@ -7,8 +7,8 @@ use crate::{contract::execute, err::StdResult};
 
 use super::{mock_creator, mock_instantiate::mock_instantiate};
 
-pub fn mock_execute(
-    factory_addr: String,
+pub fn mock_execute<F: Into<String>>(
+    factory_addr: F,
     msg: vault_network::vault_router::ExecuteMsg,
 ) -> (
     StdResult<Response>,
