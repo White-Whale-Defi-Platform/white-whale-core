@@ -15,7 +15,7 @@ pub enum ExecuteMsg {
     AddFactory { factory_addr: String },
     /// Removes a factory from the fee collector
     RemoveFactory { factory_addr: String },
-    /// Collects protocol fees based on the configuration indicated by [CollectFeesFor].
+    /// Collects protocol fees based on the configuration indicated by [CollectFeesFor]
     CollectFees { collect_fees_for: CollectFeesFor },
     /// Updates the config
     UpdateConfig { owner: Option<String> },
@@ -26,8 +26,7 @@ pub enum ExecuteMsg {
 pub enum CollectFeesFor {
     /// Collects the fees accumulated by the given contracts
     Contracts { contracts: Vec<String> },
-    /// Collects the fees accumulated by the contracts the given factory created.
-    /// Contains parameters for pagination, i.e. start_after and limit, imposed by the terraswap_factory
+    /// Collects the fees accumulated by the contracts the given factory created
     Factory {
         factory_addr: String,
         factory_type: FactoryType,
@@ -41,6 +40,11 @@ pub enum QueryMsg {
     Factories { limit: Option<u32> },
     /// Queries the configuration of this contract
     Config {},
+    /// Queries fees collected by a given factory's children or individual contracts
+    Fees {
+        query_fees_for: QueryFeesFor,
+        all_time: Option<bool>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -66,4 +70,32 @@ pub enum FactoryType {
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryFeesFor {
+    /// Specifies list of [Contract]s to query fees for
+    Contracts { contracts: Vec<Contract> },
+    /// Defines a factory for which to query fees from its children
+    Factory {
+        factory_addr: String,
+        factory_type: FactoryType,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Contract {
+    pub address: String,
+    pub contract_type: ContractType,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ContractType {
+    /// Vault contract type
+    Vault {},
+    /// Pool/Pair contract type
+    Pool {},
 }
