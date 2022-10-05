@@ -763,13 +763,20 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     );
 
     // collect the fees
+    let mut contracts: Vec<Contract> = Vec::new();
+
+    for pair in pair_tokens.clone() {
+        contracts.push(Contract {
+            address: pair.clone().to_string(),
+            contract_type: ContractType::Pool {},
+        });
+    }
+
     app.execute_contract(
         creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
-            collect_fees_for: CollectFeesFor::Contracts {
-                contracts: pair_tokens.clone(),
-            },
+            collect_fees_for: CollectFeesFor::Contracts { contracts },
         },
         &[],
     )
