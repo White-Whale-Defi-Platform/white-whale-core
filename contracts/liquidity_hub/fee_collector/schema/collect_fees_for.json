@@ -1,85 +1,50 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ExecuteMsg",
+  "title": "CollectFeesFor",
   "oneOf": [
     {
-      "description": "Adds a factory to the fee collector so it can be queried when collecting fees",
+      "description": "Collects the fees accumulated by the given contracts",
       "type": "object",
       "required": [
-        "add_factory"
+        "contracts"
       ],
       "properties": {
-        "add_factory": {
+        "contracts": {
           "type": "object",
           "required": [
-            "factory_addr"
+            "contracts"
+          ],
+          "properties": {
+            "contracts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Collects the fees accumulated by the contracts the given factory created",
+      "type": "object",
+      "required": [
+        "factory"
+      ],
+      "properties": {
+        "factory": {
+          "type": "object",
+          "required": [
+            "factory_addr",
+            "factory_type"
           ],
           "properties": {
             "factory_addr": {
               "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Removes a factory from the fee collector",
-      "type": "object",
-      "required": [
-        "remove_factory"
-      ],
-      "properties": {
-        "remove_factory": {
-          "type": "object",
-          "required": [
-            "factory_addr"
-          ],
-          "properties": {
-            "factory_addr": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor]",
-      "type": "object",
-      "required": [
-        "collect_fees"
-      ],
-      "properties": {
-        "collect_fees": {
-          "type": "object",
-          "required": [
-            "collect_fees_for"
-          ],
-          "properties": {
-            "collect_fees_for": {
-              "$ref": "#/definitions/CollectFeesFor"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Updates the config",
-      "type": "object",
-      "required": [
-        "update_config"
-      ],
-      "properties": {
-        "update_config": {
-          "type": "object",
-          "properties": {
-            "owner": {
-              "type": [
-                "string",
-                "null"
-              ]
+            },
+            "factory_type": {
+              "$ref": "#/definitions/FactoryType"
             }
           }
         }
@@ -125,59 +90,6 @@
               "properties": {
                 "denom": {
                   "type": "string"
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "CollectFeesFor": {
-      "oneOf": [
-        {
-          "description": "Collects the fees accumulated by the given contracts",
-          "type": "object",
-          "required": [
-            "contracts"
-          ],
-          "properties": {
-            "contracts": {
-              "type": "object",
-              "required": [
-                "contracts"
-              ],
-              "properties": {
-                "contracts": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "description": "Collects the fees accumulated by the contracts the given factory created",
-          "type": "object",
-          "required": [
-            "factory"
-          ],
-          "properties": {
-            "factory": {
-              "type": "object",
-              "required": [
-                "factory_addr",
-                "factory_type"
-              ],
-              "properties": {
-                "factory_addr": {
-                  "type": "string"
-                },
-                "factory_type": {
-                  "$ref": "#/definitions/FactoryType"
                 }
               }
             }

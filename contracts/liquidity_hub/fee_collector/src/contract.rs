@@ -57,12 +57,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Factories { limit } => to_binary(&queries::query_factories(deps, limit)?),
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
         QueryMsg::Fees {
-            collect_fees_for,
-            accrued,
-        } => {
-            let accrued = accrued.unwrap_or(false);
-            to_binary(&queries::query_fees(deps, collect_fees_for, accrued)?)
-        }
+            query_fees_for,
+            all_time,
+        } => to_binary(&queries::query_fees(
+            deps,
+            query_fees_for,
+            all_time.unwrap_or(false),
+        )?),
     }
 }
 

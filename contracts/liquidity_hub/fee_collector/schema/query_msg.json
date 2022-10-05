@@ -39,6 +39,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Queries fees collected by a given factory's children or individual contracts",
       "type": "object",
       "required": [
         "fees"
@@ -47,16 +48,16 @@
         "fees": {
           "type": "object",
           "required": [
-            "collect_fees_for"
+            "query_fees_for"
           ],
           "properties": {
-            "accrued": {
+            "all_time": {
               "type": [
                 "boolean",
                 "null"
               ]
             },
-            "collect_fees_for": {
+            "query_fees_for": {
               "$ref": "#/definitions/QueryFeesFor"
             }
           }
@@ -129,6 +130,7 @@
     "ContractType": {
       "oneOf": [
         {
+          "description": "Vault contract type",
           "type": "object",
           "required": [
             "vault"
@@ -141,6 +143,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Pool/Pair contract type",
           "type": "object",
           "required": [
             "pool"
@@ -229,6 +232,7 @@
     "QueryFeesFor": {
       "oneOf": [
         {
+          "description": "Specifies list of [Contract]s to query fees for",
           "type": "object",
           "required": [
             "contracts"
@@ -252,6 +256,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Defines a factory for which to query fees from its children",
           "type": "object",
           "required": [
             "factory"
