@@ -96,12 +96,8 @@ jobs:
           command: fmt
           args: --all -- --check
       
-      - name: Generate Schema
-        uses: actions-rs/cargo@v1
-        with:
-          command: schema
-          args: --locked
-
-      - name: Schema Changes
-        # fails if any changes not committed
-        run: git diff --exit-code schema
+      - name: Generate Schemas and Exit on uncommitted changes
+        run: |
+         chmod +x ./public/scripts/build_schemas.sh
+         ./public/scripts/build_schemas.sh
+        shell: bash
