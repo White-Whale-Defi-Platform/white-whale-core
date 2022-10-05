@@ -10,7 +10,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.WW_REPO_READ_PAT }}
           submodules: recursive
 
       - name: Install stable toolchain and check style
@@ -28,7 +27,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
         with:
-          token: ${{ secrets.WW_REPO_READ_PAT }}
           submodules: recursive
           # A PR should not contain too many commits
           fetch-depth: 25
