@@ -23,6 +23,9 @@ pub enum VaultFactoryError {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("Vault doesn't exist given the vault address provided")]
+    NonExistentVault {},
 }
 
 impl From<semver::Error> for VaultFactoryError {

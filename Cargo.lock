@@ -981,7 +981,7 @@ dependencies = [
 
 [[package]]
 name = "vault_factory"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
