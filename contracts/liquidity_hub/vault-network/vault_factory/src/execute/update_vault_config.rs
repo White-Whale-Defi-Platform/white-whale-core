@@ -1,24 +1,14 @@
-use cosmwasm_std::{wasm_execute, DepsMut, MessageInfo, Response};
+use cosmwasm_std::{wasm_execute, DepsMut, Response};
 
 use vault_network::vault::UpdateConfigParams;
 
-use crate::{
-    err::{StdResult, VaultFactoryError},
-    state::CONFIG,
-};
+use crate::err::StdResult;
 
 pub fn update_vault_config(
     deps: DepsMut,
-    info: MessageInfo,
     vault_addr: String,
     params: UpdateConfigParams,
 ) -> StdResult<Response> {
-    // check that owner is executing on the vault
-    let config = CONFIG.load(deps.storage)?;
-    if config.owner != info.sender {
-        return Err(VaultFactoryError::Unauthorized {});
-    }
-
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(vault_addr.as_str())?.to_string(),
