@@ -58,7 +58,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Removes a vault given the vault address provided",
+      "description": "Removes a vault given its [AssetInfo]",
       "type": "object",
       "required": [
         "remove_vault"
