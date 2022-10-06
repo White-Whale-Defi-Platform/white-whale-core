@@ -58,6 +58,27 @@
       "additionalProperties": false
     },
     {
+      "description": "Removes a vault given its [AssetInfo]",
+      "type": "object",
+      "required": [
+        "remove_vault"
+      ],
+      "properties": {
+        "remove_vault": {
+          "type": "object",
+          "required": [
+            "asset_info"
+          ],
+          "properties": {
+            "asset_info": {
+              "$ref": "#/definitions/AssetInfo"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Updates a vault config",
       "type": "object",
       "required": [

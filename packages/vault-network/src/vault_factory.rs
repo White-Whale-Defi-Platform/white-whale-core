@@ -34,6 +34,8 @@ pub enum ExecuteMsg {
         vault_addr: Option<String>,
         vault_code_id: u64,
     },
+    /// Removes a vault given its [AssetInfo]
+    RemoveVault { asset_info: AssetInfo },
     /// Updates a vault config
     UpdateVaultConfig {
         vault_addr: String,
