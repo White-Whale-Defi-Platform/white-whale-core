@@ -18,7 +18,7 @@
             "contracts": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/definitions/Contract"
               }
             }
           }
@@ -92,6 +92,51 @@
                   "type": "string"
                 }
               }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Contract": {
+      "type": "object",
+      "required": [
+        "address",
+        "contract_type"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "contract_type": {
+          "$ref": "#/definitions/ContractType"
+        }
+      }
+    },
+    "ContractType": {
+      "oneOf": [
+        {
+          "description": "Vault contract type",
+          "type": "object",
+          "required": [
+            "vault"
+          ],
+          "properties": {
+            "vault": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Pool/Pair contract type",
+          "type": "object",
+          "required": [
+            "pool"
+          ],
+          "properties": {
+            "pool": {
+              "type": "object"
             }
           },
           "additionalProperties": false

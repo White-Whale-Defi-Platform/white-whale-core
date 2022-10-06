@@ -1,6 +1,6 @@
 [package]
 name = "fee_collector"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition = "2021"
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"

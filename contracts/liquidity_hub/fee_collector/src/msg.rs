@@ -25,7 +25,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum CollectFeesFor {
     /// Collects the fees accumulated by the given contracts
-    Contracts { contracts: Vec<String> },
+    Contracts { contracts: Vec<Contract> },
     /// Collects the fees accumulated by the contracts the given factory created
     Factory {
         factory_addr: String,

@@ -4,10 +4,9 @@ use cosmwasm_std::{
 };
 
 use terraswap::factory::{PairsResponse, QueryMsg};
-use terraswap::pair::ExecuteMsg::CollectProtocolFees;
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{CollectFeesFor, FactoryType};
+use crate::msg::{CollectFeesFor, ContractType, FactoryType};
 use crate::state::{Config, CONFIG, FACTORIES};
 use crate::ContractError;
 
@@ -62,7 +61,8 @@ pub fn collect_fees(
         CollectFeesFor::Contracts { contracts } => {
             for contract in contracts {
                 collect_fees_messages.push(collect_fees_for_contract(
-                    deps.api.addr_validate(contract.as_str())?,
+                    deps.api.addr_validate(contract.address.as_str())?,
+                    contract.contract_type,
                 )?);
             }
         }
@@ -81,10 +81,17 @@ pub fn collect_fees(
 }
 
 /// Builds the message to collect the fees for the given contract
-fn collect_fees_for_contract(contract: Addr) -> StdResult<CosmosMsg> {
+fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> StdResult<CosmosMsg> {
+    let collect_protocol_fees_msg = match contract_type {
+        ContractType::Vault {} => {
+            to_binary(&vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
+        }
+        ContractType::Pool {} => to_binary(&terraswap::pair::ExecuteMsg::CollectProtocolFees {})?,
+    };
+
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: contract.to_string(),
-        msg: to_binary(&CollectProtocolFees {})?,
+        msg: collect_protocol_fees_msg,
         funds: vec![],
     }))
 }
@@ -111,6 +118,7 @@ fn collect_fees_for_factory(
             for vault_info in response.vaults {
                 result.push(collect_fees_for_contract(
                     deps.api.addr_validate(vault_info.vault.as_str())?,
+                    ContractType::Vault {},
                 )?);
             }
         }
@@ -125,6 +133,7 @@ fn collect_fees_for_factory(
                 result.push(collect_fees_for_contract(
                     deps.api
                         .addr_validate(pair.clone().contract_addr.as_str())?,
+                    ContractType::Pool {},
                 )?);
             }
         }
