@@ -70,9 +70,14 @@ esac
 
 source <(cat "$projectRootPath"/scripts/deployment/deploy_env/base.env)
 
-deployer='deployer_wallet'
 # import the deployer wallet
-export mnemonic=$(cat "$projectRootPath"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic.txt)
+if [[ "$(echo ${chain##*-})" = "testnet" ]] ; then
+  deployer='deployer_wallet_testnet'
+  export mnemonic=$(cat "$projectRootPath"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic_testnet.txt)
+else
+  deployer='deployer_wallet'
+  export mnemonic=$(cat "$projectRootPath"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic.txt)
+fi
 
 # verify if the deployer wallet has already been imported
 if ! $BINARY keys show $deployer >/dev/null 2>&1; then
