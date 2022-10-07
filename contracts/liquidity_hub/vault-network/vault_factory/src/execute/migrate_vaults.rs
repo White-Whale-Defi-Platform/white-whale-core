@@ -1,25 +1,15 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Response, WasmMsg};
 
 use vault_network::vault::MigrateMsg;
 
+use crate::err::StdResult;
 use crate::state::read_vaults;
-use crate::{
-    err::{StdResult, VaultFactoryError},
-    state::CONFIG,
-};
 
 pub fn migrate_vaults(
     deps: DepsMut,
-    info: MessageInfo,
     vault_addr: Option<String>,
     vault_code_id: u64,
 ) -> StdResult<Response> {
-    // check that owner is migrating vault
-    let config = CONFIG.load(deps.storage)?;
-    if config.owner != info.sender {
-        return Err(VaultFactoryError::Unauthorized {});
-    }
-
     // migrate only the provided vault address, otherwise migrate all vaults
     let mut res = Response::new().add_attributes(vec![
         ("method", "migrate_vaults".to_string()),

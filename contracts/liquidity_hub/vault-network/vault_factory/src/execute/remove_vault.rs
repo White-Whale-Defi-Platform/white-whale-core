@@ -1,24 +1,12 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Response};
 
 use terraswap::asset::AssetInfo;
 
 use crate::asset::AssetReference;
+use crate::err::{StdResult, VaultFactoryError};
 use crate::state::VAULTS;
-use crate::{
-    err::{StdResult, VaultFactoryError},
-    state::CONFIG,
-};
 
-pub fn remove_vault(
-    deps: DepsMut,
-    info: MessageInfo,
-    asset_info: AssetInfo,
-) -> StdResult<Response> {
-    let config = CONFIG.load(deps.storage)?;
-    if config.owner != info.sender {
-        return Err(VaultFactoryError::Unauthorized {});
-    }
-
+pub fn remove_vault(deps: DepsMut, asset_info: AssetInfo) -> StdResult<Response> {
     if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
         return Err(VaultFactoryError::NonExistentVault {});
     }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
 use terraswap::asset::AssetInfo;
 use vault_network::{vault::InstantiateMsg, vault_factory::INSTANTIATE_VAULT_REPLY_ID};
 use white_whale::fee::VaultFee;
@@ -12,15 +12,11 @@ use crate::{
 pub fn create_vault(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
     asset_info: AssetInfo,
     fees: VaultFee,
 ) -> StdResult<Response> {
     // check that owner is creating vault
     let config = CONFIG.load(deps.storage)?;
-    if config.owner != info.sender {
-        return Err(VaultFactoryError::Unauthorized {});
-    }
 
     // check that existing vault does not exist
     let existing_addr = VAULTS.may_load(deps.storage, asset_info.get_reference())?;

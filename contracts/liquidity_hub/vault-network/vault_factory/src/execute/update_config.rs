@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Response};
 
 use crate::{
     err::{StdResult, VaultFactoryError},
@@ -7,18 +7,12 @@ use crate::{
 
 pub fn update_config(
     deps: DepsMut,
-    info: MessageInfo,
     new_owner: Option<String>,
     new_fee_collector_addr: Option<String>,
     new_vault_id: Option<u64>,
     new_token_id: Option<u64>,
 ) -> StdResult<Response> {
     let new_config = CONFIG.update::<_, VaultFactoryError>(deps.storage, |mut config| {
-        // check that sender is the owner
-        if info.sender != config.owner {
-            return Err(VaultFactoryError::Unauthorized {});
-        }
-
         if let Some(new_owner) = new_owner {
             config.owner = deps.api.addr_validate(&new_owner)?;
         };

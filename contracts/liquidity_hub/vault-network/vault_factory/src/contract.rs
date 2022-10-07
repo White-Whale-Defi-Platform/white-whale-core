@@ -36,24 +36,28 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+    // permission check
+    let config = CONFIG.load(deps.storage)?;
+    if config.owner != info.sender {
+        return Err(VaultFactoryError::Unauthorized {});
+    }
+
     match msg {
-        ExecuteMsg::CreateVault { asset_info, fees } => {
-            create_vault(deps, env, info, asset_info, fees)
-        }
+        ExecuteMsg::CreateVault { asset_info, fees } => create_vault(deps, env, asset_info, fees),
         ExecuteMsg::UpdateVaultConfig { vault_addr, params } => {
-            update_vault_config(deps, info, vault_addr, params)
+            update_vault_config(deps, vault_addr, params)
         }
         ExecuteMsg::MigrateVaults {
             vault_addr,
             vault_code_id,
-        } => migrate_vaults(deps, info, vault_addr, vault_code_id),
-        ExecuteMsg::RemoveVault { asset_info } => remove_vault(deps, info, asset_info),
+        } => migrate_vaults(deps, vault_addr, vault_code_id),
+        ExecuteMsg::RemoveVault { asset_info } => remove_vault(deps, asset_info),
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
             vault_id,
             token_id,
-        } => update_config(deps, info, owner, fee_collector_addr, vault_id, token_id),
+        } => update_config(deps, owner, fee_collector_addr, vault_id, token_id),
     }
 }
 
