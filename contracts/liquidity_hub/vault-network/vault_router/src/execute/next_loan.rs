@@ -1,16 +1,25 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, Env, Response, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use terraswap::asset::Asset;
 use vault_network::vault_router::ExecuteMsg;
 
-use crate::err::StdResult;
+use crate::err::{StdResult, VaultRouterError};
 
+#[allow(clippy::too_many_arguments)]
 pub fn next_loan(
+    deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     mut payload: Vec<CosmosMsg>,
     initiator: Addr,
+    source_vault: String,
     to_loan: Vec<(String, Asset)>,
     loaned_assets: Vec<(String, Asset)>,
 ) -> StdResult<Response> {
+    // check that a vault is executing this message
+    if info.sender != deps.api.addr_validate(&source_vault)? {
+        return Err(VaultRouterError::Unauthorized {});
+    }
+
     let messages = match to_loan.split_first() {
         Some(((vault, asset), loans)) => {
             // loan next asset
@@ -21,6 +30,7 @@ pub fn next_loan(
                     amount: asset.amount,
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator,
+                        source_vault: vault.to_string(),
                         to_loan: loans.to_vec(),
                         payload,
                         loaned_assets,
@@ -122,6 +132,7 @@ mod tests {
             "factory_addr",
             ExecuteMsg::NextLoan {
                 initiator: Addr::unchecked("initiator_addr"),
+                source_vault: "source_vault".to_string(),
                 payload: payload.clone(),
                 to_loan: to_loan_assets.clone(),
                 loaned_assets: loaned_assets.clone(),
@@ -141,6 +152,7 @@ mod tests {
                             to_loan: to_loan_assets[1..].to_vec(),
                             payload,
                             loaned_assets,
+                            source_vault: "source_vault".to_string()
                         })
                         .unwrap(),
                     })
@@ -192,6 +204,7 @@ mod tests {
             "factory_addr",
             ExecuteMsg::NextLoan {
                 initiator: Addr::unchecked("initiator_addr"),
+                source_vault: "source_vault".to_string(),
                 payload: payload.clone(),
                 to_loan: vec![],
                 loaned_assets: loaned_assets.clone(),

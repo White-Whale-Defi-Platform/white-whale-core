@@ -197,6 +197,10 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         )
         .unwrap();
 
+    println!("router_addr:: {}", router_addr.clone());
+    println!("token_addr:: {}", token_addr.clone());
+    println!("native_vault_addr:: {}", native_vault_addr.clone());
+    println!("token_vault_addr:: {}", token_vault_addr.clone());
     AppInstantiateResponse {
         router_addr,
         token_addr,

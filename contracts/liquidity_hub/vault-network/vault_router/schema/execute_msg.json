@@ -74,6 +74,7 @@
             "initiator",
             "loaned_assets",
             "payload",
+            "source_vault",
             "to_loan"
           ],
           "properties": {
@@ -108,6 +109,10 @@
               "items": {
                 "$ref": "#/definitions/CosmosMsg_for_Empty"
               }
+            },
+            "source_vault": {
+              "description": "The vault contract that calls the [NextLoan] message",
+              "type": "string"
             },
             "to_loan": {
               "description": "The next loans to run.",

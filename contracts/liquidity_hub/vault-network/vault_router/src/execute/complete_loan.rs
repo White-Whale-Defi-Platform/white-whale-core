@@ -1,4 +1,6 @@
-use cosmwasm_std::{coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, Response, WasmMsg};
+use cosmwasm_std::{
+    coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+};
 use terraswap::asset::{Asset, AssetInfo};
 use vault_network::vault::PaybackAmountResponse;
 
@@ -7,9 +9,15 @@ use crate::err::{StdResult, VaultRouterError};
 pub fn complete_loan(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     initiator: Addr,
     assets: Vec<(String, Asset)>,
 ) -> StdResult<Response> {
+    // check that the contract itself is executing this message
+    if info.sender != env.contract.address {
+        return Err(VaultRouterError::Unauthorized {});
+    }
+
     // pay back loans and profit
     let messages: Vec<Vec<CosmosMsg>> = assets
         .into_iter()

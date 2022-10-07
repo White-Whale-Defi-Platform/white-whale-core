@@ -50,6 +50,7 @@ pub fn flash_loan(
                     amount: asset.amount,
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator: info.sender,
+                        source_vault: vault.to_string(),
                         to_loan: next_vaults.to_vec(),
                         payload: msgs,
                         loaned_assets: vaults,

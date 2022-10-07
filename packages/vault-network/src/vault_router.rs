@@ -36,6 +36,8 @@ pub enum ExecuteMsg {
     NextLoan {
         /// The person to pay back all profits to
         initiator: Addr,
+        /// The vault contract that calls the [NextLoan] message
+        source_vault: String,
         /// The final message to run once all assets have been loaned.
         payload: Vec<CosmosMsg>,
         /// The next loans to run.

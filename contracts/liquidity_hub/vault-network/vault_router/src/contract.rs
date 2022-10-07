@@ -35,14 +35,24 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::FlashLoan { assets, msgs } => flash_loan(deps, info, assets, msgs),
         ExecuteMsg::NextLoan {
             initiator,
+            source_vault,
             payload,
             to_loan,
             loaned_assets,
-        } => next_loan(env, payload, initiator, to_loan, loaned_assets),
+        } => next_loan(
+            deps,
+            env,
+            info,
+            payload,
+            initiator,
+            source_vault,
+            to_loan,
+            loaned_assets,
+        ),
         ExecuteMsg::CompleteLoan {
             initiator,
             loaned_assets,
-        } => complete_loan(deps, env, initiator, loaned_assets),
+        } => complete_loan(deps, env, info, initiator, loaned_assets),
         ExecuteMsg::UpdateConfig {
             owner,
             vault_factory_addr,
