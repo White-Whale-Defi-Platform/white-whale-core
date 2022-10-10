@@ -64,11 +64,13 @@ pub fn next_loan(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Response, Uint128, WasmMsg};
+    use cosmwasm_std::{
+        coins, testing::mock_info, to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
+    };
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault_router::ExecuteMsg;
 
-    use crate::tests::mock_execute;
+    use crate::{contract::execute, tests::mock_instantiate::mock_instantiate};
 
     #[test]
     fn does_call_next_loan() {
@@ -128,8 +130,11 @@ mod tests {
             ),
         ];
 
-        let (res, ..) = mock_execute(
-            "factory_addr",
+        let (mut deps, env) = mock_instantiate("factory_addr");
+        let res = execute(
+            deps.as_mut(),
+            env,
+            mock_info("source_vault", &[]),
             ExecuteMsg::NextLoan {
                 initiator: Addr::unchecked("initiator_addr"),
                 source_vault: "source_vault".to_string(),
@@ -152,7 +157,7 @@ mod tests {
                             to_loan: to_loan_assets[1..].to_vec(),
                             payload,
                             loaned_assets,
-                            source_vault: "source_vault".to_string()
+                            source_vault: to_loan_assets[0].0.to_string()
                         })
                         .unwrap(),
                     })
@@ -200,8 +205,11 @@ mod tests {
             ),
         ];
 
-        let (res, _, env) = mock_execute(
-            "factory_addr",
+        let (mut deps, env) = mock_instantiate("factory_addr");
+        let res = execute(
+            deps.as_mut(),
+            env.clone(),
+            mock_info("source_vault", &[]),
             ExecuteMsg::NextLoan {
                 initiator: Addr::unchecked("initiator_addr"),
                 source_vault: "source_vault".to_string(),

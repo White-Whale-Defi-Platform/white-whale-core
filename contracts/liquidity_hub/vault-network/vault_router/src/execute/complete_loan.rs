@@ -140,7 +140,7 @@ mod tests {
             .unwrap();
 
         app.execute_contract(
-            mock_creator().sender,
+            router_addr.clone(),
             router_addr,
             &ExecuteMsg::CompleteLoan {
                 initiator: mock_creator().sender,
@@ -183,7 +183,7 @@ mod tests {
             .unwrap();
 
         app.execute_contract(
-            mock_creator().sender,
+            router_addr.clone(),
             router_addr,
             &ExecuteMsg::CompleteLoan {
                 initiator: mock_creator().sender,
@@ -243,7 +243,7 @@ mod tests {
         .unwrap();
 
         app.execute_contract(
-            mock_creator().sender,
+            router_addr.clone(),
             router_addr,
             &ExecuteMsg::CompleteLoan {
                 initiator: mock_creator().sender,
@@ -299,7 +299,7 @@ mod tests {
         .unwrap();
 
         app.execute_contract(
-            mock_creator().sender,
+            router_addr.clone(),
             router_addr,
             &ExecuteMsg::CompleteLoan {
                 initiator: mock_creator().sender,
@@ -359,7 +359,7 @@ mod tests {
         // now try to complete loan
         let err = app
             .execute_contract(
-                mock_creator().sender,
+                router_addr.clone(),
                 router_addr,
                 &ExecuteMsg::CompleteLoan {
                     initiator: mock_creator().sender,
