@@ -1,9 +1,9 @@
 [package]
-name = "vault"
-version = "1.1.1"
-authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
+name = "vault_router"
+version = "1.0.0"
+authors = ["kaimen-sano <kaimen_sano@protonmail.com>, Kerber0x <kerber0x@protonmail.com>"]
 edition = "2021"
-description = "Contract to handle a single vault that controls an asset"
+description = "Contract to facilitate flash-loans in the vault network"
 license = "MIT"
 repository = "https://github.com/White-Whale-DeFi-Platform/migaloo-core"
 homepage = "https://whitewhale.money"
@@ -19,7 +19,6 @@ backtraces = ["cosmwasm-std/backtraces"]
 cosmwasm-std = { version = "1.0.0", features = ["iterator"] }
 cw2 = "0.14.0"
 cw20 = "0.14.0"
-cw20-base = { version = "0.14.0", features = ["library"] }
 cw-storage-plus = "0.14.0"
 protobuf = { version = "3.1.0", features = ["with-bytes"] }
 schemars = "0.8.3"
@@ -29,9 +28,11 @@ terraswap = { path = "../../../../packages/terraswap" }
 thiserror = "1.0.21"
 vault-network = { path = "../../../../packages/vault-network" }
 white-whale = { path = "../../../../packages/white-whale" }
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
 cw-multi-test = "0.14.0"
+cw20-base = "0.14.0"
+vault = { path = "../vault" }
+vault_factory = { path = "../vault_factory" }
 fee_collector = { path = "../../fee_collector" }

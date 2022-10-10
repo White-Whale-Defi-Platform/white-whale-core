@@ -947,7 +947,7 @@ checksum = "c4f5b37a154999a8f3f98cc23a628d850e154479cd94decf3414696e12e31aaf"
 
 [[package]]
 name = "vault"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -999,6 +999,30 @@ dependencies = [
  "thiserror",
  "vault",
  "vault-network",
+ "white-whale",
+]
+
+[[package]]
+name = "vault_router"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "fee_collector",
+ "protobuf 3.1.0",
+ "schemars",
+ "semver",
+ "serde",
+ "terraswap",
+ "thiserror",
+ "vault",
+ "vault-network",
+ "vault_factory",
  "white-whale",
 ]
 

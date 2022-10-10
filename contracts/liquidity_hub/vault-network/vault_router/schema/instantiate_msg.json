@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "description": "The instantiation message",
+  "type": "object",
+  "required": [
+    "owner",
+    "vault_factory_addr"
+  ],
+  "properties": {
+    "owner": {
+      "description": "The owner of the router",
+      "type": "string"
+    },
+    "vault_factory_addr": {
+      "description": "The address for the vault factory",
+      "type": "string"
+    }
+  }
+}

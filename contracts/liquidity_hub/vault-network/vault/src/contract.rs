@@ -14,7 +14,7 @@ use vault_network::vault::{
 use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
-    queries::{get_config, get_protocol_fees, get_share},
+    queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
@@ -163,5 +163,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Config {} => get_config(deps),
         QueryMsg::Share { amount } => get_share(deps, env, amount),
         QueryMsg::ProtocolFees { all_time } => get_protocol_fees(deps, all_time),
+        QueryMsg::GetPaybackAmount { amount } => get_payback_amount(deps, amount),
     }
 }
