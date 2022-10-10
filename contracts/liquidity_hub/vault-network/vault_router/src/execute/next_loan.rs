@@ -70,7 +70,11 @@ mod tests {
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault_router::ExecuteMsg;
 
-    use crate::{contract::execute, tests::mock_instantiate::mock_instantiate};
+    use crate::{
+        contract::execute,
+        err::VaultRouterError,
+        tests::{mock_execute, mock_instantiate::mock_instantiate},
+    };
 
     #[test]
     fn does_call_next_loan() {
@@ -233,5 +237,21 @@ mod tests {
                     }.into()]))
                 .add_attribute("method", "next_loan")
         );
+    }
+
+    #[test]
+    fn does_require_authorization() {
+        let (res, ..) = mock_execute(
+            "factory_addr",
+            ExecuteMsg::NextLoan {
+                initiator: Addr::unchecked("initiator_addr"),
+                source_vault: "source_vault".to_string(),
+                payload: vec![],
+                to_loan: vec![],
+                loaned_assets: vec![],
+            },
+        );
+
+        assert_eq!(res.unwrap_err(), VaultRouterError::Unauthorized {});
     }
 }

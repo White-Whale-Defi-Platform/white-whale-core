@@ -389,6 +389,43 @@ mod tests {
                 output_amount: Uint128::new(5),
                 required_amount: Uint128::new(1_066)
             }
-        )
+        );
+    }
+
+    #[test]
+    fn does_require_authorization() {
+        let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
+
+        let AppInstantiateResponse {
+            router_addr,
+            native_vault_addr,
+            ..
+        } = app_mock_instantiate(&mut app);
+
+        // now try to complete loan from unauthorized addr
+        let err = app
+            .execute_contract(
+                mock_creator().sender,
+                router_addr,
+                &ExecuteMsg::CompleteLoan {
+                    initiator: mock_creator().sender,
+                    loaned_assets: vec![(
+                        native_vault_addr.into_string(),
+                        Asset {
+                            amount: Uint128::new(1_000),
+                            info: AssetInfo::NativeToken {
+                                denom: "uluna".to_string(),
+                            },
+                        },
+                    )],
+                },
+                &[],
+            )
+            .unwrap_err();
+
+        assert_eq!(
+            err.downcast::<VaultRouterError>().unwrap(),
+            VaultRouterError::Unauthorized {}
+        );
     }
 }
