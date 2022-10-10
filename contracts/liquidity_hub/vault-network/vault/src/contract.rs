@@ -3,10 +3,10 @@ use cosmwasm_std::{
     StdError, SubMsg, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
-use cw20::{Cw20QueryMsg, MinterResponse, TokenInfoResponse};
+use cw20::MinterResponse;
 use semver::Version;
 
-use terraswap::asset::{Asset, AssetInfo};
+use terraswap::asset::Asset;
 use vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
@@ -44,19 +44,10 @@ pub fn instantiate(
     };
     CONFIG.save(deps.storage, &config)?;
 
-    // create the LP token for the vault
-    let token_name = match &msg.asset_info {
-        AssetInfo::NativeToken { denom } => denom.to_owned(),
-        AssetInfo::Token { contract_addr } => {
-            let token_info: TokenInfoResponse = deps
-                .querier
-                .query_wasm_smart(contract_addr, &Cw20QueryMsg::TokenInfo {})?;
-            token_info.name
-        }
-    };
-
     // cw20 asset symbols are 3-12 characters,
     // so we take the first 8 characters of the symbol and append "uLP-" to it
+    // in case it's an ibc token, strip away everything from the '/' in 'ibc/'. The resulting
+    // lp_symbol would be uLP-ibc in that case.
     let lp_symbol = format!(
         "uLP-{}",
         msg.asset_info
@@ -65,11 +56,18 @@ pub fn instantiate(
             .chars()
             .take(8)
             .collect::<String>()
+            .splitn(2, '/')
+            .collect::<Vec<_>>()[0]
     );
 
     let lp_label = format!(
         "WW Vault {} LP token",
-        token_name.chars().take(32).collect::<String>()
+        msg.asset_info
+            .clone()
+            .get_label(&deps.as_ref())?
+            .chars()
+            .take(32)
+            .collect::<String>()
     );
 
     let lp_instantiate_msg = SubMsg {

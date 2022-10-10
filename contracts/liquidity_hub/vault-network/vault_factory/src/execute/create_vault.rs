@@ -43,7 +43,7 @@ pub fn create_vault(
             })?,
             funds: vec![],
             label: format!(
-                "white whale {} vault",
+                "White Whale {} Vault",
                 asset_info.clone().get_label(&deps.as_ref())?
             ),
         }
@@ -115,7 +115,7 @@ mod tests {
                         })
                         .unwrap(),
                         funds: vec![],
-                        label: "white whale uluna vault".to_string()
+                        label: "White Whale uluna Vault".to_string()
                     }
                     .into()
                 })
@@ -297,7 +297,7 @@ mod tests {
                         })
                         .unwrap(),
                         funds: vec![],
-                        label: "white whale ibc/4CD5...3D04 vault".to_string()
+                        label: "White Whale ibc/4CD5...3D04 Vault".to_string()
                     }
                     .into()
                 })
