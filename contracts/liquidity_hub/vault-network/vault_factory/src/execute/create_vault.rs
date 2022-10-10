@@ -1,6 +1,7 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
 use terraswap::asset::AssetInfo;
 use vault_network::{vault::InstantiateMsg, vault_factory::INSTANTIATE_VAULT_REPLY_ID};
+use white_whale::fee::VaultFee;
 
 use crate::{
     asset::AssetReference,
@@ -11,20 +12,21 @@ use crate::{
 pub fn create_vault(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
     asset_info: AssetInfo,
+    fees: VaultFee,
 ) -> StdResult<Response> {
     // check that owner is creating vault
     let config = CONFIG.load(deps.storage)?;
-    if config.owner != info.sender {
-        return Err(VaultFactoryError::Unauthorized {});
-    }
 
     // check that existing vault does not exist
     let existing_addr = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
     if let Some(addr) = existing_addr {
         return Err(VaultFactoryError::ExistingVault { addr });
     }
+
+    // check the fees are valid
+    fees.flash_loan_fee.is_valid()?;
+    fees.protocol_fee.is_valid()?;
 
     // create a new vault
     let vault_instantiate_msg: SubMsg = SubMsg {
@@ -36,10 +38,12 @@ pub fn create_vault(
                 owner: env.contract.address.into_string(),
                 asset_info: asset_info.clone(),
                 token_id: config.token_id,
+                fee_collector_addr: config.fee_collector_addr.into_string(),
+                vault_fees: fees,
             })?,
             funds: vec![],
             label: format!(
-                "white whale {} vault",
+                "White Whale {} Vault",
                 asset_info.clone().get_label(&deps.as_ref())?
             ),
         }
@@ -58,17 +62,20 @@ pub fn create_vault(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::mock_info, to_binary, Addr, ReplyOn, Response, SubMsg, WasmMsg};
+    use cosmwasm_std::{
+        testing::mock_info, to_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
+    };
     use cw_multi_test::Executor;
+    use terraswap::asset::AssetInfo;
     use vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+    use white_whale::fee::{Fee, VaultFee};
 
     use crate::{
         contract::execute,
         err::VaultFactoryError,
         tests::{
-            mock_app, mock_creator, mock_execute,
+            get_fees, mock_app, mock_creator, mock_execute,
             mock_instantiate::{app_mock_instantiate, mock_instantiate},
-            store_code::{store_cw20_token_code, store_factory_code, store_vault_code},
         },
     };
 
@@ -84,6 +91,7 @@ mod tests {
             6,
             vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
+                fees: get_fees(),
             },
         );
 
@@ -102,10 +110,12 @@ mod tests {
                             owner: env.contract.address.to_string(),
                             asset_info,
                             token_id: 6,
+                            vault_fees: get_fees(),
+                            fee_collector_addr: "fee_collector".to_string()
                         })
                         .unwrap(),
                         funds: vec![],
-                        label: "white whale uluna vault".to_string()
+                        label: "White Whale uluna Vault".to_string()
                     }
                     .into()
                 })
@@ -127,7 +137,10 @@ mod tests {
             deps.as_mut(),
             env,
             bad_actor,
-            vault_network::vault_factory::ExecuteMsg::CreateVault { asset_info },
+            vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info,
+                fees: get_fees(),
+            },
         );
 
         assert_eq!(res.unwrap_err(), VaultFactoryError::Unauthorized {})
@@ -137,11 +150,7 @@ mod tests {
     fn cannot_create_duplicate_asset() {
         let mut app = mock_app();
 
-        let factory_id = store_factory_code(&mut app);
-        let vault_id = store_vault_code(&mut app);
-        let token_id = store_cw20_token_code(&mut app);
-
-        let factory_addr = app_mock_instantiate(&mut app, factory_id, vault_id, token_id);
+        let factory_addr = app_mock_instantiate(&mut app);
 
         let asset_info = terraswap::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
@@ -155,6 +164,7 @@ mod tests {
             factory_addr.clone(),
             &vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
+                fees: get_fees(),
             },
             &[],
         )
@@ -175,7 +185,10 @@ mod tests {
         let res = app.execute_contract(
             creator.sender,
             factory_addr,
-            &vault_network::vault_factory::ExecuteMsg::CreateVault { asset_info },
+            &vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info,
+                fees: get_fees(),
+            },
             &[],
         );
 
@@ -188,5 +201,106 @@ mod tests {
                 addr: vault_addr.unwrap()
             }
         );
+    }
+
+    #[test]
+    fn does_error_if_invalid_fee() {
+        let (mut deps, env) = mock_instantiate(1, 2);
+
+        // create with bad flash loan fee
+        let res = execute(
+            deps.as_mut(),
+            env.clone(),
+            mock_creator(),
+            vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                fees: VaultFee {
+                    flash_loan_fee: Fee {
+                        share: Decimal::percent(150),
+                    },
+                    protocol_fee: Fee {
+                        share: Decimal::percent(30),
+                    },
+                },
+            },
+        );
+        assert_eq!(
+            res.unwrap_err(),
+            VaultFactoryError::Std(StdError::GenericErr {
+                msg: "Invalid fee".to_string()
+            })
+        );
+
+        // create with bad protocol fee
+        let res = execute(
+            deps.as_mut(),
+            env,
+            mock_creator(),
+            vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                fees: VaultFee {
+                    flash_loan_fee: Fee {
+                        share: Decimal::percent(30),
+                    },
+                    protocol_fee: Fee {
+                        share: Decimal::percent(150),
+                    },
+                },
+            },
+        );
+        assert_eq!(
+            res.unwrap_err(),
+            VaultFactoryError::Std(StdError::GenericErr {
+                msg: "Invalid fee".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn can_create_ibc_token_vault() {
+        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+            denom: "ibc/4CD525F166D32B0132C095F353F4C6F033B0FF5C49141470D1EFDA1D63303D04"
+                .to_string(),
+        };
+
+        // create a vault
+        let (res, _, env) = mock_execute(
+            5,
+            6,
+            vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info: asset_info.clone(),
+                fees: get_fees(),
+            },
+        );
+
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attribute("method", "create_vault")
+                .add_submessage(SubMsg {
+                    id: INSTANTIATE_VAULT_REPLY_ID,
+                    reply_on: ReplyOn::Success,
+                    gas_limit: None,
+                    msg: WasmMsg::Instantiate {
+                        admin: Some(env.contract.address.to_string()),
+                        code_id: 5,
+                        msg: to_binary(&vault_network::vault::InstantiateMsg {
+                            owner: env.contract.address.to_string(),
+                            asset_info,
+                            token_id: 6,
+                            vault_fees: get_fees(),
+                            fee_collector_addr: "fee_collector".to_string()
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                        label: "White Whale ibc/4CD5...3D04 Vault".to_string()
+                    }
+                    .into()
+                })
+        )
     }
 }

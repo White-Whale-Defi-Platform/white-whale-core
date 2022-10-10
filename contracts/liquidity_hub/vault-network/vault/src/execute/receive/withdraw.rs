@@ -86,16 +86,18 @@ mod tests {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
     use terraswap::asset::AssetInfo;
+    use vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::{
         contract::execute,
         error::VaultError,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{
+            get_fees,
             mock_app::{mock_app, mock_app_with_balance},
             mock_creator, mock_dependencies_lp, mock_execute,
             mock_instantiate::app_mock_instantiate,
-            store_code::{store_cw20_token_code, store_vault_code},
+            store_code::store_cw20_token_code,
         },
     };
 
@@ -122,12 +124,14 @@ mod tests {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            vault_network::vault::ExecuteMsg::UpdateConfig {
+            vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: Some(false),
                 new_owner: None,
-            },
+                new_fee_collector_addr: None,
+                new_vault_fees: None,
+            }),
         );
 
         res.unwrap();
@@ -151,13 +155,8 @@ mod tests {
         // give user 15,000 uluna to start with
         let mut app = mock_app_with_balance(vec![(mock_creator().sender, coins(15_000, "uluna"))]);
 
-        let vault_id = store_vault_code(&mut app);
-        let token_id = store_cw20_token_code(&mut app);
-
         let vault_addr = app_mock_instantiate(
             &mut app,
-            vault_id,
-            token_id,
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
@@ -221,9 +220,6 @@ mod tests {
     fn can_withdraw_partial_token_funds() {
         let mut app = mock_app();
 
-        let vault_id = store_vault_code(&mut app);
-        let token_id = store_cw20_token_code(&mut app);
-
         // instantiate vault asset with creator having 15,000 of the asset
         let vault_asset_token_id = store_cw20_token_code(&mut app);
         let token_addr = app
@@ -251,7 +247,7 @@ mod tests {
             contract_addr: token_addr.clone().into_string(),
         };
 
-        let vault_addr = app_mock_instantiate(&mut app, vault_id, token_id, vault_asset);
+        let vault_addr = app_mock_instantiate(&mut app, vault_asset);
 
         // get config for the liquidity token address
         let config: Config = app
@@ -361,6 +357,8 @@ mod tests {
                     flash_loan_enabled: true,
                     owner: mock_creator().sender,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();
@@ -451,6 +449,8 @@ mod tests {
                     flash_loan_enabled: true,
                     owner: mock_creator().sender,
                     withdraw_enabled: true,
+                    fee_collector_addr: Addr::unchecked("fee_collector"),
+                    fees: get_fees(),
                 },
             )
             .unwrap();

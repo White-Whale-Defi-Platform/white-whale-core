@@ -35,6 +35,27 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the protocol fees that have been collected. If `all_time` is `true`, will return the all time collected fees.",
+      "type": "object",
+      "required": [
+        "protocol_fees"
+      ],
+      "properties": {
+        "protocol_fees": {
+          "type": "object",
+          "required": [
+            "all_time"
+          ],
+          "properties": {
+            "all_time": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

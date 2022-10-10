@@ -73,6 +73,7 @@ mod test {
                 owner: creator.sender.into_string(),
                 token_id: 5,
                 vault_id: 6,
+                fee_collector_addr: "fee_collector".to_string(),
             },
         )
         .unwrap();

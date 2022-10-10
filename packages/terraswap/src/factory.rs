@@ -15,22 +15,25 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    /// UpdateConfig update relevant code IDs
+    /// Updates contract's config, i.e. relevant code_ids, fee_collector address and owner
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
         token_code_id: Option<u64>,
         pair_code_id: Option<u64>,
     },
-    /// CreatePair instantiates pair contract
+    /// Instantiates pair contract
     CreatePair {
         /// Asset infos
         asset_infos: [AssetInfo; 2],
         pool_fees: PoolFee,
     },
-    AddNativeTokenDecimals {
-        denom: String,
-        decimals: u8,
+    /// Adds native token info to the contract so it can instantiate pair contracts that include it
+    AddNativeTokenDecimals { denom: String, decimals: u8 },
+    /// Migrates a pair contract to a given code_id
+    MigratePair {
+        contract: String,
+        code_id: Option<u64>,
     },
 }
 

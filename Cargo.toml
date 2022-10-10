@@ -7,8 +7,6 @@ members = [
     "contracts/liquidity_hub/pool-network/terraswap_router",
     "contracts/liquidity_hub/pool-network/terraswap_token",
     "contracts/liquidity_hub/fee_collector",
-    "contracts/liquidity_hub/vault-network/vault_factory/",
-    "contracts/liquidity_hub/vault-network/vault",
     "contracts/liquidity_hub/vault-network/*",
 ]
 

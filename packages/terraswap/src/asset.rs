@@ -1,13 +1,14 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
 use cosmwasm_std::{
     to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
@@ -20,6 +21,10 @@ impl fmt::Display for Asset {
         write!(f, "{}{}", self.amount, self.info)
     }
 }
+
+const IBC_HASH_TAKE: usize = 4usize;
+const IBC_HASH_SIZE: usize = 64usize;
+const IBC_PREFIX: &str = "ibc";
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -192,9 +197,42 @@ impl AssetInfo {
                 deps.api.addr_validate(contract_addr.as_str())?,
             )?
             .symbol),
-            AssetInfo::NativeToken { denom } => Ok(denom),
+            AssetInfo::NativeToken { denom } => {
+                if is_ibc_token(&denom) {
+                    get_ibc_token_label(denom)
+                } else {
+                    Ok(denom)
+                }
+            }
         }
     }
+}
+
+/// Verifies if the given denom is an ibc token or not
+fn is_ibc_token(denom: &str) -> bool {
+    let split: Vec<&str> = denom.splitn(2, '/').collect();
+
+    if split[0] == IBC_PREFIX && split.len() == 2 {
+        return split[1].matches(char::is_alphanumeric).count() == IBC_HASH_SIZE;
+    }
+
+    false
+}
+
+/// Builds the label for an ibc token denom in such way that it returns a label like "ibc/1234...5678".
+/// Call after [is_ibc_token] has been successful
+fn get_ibc_token_label(denom: String) -> StdResult<String> {
+    let ibc_token_prefix = format!("{}{}", IBC_PREFIX, '/');
+    let mut token_hash = denom
+        .strip_prefix(ibc_token_prefix.as_str())
+        .ok_or_else(|| StdError::generic_err("Splitting ibc token denom failed"))?
+        .to_string();
+
+    token_hash.drain(IBC_HASH_TAKE..token_hash.len() - IBC_HASH_TAKE);
+    token_hash.insert_str(IBC_HASH_TAKE, "...");
+    token_hash.insert_str(0, ibc_token_prefix.as_str());
+
+    Ok(token_hash)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

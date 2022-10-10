@@ -10,6 +10,8 @@
 [![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
 [![Discord badge][]][Discord invite]
 [![Twitter handle][]][Twitter badge]
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6401/badge)](https://bestpractices.coreinfrastructure.org/projects/6401)
+
 
 [Discord invite]: https://discord.com/invite/tSxyyCWgYX
 [Discord badge]: https://img.shields.io/discord/908044702794801233
@@ -24,11 +26,25 @@ different ways to contribute to the project.
 ## Resources
 
 1. [Website](https://whitewhale.money/)
-2. [White Paper](https://whitewhale.money/Litepaper.pdf)
+2. [LitePaper](https://whitewhale.money/LitepaperV2.pdf)
 3. [Docs](https://white-whale-defi-platform.github.io/docs/)
 4. [Discord](https://discord.com/invite/tSxyyCWgYX)
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
 6. [Telegram](https://t.me/whitewhaleofficial)
+
+## Building Migaloo
+
+To build Migaloo´s smart contracts, you can run the rust workspace optimizer on the root folder of the project. Alternatively, you can run `scripts/build_release.sh` to build the project artifacts.
+
+## Testing
+
+To run the tests, run `cargo test`. You can also run `cargo tarpaulin -v` to get test code coverage.
+
+## Disclaimer
+
+Migaloo core contracts are not audited yet in their current form, though most of the code has been audited and heavily used in the past, namely White Whale's v1 and TerraSwap. We plan the audit the code once the IBC components are ready, as they can potentialy introduce changes on the existing contracts.
+
+**Use the contracts and the White Whale app at your own risk!**
 
 ## Contributing
 

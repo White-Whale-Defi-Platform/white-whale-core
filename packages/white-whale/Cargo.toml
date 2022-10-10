@@ -1,6 +1,6 @@
 [package]
 name = "white-whale"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 description = "Common White Whale types and utils"

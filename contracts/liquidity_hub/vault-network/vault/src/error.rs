@@ -30,10 +30,16 @@ pub enum VaultError {
     #[error("Attempt to call callback function outside contract")]
     ExternalCallback {},
 
-    #[error("Final amount of {new_balance} is less than initial balance of {old_balance}")]
+    #[error(
+        "Final desired amount of {required_amount} is less than current balance of {current_balance} (got {old_balance} -> {current_balance}, want {old_balance} -> {required_amount})"
+    )]
     NegativeProfit {
+        /// The balance before the loan occurred
         old_balance: Uint128,
-        new_balance: Uint128,
+        /// The current balance of the vault
+        current_balance: Uint128,
+        /// The required return amount for the vault
+        required_amount: Uint128,
     },
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
@@ -44,4 +50,7 @@ pub enum VaultError {
 
     #[error("Withdrawals are not enabled")]
     WithdrawsDisabled {},
+
+    #[error("Cannot deposit while flash-loaning")]
+    DepositDuringLoan {},
 }

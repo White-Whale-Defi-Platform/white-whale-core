@@ -14,11 +14,12 @@ mod test {
         Addr,
     };
     use terraswap::asset::AssetInfo;
+    use vault_network::vault::Config;
 
     use crate::{
         contract::query,
-        state::{Config, CONFIG},
-        tests::mock_creator,
+        state::CONFIG,
+        tests::{get_fees, mock_creator},
     };
 
     #[test]
@@ -35,6 +36,8 @@ mod test {
             deposit_enabled: false,
             flash_loan_enabled: true,
             withdraw_enabled: false,
+            fee_collector_addr: Addr::unchecked("fee_collector"),
+            fees: get_fees(),
         };
 
         CONFIG.save(&mut deps.storage, &config).unwrap();

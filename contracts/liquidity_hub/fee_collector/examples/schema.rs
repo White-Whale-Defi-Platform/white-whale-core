@@ -3,7 +3,10 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, export_schema_with_title, remove_schemas, schema_for};
 
-use fee_collector::msg::{ExecuteMsg, FactoriesResponse, InstantiateMsg, MigrateMsg, QueryMsg};
+use fee_collector::msg::{
+    CollectFeesFor, Contract, ContractType, ExecuteMsg, FactoriesResponse, FactoryType,
+    InstantiateMsg, MigrateMsg, QueryFeesFor, QueryMsg,
+};
 use fee_collector::state::{Config, ConfigResponse};
 
 fn main() {
@@ -18,5 +21,10 @@ fn main() {
     export_schema(&schema_for!(Config), &out_dir);
     export_schema(&schema_for!(MigrateMsg), &out_dir);
     export_schema(&schema_for!(FactoriesResponse), &out_dir);
+    export_schema(&schema_for!(FactoryType), &out_dir);
+    export_schema(&schema_for!(CollectFeesFor), &out_dir);
+    export_schema(&schema_for!(QueryFeesFor), &out_dir);
+    export_schema(&schema_for!(Contract), &out_dir);
+    export_schema(&schema_for!(ContractType), &out_dir);
     export_schema_with_title(&schema_for!(ConfigResponse), &out_dir, "ConfigResponse");
 }

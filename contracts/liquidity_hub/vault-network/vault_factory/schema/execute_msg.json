@@ -4,13 +4,67 @@
   "description": "The execution message",
   "oneOf": [
     {
-      "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for",
+      "description": "Creates a new vault given the asset info the vault should manage deposits and withdrawals for and the fees",
       "type": "object",
       "required": [
-        "CreateVault"
+        "create_vault"
       ],
       "properties": {
-        "CreateVault": {
+        "create_vault": {
+          "type": "object",
+          "required": [
+            "asset_info",
+            "fees"
+          ],
+          "properties": {
+            "asset_info": {
+              "$ref": "#/definitions/AssetInfo"
+            },
+            "fees": {
+              "$ref": "#/definitions/VaultFee"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Migrates vaults to the given code_id. If a [vault_addr] is provided, then migrates only that vault.",
+      "type": "object",
+      "required": [
+        "migrate_vaults"
+      ],
+      "properties": {
+        "migrate_vaults": {
+          "type": "object",
+          "required": [
+            "vault_code_id"
+          ],
+          "properties": {
+            "vault_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "vault_code_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Removes a vault given its [AssetInfo]",
+      "type": "object",
+      "required": [
+        "remove_vault"
+      ],
+      "properties": {
+        "remove_vault": {
           "type": "object",
           "required": [
             "asset_info"
@@ -25,20 +79,67 @@
       "additionalProperties": false
     },
     {
-      "description": "Updates the configuration of the vault factory. If the owner is not passed, it will not be modified.",
+      "description": "Updates a vault config",
       "type": "object",
       "required": [
-        "UpdateConfig"
+        "update_vault_config"
       ],
       "properties": {
-        "UpdateConfig": {
+        "update_vault_config": {
+          "type": "object",
+          "required": [
+            "params",
+            "vault_addr"
+          ],
+          "properties": {
+            "params": {
+              "$ref": "#/definitions/UpdateConfigParams"
+            },
+            "vault_addr": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates the configuration of the vault factory. If a field is not specified, it will not be modified.",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
           "type": "object",
           "properties": {
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "owner": {
               "type": [
                 "string",
                 "null"
               ]
+            },
+            "token_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "vault_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
             }
           }
         }
@@ -91,6 +192,88 @@
           "additionalProperties": false
         }
       ]
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "Fee": {
+      "type": "object",
+      "required": [
+        "share"
+      ],
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "UpdateConfigParams": {
+      "type": "object",
+      "properties": {
+        "deposit_enabled": {
+          "description": "If users should be able to deposit funds to the contract.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "flash_loan_enabled": {
+          "description": "If users should be allowed to perform flash-loans.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "new_fee_collector_addr": {
+          "description": "The new address of the fee collector",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "new_owner": {
+          "description": "The new owner of the contract.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "new_vault_fees": {
+          "description": "The new fees used for the vault",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/VaultFee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withdraw_enabled": {
+          "description": "if users should be able to withdraw funds from the contract.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "VaultFee": {
+      "description": "Fees used by the flashloan vaults on the liquidity hub",
+      "type": "object",
+      "required": [
+        "flash_loan_fee",
+        "protocol_fee"
+      ],
+      "properties": {
+        "flash_loan_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "protocol_fee": {
+          "$ref": "#/definitions/Fee"
+        }
+      }
     }
   }
 }

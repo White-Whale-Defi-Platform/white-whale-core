@@ -45,7 +45,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor].",
+      "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor]",
       "type": "object",
       "required": [
         "collect_fees"
@@ -151,7 +151,7 @@
                 "contracts": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/definitions/Contract"
                   }
                 }
               }
@@ -160,7 +160,7 @@
           "additionalProperties": false
         },
         {
-          "description": "Collects the fees accumulated by the contracts the given factory created. Contains parameters for pagination, i.e. start_after and limit, imposed by the terraswap_factory",
+          "description": "Collects the fees accumulated by the contracts the given factory created",
           "type": "object",
           "required": [
             "factory"
@@ -169,12 +169,114 @@
             "factory": {
               "type": "object",
               "required": [
-                "factory_addr"
+                "factory_addr",
+                "factory_type"
               ],
               "properties": {
                 "factory_addr": {
                   "type": "string"
                 },
+                "factory_type": {
+                  "$ref": "#/definitions/FactoryType"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Contract": {
+      "type": "object",
+      "required": [
+        "address",
+        "contract_type"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "contract_type": {
+          "$ref": "#/definitions/ContractType"
+        }
+      }
+    },
+    "ContractType": {
+      "oneOf": [
+        {
+          "description": "Vault contract type",
+          "type": "object",
+          "required": [
+            "vault"
+          ],
+          "properties": {
+            "vault": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Pool/Pair contract type",
+          "type": "object",
+          "required": [
+            "pool"
+          ],
+          "properties": {
+            "pool": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "FactoryType": {
+      "oneOf": [
+        {
+          "description": "Vault Factory",
+          "type": "object",
+          "required": [
+            "vault"
+          ],
+          "properties": {
+            "vault": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "minimum": 0.0
+                },
+                "start_after": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "integer",
+                    "format": "uint8",
+                    "minimum": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Pool Factory",
+          "type": "object",
+          "required": [
+            "pool"
+          ],
+          "properties": {
+            "pool": {
+              "type": "object",
+              "properties": {
                 "limit": {
                   "type": [
                     "integer",
@@ -195,19 +297,6 @@
                   "minItems": 2
                 }
               }
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "description": "Collects the fees accumulated by all the contracts created by the different factories on the liquidity hub",
-          "type": "object",
-          "required": [
-            "all"
-          ],
-          "properties": {
-            "all": {
-              "type": "object"
             }
           },
           "additionalProperties": false
