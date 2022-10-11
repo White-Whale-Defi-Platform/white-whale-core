@@ -56,6 +56,27 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out, in a [`PaybackAmountResponse`] response.",
+      "type": "object",
+      "required": [
+        "get_payback_amount"
+      ],
+      "properties": {
+        "get_payback_amount": {
+          "type": "object",
+          "required": [
+            "amount"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
