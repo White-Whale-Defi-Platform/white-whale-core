@@ -10,4 +10,5 @@ mod queries;
 mod response;
 
 #[cfg(test)]
-mod testing;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tests;

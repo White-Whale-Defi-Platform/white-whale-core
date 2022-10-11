@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-pair"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
 	"Terraform Labs, PTE.",
 	"DELIGHT LABS",
@@ -35,6 +35,7 @@ cw-storage-plus.workspace = true
 integer-sqrt = "0.1.5"
 schemars.workspace = true
 serde.workspace = true
+semver.workspace = true
 thiserror.workspace = true
 protobuf.workspace = true
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }

@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-factory"
-version = "1.0.2"
+version = "1.0.3"
 authors = [
 	"Terraform Labs, PTE.",
 	"DELIGHT LABS",
@@ -35,6 +35,8 @@ serde.workspace = true
 protobuf.workspace = true
 cw20.workspace = true
 cw2.workspace = true
+thiserror.workspace = true
+semver.workspace = true
 terraswap.workspace = true
 white-whale.workspace = true
 

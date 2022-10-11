@@ -4,16 +4,18 @@ use cosmwasm_std::{
     to_binary, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
     StdError, StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
-use cw2::set_contract_version;
+use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 use protobuf::Message;
+use semver::Version;
 
 use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
 use terraswap::pair::{ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
+use crate::error::ContractError::MigrateInvalidVersion;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
     Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO,
@@ -234,7 +236,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
+    if storage_version > version {
+        return Err(MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
