@@ -1,15 +1,18 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
-use cw2::set_contract_version;
+use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 
+use semver::Version;
 use terraswap::asset::PairInfoRaw;
 use terraswap::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use terraswap::querier::query_pair_info_from_pair;
 
+use crate::error::ContractError;
+use crate::error::ContractError::MigrateInvalidVersion;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{Config, CONFIG, PAIRS, TMP_PAIR_INFO};
 use crate::{commands, queries};
@@ -24,7 +27,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
@@ -40,11 +43,16 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
     // Only the owner can execute messages on the factory
     let config: Config = CONFIG.load(deps.storage)?;
     if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(ContractError::Unauthorized {});
     }
 
     match msg {
@@ -70,7 +78,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 /// This just stores the result for future query
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let tmp_pair_info = TMP_PAIR_INFO.load(deps.storage)?;
 
     let res: MsgInstantiateContractResponse =
@@ -78,23 +86,23 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
 
-    let pair_contract = res.get_address();
-    let pair_info = query_pair_info_from_pair(&deps.querier, Addr::unchecked(pair_contract))?;
+    let pair_contract = deps.api.addr_validate(&res.address)?;
+    let pair_info = query_pair_info_from_pair(&deps.querier, pair_contract.clone())?;
 
     PAIRS.save(
         deps.storage,
         &tmp_pair_info.pair_key,
         &PairInfoRaw {
             liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
-            contract_addr: deps.api.addr_canonicalize(pair_contract)?,
+            contract_addr: deps.api.addr_canonicalize(pair_contract.as_str())?,
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
         },
     )?;
 
     Ok(Response::new().add_attributes(vec![
-        ("pair_contract_addr", pair_contract),
-        ("liquidity_token_addr", pair_info.liquidity_token.as_str()),
+        ("pair_contract_addr", pair_contract.as_str()),
+        ("liquidity_token_addr", &pair_info.liquidity_token),
     ]))
 }
 
@@ -113,8 +121,17 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
+    if storage_version > version {
+        return Err(MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

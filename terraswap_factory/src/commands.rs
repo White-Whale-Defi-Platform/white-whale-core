@@ -1,14 +1,15 @@
-use crate::state::{
-    add_allow_native_token, pair_key, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO,
-};
-use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, ReplyOn, Response, StdError, StdResult, SubMsg, WasmMsg,
-};
+use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+
 use terraswap::asset::AssetInfo;
 use terraswap::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 use terraswap::querier::query_balance;
+
+use crate::error::ContractError;
+use crate::state::{
+    add_allow_native_token, pair_key, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO,
+};
 
 /// Updates the contract's [Config]
 pub fn update_config(
@@ -17,7 +18,7 @@ pub fn update_config(
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
     if let Some(owner) = owner {
@@ -50,23 +51,31 @@ pub fn create_pair(
     env: Env,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     if asset_infos[0] == asset_infos[1] {
-        return Err(StdError::generic_err("same asset"));
+        return Err(ContractError::SameAsset {});
     }
 
     let asset_1_decimal =
         match asset_infos[0].query_decimals(env.contract.address.clone(), &deps.querier) {
             Ok(decimal) => decimal,
-            Err(_) => return Err(StdError::generic_err("asset1 is invalid")),
+            Err(_) => {
+                return Err(ContractError::InvalidAsset {
+                    asset: "asset1".to_string(),
+                })
+            }
         };
 
     let asset_2_decimal =
         match asset_infos[1].query_decimals(env.contract.address.clone(), &deps.querier) {
             Ok(decimal) => decimal,
-            Err(_) => return Err(StdError::generic_err("asset2 is invalid")),
+            Err(_) => {
+                return Err(ContractError::InvalidAsset {
+                    asset: "asset2".to_string(),
+                })
+            }
         };
 
     let raw_infos = [
@@ -78,7 +87,7 @@ pub fn create_pair(
 
     let pair_key = pair_key(&raw_infos);
     if let Ok(Some(_)) = PAIRS.may_load(deps.storage, &pair_key) {
-        return Err(StdError::generic_err("Pair already exists"));
+        return Err(ContractError::ExistingPair {});
     }
 
     TMP_PAIR_INFO.save(
@@ -141,12 +150,10 @@ pub fn add_native_token_decimals(
     env: Env,
     denom: String,
     decimals: u8,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
     if balance.is_zero() {
-        return Err(StdError::generic_err(
-            "a balance greater than zero is required by the factory for verification",
-        ));
+        return Err(ContractError::InvalidVerificationBalance {});
     }
 
     add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
@@ -162,7 +169,7 @@ pub fn execute_migrate_pair(
     deps: DepsMut,
     contract: String,
     code_id: Option<u64>,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let code_id = code_id.unwrap_or(config.pair_code_id);
 
