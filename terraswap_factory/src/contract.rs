@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::set_contract_version;
 use protobuf::Message;
@@ -77,23 +77,23 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
 
-    let pair_contract = res.get_address();
-    let pair_info = query_pair_info_from_pair(&deps.querier, Addr::unchecked(pair_contract))?;
+    let pair_contract = deps.api.addr_validate(&res.address)?;
+    let pair_info = query_pair_info_from_pair(&deps.querier, pair_contract.clone())?;
 
     PAIRS.save(
         deps.storage,
         &tmp_pair_info.pair_key,
         &PairInfoRaw {
             liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
-            contract_addr: deps.api.addr_canonicalize(pair_contract)?,
+            contract_addr: deps.api.addr_canonicalize(pair_contract.as_str())?,
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
         },
     )?;
 
     Ok(Response::new().add_attributes(vec![
-        ("pair_contract_addr", pair_contract),
-        ("liquidity_token_addr", pair_info.liquidity_token.as_str()),
+        ("pair_contract_addr", pair_contract.as_str()),
+        ("liquidity_token_addr", &pair_info.liquidity_token),
     ]))
 }
 

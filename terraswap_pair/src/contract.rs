@@ -203,11 +203,11 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
         Message::parse_from_bytes(data.as_slice()).map_err(|_| {
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
-    let liquidity_token = res.get_address();
+    let liquidity_token = res.address;
 
     let api = deps.api;
     PAIR_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
-        meta.liquidity_token = api.addr_canonicalize(liquidity_token)?;
+        meta.liquidity_token = api.addr_canonicalize(&liquidity_token)?;
         Ok(meta)
     })?;
 
