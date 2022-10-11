@@ -64,7 +64,7 @@ pub fn create_pair(
             Err(_) => {
                 return Err(ContractError::InvalidAsset {
                     asset: "asset1".to_string(),
-                })
+                });
             }
         };
 
@@ -74,7 +74,7 @@ pub fn create_pair(
             Err(_) => {
                 return Err(ContractError::InvalidAsset {
                     asset: "asset2".to_string(),
-                })
+                });
             }
         };
 
@@ -130,10 +130,14 @@ pub fn create_pair(
         }))
 }
 
-pub fn remove_pair(deps: DepsMut, _env: Env, pair_address: String) -> StdResult<Response> {
+pub fn remove_pair(
+    deps: DepsMut,
+    _env: Env,
+    pair_address: String,
+) -> Result<Response, ContractError> {
     let pair_key_bytes = pair_address.as_bytes();
     if let Ok(None) = PAIRS.may_load(deps.storage, pair_key_bytes) {
-        return Err(StdError::generic_err("Pair doesn't exist"));
+        return Err(ContractError::UnExistingPair {});
     }
 
     PAIRS.remove(deps.storage, pair_key_bytes);

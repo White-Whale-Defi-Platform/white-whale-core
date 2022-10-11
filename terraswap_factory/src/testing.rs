@@ -2,8 +2,8 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Api, CosmosMsg, Decimal, OwnedDeps, Reply, ReplyOn,
-    Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, Api, CanonicalAddr, CosmosMsg, Decimal, OwnedDeps, Reply,
+    ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
 use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
@@ -1178,8 +1178,9 @@ fn delete_pair_failed_if_not_found() {
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), env, info, msg);
 
-    assert_eq!(
-        res.unwrap_err(),
-        StdError::generic_err("Pair doesn't exist")
-    );
+    match res {
+        Ok(_) => panic!("should return ContractError::UnExistingPair"),
+        Err(ContractError::UnExistingPair {}) => (),
+        _ => panic!("should return ContractError::UnExistingPair"),
+    }
 }

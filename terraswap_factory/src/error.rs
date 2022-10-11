@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("Pair already exist")]
     ExistingPair {},
 
+    #[error("Pair doesn't exist")]
+    UnExistingPair {},
+
     #[error("A balance greater than zero is required by the factory to verify the asset")]
     InvalidVerificationBalance {},
 

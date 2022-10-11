@@ -131,6 +131,27 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Removes pair",
+      "type": "object",
+      "required": [
+        "remove_pair"
+      ],
+      "properties": {
+        "remove_pair": {
+          "type": "object",
+          "required": [
+            "pair_address"
+          ],
+          "properties": {
+            "pair_address": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
