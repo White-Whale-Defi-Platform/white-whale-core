@@ -130,6 +130,20 @@ pub fn create_pair(
         }))
 }
 
+pub fn remove_pair(deps: DepsMut, _env: Env, pair_address: String) -> StdResult<Response> {
+    let pair_key_bytes = pair_address.as_bytes();
+    if let Ok(None) = PAIRS.may_load(deps.storage, pair_key_bytes) {
+        return Err(StdError::generic_err("Pair doesn't exist"));
+    }
+
+    PAIRS.remove(deps.storage, pair_key_bytes);
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "remove_pair"),
+        ("pair_contract_addr", &pair_address),
+    ]))
+}
+
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
     deps: DepsMut,

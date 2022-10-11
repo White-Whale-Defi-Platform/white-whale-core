@@ -1086,3 +1086,100 @@ fn failed_migrate_pair_with_no_admin() {
         _ => panic!("should return ContractError::Unauthorized"),
     }
 }
+
+#[test]
+fn delete_pair() {
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+    deps = init(deps);
+    deps.querier
+        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+    ];
+
+    let raw_infos = [
+        asset_infos[0].to_raw(&deps.api).unwrap(),
+        asset_infos[1].to_raw(&deps.api).unwrap(),
+    ];
+
+    let pair_key_vec = pair_key(&raw_infos);
+
+    PAIRS
+        .save(
+            &mut deps.storage,
+            &pair_key_vec,
+            &PairInfoRaw {
+                liquidity_token: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                contract_addr: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                asset_infos: raw_infos,
+                asset_decimals: [6, 6],
+            },
+        )
+        .unwrap();
+
+    let pair = PAIRS.load(&deps.storage, &pair_key_vec);
+
+    assert!(pair.is_ok(), "pair key should exist");
+
+    let msg = ExecuteMsg::RemovePair {
+        pair_address: String::from_utf8(pair_key_vec.clone()).unwrap(),
+    };
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "remove_pair"),
+            attr(
+                "pair_contract_addr",
+                String::from_utf8(pair_key_vec.clone()).unwrap()
+            )
+        ]
+    );
+
+    let pair = PAIRS.load(&deps.storage, &pair_key_vec);
+
+    assert!(pair.is_err(), "pair key should not exist");
+}
+
+#[test]
+fn delete_pair_failed_if_not_found() {
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+    deps = init(deps);
+    deps.querier
+        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+    ];
+
+    let raw_infos = [
+        asset_infos[0].to_raw(&deps.api).unwrap(),
+        asset_infos[1].to_raw(&deps.api).unwrap(),
+    ];
+
+    let pair_key_vec = pair_key(&raw_infos);
+
+    let msg = ExecuteMsg::RemovePair {
+        pair_address: String::from_utf8(pair_key_vec.clone()).unwrap(),
+    };
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg);
+
+    assert_eq!(
+        res.unwrap_err(),
+        StdError::generic_err("Pair doesn't exist")
+    );
+}
