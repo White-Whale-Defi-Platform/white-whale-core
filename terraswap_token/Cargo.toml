@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-token"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
 edition.workspace = true
 description = "Backward compatible implementation of a CosmWasm-20 compliant token"
