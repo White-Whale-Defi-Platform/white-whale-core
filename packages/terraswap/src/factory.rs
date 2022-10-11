@@ -35,6 +35,8 @@ pub enum ExecuteMsg {
         contract: String,
         code_id: Option<u64>,
     },
+    /// Removes pair
+    RemovePair { pair_address: String },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
