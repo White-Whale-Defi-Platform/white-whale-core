@@ -1,12 +1,12 @@
 [package]
 name = "white-whale"
 version = "1.0.0"
-edition = "2021"
+edition.workspace = true
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 description = "Common White Whale types and utils"
-license = "MIT"
-repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
-homepage = "https://whitewhale.money"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 documentation = "https://whitewhale.money"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -17,7 +17,7 @@ documentation = "https://whitewhale.money"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = { version = "1.0.0" }
+cosmwasm-std.workspace = true
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
-schemars = "0.8.10"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+schemars.workspace = true
+serde.workspace = true

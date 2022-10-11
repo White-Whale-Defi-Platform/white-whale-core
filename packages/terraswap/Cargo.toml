@@ -1,8 +1,12 @@
 [package]
 name = "terraswap"
 version = "2.8.0"
-authors = ["Terraform Labs, PTE.", "DELIGHT LABS", "Kerber0x <kerber0x@protonmail.com>"]
-edition = "2021"
+authors = [
+	"Terraform Labs, PTE.",
+	"DELIGHT LABS",
+	"Kerber0x <kerber0x@protonmail.com>",
+]
+edition.workspace = true
 description = "Common terraswap types"
 license = "Apache-2.0"
 repository = "https://github.com/terraswap/terraswap"
@@ -17,13 +21,13 @@ documentation = "https://docs.terraswap.io"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cw20 = { version = "0.14.0" }
-cosmwasm-storage = { version = "1.0.0" }
-cosmwasm-std = { version = "1.0.0", features = ["stargate"] }
-schemars = "0.8.10"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-protobuf = { version = "2", features = ["with-bytes"] }
-white-whale = { version = "1.0.0", path = "../white-whale" }
+cw20.workspace = true
+cosmwasm-storage = "1.0.0"
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true
+protobuf.workspace = true
+white-whale.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
