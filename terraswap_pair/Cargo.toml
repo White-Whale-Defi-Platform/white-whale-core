@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-pair"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS", "Kerber0x <kerber0x@protonmail.com>"]
 edition = "2018"
 description = "A Terraswap pair contract"
@@ -30,6 +30,7 @@ cw-storage-plus = { version = "0.14.0" }
 integer-sqrt = "0.1.5"
 schemars = "0.8.10"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+semver = "1.0.12"
 thiserror = { version = "1.0.31" }
 protobuf = { version = "2", features = ["with-bytes"] }
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
