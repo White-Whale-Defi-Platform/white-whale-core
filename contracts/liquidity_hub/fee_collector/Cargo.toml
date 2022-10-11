@@ -2,17 +2,18 @@
 name = "fee_collector"
 version = "1.0.2"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
-edition = "2021"
+edition.workspace = true
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
-license = "MIT"
-repository = "https://github.com/White-Whale-DeFi-Platform/contracts"
-homepage = "https://whitewhale.money"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 documentation = "https://whitewhale.money"
+publish.workspace = true
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+	"contract.wasm",
+	"hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,21 +26,20 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = "1.0.0"
-cosmwasm-storage = "1.0.0"
-cw-storage-plus = "0.14.0"
-cw2 = "0.14.0"
-schemars = "0.8.10"
-semver = "1.0.12"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
-white-whale = { version = "1.0.0", path = "../../../packages/white-whale" }
-terraswap = { version = "2.8.0", path = "../../../packages/terraswap" }
-vault-network = {version = "1.0.0", path = "../../../packages/vault-network" }
+cosmwasm-std.workspace = true
+cw2.workspace = true
+cw-storage-plus.workspace = true
+schemars.workspace = true
+semver.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+white-whale.workspace = true
+terraswap.workspace = true
+vault-network.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
-cw-multi-test = "0.14.0"
+cw-multi-test = "0.15.1"
 terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }
 terraswap-token = { path = "../pool-network/terraswap_token" }
@@ -47,5 +47,4 @@ terraswap = { version = "2.8.0", path = "../../../packages/terraswap" }
 vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
 vault = { version = "1.0.0", path = "../vault-network/vault" }
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
-cw20 = {version = "0.14.0"}
-
+cw20 = { version = "0.15.1" }

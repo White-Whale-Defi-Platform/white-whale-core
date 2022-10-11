@@ -1,17 +1,17 @@
 [package]
 name = "vault-network"
 version = "1.0.0"
-edition = "2021"
+edition.workspace = true
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 description = "Messages for the Vault Network"
-license = "MIT"
-repository = "https://github.com/White-Whale-DeFi-Platform/migaloo-core"
-homepage = "https://whitewhale.money"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 documentation = "https://whitewhale.money"
 
 [dependencies]
-cosmwasm-std = { version = "1.0.0" }
-terraswap = { path = "../terraswap" }
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-schemars = "0.8.3"
-white-whale = { path = "../white-whale" }
+cosmwasm-std.workspace = true
+terraswap.workspace = true
+serde.workspace = true
+schemars.workspace = true
+white-whale.workspace = true
