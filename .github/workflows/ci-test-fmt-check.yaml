@@ -61,13 +61,24 @@ jobs:
       - name: Install dylint-link
         run: cargo install --force dylint-link
 
-      - name: Run tests
-        uses: actions-rs/cargo@v1
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
         with:
-          command: test
-          args: --no-fail-fast --locked
-        env:
-          RUST_BACKTRACE: 1
+          version: '0.15.0'
+          args: '-- --test-threads 1'
+          out-type: 'Html'
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          fail_ci_if_error: true
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: 'target/tarpaulin/coverage.html'
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
@@ -83,3 +94,9 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+      
+      - name: Generate Schemas and Exit on uncommitted changes
+        run: |
+         chmod +x ./scripts/build_schemas.sh
+         ./scripts/build_schemas.sh
+        shell: bash
