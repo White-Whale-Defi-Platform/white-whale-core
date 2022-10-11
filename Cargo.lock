@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -884,14 +884,16 @@ dependencies = [
  "cw20",
  "protobuf",
  "schemars",
+ "semver",
  "serde",
  "terraswap",
+ "thiserror",
  "white-whale",
 ]
 
 [[package]]
 name = "terraswap-pair"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
@@ -903,6 +905,7 @@ dependencies = [
  "integer-sqrt",
  "protobuf",
  "schemars",
+ "semver",
  "serde",
  "terraswap",
  "thiserror",
@@ -927,7 +930,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-token"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
