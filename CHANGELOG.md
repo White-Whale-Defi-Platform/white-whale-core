@@ -2,6 +2,7 @@
 
 - Update to Protobuf 3.0 (#12)
 - Use Cargo workspaces with Rust 1.64 (#12)
+- Migrate to CosmWasm 1.1 (#14)
 
 # 2.8.0
 
