@@ -1,0 +1,758 @@
+{
+  "contract_name": "fee_collector",
+  "contract_version": "1.0.2",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "description": "Adds a factory to the fee collector so it can be queried when collecting fees",
+        "type": "object",
+        "required": [
+          "add_factory"
+        ],
+        "properties": {
+          "add_factory": {
+            "type": "object",
+            "required": [
+              "factory_addr"
+            ],
+            "properties": {
+              "factory_addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Removes a factory from the fee collector",
+        "type": "object",
+        "required": [
+          "remove_factory"
+        ],
+        "properties": {
+          "remove_factory": {
+            "type": "object",
+            "required": [
+              "factory_addr"
+            ],
+            "properties": {
+              "factory_addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor]",
+        "type": "object",
+        "required": [
+          "collect_fees"
+        ],
+        "properties": {
+          "collect_fees": {
+            "type": "object",
+            "required": [
+              "collect_fees_for"
+            ],
+            "properties": {
+              "collect_fees_for": {
+                "$ref": "#/definitions/CollectFeesFor"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Updates the config",
+        "type": "object",
+        "required": [
+          "update_config"
+        ],
+        "properties": {
+          "update_config": {
+            "type": "object",
+            "properties": {
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "CollectFeesFor": {
+        "oneOf": [
+          {
+            "description": "Collects the fees accumulated by the given contracts",
+            "type": "object",
+            "required": [
+              "contracts"
+            ],
+            "properties": {
+              "contracts": {
+                "type": "object",
+                "required": [
+                  "contracts"
+                ],
+                "properties": {
+                  "contracts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Contract"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Collects the fees accumulated by the contracts the given factory created",
+            "type": "object",
+            "required": [
+              "factory"
+            ],
+            "properties": {
+              "factory": {
+                "type": "object",
+                "required": [
+                  "factory_addr",
+                  "factory_type"
+                ],
+                "properties": {
+                  "factory_addr": {
+                    "type": "string"
+                  },
+                  "factory_type": {
+                    "$ref": "#/definitions/FactoryType"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Contract": {
+        "type": "object",
+        "required": [
+          "address",
+          "contract_type"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "contract_type": {
+            "$ref": "#/definitions/ContractType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContractType": {
+        "oneOf": [
+          {
+            "description": "Vault contract type",
+            "type": "object",
+            "required": [
+              "vault"
+            ],
+            "properties": {
+              "vault": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Pool/Pair contract type",
+            "type": "object",
+            "required": [
+              "pool"
+            ],
+            "properties": {
+              "pool": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "FactoryType": {
+        "oneOf": [
+          {
+            "description": "Vault Factory",
+            "type": "object",
+            "required": [
+              "vault"
+            ],
+            "properties": {
+              "vault": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "integer",
+                      "format": "uint8",
+                      "minimum": 0.0
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Pool Factory",
+            "type": "object",
+            "required": [
+              "pool"
+            ],
+            "properties": {
+              "pool": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "$ref": "#/definitions/AssetInfo"
+                    },
+                    "maxItems": 2,
+                    "minItems": 2
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "description": "Queries factories added to the fee collector",
+        "type": "object",
+        "required": [
+          "factories"
+        ],
+        "properties": {
+          "factories": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Queries the configuration of this contract",
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Queries fees collected by a given factory's children or individual contracts",
+        "type": "object",
+        "required": [
+          "fees"
+        ],
+        "properties": {
+          "fees": {
+            "type": "object",
+            "required": [
+              "query_fees_for"
+            ],
+            "properties": {
+              "all_time": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "query_fees_for": {
+                "$ref": "#/definitions/QueryFeesFor"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Contract": {
+        "type": "object",
+        "required": [
+          "address",
+          "contract_type"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "contract_type": {
+            "$ref": "#/definitions/ContractType"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ContractType": {
+        "oneOf": [
+          {
+            "description": "Vault contract type",
+            "type": "object",
+            "required": [
+              "vault"
+            ],
+            "properties": {
+              "vault": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Pool/Pair contract type",
+            "type": "object",
+            "required": [
+              "pool"
+            ],
+            "properties": {
+              "pool": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "FactoryType": {
+        "oneOf": [
+          {
+            "description": "Vault Factory",
+            "type": "object",
+            "required": [
+              "vault"
+            ],
+            "properties": {
+              "vault": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "integer",
+                      "format": "uint8",
+                      "minimum": 0.0
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Pool Factory",
+            "type": "object",
+            "required": [
+              "pool"
+            ],
+            "properties": {
+              "pool": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "format": "uint32",
+                    "minimum": 0.0
+                  },
+                  "start_after": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "$ref": "#/definitions/AssetInfo"
+                    },
+                    "maxItems": 2,
+                    "minItems": 2
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "QueryFeesFor": {
+        "oneOf": [
+          {
+            "description": "Specifies list of [Contract]s to query fees for",
+            "type": "object",
+            "required": [
+              "contracts"
+            ],
+            "properties": {
+              "contracts": {
+                "type": "object",
+                "required": [
+                  "contracts"
+                ],
+                "properties": {
+                  "contracts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Contract"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Defines a factory for which to query fees from its children",
+            "type": "object",
+            "required": [
+              "factory"
+            ],
+            "properties": {
+              "factory": {
+                "type": "object",
+                "required": [
+                  "factory_addr",
+                  "factory_type"
+                ],
+                "properties": {
+                  "factory_addr": {
+                    "type": "string"
+                  },
+                  "factory_type": {
+                    "$ref": "#/definitions/FactoryType"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "migrate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MigrateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "sudo": null,
+  "responses": {
+    "config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Config",
+      "type": "object",
+      "required": [
+        "owner"
+      ],
+      "properties": {
+        "owner": {
+          "$ref": "#/definitions/Addr"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
+    "factories": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FactoriesResponse",
+      "type": "object",
+      "required": [
+        "factories"
+      ],
+      "properties": {
+        "factories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Addr"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
+    "fees": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_Asset",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Asset"
+      },
+      "definitions": {
+        "Asset": {
+          "type": "object",
+          "required": [
+            "amount",
+            "info"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "info": {
+              "$ref": "#/definitions/AssetInfo"
+            }
+          },
+          "additionalProperties": false
+        },
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
