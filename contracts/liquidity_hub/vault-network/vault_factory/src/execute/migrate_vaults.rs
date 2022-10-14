@@ -15,7 +15,7 @@ pub fn migrate_vaults(
         ("method", "migrate_vaults".to_string()),
         ("code_id", vault_code_id.to_string()),
     ]);
-    return if let Some(vault_addr) = vault_addr {
+    if let Some(vault_addr) = vault_addr {
         Ok(res
             .add_attribute("vault", vault_addr.clone())
             .add_message(migrate_vault_msg(
@@ -34,7 +34,7 @@ pub fn migrate_vaults(
         }
 
         Ok(res)
-    };
+    }
 }
 
 /// Creates a migrate vault message given a vault address and code id

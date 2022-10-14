@@ -43,12 +43,12 @@ pub fn get_protocol_fees_for_asset(storage: &dyn Storage, asset_id: String) -> S
         .find(|&protocol_fee_asset| protocol_fee_asset.clone().get_id() == asset_id)
         .cloned();
 
-    return if let Some(protocol_fees) = protocol_fees {
+    if let Some(protocol_fees) = protocol_fees {
         Ok(protocol_fees)
     } else {
         Err(StdError::generic_err(format!(
             "Protocol fees for asset {} not found",
             asset_id
         )))
-    };
+    }
 }
