@@ -33,7 +33,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Execute multiple BuyOperation",
+        "description": "Execute multiple [SwapOperation]s, i.e. multi-hop swaps.",
         "type": "object",
         "required": [
           "execute_swap_operations"
@@ -74,7 +74,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Internal use Swap all offer tokens to ask token",
+        "description": "Swap the offer to ask token. This message can only be called internally by the router contract.",
         "type": "object",
         "required": [
           "execute_swap_operation"
@@ -102,7 +102,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Internal use Check the swap amount is exceed minimum_receive",
+        "description": "Checks if the swap amount exceeds the minimum_receive. This message can only be called internally by the router contract.",
         "type": "object",
         "required": [
           "assert_minimum_receive"
@@ -249,6 +249,7 @@
     "title": "QueryMsg",
     "oneOf": [
       {
+        "description": "Retrieves the configuration of the router.",
         "type": "object",
         "required": [
           "config"
@@ -262,6 +263,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Simulates swap operations.",
         "type": "object",
         "required": [
           "simulate_swap_operations"
@@ -290,6 +292,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset is needed to perform the swap.",
         "type": "object",
         "required": [
           "reverse_simulate_swap_operations"
