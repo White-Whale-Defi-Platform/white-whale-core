@@ -1,5 +1,5 @@
 {
-  "contract_name": "terraswap-router",
+  "contract_name": "terraswap-token",
   "contract_version": "1.0.0",
   "idl_version": "1.0.0",
   "instantiate": {

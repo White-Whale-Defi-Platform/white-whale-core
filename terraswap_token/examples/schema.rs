@@ -4,7 +4,7 @@ use cw20_base::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {
-        name: "terraswap-router",
+        name: "terraswap-token",
         version: "1.0.0",
         instantiate: InstantiateMsg,
         query: QueryMsg,
