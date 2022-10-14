@@ -30,5 +30,4 @@ thiserror.workspace = true
 terraswap.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = { version = "1.0.0" }
-cosmwasm-storage = { version = "1.0.0" }
+cosmwasm-schema = "1.1.4"

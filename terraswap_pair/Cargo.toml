@@ -41,7 +41,4 @@ protobuf.workspace = true
 cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 terraswap.workspace = true
 white-whale.workspace = true
-
-[dev-dependencies]
-cosmwasm-schema = { version = "1.0.0" }
-cosmwasm-storage = { version = "1.0.0" }
+cosmwasm-schema.workspace = true

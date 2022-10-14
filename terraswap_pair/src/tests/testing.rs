@@ -8,7 +8,7 @@ use cw20::MinterResponse;
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::mock_querier::mock_dependencies;
 use terraswap::pair::ExecuteMsg::UpdateConfig;
-use terraswap::pair::{InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
+use terraswap::pair::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::fee::Fee;
 
@@ -16,7 +16,6 @@ use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
 use crate::queries::query_pair_info;
-use crate::state::Config;
 
 #[test]
 fn proper_initialization() {

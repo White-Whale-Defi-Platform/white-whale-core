@@ -11,15 +11,13 @@ use protobuf::Message;
 use semver::Version;
 
 use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
-use terraswap::pair::{ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use terraswap::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{
-    Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO,
-};
+use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};
 use crate::{commands, queries};
 
 // version info for migration info

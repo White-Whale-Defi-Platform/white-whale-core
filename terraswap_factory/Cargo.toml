@@ -39,7 +39,4 @@ thiserror.workspace = true
 semver.workspace = true
 terraswap.workspace = true
 white-whale.workspace = true
-
-[dev-dependencies]
-cosmwasm-schema = { version = "1.0.0" }
-cosmwasm-storage = { version = "1.0.0" }
+cosmwasm-schema.workspace = true

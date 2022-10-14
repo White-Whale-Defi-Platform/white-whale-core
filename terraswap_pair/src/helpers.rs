@@ -2,10 +2,8 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_bignumber::{Decimal256, Uint256};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, StdError, Uint128};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 use terraswap::asset::Asset;
 use terraswap::pair::PoolFee;
 
@@ -44,7 +42,7 @@ pub fn compute_swap(
 }
 
 /// Represents the swap computation values
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct SwapComputation {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
@@ -95,7 +93,7 @@ pub fn compute_offer_amount(
 }
 
 /// Represents the offer amount computation values
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct OfferAmountComputation {
     pub offer_amount: Uint128,
     pub spread_amount: Uint128,
