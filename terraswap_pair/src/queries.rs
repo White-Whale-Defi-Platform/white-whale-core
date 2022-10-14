@@ -1,13 +1,14 @@
 use crate::error::ContractError;
 use crate::helpers;
 use crate::state::{
-    get_protocol_fees_for_asset, ConfigResponse, ALL_TIME_COLLECTED_PROTOCOL_FEES,
-    COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO,
+    get_protocol_fees_for_asset, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    PAIR_INFO,
 };
 use cosmwasm_std::{Deps, Uint128};
 use terraswap::asset::{Asset, PairInfo, PairInfoRaw};
 use terraswap::pair::{
-    PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse, SimulationResponse,
+    ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
+    SimulationResponse,
 };
 use terraswap::querier::query_token_info;
 

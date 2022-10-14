@@ -6,13 +6,13 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use integer_sqrt::IntegerSquareRoot;
 
 use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
-use terraswap::pair::{Cw20HookMsg, FeatureToggle, PoolFee};
+use terraswap::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
 use terraswap::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::state::{
-    store_protocol_fee, Config, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    store_protocol_fee, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
     PAIR_INFO,
 };
 

@@ -1,26 +1,14 @@
-use cosmwasm_std::{Addr, StdError, StdResult, Storage, Uint128};
+use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use terraswap::asset::{Asset, PairInfoRaw};
-use terraswap::pair::{FeatureToggle, PoolFee};
+use terraswap::pair::Config;
 
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> = Item::new("collected_protocol_fees");
 pub const ALL_TIME_COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> =
     Item::new("all_time_collected_protocol_fees");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Config {
-    pub owner: Addr,
-    pub fee_collector_addr: Addr,
-    pub pool_fees: PoolFee,
-    pub feature_toggle: FeatureToggle,
-}
-
-pub type ConfigResponse = Config;
 
 /// Stores the protocol fee for a given asset
 pub fn store_protocol_fee(

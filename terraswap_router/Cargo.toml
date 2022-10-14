@@ -36,7 +36,4 @@ cw-storage-plus.workspace = true
 integer-sqrt = "0.1.5"
 schemars.workspace = true
 serde.workspace = true
-
-[dev-dependencies]
-cosmwasm-storage = { version = "1.0.0" }
-cosmwasm-schema = { version = "1.0.0" }
+cosmwasm-schema.workspace = true
