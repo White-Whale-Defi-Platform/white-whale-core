@@ -1,0 +1,670 @@
+{
+  "contract_name": "terraswap-factory",
+  "contract_version": "1.0.3",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "fee_collector_addr",
+      "pair_code_id",
+      "token_code_id"
+    ],
+    "properties": {
+      "fee_collector_addr": {
+        "type": "string"
+      },
+      "pair_code_id": {
+        "description": "Pair contract code ID, which is used to",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "token_code_id": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "description": "Updates contract's config, i.e. relevant code_ids, fee_collector address and owner",
+        "type": "object",
+        "required": [
+          "update_config"
+        ],
+        "properties": {
+          "update_config": {
+            "type": "object",
+            "properties": {
+              "fee_collector_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pair_code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "token_code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Instantiates pair contract",
+        "type": "object",
+        "required": [
+          "create_pair"
+        ],
+        "properties": {
+          "create_pair": {
+            "type": "object",
+            "required": [
+              "asset_infos",
+              "pool_fees"
+            ],
+            "properties": {
+              "asset_infos": {
+                "description": "Asset infos",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 2,
+                "minItems": 2
+              },
+              "pool_fees": {
+                "$ref": "#/definitions/PoolFee"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
+        "type": "object",
+        "required": [
+          "add_native_token_decimals"
+        ],
+        "properties": {
+          "add_native_token_decimals": {
+            "type": "object",
+            "required": [
+              "decimals",
+              "denom"
+            ],
+            "properties": {
+              "decimals": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              "denom": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Migrates a pair contract to a given code_id",
+        "type": "object",
+        "required": [
+          "migrate_pair"
+        ],
+        "properties": {
+          "migrate_pair": {
+            "type": "object",
+            "required": [
+              "contract"
+            ],
+            "properties": {
+              "code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "contract": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Removes pair",
+        "type": "object",
+        "required": [
+          "remove_pair"
+        ],
+        "properties": {
+          "remove_pair": {
+            "type": "object",
+            "required": [
+              "pair_address"
+            ],
+            "properties": {
+              "pair_address": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Decimal": {
+        "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+        "type": "string"
+      },
+      "Fee": {
+        "type": "object",
+        "required": [
+          "share"
+        ],
+        "properties": {
+          "share": {
+            "$ref": "#/definitions/Decimal"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PoolFee": {
+        "description": "Fees used by the pools on the pool network",
+        "type": "object",
+        "required": [
+          "protocol_fee",
+          "swap_fee"
+        ],
+        "properties": {
+          "protocol_fee": {
+            "$ref": "#/definitions/Fee"
+          },
+          "swap_fee": {
+            "$ref": "#/definitions/Fee"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "properties": {
+          "config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "pair"
+        ],
+        "properties": {
+          "pair": {
+            "type": "object",
+            "required": [
+              "asset_infos"
+            ],
+            "properties": {
+              "asset_infos": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "pairs"
+        ],
+        "properties": {
+          "pairs": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "native_token_decimals"
+        ],
+        "properties": {
+          "native_token_decimals": {
+            "type": "object",
+            "required": [
+              "denom"
+            ],
+            "properties": {
+              "denom": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "migrate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MigrateMsg",
+    "description": "We currently take no arguments for migrations",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "sudo": null,
+  "responses": {
+    "config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ConfigResponse",
+      "type": "object",
+      "required": [
+        "fee_collector_addr",
+        "owner",
+        "pair_code_id",
+        "token_code_id"
+      ],
+      "properties": {
+        "fee_collector_addr": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "pair_code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "token_code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "native_token_decimals": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "NativeTokenDecimalsResponse",
+      "type": "object",
+      "required": [
+        "decimals"
+      ],
+      "properties": {
+        "decimals": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "pair": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PairInfo",
+      "type": "object",
+      "required": [
+        "asset_decimals",
+        "asset_infos",
+        "contract_addr",
+        "liquidity_token"
+      ],
+      "properties": {
+        "asset_decimals": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "asset_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetInfo"
+          },
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "contract_addr": {
+          "type": "string"
+        },
+        "liquidity_token": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    },
+    "pairs": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PairsResponse",
+      "type": "object",
+      "required": [
+        "pairs"
+      ],
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PairInfo"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "PairInfo": {
+          "type": "object",
+          "required": [
+            "asset_decimals",
+            "asset_infos",
+            "contract_addr",
+            "liquidity_token"
+          ],
+          "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "contract_addr": {
+              "type": "string"
+            },
+            "liquidity_token": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
