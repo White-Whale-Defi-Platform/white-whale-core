@@ -1,12 +1,11 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use crate::vault;
+use crate::vault::{self};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Addr;
 use terraswap::asset::AssetInfo;
 use white_whale::fee::VaultFee;
 
 /// The instantiation message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     /// The owner of the factory
     pub owner: String,
@@ -19,8 +18,7 @@ pub struct InstantiateMsg {
 }
 
 /// The execution message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
     /// for and the fees
@@ -52,14 +50,17 @@ pub enum ExecuteMsg {
 }
 
 /// The query message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the configuration of the vault. Returns a [`Config`] struct.
+    /// Retrieves the configuration of the vault.
+    #[returns(Config)]
     Config {},
-    /// Retrieves the address of a given vault. Returns an [`Option<String>`].
+    /// Retrieves the address of a given vault.
+    #[returns(Option<String>)]
     Vault { asset_info: AssetInfo },
-    /// Retrieves the addresses for all the vaults. Returns an [`Option<Vec<String>>`].
+    /// Retrieves the addresses for all the vaults.
+    #[returns(VaultsResponse)]
     Vaults {
         start_after: Option<Vec<u8>>,
         limit: Option<u32>,
@@ -67,22 +68,28 @@ pub enum QueryMsg {
 }
 
 /// The migrate message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MigrateMsg {}
 
 /// The `reply` code ID for the submessage after instantiating the vault.
 pub const INSTANTIATE_VAULT_REPLY_ID: u64 = 1;
 
+#[cw_serde]
+pub struct Config {
+    pub owner: Addr,
+    pub vault_id: u64,
+    pub token_id: u64,
+    pub fee_collector_addr: Addr,
+}
+
 /// Response for the vaults query
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct VaultsResponse {
     pub vaults: Vec<VaultInfo>,
 }
 
 /// Response for the vaults query
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct VaultInfo {
     pub vault: String,
     pub asset_info_reference: Vec<u8>,

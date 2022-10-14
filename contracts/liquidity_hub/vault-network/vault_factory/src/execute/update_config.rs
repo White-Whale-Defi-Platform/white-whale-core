@@ -47,12 +47,12 @@ pub fn update_config(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_info, Addr, Response};
-    use vault_network::vault_factory::{ExecuteMsg, QueryMsg};
+    use vault_network::vault_factory::{Config, ExecuteMsg, QueryMsg};
 
     use crate::{
         contract::{execute, query},
         err::VaultFactoryError,
-        state::{Config, CONFIG},
+        state::CONFIG,
         tests::{mock_creator, mock_execute, mock_instantiate::mock_instantiate},
     };
 

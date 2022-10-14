@@ -15,3 +15,4 @@ terraswap.workspace = true
 serde.workspace = true
 schemars.workspace = true
 white-whale.workspace = true
+cosmwasm-schema.workspace = true

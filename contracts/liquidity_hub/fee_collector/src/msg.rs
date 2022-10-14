@@ -1,15 +1,14 @@
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-use terraswap::asset::AssetInfo;
+use terraswap::asset::{Asset, AssetInfo};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+use crate::state::ConfigResponse;
+
+#[cw_serde]
 pub struct InstantiateMsg {}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Adds a factory to the fee collector so it can be queried when collecting fees
     AddFactory { factory_addr: String },
@@ -21,8 +20,7 @@ pub enum ExecuteMsg {
     UpdateConfig { owner: Option<String> },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum CollectFeesFor {
     /// Collects the fees accumulated by the given contracts
     Contracts { contracts: Vec<Contract> },
@@ -33,32 +31,32 @@ pub enum CollectFeesFor {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Queries factories added to the fee collector
+    #[returns(FactoriesResponse)]
     Factories { limit: Option<u32> },
     /// Queries the configuration of this contract
+    #[returns(ConfigResponse)]
     Config {},
     /// Queries fees collected by a given factory's children or individual contracts
+    #[returns(Vec<Asset>)]
     Fees {
         query_fees_for: QueryFeesFor,
         all_time: Option<bool>,
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct FactoriesResponse {
     pub factories: Vec<Addr>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MigrateMsg {}
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum FactoryType {
     /// Vault Factory
     Vault {
@@ -72,8 +70,7 @@ pub enum FactoryType {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum QueryFeesFor {
     /// Specifies list of [Contract]s to query fees for
     Contracts { contracts: Vec<Contract> },
@@ -84,15 +81,13 @@ pub enum QueryFeesFor {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Contract {
     pub address: String,
     pub contract_type: ContractType,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ContractType {
     /// Vault contract type
     Vault {},

@@ -31,9 +31,9 @@ terraswap.workspace = true
 thiserror.workspace = true
 vault-network.workspace = true
 white-whale.workspace = true
+cosmwasm-schema.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = { version = "1.0.0" }
 cw-multi-test = "0.15.1"
 cw20-base = "0.15.1"
 vault = { path = "../vault" }

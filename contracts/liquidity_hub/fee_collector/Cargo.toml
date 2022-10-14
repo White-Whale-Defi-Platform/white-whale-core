@@ -36,9 +36,9 @@ thiserror.workspace = true
 white-whale.workspace = true
 terraswap.workspace = true
 vault-network.workspace = true
+cosmwasm-schema.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = "1.0.0"
 cw-multi-test = "0.15.1"
 terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }

@@ -1,19 +1,9 @@
 use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-use vault_network::vault_factory::VaultInfo;
+use vault_network::vault_factory::{Config, VaultInfo};
 
 pub const CONFIG: Item<Config> = Item::new("config");
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Config {
-    pub owner: Addr,
-    pub vault_id: u64,
-    pub token_id: u64,
-    pub fee_collector_addr: Addr,
-}
 
 pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");
 

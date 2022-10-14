@@ -2,14 +2,14 @@ use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Respons
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use vault_network::vault_factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use vault_network::vault_factory::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::err::{StdResult, VaultFactoryError};
 use crate::execute::{
     create_vault, migrate_vaults, remove_vault, update_config, update_vault_config,
 };
 use crate::queries::{get_config, get_vault, get_vaults};
-use crate::state::{Config, CONFIG};
+use crate::state::CONFIG;
 
 const CONTRACT_NAME: &str = "vault_factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");

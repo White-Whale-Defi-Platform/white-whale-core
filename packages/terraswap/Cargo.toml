@@ -22,12 +22,9 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cw20.workspace = true
-cosmwasm-storage = "1.0.0"
 cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 protobuf.workspace = true
 white-whale.workspace = true
-
-[dev-dependencies]
-cosmwasm-schema = { version = "1.0.0" }
+cosmwasm-schema.workspace = true

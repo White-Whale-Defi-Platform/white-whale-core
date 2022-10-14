@@ -213,13 +213,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i - 1].to_string(),
-                        },
-                        amount: Uint128::new(100_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -236,13 +230,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(200_000_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -596,13 +584,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i - 1].to_string(),
-                        },
-                        amount: Uint128::new(100_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -619,13 +601,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(200_000_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1062,13 +1038,7 @@ fn collect_pools_native_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(200_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1448,13 +1418,7 @@ fn collect_fees_with_pagination_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&terraswap::pair::ExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: pair_tokens[i].to_string(),
-                        },
-                        amount: Uint128::new(200_000_000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,

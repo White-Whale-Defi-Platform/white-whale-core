@@ -1,11 +1,9 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{StdError, StdResult, Uint128};
 use cw20::{Cw20Coin, MinterResponse};
 
 /// TokenContract InstantiateMsg
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     pub name: String,
     pub symbol: String,
