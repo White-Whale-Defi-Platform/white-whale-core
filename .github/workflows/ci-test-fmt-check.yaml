@@ -96,5 +96,5 @@ jobs:
       - name: Generate Schemas and Exit on uncommitted changes
         run: |
          chmod +x ./scripts/build_schemas.sh
-         ./scripts/build_schemas.sh
+         ./scripts/build_schemas.sh true
         shell: bash
