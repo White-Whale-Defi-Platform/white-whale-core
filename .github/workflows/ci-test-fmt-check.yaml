@@ -26,12 +26,10 @@ jobs:
       #     access_token: ${{ github.token }}
       # Checkout code, with submodules using PAT
       - name: Checkout sources
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
+        uses: actions/checkout@v3
 
       # Enable caching for cargo deps to improve run time
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/bin
@@ -50,16 +48,16 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9.7
+      #- name: Set up Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.9.7
 
-      - name: Install cargo-dylint
-        run: cargo install --force cargo-dylint
+      #- name: Install cargo-dylint
+      #  run: cargo install --force cargo-dylint
 
-      - name: Install dylint-link
-        run: cargo install --force dylint-link
+      #- name: Install dylint-link
+      #  run: cargo install --force dylint-link
 
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
@@ -86,8 +84,8 @@ jobs:
           command: clippy
           args: --locked -- -D warnings
 
-      - name: Run cosmwasm linter
-        run: cargo dylint cw_lint --workspace
+      #- name: Run cosmwasm linter
+      #  run: cargo dylint cw_lint --workspace
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
