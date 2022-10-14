@@ -1,11 +1,10 @@
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, CosmosMsg};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use terraswap::asset::Asset;
 
 /// The instantiation message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     /// The owner of the router
     pub owner: String,
@@ -14,8 +13,7 @@ pub struct InstantiateMsg {
 }
 
 /// The execution message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Retrieves the desired `assets` and runs the `msgs`, paying the required amount back the vaults
     /// after running the messages, and returning the profit to the sender.
@@ -57,14 +55,22 @@ pub enum ExecuteMsg {
 }
 
 /// The query message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the configuration of the vault router. Returns a [`Config`] struct.
+    /// Retrieves the configuration of the vault router.
+    #[returns(Config)]
     Config {},
 }
 
 /// The migrate message
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct MigrateMsg {}
+
+#[cw_serde]
+pub struct Config {
+    /// The owner of the router to update configuration
+    pub owner: Addr,
+    /// The address of the vault factory
+    pub vault_factory: Addr,
+}

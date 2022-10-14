@@ -77,7 +77,7 @@ pub fn instantiate(
         msg: WasmMsg::Instantiate {
             admin: None,
             code_id: msg.token_id,
-            msg: to_binary(&cw20_base::msg::InstantiateMsg {
+            msg: to_binary(&terraswap::token::InstantiateMsg {
                 name: lp_label.clone(),
                 symbol: lp_symbol,
                 decimals: 6,
@@ -86,7 +86,6 @@ pub fn instantiate(
                     minter: env.contract.address.to_string(),
                     cap: None,
                 }),
-                marketing: None,
             })?,
             funds: vec![],
             label: lp_label,

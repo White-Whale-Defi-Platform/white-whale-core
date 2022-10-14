@@ -864,7 +864,6 @@ version = "2.8.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw20",
  "protobuf",
  "schemars",
@@ -878,7 +877,6 @@ version = "1.0.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -898,7 +896,6 @@ dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -918,7 +915,6 @@ version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -934,7 +930,6 @@ version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm-storage",
  "cw-storage-plus",
  "cw0",
  "cw2",
@@ -1017,6 +1012,7 @@ dependencies = [
 name = "vault-network"
 version = "1.0.0"
 dependencies = [
+ "cosmwasm-schema",
  "cosmwasm-std",
  "schemars",
  "serde",
@@ -1094,6 +1090,7 @@ name = "white-whale"
 version = "1.0.0"
 dependencies = [
  "cosmwasm-bignumber",
+ "cosmwasm-schema",
  "cosmwasm-std",
  "schemars",
  "serde",

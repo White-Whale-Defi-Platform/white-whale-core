@@ -12,12 +12,9 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Addr;
-    use vault_network::vault_router::QueryMsg;
+    use vault_network::vault_router::{Config, QueryMsg};
 
-    use crate::{
-        state::Config,
-        tests::{mock_creator, mock_query},
-    };
+    use crate::tests::{mock_creator, mock_query};
 
     #[test]
     fn does_get_config() {

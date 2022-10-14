@@ -1,13 +1,12 @@
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use white_whale::fee::Fee;
 
-use crate::asset::{Asset, AssetInfo};
+use crate::asset::{Asset, AssetInfo, PairInfo};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     /// Asset infos
     pub asset_infos: [AssetInfo; 2],
@@ -18,8 +17,7 @@ pub struct InstantiateMsg {
     pub fee_collector_addr: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     /// ProvideLiquidity a user provides pool liquidity
@@ -46,8 +44,7 @@ pub enum ExecuteMsg {
     CollectProtocolFees {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Cw20HookMsg {
     /// Sell a given amount of asset
     Swap {
@@ -58,26 +55,28 @@ pub enum Cw20HookMsg {
     WithdrawLiquidity {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(PairInfo)]
     Pair {},
+    #[returns(ConfigResponse)]
     Config {},
+    #[returns(ProtocolFeesResponse)]
     ProtocolFees {
         asset_id: Option<String>,
         all_time: Option<bool>,
     },
+    #[returns(PoolResponse)]
     Pool {},
-    Simulation {
-        offer_asset: Asset,
-    },
-    ReverseSimulation {
-        ask_asset: Asset,
-    },
+    #[returns(SimulationResponse)]
+    Simulation { offer_asset: Asset },
+    #[returns(ReverseSimulationResponse)]
+    ReverseSimulation { ask_asset: Asset },
 }
 
 // Pool feature toggle
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct FeatureToggle {
     pub withdrawals_enabled: bool,
     pub deposits_enabled: bool,
@@ -85,21 +84,31 @@ pub struct FeatureToggle {
 }
 
 /// Fees used by the pools on the pool network
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
 }
 
+#[cw_serde]
+pub struct Config {
+    pub owner: Addr,
+    pub fee_collector_addr: Addr,
+    pub pool_fees: PoolFee,
+    pub feature_toggle: FeatureToggle,
+}
+
+pub type ConfigResponse = Config;
+
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct PoolResponse {
     pub assets: [Asset; 2],
     pub total_share: Uint128,
 }
 
 /// SimulationResponse returns swap simulation response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct SimulationResponse {
     pub return_amount: Uint128,
     pub spread_amount: Uint128,
@@ -108,13 +117,13 @@ pub struct SimulationResponse {
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct ProtocolFeesResponse {
     pub fees: Vec<Asset>,
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct ReverseSimulationResponse {
     pub offer_amount: Uint128,
     pub spread_amount: Uint128,
@@ -123,5 +132,5 @@ pub struct ReverseSimulationResponse {
 }
 
 /// We currently take no arguments for migrations
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct MigrateMsg {}

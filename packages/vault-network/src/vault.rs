@@ -1,10 +1,9 @@
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint128};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use terraswap::asset::{Asset, AssetInfo};
 use white_whale::fee::VaultFee;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     /// The owner of the contract.
     pub owner: String,
@@ -19,8 +18,7 @@ pub struct InstantiateMsg {
 }
 
 /// The callback messages available. Only callable by the vault contract itself.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum CallbackMsg {
     AfterTrade {
         old_balance: Uint128,
@@ -28,23 +26,20 @@ pub enum CallbackMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum Cw20HookMsg {
     /// Withdraws a given amount from the vault.
     Withdraw {},
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct Cw20ReceiveMsg {
     pub sender: String,
     pub amount: Uint128,
     pub msg: Binary,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub struct UpdateConfigParams {
     /// If users should be allowed to perform flash-loans.
     pub flash_loan_enabled: Option<bool>,
@@ -60,8 +55,7 @@ pub struct UpdateConfigParams {
     pub new_fee_collector_addr: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Deposits a given amount into the vault.
     Deposit {
@@ -81,31 +75,35 @@ pub enum ExecuteMsg {
     Callback(CallbackMsg),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the configuration of the contract in a [`Config`] response.
+    /// Retrieves the configuration of the contract.
+    #[returns(Config)]
     Config {},
-    /// Retrieves the share of the assets stored in the vault that a given `amount` of lp tokens is entitled to in a [`Uint128`] response.
+    /// Retrieves the share of the assets stored in the vault that a given `amount` of lp tokens is entitled to.
+    #[returns(Uint128)]
     Share { amount: Uint128 },
     /// Retrieves the protocol fees that have been collected. If `all_time` is `true`, will return the all time collected fees.
+    #[returns(ProtocolFeesResponse)]
     ProtocolFees { all_time: bool },
-    /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out, in a [`PaybackAmountResponse`] response.
+    /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
+    #[returns(PaybackAmountResponse)]
     GetPaybackAmount { amount: Uint128 },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct MigrateMsg {}
 
 /// The `reply` code ID for the submessage after instantiating the LP token.
 pub const INSTANTIATE_LP_TOKEN_REPLY_ID: u64 = 1;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct ProtocolFeesResponse {
     pub fees: Asset,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct Config {
     /// The owner of the vault
     pub owner: Addr,
@@ -125,7 +123,7 @@ pub struct Config {
     pub fees: VaultFee,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct PaybackAmountResponse {
     /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
     pub payback_amount: Uint128,
