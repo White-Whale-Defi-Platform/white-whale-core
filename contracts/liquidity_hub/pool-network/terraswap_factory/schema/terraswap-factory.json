@@ -278,6 +278,7 @@
     "title": "QueryMsg",
     "oneOf": [
       {
+        "description": "Retrieves the configuration of the factory.",
         "type": "object",
         "required": [
           "config"
@@ -291,6 +292,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the info for the pair with the given asset_infos.",
         "type": "object",
         "required": [
           "pair"
@@ -317,6 +319,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the pairs created by the factory. This query has pagination enabled, querying ten items by default if not specified otherwise. The max amount of items that can be queried at once is 30. `start_after` is the last asset_info of a page.",
         "type": "object",
         "required": [
           "pairs"
@@ -351,6 +354,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the decimals for the given native or ibc denom.",
         "type": "object",
         "required": [
           "native_token_decimals"

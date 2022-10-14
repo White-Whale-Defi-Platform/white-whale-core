@@ -135,6 +135,7 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
+        "description": "Used to trigger the [Cw20HookMsg] messages",
         "type": "object",
         "required": [
           "receive"
@@ -147,7 +148,7 @@
         "additionalProperties": false
       },
       {
-        "description": "ProvideLiquidity a user provides pool liquidity",
+        "description": "Provides liquidity to the pool",
         "type": "object",
         "required": [
           "provide_liquidity"
@@ -286,7 +287,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Collects the Protocol fees",
+        "description": "Collects the Protocol fees accrued by the pool",
         "type": "object",
         "required": [
           "collect_protocol_fees"
@@ -394,6 +395,7 @@
         "type": "string"
       },
       "FeatureToggle": {
+        "description": "Pool feature toggle",
         "type": "object",
         "required": [
           "deposits_enabled",
@@ -453,6 +455,7 @@
     "title": "QueryMsg",
     "oneOf": [
       {
+        "description": "Retrieves the info for the pair.",
         "type": "object",
         "required": [
           "pair"
@@ -466,6 +469,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the configuration of the pool.",
         "type": "object",
         "required": [
           "config"
@@ -479,6 +483,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the protocol fees that have been accrued. If `all_time` is `true`, it will return the fees collected since the inception of the pool. On the other hand, if `all_time` is set to `false`, only the fees that has been accrued by the pool but not collected by the fee collector will be returned.",
         "type": "object",
         "required": [
           "protocol_fees"
@@ -506,6 +511,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the pool information.",
         "type": "object",
         "required": [
           "pool"
@@ -519,6 +525,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Simulates a swap.",
         "type": "object",
         "required": [
           "simulation"
@@ -540,6 +547,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to perform the swap.",
         "type": "object",
         "required": [
           "reverse_simulation"
@@ -675,6 +683,7 @@
           "type": "string"
         },
         "FeatureToggle": {
+          "description": "Pool feature toggle",
           "type": "object",
           "required": [
             "deposits_enabled",
@@ -815,6 +824,7 @@
     "pool": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PoolResponse",
+      "description": "We define a custom struct for each query response",
       "type": "object",
       "required": [
         "assets",

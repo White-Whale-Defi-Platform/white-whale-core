@@ -40,15 +40,21 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    /// Retrieves the configuration of the factory.
     #[returns(ConfigResponse)]
     Config {},
+    /// Retrieves the info for the pair with the given asset_infos.
     #[returns(PairInfo)]
     Pair { asset_infos: [AssetInfo; 2] },
+    /// Retrieves the pairs created by the factory. This query has pagination enabled, querying ten
+    /// items by default if not specified otherwise. The max amount of items that can be queried at
+    /// once is 30. `start_after` is the last asset_info of a page.
     #[returns(PairsResponse)]
     Pairs {
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
     },
+    /// Retrieves the decimals for the given native or ibc denom.
     #[returns(NativeTokenDecimalsResponse)]
     NativeTokenDecimals { denom: String },
 }

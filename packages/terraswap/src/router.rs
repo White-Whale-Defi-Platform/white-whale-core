@@ -28,21 +28,19 @@ impl SwapOperation {
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
-    /// Execute multiple BuyOperation
+    /// Execute multiple [SwapOperation]s, i.e. multi-hop swaps.
     ExecuteSwapOperations {
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
         to: Option<String>,
     },
-
-    /// Internal use
-    /// Swap all offer tokens to ask token
+    /// Swap the offer to ask token. This message can only be called internally by the router contract.
     ExecuteSwapOperation {
         operation: SwapOperation,
         to: Option<String>,
     },
-    /// Internal use
-    /// Check the swap amount is exceed minimum_receive
+    /// Checks if the swap amount exceeds the minimum_receive. This message can only be called
+    /// internally by the router contract.
     AssertMinimumReceive {
         asset_info: AssetInfo,
         prev_balance: Uint128,
@@ -63,13 +61,17 @@ pub enum Cw20HookMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    /// Retrieves the configuration of the router.
     #[returns(ConfigResponse)]
     Config {},
+    /// Simulates swap operations.
     #[returns(SimulateSwapOperationsResponse)]
     SimulateSwapOperations {
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+    /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
+    /// is needed to perform the swap.
     #[returns(SimulateSwapOperationsResponse)]
     ReverseSimulateSwapOperations {
         ask_amount: Uint128,

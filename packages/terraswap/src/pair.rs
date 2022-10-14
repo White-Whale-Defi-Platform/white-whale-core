@@ -19,8 +19,9 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    /// Used to trigger the [Cw20HookMsg] messages
     Receive(Cw20ReceiveMsg),
-    /// ProvideLiquidity a user provides pool liquidity
+    /// Provides liquidity to the pool
     ProvideLiquidity {
         assets: [Asset; 2],
         slippage_tolerance: Option<Decimal>,
@@ -40,7 +41,7 @@ pub enum ExecuteMsg {
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
     },
-    /// Collects the Protocol fees
+    /// Collects the Protocol fees accrued by the pool
     CollectProtocolFees {},
 }
 
@@ -52,30 +53,41 @@ pub enum Cw20HookMsg {
         max_spread: Option<Decimal>,
         to: Option<String>,
     },
+    /// Withdraws liquidity
     WithdrawLiquidity {},
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    /// Retrieves the info for the pair.
     #[returns(PairInfo)]
     Pair {},
+    /// Retrieves the configuration of the pool.
     #[returns(ConfigResponse)]
     Config {},
+    /// Retrieves the protocol fees that have been accrued. If `all_time` is `true`, it will return
+    /// the fees collected since the inception of the pool. On the other hand, if `all_time` is set
+    /// to `false`, only the fees that has been accrued by the pool but not collected by the fee
+    /// collector will be returned.
     #[returns(ProtocolFeesResponse)]
     ProtocolFees {
         asset_id: Option<String>,
         all_time: Option<bool>,
     },
+    /// Retrieves the pool information.
     #[returns(PoolResponse)]
     Pool {},
+    /// Simulates a swap.
     #[returns(SimulationResponse)]
     Simulation { offer_asset: Asset },
+    /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
+    /// perform the swap.
     #[returns(ReverseSimulationResponse)]
     ReverseSimulation { ask_asset: Asset },
 }
 
-// Pool feature toggle
+/// Pool feature toggle
 #[cw_serde]
 pub struct FeatureToggle {
     pub withdrawals_enabled: bool,
@@ -100,7 +112,7 @@ pub struct Config {
 
 pub type ConfigResponse = Config;
 
-// We define a custom struct for each query response
+/// We define a custom struct for each query response
 #[cw_serde]
 pub struct PoolResponse {
     pub assets: [Asset; 2],
