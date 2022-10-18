@@ -1,5 +1,4 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Addr;
 
 use terraswap::asset::{Asset, AssetInfo};
 
@@ -10,10 +9,6 @@ pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Adds a factory to the fee collector so it can be queried when collecting fees
-    AddFactory { factory_addr: String },
-    /// Removes a factory from the fee collector
-    RemoveFactory { factory_addr: String },
     /// Collects protocol fees based on the configuration indicated by [CollectFeesFor]
     CollectFees { collect_fees_for: CollectFeesFor },
     /// Updates the config
@@ -34,9 +29,6 @@ pub enum CollectFeesFor {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Queries factories added to the fee collector
-    #[returns(FactoriesResponse)]
-    Factories { limit: Option<u32> },
     /// Queries the configuration of this contract
     #[returns(ConfigResponse)]
     Config {},
@@ -46,11 +38,6 @@ pub enum QueryMsg {
         query_fees_for: QueryFeesFor,
         all_time: Option<bool>,
     },
-}
-
-#[cw_serde]
-pub struct FactoriesResponse {
-    pub factories: Vec<Addr>,
 }
 
 #[cw_serde]

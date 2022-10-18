@@ -7,43 +7,8 @@ use terraswap::factory::{PairsResponse, QueryMsg};
 use vault_network::vault_factory::VaultsResponse;
 
 use crate::msg::{CollectFeesFor, ContractType, FactoryType};
-use crate::state::{Config, CONFIG, FACTORIES};
+use crate::state::{Config, CONFIG};
 use crate::ContractError;
-
-/// Adds a factory to the list of factories so it can be queried when collecting fees
-pub fn add_factory(
-    deps: DepsMut,
-    info: MessageInfo,
-    factory_addr: String,
-) -> Result<Response, ContractError> {
-    validate_owner(deps.storage, info.sender)?;
-
-    let factory = deps.api.addr_validate(factory_addr.as_str())?;
-    let factory_key = factory.as_bytes();
-    FACTORIES.save(deps.storage, factory_key, &factory)?;
-
-    Ok(Response::new()
-        .add_attribute("action", "add_factory")
-        .add_attribute("factory", factory.as_str()))
-}
-
-/// Removes a factory to the list of factories
-pub fn remove_factory(
-    deps: DepsMut,
-    info: MessageInfo,
-    factory_addr: String,
-) -> Result<Response, ContractError> {
-    validate_owner(deps.storage, info.sender)?;
-
-    let factory = deps.api.addr_validate(factory_addr.as_str())?;
-    let factory_key = factory.as_bytes();
-
-    FACTORIES.remove(deps.storage, factory_key);
-
-    Ok(Response::new()
-        .add_attribute("action", "remove_factory")
-        .add_attribute("factory", factory.as_str()))
-}
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.

@@ -6,13 +6,8 @@ use terraswap::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
 use vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{ContractType, FactoriesResponse, FactoryType, QueryFeesFor};
-use crate::state::{read_factories, ConfigResponse, CONFIG};
-
-pub fn query_factories(deps: Deps, limit: Option<u32>) -> StdResult<FactoriesResponse> {
-    let factories = read_factories(deps, limit)?;
-    Ok(FactoriesResponse { factories })
-}
+use crate::msg::{ContractType, FactoryType, QueryFeesFor};
+use crate::state::{ConfigResponse, CONFIG};
 
 /// Queries the [Config], which contains the owner address
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {

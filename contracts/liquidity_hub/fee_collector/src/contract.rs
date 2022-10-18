@@ -40,10 +40,6 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::AddFactory { factory_addr } => commands::add_factory(deps, info, factory_addr),
-        ExecuteMsg::RemoveFactory { factory_addr } => {
-            commands::remove_factory(deps, info, factory_addr)
-        }
         ExecuteMsg::CollectFees { collect_fees_for } => {
             commands::collect_fees(deps, info, collect_fees_for)
         }
@@ -54,7 +50,6 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Factories { limit } => to_binary(&queries::query_factories(deps, limit)?),
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
         QueryMsg::Fees {
             query_fees_for,

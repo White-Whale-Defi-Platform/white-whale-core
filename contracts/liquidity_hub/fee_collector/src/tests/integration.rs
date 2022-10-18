@@ -11,7 +11,7 @@ use terraswap::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
 use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
 
-use crate::msg::ExecuteMsg::{AddFactory, CollectFees};
+use crate::msg::ExecuteMsg::CollectFees;
 use crate::msg::{
     CollectFeesFor, Contract, ContractType, FactoryType, InstantiateMsg, QueryFeesFor, QueryMsg,
 };
@@ -58,17 +58,6 @@ fn collect_all_factories_cw20_fees_successfully() {
             None,
         )
         .unwrap();
-
-    // add factory to the fee collector
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &AddFactory {
-            factory_addr: pool_factory_address.to_string(),
-        },
-        &[],
-    )
-    .unwrap();
 
     // Create few tokens to create pools with
     let mut cw20_tokens: Vec<Addr> = Vec::new();
@@ -407,17 +396,6 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             None,
         )
         .unwrap();
-
-    // add factory to the fee collector
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &AddFactory {
-            factory_addr: pool_factory_address.to_string(),
-        },
-        &[],
-    )
-    .unwrap();
 
     // Create few tokens to create pools with
     let mut cw20_tokens: Vec<Addr> = Vec::new();
@@ -845,17 +823,6 @@ fn collect_pools_native_fees_successfully() {
         )
         .unwrap();
 
-    // add factory to the fee collector
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &AddFactory {
-            factory_addr: pool_factory_address.to_string(),
-        },
-        &[],
-    )
-    .unwrap();
-
     // add native token to the factory
     app.execute_contract(
         creator.sender.clone(),
@@ -1247,17 +1214,6 @@ fn collect_fees_with_pagination_successfully() {
             None,
         )
         .unwrap();
-
-    // add factory to the fee collector
-    app.execute_contract(
-        creator.sender.clone(),
-        fee_collector_address.clone(),
-        &AddFactory {
-            factory_addr: pool_factory_address.to_string(),
-        },
-        &[],
-    )
-    .unwrap();
 
     // add native token to the factory
     app.execute_contract(

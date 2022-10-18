@@ -429,7 +429,7 @@ dependencies = [
 
 [[package]]
 name = "fee_collector"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "cosmwasm-bignumber",
  "cosmwasm-schema",
