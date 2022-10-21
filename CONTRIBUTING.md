@@ -22,7 +22,7 @@ The following are the tools you'll need:
 ```bash
 $ rustup default stable
 $ cargo version
-# If this is lower than 1.55.0+, update
+# If this is lower than 1.64.0, update
 $ rustup update stable
 
 $ rustup target list --installed
@@ -58,7 +58,7 @@ The following are the steps to fork the repository to your GitHub account and cl
     - Click on your GitHub account where you want to fork the repo.
 2. Clone your fork to your local machine, preferably using the SSH URL. If you have issues cloning this repo, look at the 
 [GitHub docs](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository).
-    - `git clone --recurse-submodules git@github.com:$USER/migaloo-core.git` or `git clone --recurse-submodules https://github.com/$USER/migaloo-core.git`
+    - `git clone git@github.com:$USER/migaloo-core.git` or `git clone https://github.com/$USER/migaloo-core.git`
 3. Set up your git user locally if you haven't already.
     - `git config --global user.name "your name or alias"`
     - `git config --global user.email "your email address"`
@@ -133,7 +133,7 @@ Are you a graphic designer and want to help out with some NFTs? Are you a copywr
 Whatever it is, we would love to hear from you and see how we can make White Whale better for everybody.
 
 ## Docs
-When in doubt, please take a look at our [Litepaper](https://whitewhale.money/Litepaper.pdf) or our [documentation](https://white-whale-defi-platform.github.io/docs/).
+When in doubt, please take a look at our [litepaper](https://whitewhale.money/LitepaperV2.pdf) or our [documentation]([https://white-whale-defi-platform.github.io/docs/](https://ww0-1.gitbook.io/migaloo-docs/)).
 
 # Thank you!
 
