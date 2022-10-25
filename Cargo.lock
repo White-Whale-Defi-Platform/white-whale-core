@@ -873,7 +873,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
