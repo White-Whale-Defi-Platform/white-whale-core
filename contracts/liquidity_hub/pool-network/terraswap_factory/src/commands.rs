@@ -1,8 +1,10 @@
-use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
+};
 
 use terraswap::asset::AssetInfo;
 use terraswap::pair::{
-    InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
+    FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 use terraswap::querier::query_balance;
 
@@ -43,6 +45,29 @@ pub fn update_config(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "update_config"))
+}
+
+/// Updates a pair config
+pub fn update_pair_config(
+    deps: DepsMut,
+    pair_addr: String,
+    owner: Option<String>,
+    fee_collector_addr: Option<String>,
+    pool_fees: Option<PoolFee>,
+    feature_toggle: Option<FeatureToggle>,
+) -> Result<Response, ContractError> {
+    Ok(Response::new()
+        .add_message(wasm_execute(
+            deps.api.addr_validate(pair_addr.as_str())?.to_string(),
+            &terraswap::pair::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+            },
+            vec![],
+        )?)
+        .add_attribute("action", "update_pair_config"))
 }
 
 /// Creates a Pair

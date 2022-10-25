@@ -78,6 +78,60 @@
         "additionalProperties": false
       },
       {
+        "description": "Updates a pair config",
+        "type": "object",
+        "required": [
+          "update_pair_config"
+        ],
+        "properties": {
+          "update_pair_config": {
+            "type": "object",
+            "required": [
+              "pair_addr"
+            ],
+            "properties": {
+              "feature_toggle": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FeatureToggle"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fee_collector_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pair_addr": {
+                "type": "string"
+              },
+              "pool_fees": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PoolFee"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Instantiates pair contract",
         "type": "object",
         "required": [
@@ -241,6 +295,27 @@
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
         "type": "string"
+      },
+      "FeatureToggle": {
+        "description": "Pool feature toggle",
+        "type": "object",
+        "required": [
+          "deposits_enabled",
+          "swaps_enabled",
+          "withdrawals_enabled"
+        ],
+        "properties": {
+          "deposits_enabled": {
+            "type": "boolean"
+          },
+          "swaps_enabled": {
+            "type": "boolean"
+          },
+          "withdrawals_enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
       "Fee": {
         "type": "object",

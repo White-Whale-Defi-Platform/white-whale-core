@@ -1139,8 +1139,8 @@ fn delete_pair() {
             attr("action", "remove_pair"),
             attr(
                 "pair_contract_addr",
-                String::from_utf8(pair_key_vec.clone()).unwrap()
-            )
+                String::from_utf8(pair_key_vec.clone()).unwrap(),
+            ),
         ]
     );
 
@@ -1183,4 +1183,53 @@ fn delete_pair_failed_if_not_found() {
         Err(ContractError::UnExistingPair {}) => (),
         _ => panic!("should return ContractError::UnExistingPair"),
     }
+}
+
+#[test]
+fn update_pair_config() {
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::UpdatePairConfig {
+        pair_addr: "pair_addr".to_string(),
+        owner: Some("new_owner".to_string()),
+        fee_collector_addr: None,
+        pool_fees: Some(PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(3u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(5u64),
+            },
+        }),
+        feature_toggle: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(
+        res,
+        Response::new()
+            .add_attributes(vec![attr("action", "update_pair_config"),])
+            .add_message(WasmMsg::Execute {
+                contract_addr: "pair_addr".to_string(),
+                funds: vec![],
+                msg: to_binary(&terraswap::pair::ExecuteMsg::UpdateConfig {
+                    owner: Some("new_owner".to_string()),
+                    fee_collector_addr: None,
+                    pool_fees: Some(PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(3u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(5u64),
+                        },
+                    }),
+                    feature_toggle: None,
+                })
+                .unwrap()
+            })
+    );
 }

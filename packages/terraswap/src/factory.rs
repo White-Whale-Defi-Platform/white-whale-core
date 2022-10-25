@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use crate::asset::{AssetInfo, PairInfo};
-use crate::pair::PoolFee;
+use crate::pair::{FeatureToggle, PoolFee};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -19,6 +19,14 @@ pub enum ExecuteMsg {
         fee_collector_addr: Option<String>,
         token_code_id: Option<u64>,
         pair_code_id: Option<u64>,
+    },
+    /// Updates a pair config
+    UpdatePairConfig {
+        pair_addr: String,
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        pool_fees: Option<PoolFee>,
+        feature_toggle: Option<FeatureToggle>,
     },
     /// Instantiates pair contract
     CreatePair {

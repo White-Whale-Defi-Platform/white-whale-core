@@ -73,6 +73,20 @@ pub fn execute(
         ExecuteMsg::MigratePair { contract, code_id } => {
             commands::execute_migrate_pair(deps, contract, code_id)
         }
+        ExecuteMsg::UpdatePairConfig {
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        } => commands::update_pair_config(
+            deps,
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        ),
     }
 }
 
