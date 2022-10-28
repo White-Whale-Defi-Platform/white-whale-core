@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+tx_delay=8s
+
 # Displays tool usage
 function display_usage() {
   echo "Liquidity Hub Deployer"
@@ -8,6 +11,7 @@ function display_usage() {
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet)"
+  echo -e "  -d \tWhat to deploy(all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
 }
 
 # Initializes chain env variables
@@ -228,17 +232,77 @@ function init_liquidity_hub() {
   init_vault_network
 }
 
+function deploy() {
+  mkdir -p $project_root_path/scripts/deployment/output
+  output_path=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
+
+  if [[ $1 == 'all' ]]; then
+    # create file to dump results into
+    contracts_storage_output='{"contracts": []}'
+    initial_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
+  else
+    # read existing deployment file
+    contracts_storage_output=$(jq . $output_path)
+    initial_block_height=$(jq -r '.initial_block_height' $output_path)
+    exit 0
+  fi
+
+  case $1 in
+  pool-network)
+    init_pool_network
+    ;;
+  vault-network)
+    init_vault_network
+    ;;
+  fee-collector)
+    init_fee_collector
+    ;;
+  pool-factory)
+    init_pool_factory
+    ;;
+  pool-router)
+    init_pool_router
+    ;;
+  vault-factory)
+    init_vault_factory
+    ;;
+  vault-router)
+    init_vault_router
+    ;;
+  *) # deploy all
+    store_artifacts_on_chain
+    init_liquidity_hub
+    ;;
+  esac
+
+  final_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
+
+  # Add additional deployment information
+  date=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
+  tmpfile=$(mktemp)
+  jq --arg date $date --arg chain_id $CHAIN_ID --arg deployer_address $deployer_address --arg initial_block_height $initial_block_height --arg final_block_height $final_block_height '. + {date: $date , initial_block_height: $initial_block_height, final_block_height: $final_block_height, chain_id: $chain_id, deployer_address: $deployer_address}' $output_path >$tmpfile
+  mv $tmpfile $output_path
+
+  echo -e "\n**** Deployment successful ****\n"
+  jq '.' $output_path
+}
+
 if [ -z $1 ]; then
   display_usage
   exit 0
 fi
 
 # get args
-optstring=':c:h'
+optstring=':c:d:h'
 while getopts $optstring arg; do
   case "$arg" in
   c)
     chain=$OPTARG
+    init_chain_env
+    ;;
+  d)
+    import_deployer_wallet
+    deploy $OPTARG
     ;;
   h)
     display_usage
@@ -255,30 +319,3 @@ while getopts $optstring arg; do
     ;;
   esac
 done
-
-project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8s
-
-init_chain_env
-import_deployer_wallet
-
-# create file to dump results into
-contracts_storage_output='{"contracts": []}'
-mkdir -p "$project_root_path"/scripts/deployment/output
-output_path="$project_root_path"/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
-
-initial_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
-
-store_artifacts_on_chain
-init_liquidity_hub
-
-final_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
-
-# Add additional deployment information
-date=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
-tmpfile=$(mktemp)
-jq --arg date $date --arg chain_id $CHAIN_ID --arg deployer_address $deployer_address --arg initial_block_height $initial_block_height --arg final_block_height $final_block_height '. + {date: $date , initial_block_height: $initial_block_height, final_block_height: $final_block_height, chain_id: $chain_id, deployer_address: $deployer_address}' $output_path >$tmpfile
-mv $tmpfile $output_path
-
-echo -e "\n**** Deployment successful ****\n"
-jq '.' $output_path
