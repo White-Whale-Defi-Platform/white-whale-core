@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 tx_delay=8s
 
@@ -13,68 +14,6 @@ function display_usage() {
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet)"
   echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
   echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
-}
-
-# Initializes chain env variables
-function init_chain_env() {
-  case $chain in
-
-  local)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/local.env)
-    ;;
-
-  juno)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/juno.env)
-    ;;
-
-  juno-testnet)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/juno.env)
-    ;;
-
-  terra)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/terra.env)
-    ;;
-
-  terra-testnet)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/terra.env)
-    ;;
-
-  archway-testnet)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/archway.env)
-    ;;
-
-  chihuahua)
-    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/chihuahua.env)
-    ;;
-
-  *)
-    echo "Network $chain not defined"
-    exit 1
-    ;;
-  esac
-
-  source <(cat "$project_root_path"/scripts/deployment/deploy_env/base.env)
-}
-
-function import_deployer_wallet() {
-  if # import the deployer wallet
-    [[ "$(echo ${chain##*-})" = "testnet" ]]
-  then
-    deployer='deployer_wallet_testnet'
-    export mnemonic=$(cat "$project_root_path"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic_testnet.txt)
-  else
-    deployer='deployer_wallet'
-    export mnemonic=$(cat "$project_root_path"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic.txt)
-  fi
-
-  # verify if the deployer wallet has already been imported
-  if ! $BINARY keys show $deployer >/dev/null 2>&1; then
-    # wallet needs to be imported
-    echo "Importing $deployer into $BINARY..."
-    echo $mnemonic | $BINARY keys add $deployer --recover >/dev/null 2>&1
-  fi
-
-  deployer_address=$($BINARY keys show $deployer --output json | jq -r '.address')
 }
 
 function store_artifact_on_chain() {
@@ -348,17 +287,20 @@ fi
 # get args
 optstring=':c:d:s:h'
 while getopts $optstring arg; do
+  source $deployment_script_dir/wallet_importer.sh
+
   case "$arg" in
   c)
     chain=$OPTARG
-    init_chain_env
+    source $deployment_script_dir/deploy_env/chain_env.sh
+    init_chain_env $OPTARG
     ;;
   d)
-    import_deployer_wallet
+    import_deployer_wallet $chain
     deploy $OPTARG
     ;;
   s)
-    import_deployer_wallet
+    import_deployer_wallet $chain
     store $OPTARG
     ;;
   h)
