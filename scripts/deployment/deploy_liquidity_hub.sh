@@ -1,12 +1,282 @@
 #!/bin/bash
 set -e
 
-display_usage() {
-  echo "Liquidity Hub Deployer"
-  echo -e "\nUsage:\./deploy_liquidity_hub.sh [flags]\n"
+deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+tx_delay=8s
+
+# Displays tool usage
+function display_usage() {
+  echo "WW Liquidity Hub Deployer"
+  echo -e "\nUsage:./deploy_liquidity_hub.sh [flags]. Two flags should be used, -c to specify the chain and then either -d or -s.\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet)"
+  echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
+  echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
+}
+
+function store_artifact_on_chain() {
+  if [ $# -eq 1 ]; then
+    local artifact=$1
+  else
+    echo "store_artifact_on_chain needs the artifact path"
+    exit 1
+  fi
+
+  echo "Storing $(basename $artifact) on $CHAIN_ID..."
+
+  # Get contract version for storing purposes
+  local contract_path=$(find "$project_root_path" -iname $(cut -d . -f 1 <<<$(basename $artifact)) -type d)
+  local version=$(cat ''"$contract_path"'/Cargo.toml' | awk -F= '/^version/ { print $2 }')
+  local version="${version//\"/}"
+
+  local res=$($BINARY tx wasm store $artifact $TXFLAG --from $deployer)
+  local code_id=$(echo $res | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value')
+
+  # Download the wasm binary from the chain and compare it to the original one
+  echo -e "Verifying integrity of wasm artifact on chain...\n"
+  $BINARY query wasm code $code_id --node $RPC downloaded_wasm.wasm >/dev/null 2>&1
+  # The two binaries should be identical
+  diff $artifact downloaded_wasm.wasm
+  rm downloaded_wasm.wasm
+
+  # Write code_id in output file
+  tmpfile=$(mktemp)
+  jq --arg artifact $(basename "$artifact") --arg code_id $code_id --arg version $version '.contracts += [{wasm: $artifact, code_id: $code_id, version: $version}]' $output_file >$tmpfile
+  mv $tmpfile $output_file
+  echo -e "Stored artifact $(basename "$artifact") on $CHAIN_ID successfully\n"
+  sleep $tx_delay
+}
+
+function store() {
+  mkdir -p $project_root_path/scripts/deployment/output
+  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
+
+  if [[ ! -f "$output_file" ]]; then
+    # create file to dump results into
+    echo '{"contracts": []}' | jq '.' >$output_file
+  fi
+
+  case $1 in
+  fee-collector)
+    store_artifact_on_chain $project_root_path/artifacts/fee_collector.wasm
+    ;;
+  pool-factory)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_factory.wasm
+    ;;
+  pool)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_pair.wasm
+    ;;
+  token)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_token.wasm
+    ;;
+  pool-router)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_router.wasm
+    ;;
+  vault)
+    store_artifact_on_chain $project_root_path/artifacts/vault.wasm
+    ;;
+  vault-factory)
+    store_artifact_on_chain $project_root_path/artifacts/vault_factory.wasm
+    ;;
+  vault-router)
+    store_artifact_on_chain $project_root_path/artifacts/vault_router.wasm
+    ;;
+  *) # store all
+    store_artifacts_on_chain
+    ;;
+  esac
+}
+
+function store_artifacts_on_chain() {
+  for artifact in $project_root_path/artifacts/*.wasm; do
+    store_artifact_on_chain $artifact
+  done
+
+  echo -e "\n**** Stored artifacts on $CHAIN_ID successfully ****\n"
+}
+
+function append_contract_address_to_output() {
+  if [ $# -eq 2 ]; then
+    local contract_address=$1
+    local wasm_file_name=$2
+  else
+    echo "append_contract_to_output needs the contract_address and wasm_file_name"
+    exit 1
+  fi
+
+  tmpfile=$(mktemp)
+  jq -r --arg contract_address $contract_address --arg wasm_file_name $wasm_file_name '.contracts[] | select (.wasm == $wasm_file_name) |= . + {contract_address: $contract_address}' $output_file | jq -n '.contracts |= [inputs]' >$tmpfile
+  mv $tmpfile $output_file
+}
+
+function init_fee_collector() {
+  echo -e "\nInitializing the Fee Collector..."
+
+  # Prepare the instantiation message
+  init='{}'
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "fee_collector.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Collector" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'fee_collector.wasm'
+  sleep $tx_delay
+}
+
+function init_pool_factory() {
+  echo -e "\nInitializing the Pool Factory..."
+
+  # Prepare the instantiation message
+  pair_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_pair.wasm") | .code_id' $output_file)
+  token_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $output_file)
+  fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
+
+  init='{"pair_code_id": '"$pair_code_id"',"token_code_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Factory" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'terraswap_factory.wasm'
+  sleep $tx_delay
+}
+
+function init_pool_router() {
+  echo -e "\nInitializing the Pool Router..."
+
+  # Prepare the instantiation message
+  terraswap_factory=$(jq '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .contract_address' $output_file)
+
+  init='{"terraswap_factory": '"$terraswap_factory"'}'
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_router.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Router" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'terraswap_router.wasm'
+  sleep $tx_delay
+}
+
+function init_vault_factory() {
+  echo -e "\nInitializing the Vault Factory..."
+
+  # Prepare the instantiation message
+  vault_id=$(jq -r '.contracts[] | select (.wasm == "vault.wasm") | .code_id' $output_file)
+
+  init='{"owner": "'$deployer_address'", "vault_id": '"$vault_id"', "token_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Factory" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'vault_factory.wasm'
+  sleep $tx_delay
+}
+
+function init_vault_router() {
+  echo -e "\nInitializing the Vault Router..."
+
+  # Prepare the instantiation message
+  vault_factory_addr=$(jq '.contracts[] | select (.wasm == "vault_factory.wasm") | .contract_address' $output_file)
+
+  init='{"owner": "'$deployer_address'", "vault_factory_addr": '"$vault_factory_addr"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "vault_router.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Router" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'vault_router.wasm'
+  sleep $tx_delay
+}
+
+function init_pool_network() {
+  init_fee_collector
+  init_pool_factory
+  init_pool_router
+}
+
+function init_vault_network() {
+  init_vault_factory
+  init_vault_router
+}
+
+function init_liquidity_hub() {
+  echo -e "\nInitializing the Liquidity Hub on $CHAIN_ID..."
+  init_pool_network
+  init_vault_network
+}
+
+function deploy() {
+  mkdir -p $project_root_path/scripts/deployment/output
+  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
+
+  if [[ ! -f "$output_file" ]]; then
+    # create file to dump results into
+    echo '{"contracts": []}' | jq '.' >$output_file
+    initial_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
+  else
+    # read from existing deployment file
+    initial_block_height=$(jq -r '.initial_block_height' $output_file)
+  fi
+
+  case $1 in
+  pool-network)
+    init_pool_network
+    ;;
+  vault-network)
+    init_vault_network
+    ;;
+  fee-collector)
+    init_fee_collector
+    ;;
+  pool-factory)
+    init_pool_factory
+    ;;
+  pool-router)
+    init_pool_router
+    ;;
+  vault-factory)
+    init_vault_factory
+    ;;
+  vault-router)
+    init_vault_router
+    ;;
+  *) # deploy all
+    store_artifacts_on_chain
+    init_liquidity_hub
+    ;;
+  esac
+
+  final_block_height=$(curl -s $RPC/abci_info? | jq -r '.result.response.last_block_height')
+
+  # Add additional deployment information
+  date=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
+  tmpfile=$(mktemp)
+  jq --arg date $date --arg chain_id $CHAIN_ID --arg deployer_address $deployer_address --arg initial_block_height $initial_block_height --arg final_block_height $final_block_height '. + {date: $date , initial_block_height: $initial_block_height, final_block_height: $final_block_height, chain_id: $chain_id, deployer_address: $deployer_address}' $output_file >$tmpfile
+  mv $tmpfile $output_file
+
+  echo -e "\n**** Deployment successful ****\n"
+  jq '.' $output_file
 }
 
 if [ -z $1 ]; then
@@ -15,11 +285,23 @@ if [ -z $1 ]; then
 fi
 
 # get args
-optstring=':c:h'
+optstring=':c:d:s:h'
 while getopts $optstring arg; do
+  source $deployment_script_dir/wallet_importer.sh
+
   case "$arg" in
   c)
     chain=$OPTARG
+    source $deployment_script_dir/deploy_env/chain_env.sh
+    init_chain_env $OPTARG
+    ;;
+  d)
+    import_deployer_wallet $chain
+    deploy $OPTARG
+    ;;
+  s)
+    import_deployer_wallet $chain
+    store $OPTARG
     ;;
   h)
     display_usage
@@ -36,176 +318,3 @@ while getopts $optstring arg; do
     ;;
   esac
 done
-
-projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-
-case $chain in
-
-juno)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/mainnets/juno.env)
-  ;;
-
-juno-testnet)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/juno.env)
-  ;;
-
-terra)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/mainnets/terra.env)
-  ;;
-
-terra-testnet)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/terra.env)
-  ;;
-
-archway-testnet)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/testnets/archway.env)
-  ;;
-
-chihuahua)
-  source <(cat "$projectRootPath"/scripts/deployment/deploy_env/mainnets/chihuahua.env)
-  ;;
-
-
-*)
-  echo "Network $chain not defined"
-  exit 1
-  ;;
-esac
-
-source <(cat "$projectRootPath"/scripts/deployment/deploy_env/base.env)
-
-# import the deployer wallet
-if [[ "$(echo ${chain##*-})" = "testnet" ]] ; then
-  deployer='deployer_wallet_testnet'
-  export mnemonic=$(cat "$projectRootPath"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic_testnet.txt)
-else
-  deployer='deployer_wallet'
-  export mnemonic=$(cat "$projectRootPath"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic.txt)
-fi
-
-# verify if the deployer wallet has already been imported
-if ! $BINARY keys show $deployer >/dev/null 2>&1; then
-  # wallet needs to be imported
-  echo "Importing $deployer into $BINARY..."
-  echo $mnemonic | $BINARY keys add $deployer --recover >/dev/null 2>&1
-fi
-deployer_address=$($BINARY keys show $deployer --output json | jq -r '.address')
-
-contracts_storage_output='{"contracts": []}'
-
-mkdir -p "$projectRootPath"/scripts/deployment/output
-output_path="$projectRootPath"/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
-
-# Store all artifacts on chain
-date=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
-for artifact in "$projectRootPath"/artifacts/*.wasm; do
-  echo "Storing $(basename $artifact) on $CHAIN_ID..."
-  # Get contract version for storing purposes
-  contract_path=$(find "$projectRootPath" -iname $(cut -d . -f 1 <<< $(basename $artifact)) -type d)
-  version=$(cat ''"$contract_path"'/Cargo.toml' | awk -F= '/^version/ { print $2 }')
-  version="${version//\"}"
-
-  res=$($BINARY tx wasm store $artifact $TXFLAG --from $deployer)
-  code_id=$(echo $res | jq -r '.logs[0].events[-1].attributes[0].value')
-
-  contracts_storage_output=$(echo $contracts_storage_output | jq --arg artifact $(basename "$artifact") --arg code_id $code_id --arg version $version '.contracts[.contracts|length] |= . + {wasm: $artifact, code_id: $code_id, version: $version}')
-
-  # Download the wasm binary from the chain and compare it to the original one
-  echo -e "Verifying integrity of wasm artifact on chain...\n"
-  $BINARY query wasm code $code_id --node $RPC downloaded_wasm.wasm >/dev/null 2>&1
-  # The two binaries should be identical
-  diff $artifact downloaded_wasm.wasm
-  rm downloaded_wasm.wasm
-  sleep 8s
-done
-
-echo $contracts_storage_output | jq '.' >$output_path
-echo -e "\n**** Stored artifacts on $CHAIN_ID successfully ****\n"
-
-echo -e "\nInitializing the Liquidity Hub on $CHAIN_ID..."
-
-echo -e "\nInitializing the Fee Collector..."
-
-# Prepare the instantiation message
-init='{}'
-# Instantiate the contract
-code_id=$(jq -r '.contracts[] | select (.wasm == "fee_collector.wasm") | .code_id' $output_path)
-$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Collector" $TXFLAG --admin $deployer_address
-
-# Get contract address
-contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
-
-# Append contract_address to output file
-tmpfile=$(mktemp)
-jq -r --arg contract_address $contract_address '.contracts[] | select (.wasm == "fee_collector.wasm") |= . + {contract_address: $contract_address}' $output_path | jq -n '.contracts |= [inputs]' >$tmpfile
-mv $tmpfile $output_path
-sleep 8s
-echo -e "\nInitializing the Pool Factory..."
-
-# Prepare the instantiation message
-pair_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_pair.wasm") | .code_id' $output_path)
-token_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $output_path)
-fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_path)
-
-init='{"pair_code_id": '"$pair_code_id"',"token_code_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
-
-# Instantiate the contract
-code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .code_id' $output_path)
-$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Factory" $TXFLAG --admin $deployer_address
-
-# Get contract address
-contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
-
-# Append contract_address to output file
-tmpfile=$(mktemp)
-jq -r --arg contract_address $contract_address '.contracts[] | select (.wasm == "terraswap_factory.wasm") |= . + {contract_address: $contract_address}' $output_path | jq -n '.contracts |= [inputs]' >$tmpfile
-mv $tmpfile $output_path
-sleep 8s
-echo -e "\nInitializing the Pool Router..."
-
-# Prepare the instantiation message
-terraswap_factory=$(jq '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .contract_address' $output_path)
-
-init='{"terraswap_factory": '"$terraswap_factory"'}'
-# Instantiate the contract
-code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_router.wasm") | .code_id' $output_path)
-$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Router" $TXFLAG --admin $deployer_address
-
-# Get contract address
-contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
-
-# Append contract_address to output file
-tmpfile=$(mktemp)
-jq -r --arg contract_address $contract_address '.contracts[] | select (.wasm == "terraswap_router.wasm") |= . + {contract_address: $contract_address}' $output_path | jq -n '.contracts |= [inputs]' >$tmpfile
-mv $tmpfile $output_path
-
-tmpfile=$(mktemp)
-jq --arg date "$date" --arg chain_id "$CHAIN_ID" --arg deployer_address "$deployer_address" '. + {date: $date ,chain_id: $chain_id, deployer_address: $deployer_address}' $output_path >$tmpfile
-mv $tmpfile $output_path
-sleep 8s
-echo -e "\nInitializing the Vault Factory..."
-
-# Prepare the instantiation message
-vault_id=$(jq -r '.contracts[] | select (.wasm == "vault.wasm") | .code_id' $output_path)
-
-init='{"owner": "'$deployer_address'", "vault_id": '"$vault_id"', "token_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
-
-# Instantiate the contract
-code_id=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .code_id' $output_path)
-$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Factory" $TXFLAG --admin $deployer_address
-
-# Get contract address
-contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
-
-# Append contract_address to output file
-tmpfile=$(mktemp)
-jq -r --arg contract_address $contract_address '.contracts[] | select (.wasm == "vault_factory.wasm") |= . + {contract_address: $contract_address}' $output_path | jq -n '.contracts |= [inputs]' >$tmpfile
-mv $tmpfile $output_path
-
-# Add additional deployment information
-tmpfile=$(mktemp)
-jq --arg date "$date" --arg chain_id "$CHAIN_ID" --arg deployer_address "$deployer_address" '. + {date: $date ,chain_id: $chain_id, deployer_address: $deployer_address}' $output_path >$tmpfile
-mv $tmpfile $output_path
-
-echo -e "\n**** Deployment successful ****\n"
-jq '.' $output_path
