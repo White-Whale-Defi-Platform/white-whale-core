@@ -4,6 +4,7 @@ set -e
 # Import the deploy_liquidity_hub script
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+tx_delay=8s
 
 # Displays tool usage
 function display_usage() {
@@ -44,6 +45,27 @@ function read_pool_config() {
   swap_fee=$(jq -r '.swap_fee' $pool)
 }
 
+function check_decimals() {
+  if [ $# -eq 2 ]; then
+    local denom=$1
+    local decimals=$2
+  else
+    echo "check_decimals requires the denom and the decimals"
+    exit 1
+  fi
+
+  query='{"native_token_decimals":{"denom":"'$denom'"}}'
+  local res=$($BINARY query wasm contract-state smart $pool_factory_addr "$query" --node $RPC --output json | jq -r '.data.decimals')
+  if [[ -z "$res" ]]; then
+    echo "Adding native decimals to factory..."
+    # the factory doesn't have the decimals for this denom, registration needs to happen before creating the pool
+    add_native_decimals_msg='{"add_native_token_decimals":{"denom":"'$denom'","decimals":'$decimals'}}'
+    local res=$($BINARY tx wasm execute $pool_factory_addr "$add_native_decimals_msg" $TXFLAG --amount 1$DENOM --from $deployer_address)
+    echo $res
+    sleep $tx_delay
+  fi
+}
+
 function create_pool() {
   mkdir -p $project_root_path/scripts/deployment/output
   output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
@@ -60,6 +82,7 @@ function create_pool() {
     is_native=$(echo $asset | jq '.is_native')
 
     if [[ $is_native == "true" ]]; then
+      check_decimals $(echo $asset | jq -r '.asset') $(echo $asset | jq -r '.decimals')
       asset_info='{"native_token":{"denom":"'$(echo $asset | jq -r '.asset')'"}}'
     else
       asset_info='{"token":{"contract_addr":"'$(echo $asset | jq -r '.asset')'"}}'
