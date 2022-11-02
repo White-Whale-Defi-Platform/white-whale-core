@@ -4,7 +4,6 @@ set -e
 # Import the deploy_liquidity_hub script
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8s
 
 # Displays tool usage
 function display_usage() {
@@ -65,6 +64,7 @@ function create_vault() {
   echo -e "Flash loan fee: $flash_loan_fee\n"
 
   local res=$($BINARY tx wasm execute $vault_factory_addr "$create_vault_msg" $TXFLAG --from $deployer_address)
+  echo $res
 
   local vault_address=$(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "vault_address").value')
   local lp_address=$(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "lp_address").value')
@@ -78,7 +78,7 @@ function create_vault() {
   # Add additional deployment information
   date=$(date -u +"%Y-%m-%dT%H:%M:%S%z")
   tmpfile=$(mktemp)
-  jq --arg date $date --arg chain_id $CHAIN_ID --arg deployer_address $deployer_address '. + {date: $date , chain_id: $chain_id, deployer_address: $deployer_address}' $output_file >$tmpfile
+  jq --arg date $date --arg chain_id $CHAIN_ID --arg vault_factory_addr $vault_factory_addr '. + {date: $date , chain_id: $chain_id, vault_factory_addr: $vault_factory_addr}' $output_file >$tmpfile
   mv $tmpfile $output_file
 
   echo -e "\n**** Created $asset vault on $CHAIN_ID successfully ****\n"
