@@ -32,9 +32,80 @@ different ways to contribute to the project.
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
 6. [Telegram](https://t.me/whitewhaleofficial)
 
-## Building Migaloo
+## Building and Deploying Migaloo
 
-To build Migaloo´s smart contracts, you can run the rust workspace optimizer on the root folder of the project. Alternatively, you can run `scripts/build_release.sh` to build the project artifacts.
+To build and deploy Migaloo´s smart contracts we have created a series of scripts under `scripts/`.
+
+### Build scripts
+
+- `build_release.sh`: builds the project artifacts, optimized for production.
+- `build_schemas.sh`: generates schemas for the contracts.
+- `check_artifacts_size.sh`: validates the size of the optimized artifacts. The default maximum size is 600 kB, though 
+it is customizable by passing the number of kB to the script. For example `check_artifacts_size.sh 400` verifies the 
+artifacts are under 400 kB.
+
+### Deployment scripts
+
+The deployment scripts are found under `scripts/deployment/`. The following is the structure found on under this folder:
+
+```bash
+.
+├── deploy_env
+│   ├── base.env
+│   ├── chain_env.sh
+│   ├── mainnets
+│   │   ├── chihuahua.env
+│   │   ├── juno.env
+│   │   └── terra.env
+│   ├── mnemonics
+│   │   ├── deployer_mnemonic_testnet.txt
+│   │   └── deployer_mnemonic.txt
+│   └── testnets
+│       ├── archway.env
+│       ├── injective.env
+│       ├── juno.env
+│       ├── local.env
+│       └── terra.env
+├── deploy_liquidity_hub.sh
+├── deploy_pool.sh
+├── deploy_vault.sh
+├── input
+│   ├── pool.json
+│   └── vault.json
+├── output
+│   ├── uni-5_liquidity_hub_contracts.json
+│   ├── uni-5_pools.json
+│   └── uni-5_vaults.json
+└── wallet_importer.sh
+```
+
+There are three main scripts: `deploy_liquidity_hub.sh`, `deploy_pool.sh` and `deploy_vault.sh`. The rest of the scripts 
+in there are used as auxiliary scripts by the main three listed before.
+
+The `deploy_env/` folder contains env files defining the parameters for the blockchain where the deployment is going to occur, 
+whether it is a mainnet or testnet deployment.  
+
+The `input/` folder is used for adding json files containing the config parameters when deploying pools or vaults.
+The `output/` folder is where the scripts will write the data regarding the deployment, in json format. The name of the file
+follows the following nomenclature: `"chain_id"_liquidity_hub_contracts`, `"chain_id"_pools`, `"chain_id"_vaults`.
+
+- `deploy_liquidity_hub.sh`: deploys the liquidity hubs. It can deploy the entire LH or parts of it. To learn how to use it, 
+run the script with the `-h` flag.
+- `deploy_pool.sh`: deploys a pool based on the configuration specified at `input/pool.json`. To learn how to use it, 
+run the script with the `-h` flag.
+- `deploy_vault.sh`: deploys a vault based on the configuration specified at `input/vault.json`. To learn how to use it, 
+run the script with the `-h` flag.
+
+Notice that to deploy a pool or vault you need to have deployed the pool or vault factory respectively.
+
+Here are some examples:
+
+```bash
+scripts/deployment/deploy_liquidity_hub.sh -c juno -d all
+scripts/deployment/deploy_liquidity_hub.sh -c juno -d vault-network
+scripts/deployment/deploy_pool-sh -c juno -p scripts/deployment/input/pool.json
+scripts/deployment/deploy_vault-sh -c juno -v scripts/deployment/input/vault.json
+```
 
 ## Testing
 
