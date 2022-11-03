@@ -18,7 +18,7 @@ use crate::state::{Config, CONFIG, PAIRS, TMP_PAIR_INFO};
 use crate::{commands, queries};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:terraswap-factory";
+const CONTRACT_NAME: &str = "white_whale-pool_factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
