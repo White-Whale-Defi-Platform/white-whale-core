@@ -44,8 +44,7 @@ pub fn update_config(
         config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
     }
     if let Some(new_fees) = new_vault_fees {
-        new_fees.protocol_fee.is_valid()?;
-        new_fees.flash_loan_fee.is_valid()?;
+        new_fees.is_valid()?;
         config.fees = new_fees;
     }
 

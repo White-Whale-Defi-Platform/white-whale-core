@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 
 use white_whale::fee::Fee;
@@ -100,6 +100,20 @@ pub struct FeatureToggle {
 pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
+}
+
+impl PoolFee {
+    /// Checks that the given [PoolFee] is valid, i.e. the fees provided are valid, and they don't
+    /// exceed 100% together
+    pub fn is_valid(&self) -> StdResult<()> {
+        self.protocol_fee.is_valid()?;
+        self.swap_fee.is_valid()?;
+
+        if self.protocol_fee.share.checked_add(self.swap_fee.share)? >= Decimal::percent(100) {
+            return Err(StdError::generic_err("Invalid fees"));
+        }
+        Ok(())
+    }
 }
 
 #[cw_serde]
