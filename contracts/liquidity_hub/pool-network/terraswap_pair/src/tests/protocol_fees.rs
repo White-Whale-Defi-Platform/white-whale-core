@@ -4,8 +4,8 @@ use crate::queries::query_protocol_fees;
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
-    Uint128, WasmMsg,
+    to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo};
@@ -599,4 +599,69 @@ fn test_collect_protocol_fees_unsuccessful_asset_missmatch() {
         Err(ContractError::AssetMismatch {}) => (),
         _ => panic!("should return ContractError::AssetMismatch"),
     }
+}
+
+#[test]
+fn protocol_fees() {
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(50),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(50),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(200),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(20),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(200),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(40),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+    };
+    assert_eq!(protocol_fee.is_valid(), Ok(()));
 }

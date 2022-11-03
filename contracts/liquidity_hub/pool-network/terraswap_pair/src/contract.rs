@@ -55,8 +55,7 @@ pub fn instantiate(
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
 
     // check the fees are valid
-    msg.pool_fees.swap_fee.is_valid()?;
-    msg.pool_fees.protocol_fee.is_valid()?;
+    msg.pool_fees.is_valid()?;
 
     // Set owner and initial pool fees
     let config = Config {

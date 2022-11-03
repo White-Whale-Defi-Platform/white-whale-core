@@ -30,6 +30,9 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    // check the fees are valid
+    msg.vault_fees.is_valid()?;
+
     let config = Config {
         owner: deps.api.addr_validate(&msg.owner)?,
         asset_info: msg.asset_info.clone(),

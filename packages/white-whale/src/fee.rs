@@ -34,11 +34,30 @@ pub struct VaultFee {
     pub flash_loan_fee: Fee,
 }
 
+impl VaultFee {
+    /// Checks that the given [VaultFee] is valid, i.e. the fees provided are valid, and they don't
+    /// exceed 100% together
+    pub fn is_valid(&self) -> StdResult<()> {
+        self.protocol_fee.is_valid()?;
+        self.flash_loan_fee.is_valid()?;
+
+        if self
+            .protocol_fee
+            .share
+            .checked_add(self.flash_loan_fee.share)?
+            >= Decimal::percent(100)
+        {
+            return Err(StdError::generic_err("Invalid fees"));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{Decimal, StdError, Uint128};
 
-    use crate::fee::Fee;
+    use crate::fee::{Fee, VaultFee};
 
     #[test]
     fn valid_fee() {
@@ -81,5 +100,70 @@ mod tests {
             share: Decimal::from_ratio(Uint128::new(2u128), Uint128::new(1u128)),
         };
         assert_eq!(fee.is_valid(), Err(StdError::generic_err("Invalid fee")));
+    }
+
+    #[test]
+    fn vault_fee() {
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(50),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(50),
+            },
+        };
+        assert_eq!(
+            vault_fee.is_valid(),
+            Err(StdError::generic_err("Invalid fees"))
+        );
+
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(200),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(20),
+            },
+        };
+        assert_eq!(
+            vault_fee.is_valid(),
+            Err(StdError::generic_err("Invalid fee"))
+        );
+
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(20),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(200),
+            },
+        };
+        assert_eq!(
+            vault_fee.is_valid(),
+            Err(StdError::generic_err("Invalid fee"))
+        );
+
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(40),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(60),
+            },
+        };
+        assert_eq!(
+            vault_fee.is_valid(),
+            Err(StdError::generic_err("Invalid fees"))
+        );
+
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(20),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(60),
+            },
+        };
+        assert_eq!(vault_fee.is_valid(), Ok(()));
     }
 }
