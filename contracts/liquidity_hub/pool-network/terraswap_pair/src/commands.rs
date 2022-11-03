@@ -3,11 +3,11 @@ use cosmwasm_std::{
     Response, StdError, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use integer_sqrt::IntegerSquareRoot;
 
-use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
+use terraswap::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
 use terraswap::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
 use terraswap::querier::query_token_info;
+use terraswap::U256;
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -133,6 +133,10 @@ pub fn provide_liquidity(
             .expect("Wrong asset info is given"),
     ];
 
+    if deposits[0].is_zero() || deposits[1].is_zero() {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
+
     let mut messages: Vec<CosmosMsg> = vec![];
     for (i, pool) in pools.iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
@@ -160,7 +164,35 @@ pub fn provide_liquidity(
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
     let share = if total_share == Uint128::zero() {
         // Initial share = collateral amount
-        Uint128::from((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
+
+        // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+        // depositor preventing small liquidity providers from joining the pool
+        let share = Uint128::new(
+            (U256::from(deposits[0].u128())
+                .checked_mul(U256::from(deposits[1].u128()))
+                .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+            .integer_sqrt()
+            .as_u128(),
+        )
+        .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
+        .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
+
+        messages.push(mint_lp_token_msg(
+            deps.api
+                .addr_humanize(&pair_info.liquidity_token)?
+                .to_string(),
+            env.contract.address.to_string(),
+            MINIMUM_LIQUIDITY_AMOUNT,
+        )?);
+
+        // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
+        if share.is_zero() {
+            return Err(ContractError::InvalidInitialLiquidityAmount(
+                MINIMUM_LIQUIDITY_AMOUNT,
+            ));
+        }
+
+        share
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
@@ -173,24 +205,15 @@ pub fn provide_liquidity(
         )
     };
 
-    // prevent providing free token
-    if share.is_zero() {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
-    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: deps
-            .api
+    messages.push(mint_lp_token_msg(
+        deps.api
             .addr_humanize(&pair_info.liquidity_token)?
             .to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::Mint {
-            recipient: receiver.to_string(),
-            amount: share,
-        })?,
-        funds: vec![],
-    }));
+        receiver.clone(),
+        share,
+    )?);
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "provide_liquidity"),
@@ -461,4 +484,17 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
     Ok(Response::new()
         .add_attribute("action", "collect_protocol_fees")
         .add_messages(messages))
+}
+
+/// Creates the Mint LP message
+fn mint_lp_token_msg(
+    lp_token_addr: String,
+    recipient: String,
+    amount: Uint128,
+) -> Result<CosmosMsg, ContractError> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: lp_token_addr,
+        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+        funds: vec![],
+    }))
 }
