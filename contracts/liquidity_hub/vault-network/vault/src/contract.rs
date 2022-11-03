@@ -18,7 +18,7 @@ use crate::{
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
-const CONTRACT_NAME: &str = "vault_factory";
+const CONTRACT_NAME: &str = "white_whale-vault";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
