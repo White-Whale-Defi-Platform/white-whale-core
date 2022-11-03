@@ -1,4 +1,4 @@
-use cosmwasm_std::{OverflowError, StdError};
+use cosmwasm_std::{OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
@@ -19,13 +19,13 @@ pub enum ContractError {
     #[error("Invalid zero amount")]
     InvalidZeroAmount {},
 
-    #[error("Max spread assertion")]
+    #[error("Spread limit exceeded")]
     MaxSpreadAssertion {},
 
-    #[error("Max slippage assertion")]
+    #[error("Slippage tolerance exceeded")]
     MaxSlippageAssertion {},
 
-    #[error("Asset mismatch")]
+    #[error("The asset doesn't match the assets stored in contract")]
     AssetMismatch {},
 
     #[error("Too small offer amount")]
@@ -39,6 +39,12 @@ pub enum ContractError {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("Initial liquidity amount must be over {0}")]
+    InvalidInitialLiquidityAmount(Uint128),
+
+    #[error("Failed to compute the LP share with the given deposit")]
+    LiquidityShareComputation {},
 }
 
 impl From<semver::Error> for ContractError {

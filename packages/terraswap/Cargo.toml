@@ -21,6 +21,7 @@ documentation = "https://docs.terraswap.io"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
+uint = "0.9.4"
 cw20.workspace = true
 cosmwasm-std.workspace = true
 schemars.workspace = true
