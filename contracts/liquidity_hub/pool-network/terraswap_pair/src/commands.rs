@@ -432,6 +432,8 @@ pub fn update_config(
     }
 
     if let Some(pool_fees) = pool_fees {
+        pool_fees.protocol_fee.is_valid()?;
+        pool_fees.swap_fee.is_valid()?;
         config.pool_fees = pool_fees;
     }
 

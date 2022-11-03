@@ -1,4 +1,5 @@
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
+
 use vault_network::vault::UpdateConfigParams;
 
 use crate::{
@@ -43,6 +44,8 @@ pub fn update_config(
         config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
     }
     if let Some(new_fees) = new_vault_fees {
+        new_fees.protocol_fee.is_valid()?;
+        new_fees.flash_loan_fee.is_valid()?;
         config.fees = new_fees;
     }
 
@@ -65,8 +68,9 @@ pub fn update_config(
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Decimal, Response,
+        Addr, Decimal, Response, StdError, Uint128,
     };
+
     use terraswap::asset::AssetInfo;
     use vault_network::vault::{Config, UpdateConfigParams};
     use white_whale::fee::{Fee, VaultFee};
@@ -147,13 +151,61 @@ mod test {
                 ("withdraw_enabled", "false"),
                 ("deposit_enabled", "false"),
                 ("owner", &mock_creator().sender.into_string()),
-                ("fee_collector_addr", "fee_collector")
+                ("fee_collector_addr", "fee_collector"),
             ])
         );
 
         // should not have performed any changes
         let config_after = CONFIG.load(&deps.storage).unwrap();
         assert_eq!(config, config_after);
+    }
+
+    #[test]
+    fn fails_if_invalid_fees() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let config = Config {
+            owner: mock_creator().sender,
+            asset_info: AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            liquidity_token: Addr::unchecked("lp_token"),
+            deposit_enabled: false,
+            flash_loan_enabled: false,
+            withdraw_enabled: false,
+            fee_collector_addr: Addr::unchecked("fee_collector"),
+            fees: get_fees(),
+        };
+
+        CONFIG.save(&mut deps.storage, &config).unwrap();
+
+        let res = execute(
+            deps.as_mut(),
+            env,
+            mock_creator(),
+            vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+                flash_loan_enabled: None,
+                deposit_enabled: None,
+                withdraw_enabled: None,
+                new_owner: None,
+                new_fee_collector_addr: None,
+                new_vault_fees: Some(VaultFee {
+                    protocol_fee: Fee {
+                        share: Decimal::permille(5),
+                    },
+                    flash_loan_fee: Fee {
+                        share: Decimal::from_ratio(Uint128::new(2), Uint128::one()),
+                    },
+                }),
+            }),
+        )
+        .unwrap_err();
+
+        match res {
+            VaultError::Std(e) => assert_eq!(e, StdError::generic_err("Invalid fee")),
+            _ => panic!("should return Std(GenericErr -> msg: Invalid fee)"),
+        }
     }
 
     #[test]
@@ -208,7 +260,7 @@ mod test {
                 ("withdraw_enabled", "true"),
                 ("deposit_enabled", "true"),
                 ("owner", "new_owner"),
-                ("fee_collector_addr", "new_fee_collector")
+                ("fee_collector_addr", "new_fee_collector"),
             ])
         );
 
@@ -226,7 +278,7 @@ mod test {
                 flash_loan_enabled: true,
                 withdraw_enabled: true,
                 fee_collector_addr: Addr::unchecked("new_fee_collector"),
-                fees: new_fee
+                fees: new_fee,
             }
         );
     }
