@@ -26,7 +26,7 @@ pub fn get_payback_amount(deps: Deps, amount: Uint128) -> StdResult<Binary> {
 
     Ok(to_binary(&PaybackAmountResponse {
         payback_amount: required_amount,
-        flash_loan_fee,
         protocol_fee,
+        flash_loan_fee,
     })?)
 }
