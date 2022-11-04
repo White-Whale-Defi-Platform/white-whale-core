@@ -2,8 +2,10 @@ use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
+
 use terraswap::asset::AssetInfo;
 
+use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{
     error::{StdResult, VaultError},
     state::CONFIG,
@@ -12,15 +14,16 @@ use crate::{
 pub fn withdraw(deps: DepsMut, env: Env, sender: String, amount: Uint128) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    // parse sender
-    let sender = deps.api.addr_validate(&sender)?;
-
     // check that withdrawals are enabled
     if !config.withdraw_enabled {
         return Err(VaultError::WithdrawsDisabled {});
     }
 
+    // parse sender
+    let sender = deps.api.addr_validate(&sender)?;
+
     // calculate the size of vault and the amount of assets to withdraw
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
     let total_asset_amount = match &config.asset_info {
         AssetInfo::NativeToken { denom } => {
             deps.querier
@@ -36,7 +39,9 @@ pub fn withdraw(deps: DepsMut, env: Env, sender: String, amount: Uint128) -> Std
             )?;
             balance.balance
         }
-    };
+    } // deduct protocol fees
+    .checked_sub(collected_protocol_fees.amount)?;
+
     let total_share_amount: TokenInfoResponse = deps
         .querier
         .query_wasm_smart(config.liquidity_token.clone(), &Cw20QueryMsg::TokenInfo {})?;
@@ -85,9 +90,11 @@ mod tests {
     };
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
-    use terraswap::asset::AssetInfo;
+
+    use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::{Config, UpdateConfigParams};
 
+    use crate::state::COLLECTED_PROTOCOL_FEES;
     use crate::{
         contract::execute,
         error::VaultError,
@@ -338,7 +345,7 @@ mod tests {
                 ),
                 (
                     env.clone().contract.address.into_string(),
-                    &[("lp_token".to_string(), Uint128::new(5_000))],
+                    &[("lp_token".to_string(), Uint128::new(4_000))],
                 ),
             ],
             vec![],
@@ -363,6 +370,19 @@ mod tests {
             )
             .unwrap();
 
+        // inject protocol fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(1_000),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+
         let res = execute(
             deps.as_mut(),
             env,
@@ -381,7 +401,7 @@ mod tests {
                 .add_attributes(vec![
                     ("method", "withdraw"),
                     ("lp_amount", "5000"),
-                    ("asset_amount", "4999")
+                    ("asset_amount", "4999"),
                 ])
                 .add_submessages(vec![
                     SubMsg {
@@ -390,9 +410,9 @@ mod tests {
                         reply_on: cosmwasm_std::ReplyOn::Never,
                         msg: BankMsg::Send {
                             to_address: mock_creator().sender.into_string(),
-                            amount: coins(4999, "uluna")
+                            amount: coins(4999, "uluna"),
                         }
-                        .into()
+                        .into(),
                     },
                     SubMsg {
                         id: 0,
@@ -404,10 +424,10 @@ mod tests {
                                 amount: Uint128::new(5000)
                             })
                             .unwrap(),
-                            funds: vec![]
+                            funds: vec![],
                         }
-                        .into()
-                    }
+                        .into(),
+                    },
                 ])
         );
     }
@@ -423,7 +443,7 @@ mod tests {
             &[
                 (
                     "random_acc".to_string(),
-                    &[("lp_token".to_string(), Uint128::new(10_000))],
+                    &[("lp_token".to_string(), Uint128::new(9_000))],
                 ),
                 (
                     env.clone().contract.address.into_string(),
@@ -455,6 +475,19 @@ mod tests {
             )
             .unwrap();
 
+        // inject protocol fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(1_000),
+                    info: AssetInfo::Token {
+                        contract_addr: "vault_token".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+
         let res = execute(
             deps.as_mut(),
             env,
@@ -473,7 +506,7 @@ mod tests {
                 .add_attributes(vec![
                     ("method", "withdraw"),
                     ("lp_amount", "5000"),
-                    ("asset_amount", "4999")
+                    ("asset_amount", "4999"),
                 ])
                 .add_submessages(vec![
                     SubMsg {
@@ -484,12 +517,12 @@ mod tests {
                             contract_addr: "vault_token".to_string(),
                             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                                 amount: Uint128::new(4_999),
-                                recipient: mock_creator().sender.into_string()
+                                recipient: mock_creator().sender.into_string(),
                             })
                             .unwrap(),
-                            funds: vec![]
+                            funds: vec![],
                         }
-                        .into()
+                        .into(),
                     },
                     SubMsg {
                         id: 0,
@@ -501,10 +534,10 @@ mod tests {
                                 amount: Uint128::new(5000)
                             })
                             .unwrap(),
-                            funds: vec![]
+                            funds: vec![],
                         }
-                        .into()
-                    }
+                        .into(),
+                    },
                 ])
         );
     }

@@ -1,7 +1,9 @@
 use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+
 use terraswap::asset::AssetInfo;
 
+use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::StdResult, state::CONFIG};
 
 pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
@@ -10,6 +12,8 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
     let lp_amount: TokenInfoResponse = deps
         .querier
         .query_wasm_smart(config.liquidity_token, &Cw20QueryMsg::TokenInfo {})?;
+
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
     let balance = match config.asset_info {
         AssetInfo::NativeToken { denom } => {
@@ -26,7 +30,8 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
             )?;
             balance.balance
         }
-    };
+    } // deduct protocol fees
+    .checked_sub(collected_protocol_fees.amount)?;
 
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
@@ -37,8 +42,11 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{coins, from_binary, testing::mock_env, Addr, Uint128};
+    use terraswap::asset::{Asset, AssetInfo};
+
     use vault_network::vault::Config;
 
+    use crate::state::COLLECTED_PROTOCOL_FEES;
     use crate::{
         contract::query,
         state::CONFIG,
@@ -72,7 +80,7 @@ mod test {
                 &Config {
                     owner: mock_creator().sender,
                     liquidity_token: Addr::unchecked("lp_token"),
-                    asset_info: terraswap::asset::AssetInfo::NativeToken {
+                    asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },
                     deposit_enabled: true,
@@ -80,6 +88,20 @@ mod test {
                     withdraw_enabled: true,
                     fee_collector_addr: Addr::unchecked("fee_collector"),
                     fees: get_fees(),
+                },
+            )
+            .unwrap();
+
+        // inject protocol fees
+        // half of the liquid supply are fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(50_000),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
                 },
             )
             .unwrap();
@@ -96,7 +118,7 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(res, Uint128::new(54_854));
+        assert_eq!(res, Uint128::new(27_427));
     }
 
     #[test]
@@ -127,7 +149,7 @@ mod test {
                 &Config {
                     owner: mock_creator().sender,
                     liquidity_token: Addr::unchecked("lp_token"),
-                    asset_info: terraswap::asset::AssetInfo::Token {
+                    asset_info: AssetInfo::Token {
                         contract_addr: "vault_token".to_string(),
                     },
                     deposit_enabled: true,
@@ -135,6 +157,20 @@ mod test {
                     withdraw_enabled: true,
                     fee_collector_addr: Addr::unchecked("fee_collector"),
                     fees: get_fees(),
+                },
+            )
+            .unwrap();
+
+        // inject protocol fees
+        // half of the liquid supply are fees
+        COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(50_000),
+                    info: AssetInfo::Token {
+                        contract_addr: "vault_token".to_string(),
+                    },
                 },
             )
             .unwrap();
@@ -151,6 +187,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(res, Uint128::new(54_854));
+        assert_eq!(res, Uint128::new(27_427));
     }
 }
