@@ -8,7 +8,7 @@ use crate::execute::{complete_loan, flash_loan, next_loan, update_config};
 use crate::queries::get_config;
 use crate::state::CONFIG;
 
-const CONTRACT_NAME: &str = "vault_router";
+const CONTRACT_NAME: &str = "white_whale-vault_router";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

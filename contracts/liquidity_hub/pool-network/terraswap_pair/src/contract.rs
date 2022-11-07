@@ -21,7 +21,7 @@ use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CO
 use crate::{commands, queries};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
+const CONTRACT_NAME: &str = "white_whale-pool";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const INSTANTIATE_REPLY_ID: u64 = 1;

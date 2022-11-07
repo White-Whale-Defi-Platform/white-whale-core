@@ -9,7 +9,7 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, CONFIG};
 use crate::{commands, queries};
 
-const CONTRACT_NAME: &str = "crates.io:ww-fee_collector";
+const CONTRACT_NAME: &str = "white_whale-fee_collector";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

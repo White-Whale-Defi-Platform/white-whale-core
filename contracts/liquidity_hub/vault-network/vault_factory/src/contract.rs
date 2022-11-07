@@ -11,7 +11,7 @@ use crate::execute::{
 use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::CONFIG;
 
-const CONTRACT_NAME: &str = "vault_factory";
+const CONTRACT_NAME: &str = "white_whale-vault_factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

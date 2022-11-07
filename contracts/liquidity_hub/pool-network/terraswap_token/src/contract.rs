@@ -10,7 +10,7 @@ use cw20_base::ContractError;
 use terraswap::token::InstantiateMsg;
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw20-base";
+const CONTRACT_NAME: &str = "white_whale-cw20_token";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -21,7 +21,7 @@ use terraswap::router::{
 };
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:terraswap-router";
+const CONTRACT_NAME: &str = "white_whale-pool_router";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
