@@ -24,7 +24,9 @@ pub fn query_fees(
     let mut fees: Vec<Asset> = Vec::new();
 
     match query_fees_for {
-        QueryFeesFor::Contracts { contracts } => {
+        QueryFeesFor::Contracts { mut contracts } => {
+            contracts.dedup_by(|a, b| a.address == b.address);
+
             for contract in contracts {
                 match contract.contract_type {
                     ContractType::Pool {} => {
