@@ -466,10 +466,6 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
 
     // get the collected protocol fees so far
     let protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
-    if protocol_fees.len() != 2 {
-        return Err(ContractError::AssetMismatch {});
-    }
-
     // reset the collected protocol fees
     COLLECTED_PROTOCOL_FEES.save(
         deps.storage,
