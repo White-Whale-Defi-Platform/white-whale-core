@@ -103,7 +103,7 @@ fn test_migration() {
     assert_eq!(
         get_contract_version(&deps.storage),
         Ok(ContractVersion {
-            contract: "crates.io:ww-fee_collector".to_string(),
+            contract: "white_whale-fee_collector".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string()
         })
     );
