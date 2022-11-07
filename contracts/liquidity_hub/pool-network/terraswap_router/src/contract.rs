@@ -1,17 +1,15 @@
+use std::collections::HashMap;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Response, StdError, StdResult, Uint128, WasmMsg,
 };
-
-use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG};
-
-use cw2::set_contract_version;
+use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
-use std::collections::HashMap;
+use semver::Version;
+
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::SimulationResponse;
 use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
@@ -19,6 +17,11 @@ use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
+
+use crate::error::ContractError;
+use crate::error::ContractError::MigrateInvalidVersion;
+use crate::operations::execute_swap_operation;
+use crate::state::{Config, CONFIG};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-pool_router";
@@ -30,7 +33,7 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     CONFIG.save(
@@ -44,7 +47,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
         ExecuteMsg::ExecuteSwapOperations {
@@ -87,7 +95,10 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
-fn optional_addr_validate(api: &dyn Api, addr: Option<String>) -> StdResult<Option<Addr>> {
+fn optional_addr_validate(
+    api: &dyn Api,
+    addr: Option<String>,
+) -> Result<Option<Addr>, ContractError> {
     let addr = if let Some(addr) = addr {
         Some(api.addr_validate(&addr)?)
     } else {
@@ -102,7 +113,7 @@ pub fn receive_cw20(
     env: Env,
     _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let sender = deps.api.addr_validate(&cw20_msg.sender)?;
     match from_binary(&cw20_msg.msg)? {
         Cw20HookMsg::ExecuteSwapOperations {
@@ -130,10 +141,10 @@ pub fn execute_swap_operations(
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err("must provide operations"));
+        return Err(StdError::generic_err("Must provide swap operations to execute").into());
     }
 
     // Assert the operations are properly set
@@ -187,15 +198,15 @@ fn assert_minimum_receive(
     prev_balance: Uint128,
     minimum_receive: Uint128,
     receiver: Addr,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
     if swap_amount < minimum_receive {
-        return Err(StdError::generic_err(format!(
-            "assertion failed; minimum receive amount: {}, swap amount: {}",
-            minimum_receive, swap_amount
-        )));
+        return Err(ContractError::MiminumReceiveAssertion {
+            minimum_receive,
+            swap_amount,
+        });
     }
 
     Ok(Response::default())
@@ -240,7 +251,9 @@ fn simulate_swap_operations(
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err("must provide operations"));
+        return Err(StdError::generic_err(
+            "Must provide swap operations to execute",
+        ));
     }
 
     let mut offer_amount = offer_amount;
@@ -284,7 +297,9 @@ fn reverse_simulate_swap_operations(
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err("must provide operations"));
+        return Err(StdError::generic_err(
+            "Must provide swap operations to execute",
+        ));
     }
 
     let mut ask_amount = ask_amount;
@@ -336,7 +351,7 @@ fn reverse_simulate_return_amount(
     Ok(res.offer_amount)
 }
 
-fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
+fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
     let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
     for operation in operations.iter() {
         let (offer_asset, ask_asset) = match operation {
@@ -351,9 +366,7 @@ fn assert_operations(operations: &[SwapOperation]) -> StdResult<()> {
     }
 
     if ask_asset_map.keys().len() != 1 {
-        return Err(StdError::generic_err(
-            "invalid operations; multiple output token",
-        ));
+        return Err(ContractError::MultipleOutputToken {});
     }
 
     Ok(())
@@ -416,8 +429,17 @@ fn test_invalid_operations() {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
+    if storage_version > version {
+        return Err(MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
