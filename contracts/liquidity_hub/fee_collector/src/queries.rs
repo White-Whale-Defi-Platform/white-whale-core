@@ -55,6 +55,20 @@ pub fn query_fees(
         }
     }
 
+    // accumulate fees, as the asset fees coming from different pairs, i.e. pair_fees,
+    // would be duplicated in the fees vector
+    fees = fees
+        .into_iter()
+        .fold(Vec::<Asset>::new(), |mut acc, asset| {
+            let accumulated_asset = acc.iter_mut().find(|a| a.info == asset.info);
+            match accumulated_asset {
+                Some(accumulated_asset) => accumulated_asset.amount += asset.amount,
+                None => acc.push(asset),
+            }
+
+            acc
+        });
+
     Ok(fees)
 }
 
@@ -123,20 +137,6 @@ fn query_fees_for_factory(
                 let mut pair_fees = query_fees_for_pair(deps, pair.contract_addr, all_time)?;
                 fees.append(&mut pair_fees);
             }
-
-            // accumulate fees, as the asset fees coming from different pairs, i.e. pair_fees,
-            //  would be duplicated in the fees vector
-            fees = fees
-                .into_iter()
-                .fold(Vec::<Asset>::new(), |mut acc, asset| {
-                    let accumulated_asset = acc.iter_mut().find(|a| a.info == asset.info);
-                    match accumulated_asset {
-                        Some(accumulated_asset) => accumulated_asset.amount += asset.amount,
-                        None => acc.push(asset),
-                    }
-
-                    acc
-                });
         }
     }
 
