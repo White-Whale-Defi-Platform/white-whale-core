@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
@@ -10,14 +10,28 @@ pub enum ContractError {
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("Invalid operations; multiple output token")]
+    MultipleOutputToken {},
+
+    #[error(
+        "Assertion failed; minimum receive amount: {minimum_receive}, swap amount: {swap_amount}"
+    )]
+    MiminumReceiveAssertion {
+        minimum_receive: Uint128,
+        swap_amount: Uint128,
+    },
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }
 
 impl From<semver::Error> for ContractError {
