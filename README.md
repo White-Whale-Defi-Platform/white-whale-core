@@ -119,7 +119,7 @@ Migaloo core contracts are not audited yet in their current form, though most of
 
 ## Contributing
 
-[Contributing Guide](./CONTRIBUTING.md)
+[Contributing Guide](./docs/CONTRIBUTING.md)
 
 [Code of Conduct](./CODE_OF_CONDUCT.md)
 
