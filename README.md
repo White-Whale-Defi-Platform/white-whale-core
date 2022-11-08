@@ -123,6 +123,6 @@ Migaloo core contracts are not audited yet in their current form, though most of
 
 [Code of Conduct](./CODE_OF_CONDUCT.md)
 
-[Security Policies and Procedures](./SECURITY.md)
+[Security Policies and Procedures](./docs/SECURITY.md)
 
 [License](./LICENSE)
