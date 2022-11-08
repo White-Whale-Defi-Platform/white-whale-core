@@ -145,7 +145,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
         .parse()
         .map_err(|_| StdError::parse_err("Version", "Failed to parse storage_version"))?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(VaultError::MigrateInvalidVersion {
             new_version: storage_version,
             current_version: version,
