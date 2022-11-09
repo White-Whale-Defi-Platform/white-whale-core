@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
-    Response, StdError, Uint128, WasmMsg,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use integer_sqrt::IntegerSquareRoot;
@@ -11,6 +11,7 @@ use terraswap::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::helpers;
+use crate::helpers::get_protocol_fee_for_asset;
 use crate::state::{
     store_protocol_fee, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
     PAIR_INFO,
@@ -148,9 +149,17 @@ pub fn provide_liquidity(
             }));
         } else {
             // If the asset is native token, balance is already increased
-            // To calculated properly we should subtract user deposit from the pool
+            // To calculate it properly we should subtract user deposit from the pool
             pool.amount = pool.amount.checked_sub(deposits[i])?;
         }
+    }
+
+    // deduct protocol fee from pools
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    for pool in pools.iter_mut() {
+        let protocol_fee =
+            get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+        pool.amount = pool.amount.checked_sub(protocol_fee)?;
     }
 
     // assert slippage tolerance
@@ -224,19 +233,10 @@ pub fn withdraw_liquidity(
     let refund_assets: Result<Vec<Asset>, OverflowError> = pool_assets
         .iter()
         .map(|pool_asset| {
-            let protocol_fee_asset = collected_protocol_fees
-                .iter()
-                .find(|&protocol_fee_asset| {
-                    protocol_fee_asset.clone().get_id() == pool_asset.clone().get_id()
-                })
-                .cloned();
-
-            // get the protocol fee for the given pool_asset
-            let protocol_fee = if let Some(protocol_fee_asset) = protocol_fee_asset {
-                protocol_fee_asset.amount
-            } else {
-                Uint128::zero()
-            };
+            let protocol_fee = get_protocol_fee_for_asset(
+                collected_protocol_fees.clone(),
+                pool_asset.clone().get_id(),
+            );
 
             // subtract the protocol_fee from the amount of the pool_asset
             let refund_amount = pool_asset.amount.checked_sub(protocol_fee)?;
@@ -291,30 +291,40 @@ pub fn swap(
 
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
 
-    let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
-
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Asset;
     let ask_pool: Asset;
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
     let offer_decimal: u8;
     let ask_decimal: u8;
-    // If the asset balance is already increased
-    // To calculated properly we should subtract user deposit from the pool
+
+    // To calculate pool amounts properly we should subtract user deposit and the protocol fees from the pool
+    let protocol_fee =
+        get_protocol_fee_for_asset(collected_protocol_fees, offer_asset.clone().get_id());
+
+    let pools = pair_info
+        .query_pools(&deps.querier, deps.api, env.contract.address)?
+        .into_iter()
+        .map(|mut pool| {
+            if pool.info.equal(&offer_asset.info) {
+                pool.amount = pool
+                    .amount
+                    .checked_sub(offer_asset.amount)?
+                    .checked_sub(protocol_fee)?;
+            }
+            Ok(pool)
+        })
+        .collect::<StdResult<Vec<_>>>()?;
+
     if offer_asset.info.equal(&pools[0].info) {
-        offer_pool = Asset {
-            amount: pools[0].amount.checked_sub(offer_asset.amount)?,
-            info: pools[0].info.clone(),
-        };
+        offer_pool = pools[0].clone();
         ask_pool = pools[1].clone();
 
         offer_decimal = pair_info.asset_decimals[0];
         ask_decimal = pair_info.asset_decimals[1];
     } else if offer_asset.info.equal(&pools[1].info) {
-        offer_pool = Asset {
-            amount: pools[1].amount.checked_sub(offer_asset.amount)?,
-            info: pools[1].info.clone(),
-        };
+        offer_pool = pools[1].clone();
         ask_pool = pools[0].clone();
 
         offer_decimal = pair_info.asset_decimals[1];
@@ -325,6 +335,7 @@ pub fn swap(
 
     let offer_amount = offer_asset.amount;
     let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+
     let swap_computation =
         helpers::compute_swap(offer_pool.amount, ask_pool.amount, offer_amount, pool_fees);
 

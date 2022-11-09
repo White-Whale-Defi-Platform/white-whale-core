@@ -4,6 +4,7 @@ use std::ops::Mul;
 use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, StdError, Uint128};
+
 use terraswap::asset::Asset;
 use terraswap::pair::PoolFee;
 
@@ -200,4 +201,22 @@ pub fn assert_slippage_tolerance(
     }
 
     Ok(())
+}
+
+/// Gets the protocol fee amount for the given asset_id
+pub fn get_protocol_fee_for_asset(
+    collected_protocol_fees: Vec<Asset>,
+    asset_id: String,
+) -> Uint128 {
+    let protocol_fee_asset = collected_protocol_fees
+        .iter()
+        .find(|&protocol_fee_asset| protocol_fee_asset.clone().get_id() == asset_id.clone())
+        .cloned();
+
+    // get the protocol fee for the given pool_asset
+    if let Some(protocol_fee_asset) = protocol_fee_asset {
+        protocol_fee_asset.amount
+    } else {
+        Uint128::zero()
+    }
 }

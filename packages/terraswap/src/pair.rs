@@ -115,7 +115,7 @@ pub type ConfigResponse = Config;
 /// We define a custom struct for each query response
 #[cw_serde]
 pub struct PoolResponse {
-    pub assets: [Asset; 2],
+    pub assets: Vec<Asset>,
     pub total_share: Uint128,
 }
 

@@ -259,10 +259,10 @@ fn test_collect_protocol_fees_successful() {
     );
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
-    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
-    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // second swap, token -> native
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -278,14 +278,17 @@ fn test_collect_protocol_fees_successful() {
     let info = mock_info("asset0000", &[]);
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
-    let expected_ret_amount = Uint128::from(787_500_000u128);
-    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 2362.612505 = (31500 - 0) * 1500 / (18500 - 0.952380 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(2_362_612_505u128);
+    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // as we swapped both native and token, we should have collected fees in both of them
     let protocol_fees_for_token =
         query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
             .unwrap()
             .fees;
+
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_token_amount
