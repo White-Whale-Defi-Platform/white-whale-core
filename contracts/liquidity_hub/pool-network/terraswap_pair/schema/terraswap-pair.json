@@ -835,9 +835,7 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Asset"
-          },
-          "maxItems": 2,
-          "minItems": 2
+          }
         },
         "total_share": {
           "$ref": "#/definitions/Uint128"
