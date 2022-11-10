@@ -118,6 +118,20 @@ impl WasmMockQuerier {
                                 .unwrap(),
                             ));
                         }
+                        Cw20QueryMsg::Balance { address } => {
+                            return SystemResult::Ok(ContractResult::Ok(
+                                to_binary(&BalanceResponse {
+                                    balance: *self
+                                        .token_querier
+                                        .balances
+                                        .get(&address)
+                                        .expect("Address did not have CW20 balance")
+                                        .get("lp_token")
+                                        .unwrap_or(&Uint128::new(0)),
+                                })
+                                .unwrap(),
+                            ));
+                        }
                         _ => panic!("DO NOT ENTER HERE"),
                     }
                 } else if contract_addr == "vault_token" {
