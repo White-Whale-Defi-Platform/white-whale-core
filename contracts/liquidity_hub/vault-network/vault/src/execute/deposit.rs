@@ -73,12 +73,21 @@ pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> S
         // first depositor to the vault, mint LP tokens 1:1
         amount
     } else {
+        // If the asset is native token, the balance has already increased in the vault
+        // To calculate it properly we should subtract user deposit from the vault.
+        // If the asset is a cw20 token, the balance has not changed yet so we don't need to subtract it
+        let deposit_amount = match config.asset_info {
+            AssetInfo::NativeToken { .. } => amount,
+            AssetInfo::Token { .. } => Uint128::zero(),
+        };
+
         // return based on a share of the total pool
         let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
         let total_deposits = config
             .asset_info
             .query_pool(&deps.querier, deps.api, env.contract.address)?
-            .checked_sub(collected_protocol_fees.amount)?;
+            .checked_sub(collected_protocol_fees.amount)?
+            .checked_sub(deposit_amount)?;
 
         amount
             .checked_mul(total_lp_share)?
@@ -404,10 +413,12 @@ mod test {
         // the next depositor should not deposit at a 1:1 rate for asset:LP tokens
         // otherwise, the earlier depositor will be diluted.
         let second_depositor = Addr::unchecked("depositor2");
+        let third_depositor = Addr::unchecked("depositor3");
         let mut deps = mock_dependencies_lp(
             &[
                 (env.contract.address.as_ref(), &coins(15_000, "uluna")),
                 (second_depositor.as_ref(), &coins(5_000, "uluna")),
+                (third_depositor.as_ref(), &coins(8_000, "uluna")),
             ],
             &[(
                 "creator".to_string(),
@@ -453,7 +464,7 @@ mod test {
 
         let res = deposit(
             deps.as_mut(),
-            env,
+            env.clone(),
             mock_info(second_depositor.as_str(), &coins(5_000, "uluna")),
             Uint128::new(5_000),
         );
@@ -473,6 +484,28 @@ mod test {
                     msg: to_binary(&Cw20ExecuteMsg::Mint {
                         recipient: second_depositor.to_string(),
                         amount: Uint128::new(3_448)
+                    })
+                    .unwrap()
+                })
+        );
+
+        let res = deposit(
+            deps.as_mut(),
+            env,
+            mock_info(third_depositor.as_str(), &coins(8_000, "uluna")),
+            Uint128::new(8_000),
+        );
+
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attributes(vec![("method", "deposit"), ("amount", "8000")])
+                .add_message(WasmMsg::Execute {
+                    contract_addr: "lp_token".to_string(),
+                    funds: vec![],
+                    msg: to_binary(&Cw20ExecuteMsg::Mint {
+                        recipient: third_depositor.to_string(),
+                        amount: Uint128::new(5_517)
                     })
                     .unwrap()
                 })
