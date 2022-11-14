@@ -77,7 +77,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             prev_balance,
             minimum_receive,
             receiver,
-        } => assert_minium_receive(
+        } => assert_minimum_receive(
             deps.as_ref(),
             asset_info,
             prev_balance,
@@ -181,20 +181,20 @@ pub fn execute_swap_operations(
     Ok(Response::new().add_messages(messages))
 }
 
-fn assert_minium_receive(
+fn assert_minimum_receive(
     deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,
-    minium_receive: Uint128,
+    minimum_receive: Uint128,
     receiver: Addr,
 ) -> StdResult<Response> {
     let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
-    if swap_amount < minium_receive {
+    if swap_amount < minimum_receive {
         return Err(StdError::generic_err(format!(
             "assertion failed; minimum receive amount: {}, swap amount: {}",
-            minium_receive, swap_amount
+            minimum_receive, swap_amount
         )));
     }
 
