@@ -1,5 +1,6 @@
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
+
 use terraswap::{asset::AssetInfo, querier::query_token_info};
 
 use crate::{
@@ -116,17 +117,20 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, Addr, Response, Uint128, WasmMsg,
+        to_binary, Addr, BankMsg, CosmosMsg, Response, Uint128, WasmMsg,
     };
     use cw20::Cw20ExecuteMsg;
-    use terraswap::asset::{Asset, AssetInfo};
+    use cw_multi_test::Executor;
+
+    use terraswap::asset::AssetInfo;
     use vault_network::vault::Config;
 
+    use crate::tests::mock_app::mock_app_with_balance;
+    use crate::tests::mock_instantiate::app_mock_instantiate;
     use crate::{
         contract::execute,
         error::VaultError,
-        execute::deposit,
-        state::{COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
+        state::{CONFIG, LOAN_COUNTER},
         tests::{get_fees, mock_creator, mock_dependencies_lp, mock_execute},
     };
 
@@ -183,9 +187,9 @@ mod test {
                     funds: vec![],
                     msg: to_binary(&Cw20ExecuteMsg::Mint {
                         recipient: "creator".to_string(),
-                        amount: Uint128::new(5_000)
+                        amount: Uint128::new(5_000),
                     })
-                    .unwrap()
+                    .unwrap(),
                 })
         );
     }
@@ -248,19 +252,19 @@ mod test {
                         msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                             owner: "creator".to_string(),
                             recipient: env.contract.address.into_string(),
-                            amount: Uint128::new(5_000)
+                            amount: Uint128::new(5_000),
                         })
-                        .unwrap()
+                        .unwrap(),
                     },
                     WasmMsg::Execute {
                         contract_addr: "lp_token".to_string(),
                         funds: vec![],
                         msg: to_binary(&Cw20ExecuteMsg::Mint {
                             recipient: "creator".to_string(),
-                            amount: Uint128::new(5_000)
+                            amount: Uint128::new(5_000),
                         })
-                        .unwrap()
-                    }
+                        .unwrap(),
+                    },
                 ])
         )
     }
@@ -281,7 +285,7 @@ mod test {
             res.unwrap_err(),
             VaultError::FundsMismatch {
                 sent: Uint128::new(0),
-                wanted: Uint128::new(5_000)
+                wanted: Uint128::new(5_000),
             }
         );
     }
@@ -326,7 +330,7 @@ mod test {
             res.unwrap_err(),
             VaultError::FundsMismatch {
                 sent: Uint128::new(0),
-                wanted: Uint128::new(5_000)
+                wanted: Uint128::new(5_000),
             }
         );
     }
@@ -407,108 +411,120 @@ mod test {
 
     #[test]
     fn does_not_dilute_early_holders() {
-        let env = mock_env();
         // simulate a vault with first depositor having 10,000 LP tokens
         // and vault having 15,000 of asset
         // the next depositor should not deposit at a 1:1 rate for asset:LP tokens
         // otherwise, the earlier depositor will be diluted.
         let second_depositor = Addr::unchecked("depositor2");
         let third_depositor = Addr::unchecked("depositor3");
-        let mut deps = mock_dependencies_lp(
-            &[
-                (env.contract.address.as_ref(), &coins(15_000, "uluna")),
-                (second_depositor.as_ref(), &coins(5_000, "uluna")),
-                (third_depositor.as_ref(), &coins(8_000, "uluna")),
-            ],
-            &[(
-                "creator".to_string(),
-                &[("lp_token".to_string(), Uint128::new(10_000))],
-            )],
-            vec![],
+
+        let mut app = mock_app_with_balance(vec![
+            (mock_creator().sender, coins(15_000, "uluna")),
+            (second_depositor.clone(), coins(5_000, "uluna")),
+            (third_depositor.clone(), coins(8_000, "uluna")),
+        ]);
+
+        let vault_addr = app_mock_instantiate(
+            &mut app,
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
         );
 
-        // inject lp token address to config
-        CONFIG
-            .save(
-                &mut deps.storage,
-                &Config {
-                    owner: mock_creator().sender,
-                    liquidity_token: Addr::unchecked("lp_token"),
-                    asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                    deposit_enabled: true,
-                    flash_loan_enabled: true,
-                    withdraw_enabled: true,
-                    fee_collector_addr: Addr::unchecked("fee_collector"),
-                    fees: get_fees(),
-                },
+        // first depositor deposits 10,000 uluna
+        app.execute_contract(
+            mock_creator().sender,
+            vault_addr.clone(),
+            &vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(10_000),
+            },
+            &coins(10_000, "uluna"),
+        )
+        .unwrap();
+
+        // get config for the liquidity token address
+        let config: Config = app
+            .wrap()
+            .query_wasm_smart(
+                vault_addr.clone(),
+                &vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
-        // inject loan counter
-        LOAN_COUNTER.save(&mut deps.storage, &0).unwrap();
-
-        // set protocol fee to 500 token
-        COLLECTED_PROTOCOL_FEES
-            .save(
-                &mut deps.storage,
-                &Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                    amount: Uint128::new(500),
+        // user should have 10,000 lp tokens
+        let cw20_balance: cw20::BalanceResponse = app
+            .wrap()
+            .query_wasm_smart(
+                config.liquidity_token.clone(),
+                &cw20::Cw20QueryMsg::Balance {
+                    address: mock_creator().sender.into_string(),
                 },
             )
             .unwrap();
+        assert_eq!(Uint128::new(10_000), cw20_balance.balance);
 
-        let res = deposit(
-            deps.as_mut(),
-            env.clone(),
-            mock_info(second_depositor.as_str(), &coins(5_000, "uluna")),
-            Uint128::new(5_000),
-        );
+        // inject 5,000 luna that where "generated" via fees
+        app.execute(
+            mock_creator().sender,
+            CosmosMsg::Bank(BankMsg::Send {
+                to_address: vault_addr.to_string(),
+                amount: coins(5000, "uluna"),
+            }),
+        )
+        .unwrap();
 
-        // creator has 10,000 of the LP token in a 14,500 pool
-        // depositor2 should therefore get (5000 / 14500) * 10000 = 3,448 LP tokens
-        // this leaves creator with 10,000 / 13,448 of the total LP supply or 14,500 tokens
-        // depositor2 is entitled to 3,448 / 13,448 of the total LP supply or 4,999 tokens
+        // second depositor deposits 5,000 uluna
+        app.execute_contract(
+            second_depositor.clone(),
+            vault_addr.clone(),
+            &vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(5_000),
+            },
+            &coins(5_000, "uluna"),
+        )
+        .unwrap();
 
-        assert_eq!(
-            res.unwrap(),
-            Response::new()
-                .add_attributes(vec![("method", "deposit"), ("amount", "5000")])
-                .add_message(WasmMsg::Execute {
-                    contract_addr: "lp_token".to_string(),
-                    funds: vec![],
-                    msg: to_binary(&Cw20ExecuteMsg::Mint {
-                        recipient: second_depositor.to_string(),
-                        amount: Uint128::new(3_448)
-                    })
-                    .unwrap()
-                })
-        );
+        // creator has 10,000 LP tokens in a 15,000 uluna pool
+        // depositor2 should therefore get (5000 / 15000) * 10000 = 3,333 LP tokens
+        let cw20_balance: cw20::BalanceResponse = app
+            .wrap()
+            .query_wasm_smart(
+                config.liquidity_token.clone(),
+                &cw20::Cw20QueryMsg::Balance {
+                    address: second_depositor.to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(Uint128::new(3_333), cw20_balance.balance);
 
-        let res = deposit(
-            deps.as_mut(),
-            env,
-            mock_info(third_depositor.as_str(), &coins(8_000, "uluna")),
-            Uint128::new(8_000),
-        );
+        // third depositor deposits 8,000 uluna
+        app.execute_contract(
+            third_depositor.clone(),
+            vault_addr.clone(),
+            &vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(8_000),
+            },
+            &coins(8_000, "uluna"),
+        )
+        .unwrap();
 
-        assert_eq!(
-            res.unwrap(),
-            Response::new()
-                .add_attributes(vec![("method", "deposit"), ("amount", "8000")])
-                .add_message(WasmMsg::Execute {
-                    contract_addr: "lp_token".to_string(),
-                    funds: vec![],
-                    msg: to_binary(&Cw20ExecuteMsg::Mint {
-                        recipient: third_depositor.to_string(),
-                        amount: Uint128::new(5_517)
-                    })
-                    .unwrap()
-                })
-        );
+        // creator has 10,000 LP tokens in a 20,000 uluna pool
+        // depositor2 has 3,333 LP tokens
+        // depositor3 should therefore get (8000 / 20000) * 13333 = 5,333 LP tokens
+        let cw20_balance: cw20::BalanceResponse = app
+            .wrap()
+            .query_wasm_smart(
+                config.liquidity_token,
+                &cw20::Cw20QueryMsg::Balance {
+                    address: third_depositor.to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(Uint128::new(5_333), cw20_balance.balance);
+
+        // at the point the pool has 28,000 uluna for a total of 18,666 LP tokens
+        // this leaves creator with 10,000 / 18,666 of the total LP supply or 15,000 tokens
+        // depositor2 is entitled to 3,333 / 18,666 of the total LP supply or 5,000 tokens
+        // depositor3 is entitled to 5,333 / 18,666 of the total LP supply or 8,000 tokens
     }
 }
