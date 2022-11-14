@@ -187,9 +187,13 @@ fn can_migrate_contract() {
     let info = mock_info("addr0000", &[]);
     instantiate(deps.as_mut(), env, info, msg).unwrap();
 
-    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
 
-    assert_eq!(res, Response::new());
+    // should not be able to migrate as the version is lower
+    match res {
+        Err(ContractError::MigrateInvalidVersion { .. }) => (),
+        _ => panic!("should return ContractError::MigrateInvalidVersion"),
+    }
 }
 
 #[test]

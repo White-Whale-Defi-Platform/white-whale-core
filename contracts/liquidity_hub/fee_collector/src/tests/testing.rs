@@ -1,6 +1,7 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, ContractVersion};
+use std::env;
 
 use crate::contract::{execute, instantiate, migrate, query};
 use terraswap::mock_querier::mock_dependencies;
@@ -108,5 +109,11 @@ fn test_migration() {
         })
     );
 
-    migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
+
+    // should not be able to migrate as the version is lower
+    match res {
+        Err(ContractError::MigrateInvalidVersion { .. }) => (),
+        _ => panic!("should return ContractError::MigrateInvalidVersion"),
+    }
 }
