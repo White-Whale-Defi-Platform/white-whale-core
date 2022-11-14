@@ -2,6 +2,7 @@ use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::compute_swap;
 use crate::queries::query_protocol_fees;
+use crate::state::COLLECTED_PROTOCOL_FEES;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
@@ -127,20 +128,21 @@ fn try_native_to_token() {
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
-    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
-    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.003%
+    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_swap_fee_amount)
         .unwrap()
         .checked_sub(expected_protocol_fee_amount)
         .unwrap();
-    // check simulation res
+
+    // check simulation res, reset values pre-swap to check simulation
     deps.querier.with_balance(&[(
         &MOCK_CONTRACT_ADDR.to_string(),
         vec![Coin {
@@ -193,7 +195,27 @@ fn try_native_to_token() {
         Uint128::zero()
     );
 
-    // check reverse simulation res
+    // reset protocol fees so the simulation returns same values as the actual swap
+    COLLECTED_PROTOCOL_FEES
+        .save(
+            &mut deps.storage,
+            &vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ],
+        )
+        .unwrap();
+
     let reverse_simulation_res: ReverseSimulationResponse = from_binary(
         &query(
             deps.as_ref(),
@@ -484,8 +506,7 @@ fn try_token_to_native() {
         .checked_sub(expected_protocol_fee_amount)
         .unwrap();
 
-    // check simulation res
-    // return asset token balance as normal
+    // check simulation res, reset values pre-swap to check simulation
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
@@ -539,6 +560,27 @@ fn try_token_to_native() {
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
     );
+
+    // reset protocol fees so the simulation returns same values as the actual swap
+    COLLECTED_PROTOCOL_FEES
+        .save(
+            &mut deps.storage,
+            &vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ],
+        )
+        .unwrap();
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = from_binary(
