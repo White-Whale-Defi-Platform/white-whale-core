@@ -172,8 +172,6 @@ pub fn provide_liquidity(
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
     let share = if total_share == Uint128::zero() {
-        // Initial share = collateral amount
-
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
         let share = Uint128::new(
