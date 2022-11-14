@@ -79,11 +79,12 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::testing::mock_env;
     use cosmwasm_std::Response;
 
-    use vault_network::vault_factory::MigrateMsg;
-
+    use crate::err::VaultFactoryError;
     use crate::tests::mock_instantiate::mock_instantiate;
+    use vault_network::vault_factory::MigrateMsg;
 
     use super::migrate;
 
@@ -92,10 +93,13 @@ mod test {
         // instantiate contract
         let (mut deps, env) = mock_instantiate(5, 6);
 
-        // migrate contract
-        let res = migrate(deps.as_mut(), env, MigrateMsg {}).unwrap();
+        let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
 
-        assert_eq!(res, Response::new());
+        // should not be able to migrate as the version is lower
+        match res {
+            Err(VaultFactoryError::MigrateInvalidVersion { .. }) => (),
+            _ => panic!("should return VaultFactoryError::MigrateInvalidVersion"),
+        }
     }
 }
 
