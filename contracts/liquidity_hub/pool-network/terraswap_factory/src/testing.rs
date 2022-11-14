@@ -618,7 +618,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let res = execute(deps.as_mut(), env, info, msg);
     match res {
         Ok(_) => panic!("Should return ContractError::InvalidAsset"),
-        Err(ContractError::InvalidAsset { asset }) => assert_eq!("asset2", asset),
+        Err(ContractError::InvalidAsset { asset }) => assert_eq!("invalid", asset),
         _ => panic!("Should return ContractError::InvalidAsset"),
     }
 
@@ -649,7 +649,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let res = execute(deps.as_mut(), env, info, msg);
     match res {
         Ok(_) => panic!("Should return ContractError::InvalidAsset"),
-        Err(ContractError::InvalidAsset { asset }) => assert_eq!("asset1", asset),
+        Err(ContractError::InvalidAsset { asset }) => assert_eq!("invalid", asset),
         _ => panic!("Should return ContractError::InvalidAsset"),
     }
 }
