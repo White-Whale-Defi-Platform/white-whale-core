@@ -432,6 +432,7 @@ pub fn update_config(
     }
 
     if let Some(pool_fees) = pool_fees {
+        pool_fees.is_valid()?;
         config.pool_fees = pool_fees;
     }
 

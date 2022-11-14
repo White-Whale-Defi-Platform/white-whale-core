@@ -366,7 +366,7 @@ fn test_max_spread_with_diff_decimal() {
 }
 
 #[test]
-fn test_update_cofig_unsuccessful() {
+fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
 
     deps.querier.with_token_balances(&[
@@ -404,6 +404,28 @@ fn test_update_cofig_unsuccessful() {
     // we can just call .unwrap() to assert this was a success
     instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
+    // update config with invalid fees
+    let update_config_message = UpdateConfig {
+        owner: None,
+        fee_collector_addr: None,
+        pool_fees: Some(PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::MAX,
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        }),
+        feature_toggle: None,
+    };
+
+    let res = execute(deps.as_mut(), env.clone(), info, update_config_message);
+    match res {
+        Ok(_) => panic!("should return Std(GenericErr -> msg: Invalid fee)"),
+        Err(ContractError::Std(e)) => assert_eq!(e, StdError::generic_err("Invalid fee")),
+        _ => panic!("should return Std(GenericErr -> msg: Invalid fee)"),
+    }
+
     // an unauthorized party tries to update the config
     let info = mock_info("unauthorized", &[]);
     let update_config_message = UpdateConfig {
@@ -422,7 +444,7 @@ fn test_update_cofig_unsuccessful() {
 }
 
 #[test]
-fn test_update_cofig_successful() {
+fn test_update_config_successful() {
     let mut deps = mock_dependencies(&[]);
 
     deps.querier.with_token_balances(&[
