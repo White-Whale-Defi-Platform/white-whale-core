@@ -921,8 +921,10 @@ dependencies = [
  "cw20",
  "integer-sqrt",
  "schemars",
+ "semver",
  "serde",
  "terraswap",
+ "thiserror",
 ]
 
 [[package]]

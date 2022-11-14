@@ -236,7 +236,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,
