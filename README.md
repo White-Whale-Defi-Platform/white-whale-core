@@ -34,7 +34,7 @@ different ways to contribute to the project.
 
 ## Building and Deploying Migaloo
 
-To build and deploy Migaloo´s smart contracts we have created a series of scripts under `scripts/`.
+To build and deploy Migaloo´s smart contracts we have created a series of scripts under `scripts/`. You need at least Rust v1.64.0 to compile the contracts. 
 
 ### Build scripts
 
