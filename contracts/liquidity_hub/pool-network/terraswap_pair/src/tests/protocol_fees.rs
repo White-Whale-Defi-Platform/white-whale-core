@@ -1,7 +1,5 @@
 use crate::contract::{execute, instantiate, reply};
-use crate::error::ContractError;
 use crate::queries::query_protocol_fees;
-use crate::state::COLLECTED_PROTOCOL_FEES;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
@@ -102,8 +100,8 @@ fn test_protocol_fees() {
     );
     execute(deps.as_mut(), env, info, msg).unwrap();
 
-    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
@@ -147,7 +145,9 @@ fn test_protocol_fees() {
     );
     execute(deps.as_mut(), env, info, msg).unwrap();
 
-    let expected_ret_amount = Uint128::from(1_904_760_000u128);
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.335600 = (20000 - 0.952380 ) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(952_335_600u128);
     let new_expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // the new protocol fees should have increased from the previous time
@@ -158,7 +158,7 @@ fn test_protocol_fees() {
     assert!(new_protocol_fees_for_token.first().unwrap().amount > expected_protocol_fee_amount);
     assert_eq!(
         new_protocol_fees_for_token.first().unwrap().amount,
-        new_expected_protocol_fee_amount
+        new_expected_protocol_fee_amount + expected_protocol_fee_amount // fees collected in the first + second swap
     );
     let protocol_fees_for_native =
         query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)

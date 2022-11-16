@@ -132,7 +132,6 @@ fn provide_liquidity() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    println!("{:?}", res.messages);
 
     assert_eq!(res.messages.len(), 3usize);
 
@@ -230,7 +229,6 @@ fn provide_liquidity() {
 
     // only accept 100, then 50 share will be generated with 100 * (100 / 200)
     let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
-    println!("{:?}", res.messages);
     assert_eq!(res.messages.len(), 2usize);
 
     let transfer_from_msg = res.messages.get(0).expect("no message");
