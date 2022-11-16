@@ -134,13 +134,31 @@ fn try_native_to_token() {
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
-    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.003%
-    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
+    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
+    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_swap_fee_amount)
         .unwrap()
         .checked_sub(expected_protocol_fee_amount)
         .unwrap();
+
+    // as we swapped native to token, we accumulate the protocol fees in token
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        expected_protocol_fee_amount
+    );
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
 
     // check simulation res, reset values pre-swap to check simulation
     deps.querier.with_balance(&[(
@@ -151,6 +169,27 @@ fn try_native_to_token() {
             /* user deposit must be pre-applied */
         }],
     )]);
+
+    // reset protocol fees so the simulation returns same values as the actual swap
+    COLLECTED_PROTOCOL_FEES
+        .save(
+            &mut deps.storage,
+            &vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ],
+        )
+        .unwrap();
 
     let simulation_res: SimulationResponse = from_binary(
         &query(
@@ -175,24 +214,6 @@ fn try_native_to_token() {
     assert_eq!(
         expected_protocol_fee_amount,
         simulation_res.protocol_fee_amount
-    );
-
-    // as we swapped native to token, we accumulate the protocol fees in token
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
-    assert_eq!(
-        protocol_fees_for_token.first().unwrap().amount,
-        expected_protocol_fee_amount
-    );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
-    assert_eq!(
-        protocol_fees_for_native.first().unwrap().amount,
-        Uint128::zero()
     );
 
     // reset protocol fees so the simulation returns same values as the actual swap
@@ -506,6 +527,24 @@ fn try_token_to_native() {
         .checked_sub(expected_protocol_fee_amount)
         .unwrap();
 
+    // as we swapped token to native, we accumulate the protocol fees in native
+    let protocol_fees_for_native =
+        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
+            .unwrap()
+            .fees;
+    assert_eq!(
+        protocol_fees_for_native.first().unwrap().amount,
+        expected_protocol_fee_amount
+    );
+    let protocol_fees_for_token =
+        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
+            .unwrap()
+            .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        Uint128::zero()
+    );
+
     // check simulation res, reset values pre-swap to check simulation
     deps.querier.with_token_balances(&[
         (
@@ -514,9 +553,30 @@ fn try_token_to_native() {
         ),
         (
             &"asset0000".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &(asset_pool_amount))],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
         ),
     ]);
+
+    // reset protocol fees so the simulation returns same values as the actual swap
+    COLLECTED_PROTOCOL_FEES
+        .save(
+            &mut deps.storage,
+            &vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ],
+        )
+        .unwrap();
 
     let simulation_res: SimulationResponse = from_binary(
         &query(
@@ -541,24 +601,6 @@ fn try_token_to_native() {
     assert_eq!(
         expected_protocol_fee_amount,
         simulation_res.protocol_fee_amount
-    );
-
-    // as we swapped token to native, we accumulate the protocol fees in native
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
-    assert_eq!(
-        protocol_fees_for_native.first().unwrap().amount,
-        expected_protocol_fee_amount
-    );
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
-    assert_eq!(
-        protocol_fees_for_token.first().unwrap().amount,
-        Uint128::zero()
     );
 
     // reset protocol fees so the simulation returns same values as the actual swap

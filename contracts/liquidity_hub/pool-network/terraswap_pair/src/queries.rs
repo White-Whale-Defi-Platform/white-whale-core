@@ -70,17 +70,17 @@ pub fn query_simulation(
     let offer_pool: Asset;
     let ask_pool: Asset;
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
-    let protocol_fee =
-        get_protocol_fee_for_asset(collected_protocol_fees, offer_asset.clone().get_id());
 
     // To calculate pool amounts properly we should subtract the protocol fees from the pool
     let pools = pair_info
         .query_pools(&deps.querier, deps.api, contract_addr)?
         .into_iter()
         .map(|mut pool| {
-            if pool.info.equal(&offer_asset.info) {
-                pool.amount = pool.amount.checked_sub(protocol_fee)?;
-            }
+            // subtract the protocol fee from the pool
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+
             Ok(pool)
         })
         .collect::<StdResult<Vec<_>>>()?;
@@ -124,15 +124,16 @@ pub fn query_reverse_simulation(
 
     // To calculate pool amounts properly we should subtract the protocol fees from the pool
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
-    let protocol_fee =
-        get_protocol_fee_for_asset(collected_protocol_fees, ask_asset.clone().get_id());
+
     let pools = pair_info
         .query_pools(&deps.querier, deps.api, contract_addr)?
         .into_iter()
         .map(|mut pool| {
-            if pool.info.equal(&ask_asset.info) {
-                pool.amount = pool.amount.checked_sub(protocol_fee)?;
-            }
+            // subtract the protocol fee from the pool
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+
             Ok(pool)
         })
         .collect::<StdResult<Vec<_>>>()?;

@@ -48,17 +48,12 @@ fn migrate_vault_msg(vault_addr: Addr, code_id: u64) -> StdResult<CosmosMsg> {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::mock_info, Addr, Attribute};
-    use cw_multi_test::Executor;
+    use cosmwasm_std::{testing::mock_info, Attribute};
 
-    use crate::tests::store_code::store_vault_code;
     use crate::{
         contract::execute,
         err::VaultFactoryError,
-        tests::{
-            get_fees, mock_app, mock_creator,
-            mock_instantiate::{app_mock_instantiate, mock_instantiate},
-        },
+        tests::{mock_creator, mock_instantiate::mock_instantiate},
     };
 
     #[test]
