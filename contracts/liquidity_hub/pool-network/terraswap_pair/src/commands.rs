@@ -321,19 +321,19 @@ pub fn swap(
     let ask_decimal: u8;
 
     // To calculate pool amounts properly we should subtract user deposit and the protocol fees from the pool
-    let protocol_fee =
-        get_protocol_fee_for_asset(collected_protocol_fees, offer_asset.clone().get_id());
-
     let pools = pair_info
         .query_pools(&deps.querier, deps.api, env.contract.address)?
         .into_iter()
         .map(|mut pool| {
+            // subtract the protocol fee from the pool
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+
             if pool.info.equal(&offer_asset.info) {
-                pool.amount = pool
-                    .amount
-                    .checked_sub(offer_asset.amount)?
-                    .checked_sub(protocol_fee)?;
+                pool.amount = pool.amount.checked_sub(offer_asset.amount)?
             }
+
             Ok(pool)
         })
         .collect::<StdResult<Vec<_>>>()?;
