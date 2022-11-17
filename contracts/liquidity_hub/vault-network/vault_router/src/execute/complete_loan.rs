@@ -17,7 +17,7 @@ pub fn complete_loan(
     if info.sender != env.contract.address {
         return Err(VaultRouterError::Unauthorized {});
     }
-    println!("complete_loan: {:?}", assets);
+
     // pay back loans and profit
     let messages: Vec<Vec<CosmosMsg>> = assets
         .into_iter()

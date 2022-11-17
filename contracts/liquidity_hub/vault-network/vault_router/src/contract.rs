@@ -23,7 +23,6 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(&msg.owner)?,
         vault_factory: deps.api.addr_validate(&msg.vault_factory_addr)?,
-        nested_loans_enabled: false, // default to false
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -59,8 +58,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::UpdateConfig {
             owner,
             vault_factory_addr,
-            nested_loans_enabled,
-        } => update_config(deps, info, owner, vault_factory_addr, nested_loans_enabled),
+        } => update_config(deps, info, owner, vault_factory_addr),
     }
 }
 

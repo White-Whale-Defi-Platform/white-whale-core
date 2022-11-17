@@ -27,7 +27,6 @@ pub enum ExecuteMsg {
     UpdateConfig {
         owner: Option<String>,
         vault_factory_addr: Option<String>,
-        nested_loans_enabled: Option<bool>,
     },
     /// Performs the next loan.
     ///
@@ -76,6 +75,4 @@ pub struct Config {
     pub owner: Addr,
     /// The address of the vault factory
     pub vault_factory: Addr,
-    /// Whether or not the router allows nested flash loans
-    pub nested_loans_enabled: bool,
 }

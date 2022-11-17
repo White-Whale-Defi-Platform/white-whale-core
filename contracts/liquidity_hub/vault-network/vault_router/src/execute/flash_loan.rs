@@ -19,7 +19,7 @@ pub fn flash_loan(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
-    if assets.len() > 1 && config.nested_loans_enabled == false {
+    if assets.len() > 1 {
         return Err(VaultRouterError::NestedFlashLoansDisabled {});
     }
 
@@ -79,7 +79,7 @@ mod tests {
     use cw_multi_test::Executor;
 
     use terraswap::asset::{Asset, AssetInfo};
-    use vault_network::vault_router::{Config, ExecuteMsg};
+    use vault_network::vault_router::ExecuteMsg;
 
     use crate::{
         err::VaultRouterError,
@@ -192,16 +192,6 @@ mod tests {
     fn does_not_allow_nested_flashloans() {
         let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
         let AppInstantiateResponse { router_addr, .. } = app_mock_instantiate(&mut app);
-
-        let config: Option<Config> = app
-            .wrap()
-            .query_wasm_smart(
-                router_addr.clone(),
-                &vault_network::vault_router::QueryMsg::Config {},
-            )
-            .unwrap();
-
-        assert_eq!(config.unwrap().nested_loans_enabled, false);
 
         // try borrowing multiple assets, i.e. taking out nested flashloans
         let err = app
