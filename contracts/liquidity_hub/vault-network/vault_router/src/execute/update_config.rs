@@ -10,6 +10,7 @@ pub fn update_config(
     info: MessageInfo,
     new_owner: Option<String>,
     new_vault_factory_addr: Option<String>,
+    nested_loans_enabled: Option<bool>,
 ) -> StdResult<Response> {
     let new_config = CONFIG.update::<_, VaultRouterError>(deps.storage, |mut config| {
         // check that sender is the owner
@@ -25,6 +26,10 @@ pub fn update_config(
             config.vault_factory = deps.api.addr_validate(&new_vault_factory_addr)?;
         }
 
+        if let Some(nested_loans_enabled) = nested_loans_enabled {
+            config.nested_loans_enabled = nested_loans_enabled;
+        }
+
         Ok(config)
     })?;
 
@@ -32,6 +37,10 @@ pub fn update_config(
         ("method", "update_config"),
         ("owner", &new_config.owner.into_string()),
         ("vault_factory", &new_config.vault_factory.into_string()),
+        (
+            "nested_loans_enabled",
+            &new_config.nested_loans_enabled.to_string(),
+        ),
     ]))
 }
 
@@ -60,6 +69,7 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: Some(bad_actor.sender.into_string()),
                 vault_factory_addr: Some("new_vault_address".to_string()),
+                nested_loans_enabled: None,
             },
         );
 
@@ -71,6 +81,7 @@ mod tests {
         let new_config = Config {
             owner: Addr::unchecked("new_owner"),
             vault_factory: Addr::unchecked("new_factory"),
+            nested_loans_enabled: true,
         };
 
         let (res, deps, ..) = mock_execute(
@@ -78,6 +89,7 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: Some(new_config.owner.clone().into_string()),
                 vault_factory_addr: Some(new_config.vault_factory.clone().into_string()),
+                nested_loans_enabled: Some(new_config.nested_loans_enabled.clone()),
             },
         );
 
@@ -90,6 +102,10 @@ mod tests {
                 (
                     "vault_factory",
                     &new_config.vault_factory.clone().into_string()
+                ),
+                (
+                    "nested_loans_enabled",
+                    &new_config.nested_loans_enabled.clone().to_string()
                 )
             ])
         );
@@ -105,6 +121,7 @@ mod tests {
             ExecuteMsg::UpdateConfig {
                 owner: None,
                 vault_factory_addr: None,
+                nested_loans_enabled: None,
             },
         );
 
@@ -114,7 +131,8 @@ mod tests {
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
                 ("owner", &mock_creator().sender.into_string()),
-                ("vault_factory", "factory")
+                ("vault_factory", "factory"),
+                ("nested_loans_enabled", "false")
             ])
         );
 
@@ -123,7 +141,8 @@ mod tests {
             CONFIG.load(&deps.storage).unwrap(),
             Config {
                 owner: mock_creator().sender,
-                vault_factory: Addr::unchecked("factory")
+                vault_factory: Addr::unchecked("factory"),
+                nested_loans_enabled: false
             }
         );
     }

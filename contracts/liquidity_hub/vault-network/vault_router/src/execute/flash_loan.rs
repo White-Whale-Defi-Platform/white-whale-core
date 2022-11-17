@@ -19,6 +19,10 @@ pub fn flash_loan(
 ) -> StdResult<Response> {
     let config = CONFIG.load(deps.storage)?;
 
+    if assets.len() > 1 && config.nested_loans_enabled == false {
+        return Err(VaultRouterError::NestedFlashLoansDisabled {});
+    }
+
     // get the vaults to perform loans for
     let vaults = assets
         .into_iter()
@@ -75,7 +79,7 @@ mod tests {
     use cw_multi_test::Executor;
 
     use terraswap::asset::{Asset, AssetInfo};
-    use vault_network::vault_router::ExecuteMsg;
+    use vault_network::vault_router::{Config, ExecuteMsg};
 
     use crate::{
         err::VaultRouterError,
@@ -182,5 +186,52 @@ mod tests {
             res.unwrap(),
             Response::new().add_attributes(vec![("method", "flash_loan")])
         )
+    }
+
+    #[test]
+    fn does_not_allow_nested_flashloans() {
+        let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
+        let AppInstantiateResponse { router_addr, .. } = app_mock_instantiate(&mut app);
+
+        let config: Option<Config> = app
+            .wrap()
+            .query_wasm_smart(
+                router_addr.clone(),
+                &vault_network::vault_router::QueryMsg::Config {},
+            )
+            .unwrap();
+
+        assert_eq!(config.unwrap().nested_loans_enabled, false);
+
+        // try borrowing multiple assets, i.e. taking out nested flashloans
+        let err = app
+            .execute_contract(
+                mock_creator().sender,
+                router_addr.clone(),
+                &ExecuteMsg::FlashLoan {
+                    assets: vec![
+                        Asset {
+                            amount: Uint128::new(1_000),
+                            info: AssetInfo::NativeToken {
+                                denom: "uluna".to_string(),
+                            },
+                        },
+                        Asset {
+                            amount: Uint128::new(1_000),
+                            info: AssetInfo::NativeToken {
+                                denom: "uluna".to_string(),
+                            },
+                        },
+                    ],
+                    msgs: vec![],
+                },
+                &[],
+            )
+            .unwrap_err();
+
+        assert_eq!(
+            err.downcast::<VaultRouterError>().unwrap(),
+            VaultRouterError::NestedFlashLoansDisabled {}
+        );
     }
 }

@@ -70,6 +70,12 @@
           "update_config": {
             "type": "object",
             "properties": {
+              "nested_loans_enabled": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
               "owner": {
                 "type": [
                   "string",
@@ -780,10 +786,15 @@
       "title": "Config",
       "type": "object",
       "required": [
+        "nested_loans_enabled",
         "owner",
         "vault_factory"
       ],
       "properties": {
+        "nested_loans_enabled": {
+          "description": "Whether or not the router allows nested flash loans",
+          "type": "boolean"
+        },
         "owner": {
           "description": "The owner of the router to update configuration",
           "allOf": [
