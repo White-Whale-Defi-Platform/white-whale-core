@@ -102,7 +102,7 @@ pub fn query_simulation(
         ask_pool.amount,
         offer_asset.amount,
         pool_fees,
-    );
+    )?;
 
     Ok(SimulationResponse {
         return_amount: swap_computation.return_amount,
@@ -156,7 +156,7 @@ pub fn query_reverse_simulation(
         ask_pool.amount,
         ask_asset.amount,
         pool_fees,
-    );
+    )?;
 
     Ok(ReverseSimulationResponse {
         offer_amount: offer_amount_computation.offer_amount,

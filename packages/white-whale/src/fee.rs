@@ -1,6 +1,5 @@
-use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, StdError, StdResult};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Uint256};
 
 #[cw_serde]
 pub struct Fee {

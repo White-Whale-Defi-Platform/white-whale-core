@@ -358,7 +358,7 @@ pub fn swap(
     let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
 
     let swap_computation =
-        helpers::compute_swap(offer_pool.amount, ask_pool.amount, offer_amount, pool_fees);
+        helpers::compute_swap(offer_pool.amount, ask_pool.amount, offer_amount, pool_fees)?;
 
     let return_asset = Asset {
         info: ask_pool.info.clone(),

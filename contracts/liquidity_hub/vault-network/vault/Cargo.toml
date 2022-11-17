@@ -30,7 +30,6 @@ terraswap.workspace = true
 thiserror.workspace = true
 vault-network.workspace = true
 white-whale.workspace = true
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 
 [dev-dependencies]
 cosmwasm-schema = "1.1.4"
