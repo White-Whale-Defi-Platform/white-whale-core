@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Coin, Decimal, Uint128};
+use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Coin, Decimal, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
@@ -1647,8 +1647,7 @@ fn collect_fees_for_vault() {
 
     let flash_loan_value = 500_000u128;
     let return_flash_loan_value = 600_000u128;
-    let computed_protocol_fees =
-        flash_loan_fee.compute(cosmwasm_bignumber::Uint256::from(flash_loan_value));
+    let computed_protocol_fees = flash_loan_fee.compute(Uint256::from(flash_loan_value));
 
     // Verify no fees have been generated via the collector's query
     let fee_collector_fees_query: Vec<Asset> = app
@@ -1713,7 +1712,7 @@ fn collect_fees_for_vault() {
         assert!(query_protocol_fees_res.fees.amount > Uint128::zero());
         assert_eq!(
             computed_protocol_fees,
-            cosmwasm_bignumber::Uint256::from(query_protocol_fees_res.fees.amount)
+            Uint256::from(query_protocol_fees_res.fees.amount)
         );
     }
 
@@ -1745,10 +1744,7 @@ fn collect_fees_for_vault() {
             .unwrap();
 
         assert!(balance_res.amount > Uint128::zero());
-        assert_eq!(
-            cosmwasm_bignumber::Uint256::from(balance_res.amount),
-            computed_protocol_fees
-        );
+        assert_eq!(Uint256::from(balance_res.amount), computed_protocol_fees);
     }
 
     // verify the protocol fees are zero after collecting the fees from the flashloans

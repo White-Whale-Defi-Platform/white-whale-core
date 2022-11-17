@@ -38,7 +38,6 @@ serde.workspace = true
 semver.workspace = true
 thiserror.workspace = true
 protobuf.workspace = true
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 terraswap.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true

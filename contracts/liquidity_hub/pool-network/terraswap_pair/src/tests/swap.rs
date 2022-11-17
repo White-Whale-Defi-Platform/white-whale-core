@@ -31,7 +31,9 @@ fn test_compute_swap_with_huge_pool_variance() {
     };
 
     assert_eq!(
-        compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees).return_amount,
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees)
+            .unwrap()
+            .return_amount,
         Uint128::zero()
     );
 }
