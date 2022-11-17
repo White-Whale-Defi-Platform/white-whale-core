@@ -102,6 +102,7 @@
               "loaned_assets",
               "payload",
               "source_vault",
+              "source_vault_asset_info",
               "to_loan"
             ],
             "properties": {
@@ -140,6 +141,14 @@
               "source_vault": {
                 "description": "The vault contract that calls the [NextLoan] message",
                 "type": "string"
+              },
+              "source_vault_asset_info": {
+                "description": "The source vault's [AssetInfo]. Used for validation.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/AssetInfo"
+                  }
+                ]
               },
               "to_loan": {
                 "description": "The next loans to run.",
