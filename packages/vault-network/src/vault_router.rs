@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, CosmosMsg};
 
-use terraswap::asset::Asset;
+use terraswap::asset::{Asset, AssetInfo};
 
 /// The instantiation message
 #[cw_serde]
@@ -36,6 +36,8 @@ pub enum ExecuteMsg {
         initiator: Addr,
         /// The vault contract that calls the [NextLoan] message
         source_vault: String,
+        /// The source vault's [AssetInfo]. Used for validation.
+        source_vault_asset_info: AssetInfo,
         /// The final message to run once all assets have been loaned.
         payload: Vec<CosmosMsg>,
         /// The next loans to run.

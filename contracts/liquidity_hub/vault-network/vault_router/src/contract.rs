@@ -36,6 +36,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::NextLoan {
             initiator,
             source_vault,
+            source_vault_asset_info: source_vault_asset,
             payload,
             to_loan,
             loaned_assets,
@@ -46,6 +47,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             payload,
             initiator,
             source_vault,
+            source_vault_asset,
             to_loan,
             loaned_assets,
         ),
