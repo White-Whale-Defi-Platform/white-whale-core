@@ -25,7 +25,6 @@ mod test {
             Config {
                 owner: mock_creator().sender,
                 vault_factory: Addr::unchecked("factory_addr"),
-                nested_loans_enabled: false
             }
         );
     }
