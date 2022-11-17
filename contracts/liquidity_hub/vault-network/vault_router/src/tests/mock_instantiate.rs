@@ -44,6 +44,7 @@ pub struct AppInstantiateResponse {
     pub token_addr: Addr,
     pub native_vault_addr: Addr,
     pub token_vault_addr: Addr,
+    pub factory_addr: Addr,
 }
 
 pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
@@ -189,7 +190,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
             creator.clone().sender,
             &vault_network::vault_router::InstantiateMsg {
                 owner: creator.sender.into_string(),
-                vault_factory_addr: factory_addr.into_string(),
+                vault_factory_addr: factory_addr.clone().into_string(),
             },
             &[],
             "mock vault router",
@@ -202,5 +203,6 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         token_addr,
         native_vault_addr,
         token_vault_addr,
+        factory_addr,
     }
 }

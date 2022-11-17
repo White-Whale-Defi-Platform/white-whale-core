@@ -1,8 +1,10 @@
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use terraswap::asset::Asset;
+
+use terraswap::asset::{Asset, AssetInfo};
 use vault_network::vault_router::ExecuteMsg;
 
 use crate::err::{StdResult, VaultRouterError};
+use crate::state::CONFIG;
 
 #[allow(clippy::too_many_arguments)]
 pub fn next_loan(
@@ -12,11 +14,27 @@ pub fn next_loan(
     mut payload: Vec<CosmosMsg>,
     initiator: Addr,
     source_vault: String,
+    source_vault_asset: AssetInfo,
     to_loan: Vec<(String, Asset)>,
     loaned_assets: Vec<(String, Asset)>,
 ) -> StdResult<Response> {
-    // check that a vault is executing this message
-    if info.sender != deps.api.addr_validate(&source_vault)? {
+    // check that the source vault is executing this message and it is a vault created by the WW vault factory
+    let config = CONFIG.load(deps.storage)?;
+
+    let Some(queried_vault) = deps.querier.query_wasm_smart::<Option<String>>(
+        config.vault_factory,
+        &vault_network::vault_factory::QueryMsg::Vault {
+            asset_info: source_vault_asset,
+        },
+    )? else {
+        return Err(VaultRouterError::Unauthorized {});
+    };
+
+    let validated_source_vault = deps.api.addr_validate(&source_vault)?;
+
+    if info.sender != validated_source_vault
+        || deps.api.addr_validate(&queried_vault)? != validated_source_vault
+    {
         return Err(VaultRouterError::Unauthorized {});
     }
 
@@ -31,6 +49,7 @@ pub fn next_loan(
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator,
                         source_vault: vault.to_string(),
+                        source_vault_asset_info: asset.info.clone(),
                         to_loan: loans.to_vec(),
                         payload,
                         loaned_assets,
@@ -64,194 +83,84 @@ pub fn next_loan(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
-        coins, testing::mock_info, to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
-    };
-    use terraswap::asset::{Asset, AssetInfo};
+    use cosmwasm_std::{coins, Addr};
+    use cw_multi_test::Executor;
+
+    use terraswap::asset::AssetInfo;
     use vault_network::vault_router::ExecuteMsg;
 
-    use crate::{
-        contract::execute,
-        err::VaultRouterError,
-        tests::{mock_execute, mock_instantiate::mock_instantiate},
-    };
-
-    #[test]
-    fn does_call_next_loan() {
-        let payload = vec![BankMsg::Send {
-            to_address: "actor1".to_string(),
-            amount: coins(1000, "uluna"),
-        }
-        .into()];
-
-        let to_loan_assets = vec![
-            (
-                "ukrw_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(5_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                },
-            ),
-            (
-                "uluna_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(6_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                },
-            ),
-        ];
-        let loaned_assets = vec![
-            (
-                "token_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(4_000),
-                    info: AssetInfo::Token {
-                        contract_addr: "token_loaned".to_string(),
-                    },
-                },
-            ),
-            (
-                "ukrw_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(5_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                },
-            ),
-            (
-                "uluna_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(6_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                },
-            ),
-        ];
-
-        let (mut deps, env) = mock_instantiate("factory_addr");
-        let res = execute(
-            deps.as_mut(),
-            env,
-            mock_info("source_vault", &[]),
-            ExecuteMsg::NextLoan {
-                initiator: Addr::unchecked("initiator_addr"),
-                source_vault: "source_vault".to_string(),
-                payload: payload.clone(),
-                to_loan: to_loan_assets.clone(),
-                loaned_assets: loaned_assets.clone(),
-            },
-        );
-
-        assert_eq!(
-            res.unwrap(),
-            Response::new()
-                .add_message(WasmMsg::Execute {
-                    contract_addr: to_loan_assets[0].0.clone(),
-                    funds: vec![],
-                    msg: to_binary(&vault_network::vault::ExecuteMsg::FlashLoan {
-                        amount: to_loan_assets[0].1.amount,
-                        msg: to_binary(&ExecuteMsg::NextLoan {
-                            initiator: Addr::unchecked("initiator_addr"),
-                            to_loan: to_loan_assets[1..].to_vec(),
-                            payload,
-                            loaned_assets,
-                            source_vault: to_loan_assets[0].0.to_string()
-                        })
-                        .unwrap(),
-                    })
-                    .unwrap(),
-                })
-                .add_attribute("method", "next_loan")
-        );
-    }
-
-    #[test]
-    fn does_call_payload() {
-        let payload = vec![BankMsg::Send {
-            to_address: "actor1".to_string(),
-            amount: coins(1000, "uluna"),
-        }
-        .into()];
-
-        let loaned_assets = vec![
-            (
-                "token_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(4_000),
-                    info: AssetInfo::Token {
-                        contract_addr: "token_loaned".to_string(),
-                    },
-                },
-            ),
-            (
-                "ukrw_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(5_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "ukrw".to_string(),
-                    },
-                },
-            ),
-            (
-                "uluna_vault".to_string(),
-                Asset {
-                    amount: Uint128::new(6_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                },
-            ),
-        ];
-
-        let (mut deps, env) = mock_instantiate("factory_addr");
-        let res = execute(
-            deps.as_mut(),
-            env.clone(),
-            mock_info("source_vault", &[]),
-            ExecuteMsg::NextLoan {
-                initiator: Addr::unchecked("initiator_addr"),
-                source_vault: "source_vault".to_string(),
-                payload: payload.clone(),
-                to_loan: vec![],
-                loaned_assets: loaned_assets.clone(),
-            },
-        );
-
-        assert_eq!(
-            res.unwrap(),
-            Response::new()
-                .add_messages(payload.into_iter().chain(vec![WasmMsg::Execute {
-                        contract_addr: env.contract.address.to_string(),
-                        funds: vec![],
-                        msg: to_binary(&ExecuteMsg::CompleteLoan {
-                            initiator: Addr::unchecked("initiator_addr"),
-                            loaned_assets,
-                        })
-                        .unwrap(),
-                    }.into()]))
-                .add_attribute("method", "next_loan")
-        );
-    }
+    use crate::err::VaultRouterError;
+    use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
+    use crate::tests::{mock_admin, mock_app_with_balance};
 
     #[test]
     fn does_require_authorization() {
-        let (res, ..) = mock_execute(
-            "factory_addr",
-            ExecuteMsg::NextLoan {
-                initiator: Addr::unchecked("initiator_addr"),
-                source_vault: "source_vault".to_string(),
-                payload: vec![],
-                to_loan: vec![],
-                loaned_assets: vec![],
-            },
+        let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
+
+        let AppInstantiateResponse {
+            router_addr,
+            factory_addr,
+            ..
+        } = app_mock_instantiate(&mut app);
+
+        // try calling NextLoan with an unauthorized vault, i.e. one that doesn't exist on the factory
+        let err = app
+            .execute_contract(
+                Addr::unchecked("unauthorized"),
+                router_addr.clone(),
+                &ExecuteMsg::NextLoan {
+                    initiator: Addr::unchecked("initiator_addr"),
+                    source_vault: "source_vault".to_string(),
+                    source_vault_asset_info: AssetInfo::Token {
+                        contract_addr: "non_existing".to_string(),
+                    },
+                    payload: vec![],
+                    to_loan: vec![],
+                    loaned_assets: vec![],
+                },
+                &[],
+            )
+            .unwrap_err();
+
+        assert_eq!(
+            err.downcast::<VaultRouterError>().unwrap(),
+            VaultRouterError::Unauthorized {}
         );
 
-        assert_eq!(res.unwrap_err(), VaultRouterError::Unauthorized {});
+        let luna_vault: Option<String> = app
+            .wrap()
+            .query_wasm_smart(
+                factory_addr,
+                &vault_network::vault_factory::QueryMsg::Vault {
+                    asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+
+        //query address of vault contract
+        let err = app
+            .execute_contract(
+                Addr::unchecked("unauthorized"),
+                router_addr.clone(),
+                &ExecuteMsg::NextLoan {
+                    initiator: Addr::unchecked("initiator_addr"),
+                    source_vault: luna_vault.unwrap(),
+                    source_vault_asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    payload: vec![],
+                    to_loan: vec![],
+                    loaned_assets: vec![],
+                },
+                &[],
+            )
+            .unwrap_err();
+
+        assert_eq!(
+            err.downcast::<VaultRouterError>().unwrap(),
+            VaultRouterError::Unauthorized {}
+        );
     }
 }

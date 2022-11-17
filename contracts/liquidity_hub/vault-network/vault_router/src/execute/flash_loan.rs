@@ -1,4 +1,5 @@
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
+
 use terraswap::asset::Asset;
 use vault_network::vault_router::ExecuteMsg;
 
@@ -51,6 +52,7 @@ pub fn flash_loan(
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator: info.sender,
                         source_vault: vault.to_string(),
+                        source_vault_asset_info: asset.info.clone(),
                         to_loan: next_vaults.to_vec(),
                         payload: msgs,
                         loaned_assets: vaults,
@@ -71,6 +73,7 @@ pub fn flash_loan(
 mod tests {
     use cosmwasm_std::{coins, to_binary, BankMsg, CosmosMsg, Response, Uint128, WasmMsg};
     use cw_multi_test::Executor;
+
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault_router::ExecuteMsg;
 
