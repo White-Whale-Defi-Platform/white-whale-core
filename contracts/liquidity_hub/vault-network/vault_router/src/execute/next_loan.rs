@@ -93,6 +93,9 @@ mod tests {
     use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
     use crate::tests::{mock_admin, mock_app_with_balance};
 
+    // Once the nested flashloan feature is enabled again, write proper tests covering payload verification,
+    // order of execution, next_loan is called as it should with nested loans and so on.
+
     #[test]
     fn does_require_authorization() {
         let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);

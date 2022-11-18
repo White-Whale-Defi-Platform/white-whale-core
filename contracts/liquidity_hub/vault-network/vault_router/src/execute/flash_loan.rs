@@ -75,7 +75,10 @@ pub fn flash_loan(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{coins, to_binary, BankMsg, CosmosMsg, Response, Uint128, WasmMsg};
+    use cosmwasm_std::{
+        coins, from_binary, to_binary, Attribute, BankMsg, CosmosMsg, Event, Response, Uint128,
+        WasmMsg,
+    };
     use cw_multi_test::Executor;
 
     use terraswap::asset::{Asset, AssetInfo};
@@ -95,40 +98,85 @@ mod tests {
         let AppInstantiateResponse { router_addr, .. } = app_mock_instantiate(&mut app);
 
         let dummy_contract_addr = create_dummy_contract(&mut app);
+        let transfer_amount = 66u128;
 
         // give the dummy contract a bunch of extra stuff to pay with
         app.send_tokens(
             mock_admin(),
             dummy_contract_addr.clone(),
-            &coins(66, "uluna"),
+            &coins(transfer_amount, "uluna"),
         )
         .unwrap();
 
+        let payload = vec![WasmMsg::Execute {
+            contract_addr: dummy_contract_addr.clone().into_string(),
+            msg: to_binary(&crate::tests::ExecuteMsg::Send {
+                to_address: router_addr.clone(),
+                amount: coins(transfer_amount, "uluna"),
+            })
+            .unwrap(),
+            funds: vec![],
+        }
+        .into()];
+
         // run a successful flash-loan
-        app.execute_contract(
-            mock_creator().sender,
-            router_addr.clone(),
-            &ExecuteMsg::FlashLoan {
-                assets: vec![Asset {
-                    amount: Uint128::new(1_000),
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                }],
-                msgs: vec![WasmMsg::Execute {
-                    contract_addr: dummy_contract_addr.into_string(),
-                    msg: to_binary(&crate::tests::ExecuteMsg::Send {
-                        to_address: router_addr,
-                        amount: coins(66, "uluna"),
-                    })
-                    .unwrap(),
-                    funds: vec![],
+        let res = app
+            .execute_contract(
+                mock_creator().sender,
+                router_addr.clone(),
+                &ExecuteMsg::FlashLoan {
+                    assets: vec![Asset {
+                        amount: Uint128::new(1_000),
+                        info: AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    }],
+                    msgs: payload.clone(),
+                },
+                &[],
+            )
+            .unwrap();
+
+        // verify payload was executed
+        let payload_amount = match payload.first().unwrap() {
+            CosmosMsg::Wasm(WasmMsg::Execute { msg, .. }) => {
+                let msg: crate::tests::ExecuteMsg = from_binary(msg).unwrap();
+                match msg {
+                    crate::tests::ExecuteMsg::Send { amount, .. } => amount,
                 }
-                .into()],
+            }
+            _ => panic!("Unexpected message"),
+        };
+
+        let payload_event = res
+            .events
+            .iter()
+            .find(|event| {
+                event.ty == "transfer"
+                    && event.attributes.contains(&Attribute {
+                        key: "amount".to_string(),
+                        value: payload_amount.first().unwrap().to_string(),
+                    })
+            })
+            .unwrap()
+            .clone();
+
+        let expected_payload_event = Event::new("transfer").add_attributes(vec![
+            Attribute {
+                key: "recipient".to_string(),
+                value: router_addr.to_string(),
             },
-            &[],
-        )
-        .unwrap();
+            Attribute {
+                key: "sender".to_string(),
+                value: dummy_contract_addr.to_string(),
+            },
+            Attribute {
+                key: "amount".to_string(),
+                value: payload_amount.first().unwrap().to_string(),
+            },
+        ]);
+
+        assert_eq!(payload_event, expected_payload_event);
     }
 
     #[test]
@@ -223,5 +271,176 @@ mod tests {
             err.downcast::<VaultRouterError>().unwrap(),
             VaultRouterError::NestedFlashLoansDisabled {}
         );
+    }
+
+    #[test]
+    fn verify_events() {
+        let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_066, "uluna"))]);
+        let AppInstantiateResponse {
+            router_addr,
+            native_vault_addr,
+            ..
+        } = app_mock_instantiate(&mut app);
+
+        let dummy_contract_addr = create_dummy_contract(&mut app);
+        let transfer_amount = 66u128;
+        let flashloan_amount = 1_000u128;
+
+        // give the dummy contract a bunch of extra stuff to pay with
+        app.send_tokens(
+            mock_admin(),
+            dummy_contract_addr.clone(),
+            &coins(transfer_amount, "uluna"),
+        )
+        .unwrap();
+
+        let payload = vec![WasmMsg::Execute {
+            contract_addr: dummy_contract_addr.clone().into_string(),
+            msg: to_binary(&crate::tests::ExecuteMsg::Send {
+                to_address: router_addr.clone(),
+                amount: coins(transfer_amount, "uluna"),
+            })
+            .unwrap(),
+            funds: vec![],
+        }
+        .into()];
+
+        // run a successful flash-loan
+        let res = app
+            .execute_contract(
+                mock_creator().sender,
+                router_addr.clone(),
+                &ExecuteMsg::FlashLoan {
+                    assets: vec![Asset {
+                        amount: Uint128::new(flashloan_amount),
+                        info: AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    }],
+                    msgs: payload.clone(),
+                },
+                &[],
+            )
+            .unwrap();
+
+        let payload_amount = match payload.first().unwrap() {
+            CosmosMsg::Wasm(WasmMsg::Execute { msg, .. }) => {
+                let msg: crate::tests::ExecuteMsg = from_binary(msg).unwrap();
+                match msg {
+                    crate::tests::ExecuteMsg::Send { amount, .. } => amount,
+                }
+            }
+            _ => panic!("Unexpected message"),
+        };
+
+        // verify messages where executed in the right order
+        let events = res.events;
+        let expected_events = vec![
+            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("wasm").add_attributes(vec![
+                Attribute {
+                    key: "_contract_addr".to_string(),
+                    value: router_addr.to_string(),
+                },
+                Attribute {
+                    key: "method".to_string(),
+                    value: "flash_loan".to_string(),
+                },
+            ]),
+            Event::new("execute").add_attribute("_contract_addr", native_vault_addr.to_string()),
+            Event::new("wasm").add_attributes(vec![
+                Attribute {
+                    key: "_contract_addr".to_string(),
+                    value: native_vault_addr.to_string(),
+                },
+                Attribute {
+                    key: "method".to_string(),
+                    value: "flash_loan".to_string(),
+                },
+                Attribute {
+                    key: "amount".to_string(),
+                    value: flashloan_amount.to_string(),
+                },
+            ]),
+            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("wasm").add_attributes(vec![
+                Attribute {
+                    key: "_contract_addr".to_string(),
+                    value: router_addr.to_string(),
+                },
+                Attribute {
+                    key: "method".to_string(),
+                    value: "next_loan".to_string(),
+                },
+            ]),
+            Event::new("execute").add_attribute("_contract_addr", dummy_contract_addr.to_string()),
+            Event::new("transfer").add_attributes(vec![
+                Attribute {
+                    key: "recipient".to_string(),
+                    value: router_addr.to_string(),
+                },
+                Attribute {
+                    key: "sender".to_string(),
+                    value: dummy_contract_addr.to_string(),
+                },
+                Attribute {
+                    key: "amount".to_string(),
+                    value: payload_amount.first().unwrap().to_string(),
+                },
+            ]),
+            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("wasm").add_attributes(vec![
+                Attribute {
+                    key: "_contract_addr".to_string(),
+                    value: router_addr.to_string(),
+                },
+                Attribute {
+                    key: "method".to_string(),
+                    value: "complete_loan".to_string(),
+                },
+            ]),
+            Event::new("transfer").add_attributes(vec![
+                Attribute {
+                    key: "recipient".to_string(),
+                    value: native_vault_addr.to_string(),
+                },
+                Attribute {
+                    key: "sender".to_string(),
+                    value: router_addr.to_string(),
+                },
+                Attribute {
+                    key: "amount".to_string(),
+                    value: coins(transfer_amount + flashloan_amount, "uluna")
+                        .first()
+                        .unwrap()
+                        .to_string(),
+                },
+            ]),
+            Event::new("execute").add_attribute("_contract_addr", native_vault_addr.to_string()),
+            Event::new("wasm").add_attributes(vec![
+                Attribute {
+                    key: "_contract_addr".to_string(),
+                    value: native_vault_addr.to_string(),
+                },
+                Attribute {
+                    key: "method".to_string(),
+                    value: "after_trade".to_string(),
+                },
+                Attribute {
+                    key: "profit".to_string(),
+                    value: "0".to_string(),
+                },
+                Attribute {
+                    key: "protocol_fee".to_string(),
+                    value: (transfer_amount / 2).to_string(),
+                },
+                Attribute {
+                    key: "flash_loan_fee".to_string(),
+                    value: (transfer_amount / 2).to_string(),
+                },
+            ]),
+        ];
+
+        assert_eq!(events, expected_events);
     }
 }
