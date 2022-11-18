@@ -1,6 +1,6 @@
 [package]
 name = "vault_factory"
-version = "1.0.7"
+version = "1.0.8"
 authors = [
 	"kaimen-sano <kaimen_sano@protonmail.com>, Kerber0x <kerber0x@protonmail.com>",
 ]
