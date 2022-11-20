@@ -6,5 +6,6 @@ pub mod state;
 
 mod response;
 
+mod migrations;
 #[cfg(test)]
 mod testing;
