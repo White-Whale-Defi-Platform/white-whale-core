@@ -419,13 +419,7 @@ fn execute_swap_operation() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(1000000u128),
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: "asset".to_string(),
-                        },
-                        amount: Uint128::from(1000000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: Some("addr0000".to_string()),
@@ -804,13 +798,7 @@ fn query_reverse_routes_with_to_native() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(target_amount),
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: "asset0000".to_string(),
-                        },
-                        amount: Uint128::from(target_amount),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
