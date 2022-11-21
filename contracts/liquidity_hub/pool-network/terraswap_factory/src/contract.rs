@@ -149,7 +149,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
-    if storage_version == Version::parse("1.0.8")? {
+    if storage_version <= Version::parse("1.0.8")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
 
