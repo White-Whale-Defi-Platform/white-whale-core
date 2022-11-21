@@ -883,7 +883,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-router"
-version = "1.0.3"
+version = "1.0.5"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

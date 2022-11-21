@@ -92,8 +92,7 @@ pub fn asset_into_swap_msg(
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset,
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread,
                     to,
