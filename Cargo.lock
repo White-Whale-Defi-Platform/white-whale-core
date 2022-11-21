@@ -846,7 +846,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-factory"
-version = "1.0.5"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -864,7 +864,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
