@@ -1119,7 +1119,7 @@ fn delete_pair() {
             &pair_key_vec,
             &PairInfoRaw {
                 liquidity_token: CanonicalAddr(cosmwasm_std::Binary(vec![])),
-                contract_addr: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                contract_addr: deps.api.addr_canonicalize("pair0000").unwrap(),
                 asset_infos: raw_infos,
                 asset_decimals: [6, 6],
             },
@@ -1130,9 +1130,7 @@ fn delete_pair() {
 
     assert!(pair.is_ok(), "pair key should exist");
 
-    let msg = ExecuteMsg::RemovePair {
-        pair_address: String::from_utf8(pair_key_vec.clone()).unwrap(),
-    };
+    let msg = ExecuteMsg::RemovePair { asset_infos };
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
@@ -1141,10 +1139,7 @@ fn delete_pair() {
         res.attributes,
         vec![
             attr("action", "remove_pair"),
-            attr(
-                "pair_contract_addr",
-                String::from_utf8(pair_key_vec.clone()).unwrap(),
-            ),
+            attr("pair_contract_addr", "pair0000",),
         ]
     );
 
@@ -1168,16 +1163,7 @@ fn delete_pair_failed_if_not_found() {
         },
     ];
 
-    let raw_infos = [
-        asset_infos[0].to_raw(&deps.api).unwrap(),
-        asset_infos[1].to_raw(&deps.api).unwrap(),
-    ];
-
-    let pair_key_vec = pair_key(&raw_infos);
-
-    let msg = ExecuteMsg::RemovePair {
-        pair_address: String::from_utf8(pair_key_vec.clone()).unwrap(),
-    };
+    let msg = ExecuteMsg::RemovePair { asset_infos };
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), env, info, msg);

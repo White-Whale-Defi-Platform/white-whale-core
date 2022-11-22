@@ -41,8 +41,8 @@ pub enum ExecuteMsg {
         contract: String,
         code_id: Option<u64>,
     },
-    /// Removes pair
-    RemovePair { pair_address: String },
+    /// Removes pair contract given asset infos
+    RemovePair { asset_infos: [AssetInfo; 2] },
 }
 
 #[cw_serde]

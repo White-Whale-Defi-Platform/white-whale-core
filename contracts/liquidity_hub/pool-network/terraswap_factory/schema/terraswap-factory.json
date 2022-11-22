@@ -222,7 +222,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Removes pair",
+        "description": "Removes pair contract given asset infos",
         "type": "object",
         "required": [
           "remove_pair"
@@ -231,11 +231,16 @@
           "remove_pair": {
             "type": "object",
             "required": [
-              "pair_address"
+              "asset_infos"
             ],
             "properties": {
-              "pair_address": {
-                "type": "string"
+              "asset_infos": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 2,
+                "minItems": 2
               }
             },
             "additionalProperties": false
