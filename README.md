@@ -6,11 +6,12 @@
   </h1>
 </a>
 
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
-[![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+[![codecov](https://codecov.io/github/White-Whale-Defi-Platform/migaloo-core/branch/main/graph/badge.svg?token=Y8S6P1KBS2)](https://codecov.io/github/White-Whale-Defi-Platform/migaloo-core)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6401/badge)](https://bestpractices.coreinfrastructure.org/projects/6401)
 [![Discord badge][]][Discord invite]
 [![Twitter handle][]][Twitter badge]
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6401/badge)](https://bestpractices.coreinfrastructure.org/projects/6401)
+[![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
 
 
 [Discord invite]: https://discord.com/invite/tSxyyCWgYX
