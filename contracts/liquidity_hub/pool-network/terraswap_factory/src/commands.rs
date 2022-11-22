@@ -158,18 +158,28 @@ pub fn create_pair(
 pub fn remove_pair(
     deps: DepsMut,
     _env: Env,
-    pair_address: String,
+    asset_infos: [AssetInfo; 2],
 ) -> Result<Response, ContractError> {
-    let pair_key_bytes = pair_address.as_bytes();
-    if let Ok(None) = PAIRS.may_load(deps.storage, pair_key_bytes) {
-        return Err(ContractError::UnExistingPair {});
-    }
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.api)?,
+        asset_infos[1].to_raw(deps.api)?,
+    ];
 
-    PAIRS.remove(deps.storage, pair_key_bytes);
+    let pair_key = pair_key(&raw_infos);
+    let pair = PAIRS.may_load(deps.storage, &pair_key)?;
+
+    let Some(pair) = pair else {
+        return Err(ContractError::UnExistingPair {});
+    };
+
+    PAIRS.remove(deps.storage, &pair_key);
 
     Ok(Response::new().add_attributes(vec![
         ("action", "remove_pair"),
-        ("pair_contract_addr", &pair_address),
+        (
+            "pair_contract_addr",
+            deps.api.addr_humanize(&pair.contract_addr)?.as_ref(),
+        ),
     ]))
 }
 
