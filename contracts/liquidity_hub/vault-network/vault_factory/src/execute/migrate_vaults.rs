@@ -48,17 +48,12 @@ fn migrate_vault_msg(vault_addr: Addr, code_id: u64) -> StdResult<CosmosMsg> {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::mock_info, Addr, Attribute};
-    use cw_multi_test::Executor;
+    use cosmwasm_std::{testing::mock_info, Attribute};
 
-    use crate::tests::store_code::store_vault_code;
     use crate::{
         contract::execute,
         err::VaultFactoryError,
-        tests::{
-            get_fees, mock_app, mock_creator,
-            mock_instantiate::{app_mock_instantiate, mock_instantiate},
-        },
+        tests::{mock_creator, mock_instantiate::mock_instantiate},
     };
 
     #[test]
@@ -115,117 +110,5 @@ mod tests {
         ];
 
         assert_eq!(res.attributes, expected_attributes);
-    }
-
-    #[test]
-    fn can_migrate_multiple_vaults() {
-        let mut app = mock_app();
-        let creator = mock_creator();
-
-        let factory_addr = app_mock_instantiate(&mut app);
-        let new_vault_code_id = store_vault_code(&mut app);
-
-        // create two vaults
-        let asset_info_1 = terraswap::asset::AssetInfo::NativeToken {
-            denom: "uluna".to_string(),
-        };
-
-        app.execute_contract(
-            creator.sender.clone(),
-            factory_addr.clone(),
-            &vault_network::vault_factory::ExecuteMsg::CreateVault {
-                asset_info: asset_info_1.clone(),
-                fees: get_fees(),
-            },
-            &[],
-        )
-        .unwrap();
-
-        // get vault address
-        let vault_addr_1: Option<Addr> = app
-            .wrap()
-            .query_wasm_smart(
-                factory_addr.clone(),
-                &vault_network::vault_factory::QueryMsg::Vault {
-                    asset_info: asset_info_1.clone(),
-                },
-            )
-            .unwrap();
-
-        let asset_info_2 = terraswap::asset::AssetInfo::NativeToken {
-            denom: "ujuno".to_string(),
-        };
-
-        app.execute_contract(
-            creator.sender.clone(),
-            factory_addr.clone(),
-            &vault_network::vault_factory::ExecuteMsg::CreateVault {
-                asset_info: asset_info_2.clone(),
-                fees: get_fees(),
-            },
-            &[],
-        )
-        .unwrap();
-
-        // get vault address
-        let vault_addr_2: Option<Addr> = app
-            .wrap()
-            .query_wasm_smart(
-                factory_addr.clone(),
-                &vault_network::vault_factory::QueryMsg::Vault {
-                    asset_info: asset_info_2.clone(),
-                },
-            )
-            .unwrap();
-
-        // migrate vaults
-        let res = app
-            .execute_contract(
-                creator.sender.clone(),
-                factory_addr.clone(),
-                &vault_network::vault_factory::ExecuteMsg::MigrateVaults {
-                    vault_addr: None,
-                    vault_code_id: new_vault_code_id.clone(),
-                },
-                &[],
-            )
-            .unwrap();
-
-        assert_eq!(res.events.len(), 4);
-
-        for event in res.events {
-            if event.ty == "wasm" {
-                let expected_attributes = vec![
-                    Attribute {
-                        key: "_contract_addr".to_string(),
-                        value: factory_addr.clone().to_string(),
-                    },
-                    Attribute {
-                        key: "method".to_string(),
-                        value: "migrate_vaults".to_string(),
-                    },
-                    Attribute {
-                        key: "code_id".to_string(),
-                        value: new_vault_code_id.to_string(),
-                    },
-                    Attribute {
-                        key: "vault".to_string(),
-                        value: vault_addr_2
-                            .clone()
-                            .unwrap_or(Addr::unchecked(""))
-                            .to_string(),
-                    },
-                    Attribute {
-                        key: "vault".to_string(),
-                        value: vault_addr_1
-                            .clone()
-                            .unwrap_or(Addr::unchecked(""))
-                            .to_string(),
-                    },
-                ];
-
-                assert_eq!(event.attributes, expected_attributes);
-            }
-        }
     }
 }

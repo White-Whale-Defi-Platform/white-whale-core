@@ -3,15 +3,16 @@ use cosmwasm_std::{
     coin, from_binary, to_binary, Addr, Coin, CosmosMsg, StdError, SubMsg, Uint128, WasmMsg,
 };
 
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, instantiate, migrate, query};
 use crate::operations::asset_into_swap_msg;
 use terraswap::mock_querier::mock_dependencies;
 
+use crate::error::ContractError;
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
 use terraswap::router::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation,
 };
 
@@ -60,7 +61,10 @@ fn execute_swap_operations() {
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
-        Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "must provide operations"),
+        Err(ContractError::Std(error)) => assert_eq!(
+            error,
+            StdError::generic_err("Must provide swap operations to execute")
+        ),
         _ => panic!("DO NOT ENTER HERE"),
     }
 
@@ -311,7 +315,7 @@ fn execute_swap_operation() {
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), mock_env(), info, msg.clone());
     match res {
-        Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "unauthorized"),
+        Err(ContractError::Unauthorized {}) => (),
         _ => panic!("DO NOT ENTER HERE"),
     }
 
@@ -415,13 +419,7 @@ fn execute_swap_operation() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(1000000u128),
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: "asset".to_string(),
-                        },
-                        amount: Uint128::from(1000000u128),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: Some("addr0000".to_string()),
@@ -621,7 +619,7 @@ fn query_reverse_routes_with_from_native() {
     let info = mock_info("addr0", &[coin(offer_amount.u128(), "ukrw")]);
     let res = execute(deps.as_mut(), mock_env(), info, msg.clone());
     match res {
-        Err(StdError::GenericErr { msg, .. }) => assert_eq!(msg, "unauthorized"),
+        Err(ContractError::Unauthorized {}) => (),
         _ => panic!("DO NOT ENTER HERE"),
     }
 
@@ -800,13 +798,7 @@ fn query_reverse_routes_with_to_native() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(target_amount),
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset: Asset {
-                        info: AssetInfo::Token {
-                            contract_addr: "asset0000".to_string(),
-                        },
-                        amount: Uint128::from(target_amount),
-                    },
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -853,10 +845,13 @@ fn assert_minimum_receive_native_token() {
     };
     let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
-        Err(StdError::GenericErr { msg, .. }) => assert_eq!(
-            msg,
-            "assertion failed; minimum receive amount: 1000001, swap amount: 1000000"
-        ),
+        Err(ContractError::MiminumReceiveAssertion {
+            minimum_receive,
+            swap_amount,
+        }) => {
+            assert_eq!(minimum_receive, Uint128::new(1000001));
+            assert_eq!(swap_amount, Uint128::new(1000000));
+        }
         _ => panic!("DO NOT ENTER HERE"),
     }
 }
@@ -892,10 +887,32 @@ fn assert_minimum_receive_token() {
     };
     let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
-        Err(StdError::GenericErr { msg, .. }) => assert_eq!(
-            msg,
-            "assertion failed; minimum receive amount: 1000001, swap amount: 1000000"
-        ),
+        Err(ContractError::MiminumReceiveAssertion {
+            minimum_receive,
+            swap_amount,
+        }) => {
+            assert_eq!(minimum_receive, Uint128::new(1000001));
+            assert_eq!(swap_amount, Uint128::new(1000000));
+        }
         _ => panic!("DO NOT ENTER HERE"),
+    }
+}
+
+#[test]
+fn can_migrate_contract() {
+    let mut deps = mock_dependencies(&[]);
+    let msg = InstantiateMsg {
+        terraswap_factory: "terraswap_factory".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+    instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
+
+    // should not be able to migrate as the version is lower
+    match res {
+        Err(ContractError::MigrateInvalidVersion { .. }) => (),
+        _ => panic!("should return ContractError::MigrateInvalidVersion"),
     }
 }

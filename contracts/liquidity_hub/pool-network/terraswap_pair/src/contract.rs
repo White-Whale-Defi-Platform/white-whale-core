@@ -21,7 +21,7 @@ use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CO
 use crate::{commands, queries};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:terraswap-pair";
+const CONTRACT_NAME: &str = "white_whale-pool";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
@@ -55,8 +55,7 @@ pub fn instantiate(
     let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
 
     // check the fees are valid
-    msg.pool_fees.swap_fee.is_valid()?;
-    msg.pool_fees.protocol_fee.is_valid()?;
+    msg.pool_fees.is_valid()?;
 
     // Set owner and initial pool fees
     let config = Config {
@@ -232,16 +231,23 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use crate::migrations;
+
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,
         });
+    }
+
+    if storage_version <= Version::parse("1.0.4")? {
+        migrations::migrate_to_v110(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

@@ -1,6 +1,6 @@
 [package]
 name = "fee_collector"
-version = "1.0.3"
+version = "1.0.4"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
@@ -46,5 +46,4 @@ terraswap-token = { path = "../pool-network/terraswap_token" }
 terraswap = { version = "2.8.0", path = "../../../packages/terraswap" }
 vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
 vault = { version = "1.0.0", path = "../vault-network/vault" }
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 cw20 = { version = "0.15.1" }

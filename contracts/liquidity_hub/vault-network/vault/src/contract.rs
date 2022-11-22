@@ -18,7 +18,7 @@ use crate::{
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
-const CONTRACT_NAME: &str = "vault_factory";
+const CONTRACT_NAME: &str = "white_whale-vault";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -29,6 +29,9 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    // check the fees are valid
+    msg.vault_fees.is_valid()?;
 
     let config = Config {
         owner: deps.api.addr_validate(&msg.owner)?,
@@ -129,6 +132,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     // initialize the loan counter
@@ -142,7 +146,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
         .parse()
         .map_err(|_| StdError::parse_err("Version", "Failed to parse storage_version"))?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(VaultError::MigrateInvalidVersion {
             new_version: storage_version,
             current_version: version,

@@ -8,7 +8,7 @@ use crate::execute::{complete_loan, flash_loan, next_loan, update_config};
 use crate::queries::get_config;
 use crate::state::CONFIG;
 
-const CONTRACT_NAME: &str = "vault_router";
+const CONTRACT_NAME: &str = "white_whale-vault_router";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -36,6 +36,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
         ExecuteMsg::NextLoan {
             initiator,
             source_vault,
+            source_vault_asset_info: source_vault_asset,
             payload,
             to_loan,
             loaned_assets,
@@ -46,6 +47,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             payload,
             initiator,
             source_vault,
+            source_vault_asset,
             to_loan,
             loaned_assets,
         ),
@@ -60,12 +62,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(VaultRouterError::MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,

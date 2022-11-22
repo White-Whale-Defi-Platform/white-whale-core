@@ -88,7 +88,7 @@ pub fn create_pair(
             Ok(decimal) => decimal,
             Err(_) => {
                 return Err(ContractError::InvalidAsset {
-                    asset: "asset1".to_string(),
+                    asset: asset_infos[0].to_string(),
                 });
             }
         };
@@ -98,7 +98,7 @@ pub fn create_pair(
             Ok(decimal) => decimal,
             Err(_) => {
                 return Err(ContractError::InvalidAsset {
-                    asset: "asset2".to_string(),
+                    asset: asset_infos[1].to_string(),
                 });
             }
         };

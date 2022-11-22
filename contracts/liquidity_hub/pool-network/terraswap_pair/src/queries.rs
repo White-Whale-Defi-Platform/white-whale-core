@@ -1,16 +1,19 @@
-use crate::error::ContractError;
-use crate::helpers;
-use crate::state::{
-    get_protocol_fees_for_asset, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
-    PAIR_INFO,
-};
-use cosmwasm_std::{Deps, Uint128};
+use cosmwasm_std::{Deps, StdResult, Uint128};
+
 use terraswap::asset::{Asset, PairInfo, PairInfoRaw};
 use terraswap::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
 use terraswap::querier::query_token_info;
+
+use crate::error::ContractError;
+use crate::helpers;
+use crate::helpers::get_protocol_fee_for_asset;
+use crate::state::{
+    get_protocol_fees_for_asset, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    PAIR_INFO,
+};
 
 /// Queries the [PairInfo] of the pool
 pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
@@ -24,7 +27,23 @@ pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
 pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
-    let assets: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
+
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    let assets = pair_info
+        .query_pools(&deps.querier, deps.api, contract_addr)?
+        .iter()
+        .map(|asset| {
+            // deduct protocol fee for that asset
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), asset.clone().get_id());
+
+            Asset {
+                info: asset.info.clone(),
+                amount: asset.amount - protocol_fee,
+            }
+        })
+        .collect();
+
     let total_share: Uint128 = query_token_info(
         &deps.querier,
         deps.api.addr_humanize(&pair_info.liquidity_token)?,
@@ -47,10 +66,25 @@ pub fn query_simulation(
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
 
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
-    let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+
+    // To calculate pool amounts properly we should subtract the protocol fees from the pool
+    let pools = pair_info
+        .query_pools(&deps.querier, deps.api, contract_addr)?
+        .into_iter()
+        .map(|mut pool| {
+            // subtract the protocol fee from the pool
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+
+            Ok(pool)
+        })
+        .collect::<StdResult<Vec<_>>>()?;
+
     if offer_asset.info.equal(&pools[0].info) {
         offer_pool = pools[0].clone();
         ask_pool = pools[1].clone();
@@ -68,7 +102,7 @@ pub fn query_simulation(
         ask_pool.amount,
         offer_asset.amount,
         pool_fees,
-    );
+    )?;
 
     Ok(SimulationResponse {
         return_amount: swap_computation.return_amount,
@@ -87,7 +121,22 @@ pub fn query_reverse_simulation(
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
 
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
-    let pools: [Asset; 2] = pair_info.query_pools(&deps.querier, deps.api, contract_addr)?;
+
+    // To calculate pool amounts properly we should subtract the protocol fees from the pool
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+
+    let pools = pair_info
+        .query_pools(&deps.querier, deps.api, contract_addr)?
+        .into_iter()
+        .map(|mut pool| {
+            // subtract the protocol fee from the pool
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+
+            Ok(pool)
+        })
+        .collect::<StdResult<Vec<_>>>()?;
 
     let offer_pool: Asset;
     let ask_pool: Asset;
@@ -107,7 +156,7 @@ pub fn query_reverse_simulation(
         ask_pool.amount,
         ask_asset.amount,
         pool_fees,
-    );
+    )?;
 
     Ok(ReverseSimulationResponse {
         offer_amount: offer_amount_computation.offer_amount,

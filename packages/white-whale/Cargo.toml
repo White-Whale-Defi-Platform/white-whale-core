@@ -18,7 +18,6 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cosmwasm-std.workspace = true
-cosmwasm-bignumber = { git = "https://github.com/terra-money/terra-cosmwasm", branch = "feature/wasm-1.0" }
 schemars.workspace = true
 serde.workspace = true
 cosmwasm-schema.workspace = true

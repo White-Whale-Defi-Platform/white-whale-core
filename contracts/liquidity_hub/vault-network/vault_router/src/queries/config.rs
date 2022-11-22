@@ -24,7 +24,7 @@ mod test {
             config,
             Config {
                 owner: mock_creator().sender,
-                vault_factory: Addr::unchecked("factory_addr")
+                vault_factory: Addr::unchecked("factory_addr"),
             }
         );
     }

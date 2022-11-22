@@ -44,7 +44,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.64.0
+          toolchain: 1.65.0
           override: true
           components: rustfmt, clippy
 
@@ -64,19 +64,13 @@ jobs:
         with:
           version: '0.15.0'
           args: '-- --test-threads 1'
-          out-type: 'Html'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
+        if: ${{ github.event.repository.name == 'migaloo-core' }}
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage-report
-          path: 'target/tarpaulin/coverage.html'
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1

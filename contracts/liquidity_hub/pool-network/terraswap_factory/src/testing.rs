@@ -56,9 +56,13 @@ fn can_migrate_contract() {
 
     instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
 
-    assert_eq!(res, Response::new());
+    // should not be able to migrate as the version is lower
+    match res {
+        Err(ContractError::MigrateInvalidVersion { .. }) => (),
+        _ => panic!("should return ContractError::MigrateInvalidVersion"),
+    }
 }
 
 #[test]
@@ -614,7 +618,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let res = execute(deps.as_mut(), env, info, msg);
     match res {
         Ok(_) => panic!("Should return ContractError::InvalidAsset"),
-        Err(ContractError::InvalidAsset { asset }) => assert_eq!("asset2", asset),
+        Err(ContractError::InvalidAsset { asset }) => assert_eq!("invalid", asset),
         _ => panic!("Should return ContractError::InvalidAsset"),
     }
 
@@ -645,7 +649,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let res = execute(deps.as_mut(), env, info, msg);
     match res {
         Ok(_) => panic!("Should return ContractError::InvalidAsset"),
-        Err(ContractError::InvalidAsset { asset }) => assert_eq!("asset1", asset),
+        Err(ContractError::InvalidAsset { asset }) => assert_eq!("invalid", asset),
         _ => panic!("Should return ContractError::InvalidAsset"),
     }
 }

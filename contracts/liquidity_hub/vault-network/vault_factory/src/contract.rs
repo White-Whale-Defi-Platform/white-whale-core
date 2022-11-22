@@ -11,7 +11,7 @@ use crate::execute::{
 use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::CONFIG;
 
-const CONTRACT_NAME: &str = "vault_factory";
+const CONTRACT_NAME: &str = "white_whale-vault_factory";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -61,12 +61,13 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version > version {
+    if storage_version >= version {
         return Err(VaultFactoryError::MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,
@@ -79,11 +80,9 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Response;
-
-    use vault_network::vault_factory::MigrateMsg;
-
+    use crate::err::VaultFactoryError;
     use crate::tests::mock_instantiate::mock_instantiate;
+    use vault_network::vault_factory::MigrateMsg;
 
     use super::migrate;
 
@@ -92,10 +91,13 @@ mod test {
         // instantiate contract
         let (mut deps, env) = mock_instantiate(5, 6);
 
-        // migrate contract
-        let res = migrate(deps.as_mut(), env, MigrateMsg {}).unwrap();
+        let res = migrate(deps.as_mut(), env, MigrateMsg {});
 
-        assert_eq!(res, Response::new());
+        // should not be able to migrate as the version is lower
+        match res {
+            Err(VaultFactoryError::MigrateInvalidVersion { .. }) => (),
+            _ => panic!("should return VaultFactoryError::MigrateInvalidVersion"),
+        }
     }
 }
 

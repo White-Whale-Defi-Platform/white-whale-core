@@ -1,9 +1,9 @@
 use std::cmp::Ordering;
 use std::ops::Mul;
 
-use cosmwasm_bignumber::{Decimal256, Uint256};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, StdError, Uint128};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Uint128, Uint256};
+
 use terraswap::asset::Asset;
 use terraswap::pair::PoolFee;
 
@@ -14,7 +14,7 @@ pub fn compute_swap(
     ask_pool: Uint128,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-) -> SwapComputation {
+) -> StdResult<SwapComputation> {
     let offer_pool: Uint256 = Uint256::from(offer_pool);
     let ask_pool: Uint256 = ask_pool.into();
     let offer_amount: Uint256 = offer_amount.into();
@@ -33,12 +33,12 @@ pub fn compute_swap(
     // swap and protocol fee will be absorbed by the pool
     let return_amount: Uint256 = return_amount - swap_fee_amount - protocol_fee_amount;
 
-    SwapComputation {
-        return_amount: return_amount.into(),
-        spread_amount: spread_amount.into(),
-        swap_fee_amount: swap_fee_amount.into(),
-        protocol_fee_amount: protocol_fee_amount.into(),
-    }
+    Ok(SwapComputation {
+        return_amount: return_amount.try_into()?,
+        spread_amount: spread_amount.try_into()?,
+        swap_fee_amount: swap_fee_amount.try_into()?,
+        protocol_fee_amount: protocol_fee_amount.try_into()?,
+    })
 }
 
 /// Represents the swap computation values
@@ -55,7 +55,7 @@ pub fn compute_offer_amount(
     ask_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
-) -> OfferAmountComputation {
+) -> StdResult<OfferAmountComputation> {
     let offer_pool: Uint256 = offer_pool.into();
     let ask_pool: Uint256 = ask_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
@@ -84,12 +84,12 @@ pub fn compute_offer_amount(
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
 
-    OfferAmountComputation {
-        offer_amount: offer_amount.into(),
-        spread_amount: spread_amount.into(),
-        swap_fee_amount: swap_fee_amount.into(),
-        protocol_fee_amount: protocol_fee_amount.into(),
-    }
+    Ok(OfferAmountComputation {
+        offer_amount: offer_amount.try_into()?,
+        spread_amount: spread_amount.try_into()?,
+        swap_fee_amount: swap_fee_amount.try_into()?,
+        protocol_fee_amount: protocol_fee_amount.try_into()?,
+    })
 }
 
 /// Represents the offer amount computation values
@@ -152,7 +152,7 @@ pub fn assert_max_spread(
         let belief_price: Decimal256 = belief_price.into();
         let max_spread: Decimal256 = max_spread.into();
 
-        let expected_return = offer_amount / belief_price;
+        let expected_return = offer_amount * (Decimal256::one() / belief_price);
         let spread_amount = if expected_return > return_amount {
             expected_return - return_amount
         } else {
@@ -200,4 +200,22 @@ pub fn assert_slippage_tolerance(
     }
 
     Ok(())
+}
+
+/// Gets the protocol fee amount for the given asset_id
+pub fn get_protocol_fee_for_asset(
+    collected_protocol_fees: Vec<Asset>,
+    asset_id: String,
+) -> Uint128 {
+    let protocol_fee_asset = collected_protocol_fees
+        .iter()
+        .find(|&protocol_fee_asset| protocol_fee_asset.clone().get_id() == asset_id.clone())
+        .cloned();
+
+    // get the protocol fee for the given pool_asset
+    if let Some(protocol_fee_asset) = protocol_fee_asset {
+        protocol_fee_asset.amount
+    } else {
+        Uint128::zero()
+    }
 }

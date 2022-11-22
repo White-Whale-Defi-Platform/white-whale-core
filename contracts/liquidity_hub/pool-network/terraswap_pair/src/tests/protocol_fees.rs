@@ -1,11 +1,9 @@
 use crate::contract::{execute, instantiate, reply};
-use crate::error::ContractError;
 use crate::queries::query_protocol_fees;
-use crate::state::COLLECTED_PROTOCOL_FEES;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
-    Uint128, WasmMsg,
+    to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo};
@@ -102,8 +100,8 @@ fn test_protocol_fees() {
     );
     execute(deps.as_mut(), env, info, msg).unwrap();
 
-    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
@@ -147,7 +145,9 @@ fn test_protocol_fees() {
     );
     execute(deps.as_mut(), env, info, msg).unwrap();
 
-    let expected_ret_amount = Uint128::from(1_904_760_000u128);
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.335600 = (20000 - 0.952380 ) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(952_335_600u128);
     let new_expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // the new protocol fees should have increased from the previous time
@@ -158,7 +158,7 @@ fn test_protocol_fees() {
     assert!(new_protocol_fees_for_token.first().unwrap().amount > expected_protocol_fee_amount);
     assert_eq!(
         new_protocol_fees_for_token.first().unwrap().amount,
-        new_expected_protocol_fee_amount
+        new_expected_protocol_fee_amount + expected_protocol_fee_amount // fees collected in the first + second swap
     );
     let protocol_fees_for_native =
         query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
@@ -259,10 +259,10 @@ fn test_collect_protocol_fees_successful() {
     );
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
-    // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
-    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+    let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // second swap, token -> native
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -278,14 +278,17 @@ fn test_collect_protocol_fees_successful() {
     let info = mock_info("asset0000", &[]);
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
-    let expected_ret_amount = Uint128::from(787_500_000u128);
-    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.1%
+    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
+    // 2362.612505 = (31500 - 0) * 1500 / (18500 - 0.952380 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(2_362_612_505u128);
+    let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // as we swapped both native and token, we should have collected fees in both of them
     let protocol_fees_for_token =
         query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
             .unwrap()
             .fees;
+
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_token_amount
@@ -515,88 +518,66 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
 }
 
 #[test]
-fn test_collect_protocol_fees_unsuccessful_asset_missmatch() {
-    let mut deps = mock_dependencies(&[]);
-
-    deps.querier.with_token_balances(&[
-        (
-            &"asset1".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(10_000u128))],
-        ),
-        (
-            &"asset2".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(10_000u128))],
-        ),
-        (
-            &"asset3".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(10_000u128))],
-        ),
-    ]);
-
-    // this should initialize COLLECTED_PROTOCOL_FEES with 2 assets only
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "asset1".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset2".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 1000u128),
-            },
-            swap_fee: Fee {
-                share: Decimal::from_ratio(3u128, 1000u128),
-            },
+fn protocol_fees() {
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(50),
         },
-        fee_collector_addr: "collector".to_string(),
+        swap_fee: Fee {
+            share: Decimal::percent(50),
+        },
     };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
 
-    let env = mock_env();
-    let info = mock_info("addr0000", &[]);
-    // we can just call .unwrap() to assert this was a success
-    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(200),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(20),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
 
-    // inject some invalid protocol fees
-    COLLECTED_PROTOCOL_FEES
-        .save(
-            &mut deps.storage,
-            &vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "asset1".to_string(),
-                    },
-                    amount: Uint128::zero(),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "asset2".to_string(),
-                    },
-                    amount: Uint128::zero(),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "asset3".to_string(),
-                    },
-                    amount: Uint128::zero(),
-                },
-            ],
-        )
-        .unwrap();
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(200),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
 
-    // swap native -> token
-    let msg = ExecuteMsg::CollectProtocolFees {};
-    let env = mock_env();
-    let info = mock_info("addr0000", &[]);
-    let res = execute(deps.as_mut(), env.clone(), info, msg);
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(40),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
 
-    match res {
-        Ok(_) => panic!("should return ContractError::AssetMismatch"),
-        Err(ContractError::AssetMismatch {}) => (),
-        _ => panic!("should return ContractError::AssetMismatch"),
-    }
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+    };
+    assert_eq!(protocol_fee.is_valid(), Ok(()));
 }

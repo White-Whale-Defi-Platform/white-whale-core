@@ -7,9 +7,10 @@ use semver::Version;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::{Config, CONFIG};
+use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, queries};
 
-const CONTRACT_NAME: &str = "crates.io:ww-fee_collector";
+const CONTRACT_NAME: &str = "white_whale-fee_collector";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -62,13 +63,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version < version {
-        set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    if storage_version >= version {
+        return Err(MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
     }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }

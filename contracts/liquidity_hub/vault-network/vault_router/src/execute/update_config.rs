@@ -114,7 +114,7 @@ mod tests {
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
                 ("owner", &mock_creator().sender.into_string()),
-                ("vault_factory", "factory")
+                ("vault_factory", "factory"),
             ])
         );
 
@@ -123,7 +123,7 @@ mod tests {
             CONFIG.load(&deps.storage).unwrap(),
             Config {
                 owner: mock_creator().sender,
-                vault_factory: Addr::unchecked("factory")
+                vault_factory: Addr::unchecked("factory"),
             }
         );
     }

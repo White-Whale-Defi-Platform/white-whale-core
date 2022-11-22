@@ -31,6 +31,9 @@ pub enum VaultRouterError {
         output_amount: Uint128,
         required_amount: Uint128,
     },
+
+    #[error("Nested flash-loans are disabled")]
+    NestedFlashLoansDisabled {},
 }
 
 impl From<semver::Error> for VaultRouterError {

@@ -1,4 +1,4 @@
-use cosmwasm_std::{OverflowError, Uint128};
+use cosmwasm_std::{ConversionOverflowError, DivideByZeroError, OverflowError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
@@ -14,6 +14,12 @@ pub enum VaultError {
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
+
+    #[error("{0}")]
+    ConversionOverflowError(#[from] ConversionOverflowError),
+
+    #[error("{0}")]
+    DivideByZeroError(#[from] DivideByZeroError),
 
     #[error("Deposits are not enabled")]
     DepositsDisabled {},

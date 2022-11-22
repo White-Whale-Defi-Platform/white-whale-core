@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 
 use white_whale::fee::Fee;
@@ -102,6 +102,20 @@ pub struct PoolFee {
     pub swap_fee: Fee,
 }
 
+impl PoolFee {
+    /// Checks that the given [PoolFee] is valid, i.e. the fees provided are valid, and they don't
+    /// exceed 100% together
+    pub fn is_valid(&self) -> StdResult<()> {
+        self.protocol_fee.is_valid()?;
+        self.swap_fee.is_valid()?;
+
+        if self.protocol_fee.share.checked_add(self.swap_fee.share)? >= Decimal::percent(100) {
+            return Err(StdError::generic_err("Invalid fees"));
+        }
+        Ok(())
+    }
+}
+
 #[cw_serde]
 pub struct Config {
     pub owner: Addr,
@@ -115,7 +129,7 @@ pub type ConfigResponse = Config;
 /// We define a custom struct for each query response
 #[cw_serde]
 pub struct PoolResponse {
-    pub assets: [Asset; 2],
+    pub assets: Vec<Asset>,
     pub total_share: Uint128,
 }
 

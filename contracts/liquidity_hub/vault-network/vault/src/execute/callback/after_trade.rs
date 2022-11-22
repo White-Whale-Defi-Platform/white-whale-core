@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128};
+use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 use terraswap::asset::AssetInfo;
 
@@ -34,18 +34,14 @@ pub fn after_trade(
     };
 
     // check that balance is greater than expected
-    let protocol_fee = Uint128::from(
-        config
-            .fees
-            .protocol_fee
-            .compute(cosmwasm_bignumber::Uint256::from(loan_amount)),
-    );
-    let flash_loan_fee = Uint128::from(
+    let protocol_fee =
+        Uint128::try_from(config.fees.protocol_fee.compute(Uint256::from(loan_amount)))?;
+    let flash_loan_fee = Uint128::try_from(
         config
             .fees
             .flash_loan_fee
-            .compute(cosmwasm_bignumber::Uint256::from(loan_amount)),
-    );
+            .compute(Uint256::from(loan_amount)),
+    )?;
 
     let required_amount = old_balance
         .checked_add(protocol_fee)?

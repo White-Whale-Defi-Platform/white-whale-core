@@ -1,10 +1,10 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-    StdResult, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
 
 use crate::state::{Config, CONFIG};
 
+use crate::error::ContractError;
 use cw20::Cw20ExecuteMsg;
 use terraswap::asset::{Asset, AssetInfo, PairInfo};
 use terraswap::pair::ExecuteMsg as PairExecuteMsg;
@@ -19,9 +19,9 @@ pub fn execute_swap_operation(
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     if env.contract.address != info.sender {
-        return Err(StdError::generic_err("unauthorized"));
+        return Err(ContractError::Unauthorized {});
     }
 
     let messages: Vec<CosmosMsg> = match operation {
@@ -71,7 +71,7 @@ pub fn asset_into_swap_msg(
     offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
-) -> StdResult<CosmosMsg> {
+) -> Result<CosmosMsg, ContractError> {
     match offer_asset.info.clone() {
         AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: pair_contract.to_string(),
@@ -92,8 +92,7 @@ pub fn asset_into_swap_msg(
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: to_binary(&PairExecuteMsg::Swap {
-                    offer_asset,
+                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread,
                     to,
