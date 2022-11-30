@@ -451,6 +451,7 @@ fn create_ibc_tokens_pair() {
     );
 }
 
+#[cfg(feature = "injective")]
 #[test]
 fn create_pair_ethereum_asset_and_ibc_token() {
     let mut deps = mock_dependencies(&[
@@ -535,7 +536,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                 .unwrap(),
                 code_id: 321u64,
                 funds: vec![],
-                label: "uusd-ibc/2739...5EB2 pair".to_string(),
+                label: "peggy0x87a...1B5-ibc/2739...5EB2 pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
             .into(),

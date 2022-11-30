@@ -26,11 +26,11 @@ const IBC_HASH_TAKE: usize = 4usize;
 const IBC_HASH_SIZE: usize = 64usize;
 const IBC_PREFIX: &str = "ibc";
 
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 const PEGGY_PREFIX: &str = "peggy";
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 const PEGGY_ADDR_SIZE: usize = 47usize;
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 const PEGGY_ADDR_TAKE: usize = 3usize;
 
 impl Asset {
@@ -204,7 +204,7 @@ impl AssetInfo {
             )?
             .symbol),
             AssetInfo::NativeToken { denom } => {
-                //#[cfg(feature = "injective")]
+                #[cfg(feature = "injective")]
                 {
                     if is_ethereum_bridged_asset(&denom) {
                         return get_ethereum_bridged_asset_label(denom.clone());
@@ -231,13 +231,13 @@ fn is_ibc_token(denom: &str) -> bool {
     false
 }
 
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 /// Verifies if the given denom is an Ethereum bridged asset on Injective.
 fn is_ethereum_bridged_asset(denom: &str) -> bool {
     denom.starts_with(PEGGY_PREFIX) && denom.len() == PEGGY_ADDR_SIZE
 }
 
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 /// Builds the label for an Ethereum bridged asset denom in such way that it returns a label like "peggy0x123..456".
 /// Call after [is_ethereum_bridged_asset] has been successful
 fn get_ethereum_bridged_asset_label(denom: String) -> StdResult<String> {

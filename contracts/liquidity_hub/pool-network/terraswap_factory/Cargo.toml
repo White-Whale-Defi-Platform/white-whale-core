@@ -23,6 +23,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
+injective = ["terraswap/injective"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]

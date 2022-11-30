@@ -446,7 +446,7 @@ fn get_token_asset_label() {
     assert_eq!(asset_label, "mAAPL");
 }
 
-//#[cfg(feature = "injective")]
+#[cfg(feature = "injective")]
 #[test]
 fn get_peggy_asset_label() {
     let deps = mock_dependencies(&[]);
