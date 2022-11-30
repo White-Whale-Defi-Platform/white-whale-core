@@ -11,11 +11,6 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-#[cfg(feature = "injective")]
-use crate::asset::get_ethereum_bridged_asset_label;
-#[cfg(feature = "injective")]
-use crate::asset::is_ethereum_bridged_asset;
-
 #[test]
 fn token_balance_querier() {
     let mut deps = mock_dependencies(&[]);
@@ -451,24 +446,7 @@ fn get_token_asset_label() {
     assert_eq!(asset_label, "mAAPL");
 }
 
-#[cfg(feature = "injective")]
-#[test]
-pub fn test_ethereum_bridged_assets() {
-    let peggy = "peggy0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
-    assert!(is_ethereum_bridged_asset(&peggy));
-    let label = get_ethereum_bridged_asset_label(peggy.to_string()).unwrap();
-    assert_eq!(label, "peggy0x71C...76F");
-
-    let peggy = "peggy0xf9152067989BDc8783fF586624124C05A529A5D1";
-    assert!(is_ethereum_bridged_asset(&peggy));
-    let label = get_ethereum_bridged_asset_label(peggy.to_string()).unwrap();
-    assert_eq!(label, "peggy0xf91...5D1");
-
-    let not_peggy = "ibc/E8AC6B792CDE60AB208CA060CA010A3881F682A7307F624347AB71B6A0B0BF89";
-    assert!(!is_ethereum_bridged_asset(not_peggy));
-}
-
-#[cfg(feature = "injective")]
+//#[cfg(feature = "injective")]
 #[test]
 fn get_peggy_asset_label() {
     let deps = mock_dependencies(&[]);
@@ -477,4 +455,16 @@ fn get_peggy_asset_label() {
     };
     let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
     assert_eq!(asset_label, "peggy0xf91...5D1");
+
+    let asset_info = AssetInfo::NativeToken {
+        denom: "peggy0x71C7656EC7ab88b098defB751B7401B5f6d8976F".to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "peggy0x71C...76F");
+
+    let not_peggy_asset_info = AssetInfo::NativeToken {
+        denom: "ibc/E8AC6B792CDE60AB208CA060CA010A3881F682A7307F624347AB71B6A0B0BF89".to_string(),
+    };
+    let asset_label = not_peggy_asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "ibc/E8AC...BF89");
 }
