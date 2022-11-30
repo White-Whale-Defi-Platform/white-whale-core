@@ -452,6 +452,112 @@ fn create_ibc_tokens_pair() {
 }
 
 #[test]
+fn create_pair_ethereum_asset_and_ibc_token() {
+    let mut deps = mock_dependencies(&[
+        coin(
+            10u128,
+            "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5".to_string(),
+        ),
+        coin(
+            10u128,
+            "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+        ),
+    ]);
+    deps = init(deps);
+    deps.querier.with_terraswap_factory(
+        &[],
+        &[
+            (
+                "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5".to_string(),
+                6u8,
+            ),
+            (
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+                6u8,
+            ),
+        ],
+    );
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+                .to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_pair"),
+            attr("pair", "peggy0x87a...1B5-ibc/2739...5EB2"),
+            attr("pair_label", "peggy0x87a...1B5-ibc/2739...5EB2 pair"),
+        ]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 1,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                    asset_decimals: [6u8, 6u8],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                    },
+                    fee_collector_addr: "collector".to_string(),
+                })
+                .unwrap(),
+                code_id: 321u64,
+                funds: vec![],
+                label: "uusd-ibc/2739...5EB2 pair".to_string(),
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
+            }
+            .into(),
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_PAIR_INFO.load(&deps.storage).unwrap(),
+        TmpPairInfo {
+            asset_infos: raw_infos.clone(),
+            pair_key: pair_key(&raw_infos),
+            asset_decimals: [6u8, 6u8],
+        }
+    );
+}
+
+#[test]
 fn fail_to_create_same_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);

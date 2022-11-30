@@ -26,6 +26,13 @@ const IBC_HASH_TAKE: usize = 4usize;
 const IBC_HASH_SIZE: usize = 64usize;
 const IBC_PREFIX: &str = "ibc";
 
+#[cfg(feature = "injective")]
+const PEGGY_PREFIX: &str = "peggy";
+#[cfg(feature = "injective")]
+const PEGGY_ADDR_SIZE: usize = 47usize;
+#[cfg(feature = "injective")]
+const PEGGY_ADDR_TAKE: usize = 3usize;
+
 impl Asset {
     pub fn is_native_token(&self) -> bool {
         self.info.is_native_token()
@@ -197,6 +204,12 @@ impl AssetInfo {
             )?
             .symbol),
             AssetInfo::NativeToken { denom } => {
+                #[cfg(feature = "injective")]
+                {
+                    if is_ethereum_bridged_asset(&denom) {
+                        return get_ethereum_bridged_asset_label(denom.clone());
+                    }
+                }
                 if is_ibc_token(&denom) {
                     get_ibc_token_label(denom)
                 } else {
@@ -216,6 +229,29 @@ fn is_ibc_token(denom: &str) -> bool {
     }
 
     false
+}
+
+#[cfg(feature = "injective")]
+/// Verifies if the given denom is an Ethereum bridged asset on Injective.
+pub fn is_ethereum_bridged_asset(denom: &str) -> bool {
+    denom.starts_with(PEGGY_PREFIX) && denom.len() == PEGGY_ADDR_SIZE
+}
+
+#[cfg(feature = "injective")]
+/// Builds the label for an Ethereum bridged asset denom in such way that it returns a label like "peggy0x123..456".
+/// Call after [is_ethereum_bridged_asset] has been successful
+pub fn get_ethereum_bridged_asset_label(denom: String) -> StdResult<String> {
+    let ethereum_asset_prefix = format!("{}{}", PEGGY_PREFIX, "0x");
+    let mut asset_address = denom
+        .strip_prefix(ethereum_asset_prefix.as_str())
+        .ok_or_else(|| StdError::generic_err("Splitting ethereum bridged asset denom failed"))?
+        .to_string();
+
+    asset_address.drain(PEGGY_ADDR_TAKE..asset_address.len() - PEGGY_ADDR_TAKE);
+    asset_address.insert_str(PEGGY_ADDR_TAKE, "...");
+    asset_address.insert_str(0, ethereum_asset_prefix.as_str());
+
+    Ok(asset_address)
 }
 
 /// Builds the label for an ibc token denom in such way that it returns a label like "ibc/1234...5678".
