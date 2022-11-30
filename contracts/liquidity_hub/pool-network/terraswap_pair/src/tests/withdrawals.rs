@@ -48,6 +48,9 @@ fn withdraw_liquidity() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -197,6 +200,9 @@ fn test_withdrawal_unauthorized() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -257,6 +263,9 @@ fn test_withdrawal_wrong_message() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),

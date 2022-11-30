@@ -53,6 +53,9 @@ fn test_protocol_fees() {
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -211,6 +214,9 @@ fn test_collect_protocol_fees_successful() {
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -409,6 +415,9 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -526,6 +535,9 @@ fn protocol_fees() {
         swap_fee: Fee {
             share: Decimal::percent(50),
         },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
     };
     assert_eq!(
         protocol_fee.is_valid(),
@@ -539,6 +551,9 @@ fn protocol_fees() {
         swap_fee: Fee {
             share: Decimal::percent(20),
         },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
     };
     assert_eq!(
         protocol_fee.is_valid(),
@@ -551,6 +566,9 @@ fn protocol_fees() {
         },
         swap_fee: Fee {
             share: Decimal::percent(200),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
         },
     };
     assert_eq!(
@@ -565,6 +583,9 @@ fn protocol_fees() {
         swap_fee: Fee {
             share: Decimal::percent(60),
         },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
     };
     assert_eq!(
         protocol_fee.is_valid(),
@@ -577,6 +598,9 @@ fn protocol_fees() {
         },
         swap_fee: Fee {
             share: Decimal::percent(60),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
         },
     };
     assert_eq!(protocol_fee.is_valid(), Ok(()));

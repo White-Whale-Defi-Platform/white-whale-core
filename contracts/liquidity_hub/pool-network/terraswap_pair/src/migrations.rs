@@ -1,8 +1,14 @@
-use cosmwasm_std::{CanonicalAddr, DepsMut, StdError, Uint128};
+use cosmwasm_schema::cw_serde;
+use cosmwasm_std::{Addr, CanonicalAddr, Decimal, DepsMut, StdError, Uint128};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
 use terraswap::asset::AssetInfo;
+use terraswap::pair::{Config, FeatureToggle};
+use white_whale::fee::Fee;
+
+use crate::state::CONFIG;
 
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`]
@@ -54,6 +60,43 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
     // back into the state
     let pair_info = PAIR_INFO.load(deps.storage)?;
     PAIR_INFO.save(deps.storage, &pair_info)?;
+
+    Ok(())
+}
+
+pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
+    #[cw_serde]
+    struct ConfigV110 {
+        pub owner: Addr,
+        pub fee_collector_addr: Addr,
+        pub pool_fees: PoolFeeV110,
+        pub feature_toggle: FeatureToggle,
+    }
+
+    #[cw_serde]
+    struct PoolFeeV110 {
+        pub protocol_fee: Fee,
+        pub swap_fee: Fee,
+    }
+
+    const CONFIG_V110: Item<ConfigV110> = Item::new("config");
+    let config_v110 = CONFIG_V110.load(deps.storage)?;
+
+    // Add burn fee to config
+    let config = Config {
+        owner: config_v110.owner,
+        fee_collector_addr: config_v110.fee_collector_addr,
+        pool_fees: terraswap::pair::PoolFee {
+            protocol_fee: config_v110.pool_fees.protocol_fee,
+            swap_fee: config_v110.pool_fees.swap_fee,
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        feature_toggle: config_v110.feature_toggle,
+    };
+
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(())
 }

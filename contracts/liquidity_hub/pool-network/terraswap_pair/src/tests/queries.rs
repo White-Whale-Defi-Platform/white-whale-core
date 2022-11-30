@@ -41,6 +41,9 @@ fn test_simulations_asset_missmatch() {
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -122,6 +125,9 @@ fn test_query_pool() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),

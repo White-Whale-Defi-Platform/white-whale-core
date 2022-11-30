@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    from_binary, to_binary, Addr, Api, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
@@ -43,6 +43,9 @@ fn proper_initialization() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -138,6 +141,9 @@ fn test_initialization_invalid_fees() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -178,6 +184,9 @@ fn can_migrate_contract() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -399,6 +408,9 @@ fn test_update_config_unsuccessful() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -418,6 +430,9 @@ fn test_update_config_unsuccessful() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         }),
         feature_toggle: None,
@@ -477,6 +492,9 @@ fn test_update_config_successful() {
             swap_fee: Fee {
                 share: Decimal::zero(),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -503,6 +521,9 @@ fn test_update_config_successful() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(3u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         }),
         feature_toggle: None,
@@ -545,4 +566,15 @@ fn test_assert_slippage_tolerance_invalid_ratio() {
         Err(ContractError::Std { .. }) => (),
         _ => panic!("should return ContractError::Std"),
     }
+}
+
+#[test]
+fn zero_address() {
+    let mut deps = mock_dependencies(&[]);
+
+    let addr = deps.api.addr_canonicalize("0x0").unwrap();
+    println!("addr: {:?}", addr);
+
+    let addr = deps.api.addr_validate(&"0x0".to_string()).unwrap();
+    println!("addr: {:?}", addr);
 }

@@ -29,15 +29,18 @@ pub fn compute_swap(
     let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
+    let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-    // swap and protocol fee will be absorbed by the pool
-    let return_amount: Uint256 = return_amount - swap_fee_amount - protocol_fee_amount;
+    // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
+    let return_amount: Uint256 =
+        return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
 
     Ok(SwapComputation {
         return_amount: return_amount.try_into()?,
         spread_amount: spread_amount.try_into()?,
         swap_fee_amount: swap_fee_amount.try_into()?,
         protocol_fee_amount: protocol_fee_amount.try_into()?,
+        burn_fee_amount: burn_fee_amount.try_into()?,
     })
 }
 
@@ -48,6 +51,7 @@ pub struct SwapComputation {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 pub fn compute_offer_amount(

@@ -115,10 +115,14 @@
         "description": "Fees used by the pools on the pool network",
         "type": "object",
         "required": [
+          "burn_fee",
           "protocol_fee",
           "swap_fee"
         ],
         "properties": {
+          "burn_fee": {
+            "$ref": "#/definitions/Fee"
+          },
           "protocol_fee": {
             "$ref": "#/definitions/Fee"
           },
@@ -431,10 +435,14 @@
         "description": "Fees used by the pools on the pool network",
         "type": "object",
         "required": [
+          "burn_fee",
           "protocol_fee",
           "swap_fee"
         ],
         "properties": {
+          "burn_fee": {
+            "$ref": "#/definitions/Fee"
+          },
           "protocol_fee": {
             "$ref": "#/definitions/Fee"
           },
@@ -719,10 +727,14 @@
           "description": "Fees used by the pools on the pool network",
           "type": "object",
           "required": [
+            "burn_fee",
             "protocol_fee",
             "swap_fee"
           ],
           "properties": {
+            "burn_fee": {
+              "$ref": "#/definitions/Fee"
+            },
             "protocol_fee": {
               "$ref": "#/definitions/Fee"
             },

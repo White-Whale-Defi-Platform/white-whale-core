@@ -100,6 +100,7 @@ pub struct FeatureToggle {
 pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
+    pub burn_fee: Fee,
 }
 
 impl PoolFee {
@@ -108,8 +109,9 @@ impl PoolFee {
     pub fn is_valid(&self) -> StdResult<()> {
         self.protocol_fee.is_valid()?;
         self.swap_fee.is_valid()?;
+        self.burn_fee.is_valid()?;
 
-        if self.protocol_fee.share.checked_add(self.swap_fee.share)? >= Decimal::percent(100) {
+        if self.protocol_fee.share.checked_add(self.swap_fee.share)?.checked_add(self.burn_fee.share)? >= Decimal::percent(100) {
             return Err(StdError::generic_err("Invalid fees"));
         }
         Ok(())

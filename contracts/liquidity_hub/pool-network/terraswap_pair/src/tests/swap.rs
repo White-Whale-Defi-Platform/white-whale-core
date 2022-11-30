@@ -28,6 +28,9 @@ fn test_compute_swap_with_huge_pool_variance() {
         swap_fee: Fee {
             share: Decimal::percent(1u64),
         },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
     };
 
     assert_eq!(
@@ -80,6 +83,9 @@ fn try_native_to_token() {
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -295,6 +301,7 @@ fn try_native_to_token() {
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
+            attr("burn_fee_amount", Uint128::zero().to_string(),),
         ]
     );
 
@@ -353,6 +360,9 @@ fn try_swap_invalid_token() {
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -451,6 +461,9 @@ fn try_token_to_native() {
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -684,6 +697,7 @@ fn try_token_to_native() {
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
+            attr("burn_fee_amount", Uint128::zero().to_string(),)
         ]
     );
 
@@ -759,6 +773,9 @@ fn test_swap_to_third_party() {
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),
