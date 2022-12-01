@@ -6,7 +6,9 @@ use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use semver::Version;
 
-use terraswap::asset::Asset;
+#[cfg(feature = "injective")]
+use terraswap::asset::PEGGY_PREFIX;
+use terraswap::asset::{Asset, IBC_PREFIX};
 use vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
@@ -47,21 +49,26 @@ pub fn instantiate(
     };
     CONFIG.save(deps.storage, &config)?;
 
+    let asset_label: String = msg.asset_info.clone().get_label(&deps.as_ref())?;
+
     // cw20 asset symbols are 3-12 characters,
     // so we take the first 8 characters of the symbol and append "uLP-" to it
+    let mut lp_symbol = format!("uLP-{}", asset_label.chars().take(8).collect::<String>());
+
     // in case it's an ibc token, strip away everything from the '/' in 'ibc/'. The resulting
     // lp_symbol would be uLP-ibc in that case.
-    let lp_symbol = format!(
-        "uLP-{}",
-        msg.asset_info
-            .clone()
-            .get_label(&deps.as_ref())?
-            .chars()
-            .take(8)
-            .collect::<String>()
-            .splitn(2, '/')
-            .collect::<Vec<_>>()[0]
-    );
+    if asset_label.starts_with(IBC_PREFIX) {
+        lp_symbol = lp_symbol.splitn(2, '/').collect::<Vec<_>>()[0].to_string();
+    }
+
+    #[cfg(feature = "injective")]
+    {
+        // in case it is an Ethereum bridged (peggy) asset on Injective, strip away everything from
+        // the "0x" in 'peggy0x...'. The resulting lp_symbol would be uLP-peggy in that case.
+        if asset_label.starts_with(PEGGY_PREFIX) {
+            lp_symbol = lp_symbol.splitn(2, "0x").collect::<Vec<_>>()[0].to_string();
+        }
+    }
 
     let lp_label = format!(
         "WW Vault {} LP token",

@@ -303,4 +303,48 @@ mod tests {
                 })
         )
     }
+
+    #[cfg(feature = "injective")]
+    #[test]
+    fn can_create_peggy_token_vault() {
+        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+            denom: "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5".to_string(),
+        };
+
+        // create a vault
+        let (res, _, env) = mock_execute(
+            5,
+            6,
+            vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info: asset_info.clone(),
+                fees: get_fees(),
+            },
+        );
+
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attribute("method", "create_vault")
+                .add_submessage(SubMsg {
+                    id: INSTANTIATE_VAULT_REPLY_ID,
+                    reply_on: ReplyOn::Success,
+                    gas_limit: None,
+                    msg: WasmMsg::Instantiate {
+                        admin: Some(env.contract.address.to_string()),
+                        code_id: 5,
+                        msg: to_binary(&vault_network::vault::InstantiateMsg {
+                            owner: env.contract.address.to_string(),
+                            asset_info,
+                            token_id: 6,
+                            vault_fees: get_fees(),
+                            fee_collector_addr: "fee_collector".to_string()
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                        label: "White Whale peggy0x87a...1B5 Vault".to_string()
+                    }
+                    .into()
+                })
+        )
+    }
 }

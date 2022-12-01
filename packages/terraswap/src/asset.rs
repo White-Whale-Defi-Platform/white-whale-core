@@ -24,10 +24,10 @@ impl fmt::Display for Asset {
 pub const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000u128);
 const IBC_HASH_TAKE: usize = 4usize;
 const IBC_HASH_SIZE: usize = 64usize;
-const IBC_PREFIX: &str = "ibc";
+pub const IBC_PREFIX: &str = "ibc";
 
 #[cfg(feature = "injective")]
-const PEGGY_PREFIX: &str = "peggy";
+pub const PEGGY_PREFIX: &str = "peggy";
 #[cfg(feature = "injective")]
 const PEGGY_ADDR_SIZE: usize = 47usize;
 #[cfg(feature = "injective")]
