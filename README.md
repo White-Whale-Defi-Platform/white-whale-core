@@ -1,7 +1,7 @@
 <a href="https://whitewhale.money/">
   <h1 align="center">
     <picture>
-      <img alt="Flutter" src="https://miro.medium.com/max/1400/1*29OYRJqqddosWtWo-c3TYQ.png">
+      <img alt="White Whale Migaloo" src="https://miro.medium.com/max/1400/1*29OYRJqqddosWtWo-c3TYQ.png">
     </picture>
   </h1>
 </a>
@@ -21,7 +21,7 @@
 
 ## Getting started
 
-To get started with `migaloo-core`, we encourage you to go through our [contributing guide](./CONTRIBUTING.md) to see the 
+To get started with `migaloo-core`, please go through the [contributing guide](./CONTRIBUTING.md) to see the 
 different ways to contribute to the project.
 
 ## Resources
@@ -40,7 +40,8 @@ in the [documentation](https://ww0-1.gitbook.io/migaloo-docs/smart-contracts/dep
 
 ## Building and Deploying Migaloo
 
-To build and deploy Migaloo´s smart contracts we have created a series of scripts under `scripts/`. You need at least Rust v1.64.0 to compile the contracts. 
+To build and deploy Migaloo´s smart contracts there are a series of deployment scripts under `scripts/`. You need at 
+least Rust v1.65.0 to compile the contracts. 
 
 ### Build scripts
 
@@ -113,7 +114,7 @@ scripts/deployment/deploy_pool-sh -c juno -p scripts/deployment/input/pool.json
 scripts/deployment/deploy_vault-sh -c juno -v scripts/deployment/input/vault.json
 ```
 
-## Testing
+## Testing Migaloo
 
 To run the tests, run `cargo test`. You can also run `cargo tarpaulin -v` to get test code coverage.
 
