@@ -1,6 +1,6 @@
 [package]
 name = "terraswap"
-version = "2.8.0"
+version = "2.8.1"
 authors = [
 	"Terraform Labs, PTE.",
 	"DELIGHT LABS",
@@ -19,6 +19,7 @@ documentation = "https://docs.terraswap.io"
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+injective = []
 
 [dependencies]
 uint = "0.9.4"

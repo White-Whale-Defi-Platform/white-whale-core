@@ -16,6 +16,7 @@ publish.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
+injective = ["terraswap/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]

@@ -445,3 +445,26 @@ fn get_token_asset_label() {
     // the Wasm::Smarty query for TokenInfo on the mock_querier returns mAAPL
     assert_eq!(asset_label, "mAAPL");
 }
+
+#[cfg(feature = "injective")]
+#[test]
+fn get_peggy_asset_label() {
+    let deps = mock_dependencies(&[]);
+    let asset_info = AssetInfo::NativeToken {
+        denom: "peggy0xf9152067989BDc8783fF586624124C05A529A5D1".to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "peggy0xf91...5D1");
+
+    let asset_info = AssetInfo::NativeToken {
+        denom: "peggy0x71C7656EC7ab88b098defB751B7401B5f6d8976F".to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "peggy0x71C...76F");
+
+    let not_peggy_asset_info = AssetInfo::NativeToken {
+        denom: "ibc/E8AC6B792CDE60AB208CA060CA010A3881F682A7307F624347AB71B6A0B0BF89".to_string(),
+    };
+    let asset_label = not_peggy_asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "ibc/E8AC...BF89");
+}
