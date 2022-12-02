@@ -151,7 +151,10 @@ pub fn execute_swap_operations(
     assert_operations(&operations)?;
 
     let to = if let Some(to) = to { to } else { sender };
-    let target_asset_info = operations.last().unwrap().get_target_asset_info();
+    let target_asset_info = operations
+        .last()
+        .ok_or_else(|| ContractError::Std(StdError::generic_err("Couldn't get swap operation")))?
+        .get_target_asset_info();
 
     let mut operation_index = 0;
     let mut messages: Vec<CosmosMsg> = operations
@@ -317,8 +320,7 @@ fn reverse_simulate_swap_operations(
                     ask_amount,
                     offer_asset_info,
                     ask_asset_info,
-                )
-                .unwrap()
+                )?
             }
         }
     }
