@@ -114,9 +114,11 @@ To run the tests, run `cargo test`. You can also run `cargo tarpaulin -v` to get
 
 ## Disclaimer
 
-Migaloo core contracts are not audited yet in their current form, though most of the code has been audited and heavily used in the past, namely White Whale's v1 and TerraSwap. We plan the audit the code once the IBC components are ready, as they can potentialy introduce changes on the existing contracts.
-
 **Use the contracts and the White Whale app at your own risk!**
+
+## Audit
+
+Migaloo core contracts have been audited by [SCV-Security](https://www.scv.services/). The report can be found [here](https://github.com/SCV-Security/PublicReports/blob/main/CW/WhiteWhale/White%20Whale%20-%20Migaloo%20Audit%20Report%20v1.0.pdf).
 
 ## Contributing
 
