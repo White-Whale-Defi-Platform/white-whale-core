@@ -33,6 +33,11 @@ different ways to contribute to the project.
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
 6. [Telegram](https://t.me/whitewhaleofficial)
 
+## Deployed contracts
+
+White Whale Migaloo is a protocol that exists across multiple chains. You can find contract addresses for different chain deployments 
+in the [documentation](https://ww0-1.gitbook.io/migaloo-docs/smart-contracts/deployments).
+
 ## Building and Deploying Migaloo
 
 To build and deploy Migaloo´s smart contracts we have created a series of scripts under `scripts/`. You need at least Rust v1.64.0 to compile the contracts. 
