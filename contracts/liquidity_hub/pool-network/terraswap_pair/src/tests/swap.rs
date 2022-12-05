@@ -5,8 +5,8 @@ use crate::queries::query_protocol_fees;
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg,
+    attr, coins, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo};
@@ -133,6 +133,7 @@ fn try_native_to_token() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
@@ -152,6 +153,23 @@ fn try_native_to_token() {
         .unwrap()
         .checked_sub(expected_burn_fee_amount)
         .unwrap();
+
+    // since there is a burn_fee on the PoolFee, check burn message
+    // since we swapped to a cw20 token, the burn message should be a Cw20ExecuteMsg::Burn
+    let expected_burn_msg = SubMsg {
+        id: 0,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Burn {
+                amount: expected_burn_fee_amount,
+            })
+            .unwrap(),
+            funds: vec![],
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
+    };
+    assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
 
     // as we swapped native to token, we accumulate the protocol fees in token
     let protocol_fees_for_token =
@@ -288,7 +306,6 @@ fn try_native_to_token() {
             .abs()
             < 3i128
     );
-
     assert!(
         (expected_burn_fee_amount.u128() as i128
             - reverse_simulation_res.burn_fee_amount.u128() as i128)
@@ -474,7 +491,7 @@ fn try_token_to_native() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
             burn_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::from_ratio(1u128, 1000u128),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -536,6 +553,7 @@ fn try_token_to_native() {
     let info = mock_info("asset0000", &[]);
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
@@ -547,11 +565,26 @@ fn try_token_to_native() {
         .unwrap();
     let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+    let expected_burn_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_swap_fee_amount)
         .unwrap()
         .checked_sub(expected_protocol_fee_amount)
+        .unwrap()
+        .checked_sub(expected_burn_fee_amount)
         .unwrap();
+
+    // since there is a burn_fee on the PoolFee, check burn message
+    // since we swapped to a native token, the burn message should be a BankMsg::Burn
+    let expected_burn_msg = SubMsg {
+        id: 0,
+        msg: CosmosMsg::Bank(BankMsg::Burn {
+            amount: coins(expected_burn_fee_amount.u128(), "uusd"),
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
+    };
+    assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
 
     // as we swapped token to native, we accumulate the protocol fees in native
     let protocol_fees_for_native =
@@ -623,6 +656,7 @@ fn try_token_to_native() {
 
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
+    assert_eq!(expected_burn_fee_amount, simulation_res.burn_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
     assert_eq!(
         expected_protocol_fee_amount,
@@ -684,10 +718,15 @@ fn try_token_to_native() {
             .abs()
             < 3i128
     );
-
     assert!(
         (expected_protocol_fee_amount.u128() as i128
             - reverse_simulation_res.protocol_fee_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
+    assert!(
+        (expected_burn_fee_amount.u128() as i128
+            - reverse_simulation_res.burn_fee_amount.u128() as i128)
             .abs()
             < 3i128
     );
@@ -708,7 +747,7 @@ fn try_token_to_native() {
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
-            attr("burn_fee_amount", Uint128::zero().to_string(),)
+            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),)
         ]
     );
 
@@ -833,6 +872,7 @@ fn test_swap_to_third_party() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(res.messages.len(), 1); //no burn msg as there is no burn_fee
 
     assert_eq!(
         res.attributes
@@ -842,4 +882,45 @@ fn test_swap_to_third_party() {
             .unwrap(),
         "third_party"
     );
+
+    // reset protocol fees so the simulation returns same values as the actual swap
+    COLLECTED_PROTOCOL_FEES
+        .save(
+            &mut deps.storage,
+            &vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: "asset0000".to_string(),
+                    },
+                    amount: Uint128::zero(),
+                },
+            ],
+        )
+        .unwrap();
+
+    let simulation_res: SimulationResponse = from_binary(
+        &query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::Simulation {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: offer_amount,
+                },
+            },
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    // there shouldn't be any burn_fee
+    assert_eq!(simulation_res.burn_fee_amount, Uint128::zero());
 }
