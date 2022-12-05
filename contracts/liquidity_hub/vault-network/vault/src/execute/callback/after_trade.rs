@@ -103,11 +103,13 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        Addr, Response, Uint128,
+        to_binary, Addr, BankMsg, CosmosMsg, Decimal, ReplyOn, Response, SubMsg, Uint128, WasmMsg,
     };
+    use cw20::Cw20ExecuteMsg;
 
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::Config;
+    use white_whale::fee::{Fee, VaultFee};
 
     use crate::{
         contract::{execute, instantiate},
@@ -139,7 +141,17 @@ mod test {
                     denom: "uluna".to_string(),
                 },
                 fee_collector_addr: "fee_collector".to_string(),
-                vault_fees: get_fees(),
+                vault_fees: VaultFee {
+                    flash_loan_fee: Fee {
+                        share: Decimal::permille(5),
+                    },
+                    protocol_fee: Fee {
+                        share: Decimal::permille(5),
+                    },
+                    burn_fee: Fee {
+                        share: Decimal::permille(1),
+                    },
+                },
             },
         )
         .unwrap();
@@ -159,13 +171,22 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![
-                ("method", "after_trade"),
-                ("profit", "2490"),
-                ("protocol_fee", "5"),
-                ("flash_loan_fee", "5"),
-                ("burn_fee", "0"),
-            ])
+            Response::new()
+                .add_submessage(SubMsg {
+                    id: 0,
+                    msg: CosmosMsg::Bank(BankMsg::Burn {
+                        amount: coins(Uint128::new(1).u128(), "uluna"),
+                    }),
+                    gas_limit: None,
+                    reply_on: ReplyOn::Never,
+                })
+                .add_attributes(vec![
+                    ("method", "after_trade"),
+                    ("profit", "2489"),
+                    ("protocol_fee", "5"),
+                    ("flash_loan_fee", "5"),
+                    ("burn_fee", "1"),
+                ])
         );
 
         // should have updated the protocol fee and all time fee
@@ -219,7 +240,17 @@ mod test {
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
                     fee_collector_addr: Addr::unchecked("fee_collector"),
-                    fees: get_fees(),
+                    fees: VaultFee {
+                        flash_loan_fee: Fee {
+                            share: Decimal::permille(5),
+                        },
+                        protocol_fee: Fee {
+                            share: Decimal::permille(5),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::permille(1),
+                        },
+                    },
                 },
             )
             .unwrap();
@@ -266,13 +297,27 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![
-                ("method", "after_trade"),
-                ("profit", "2490"),
-                ("protocol_fee", "5"),
-                ("flash_loan_fee", "5"),
-                ("burn_fee", "0"),
-            ])
+            Response::new()
+                .add_submessage(SubMsg {
+                    id: 0,
+                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: "vault_token".to_string(),
+                        msg: to_binary(&Cw20ExecuteMsg::Burn {
+                            amount: Uint128::new(1),
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                    }),
+                    gas_limit: None,
+                    reply_on: ReplyOn::Never,
+                })
+                .add_attributes(vec![
+                    ("method", "after_trade"),
+                    ("profit", "2489"),
+                    ("protocol_fee", "5"),
+                    ("flash_loan_fee", "5"),
+                    ("burn_fee", "1"),
+                ])
         );
 
         // should have updated the protocol fee and all time fee
