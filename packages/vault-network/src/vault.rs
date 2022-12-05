@@ -125,10 +125,12 @@ pub struct Config {
 
 #[cw_serde]
 pub struct PaybackAmountResponse {
-    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
+    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`+ `burn_fee`.
     pub payback_amount: Uint128,
     /// The amount of fee paid to the protocol
     pub protocol_fee: Uint128,
     /// The amount of fee paid to vault holders
     pub flash_loan_fee: Uint128,
+    /// The amount of fee to be burned
+    pub burn_fee: Uint128,
 }
