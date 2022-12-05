@@ -114,10 +114,14 @@
         "description": "Fees used by the flashloan vaults on the liquidity hub",
         "type": "object",
         "required": [
+          "burn_fee",
           "flash_loan_fee",
           "protocol_fee"
         ],
         "properties": {
+          "burn_fee": {
+            "$ref": "#/definitions/Fee"
+          },
           "flash_loan_fee": {
             "$ref": "#/definitions/Fee"
           },
@@ -364,10 +368,14 @@
         "description": "Fees used by the flashloan vaults on the liquidity hub",
         "type": "object",
         "required": [
+          "burn_fee",
           "flash_loan_fee",
           "protocol_fee"
         ],
         "properties": {
+          "burn_fee": {
+            "$ref": "#/definitions/Fee"
+          },
           "flash_loan_fee": {
             "$ref": "#/definitions/Fee"
           },
@@ -620,10 +628,14 @@
           "description": "Fees used by the flashloan vaults on the liquidity hub",
           "type": "object",
           "required": [
+            "burn_fee",
             "flash_loan_fee",
             "protocol_fee"
           ],
           "properties": {
+            "burn_fee": {
+              "$ref": "#/definitions/Fee"
+            },
             "flash_loan_fee": {
               "$ref": "#/definitions/Fee"
             },

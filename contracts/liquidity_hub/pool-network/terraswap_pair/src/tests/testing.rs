@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
@@ -566,15 +566,4 @@ fn test_assert_slippage_tolerance_invalid_ratio() {
         Err(ContractError::Std { .. }) => (),
         _ => panic!("should return ContractError::Std"),
     }
-}
-
-#[test]
-fn zero_address() {
-    let mut deps = mock_dependencies(&[]);
-
-    let addr = deps.api.addr_canonicalize("0x0").unwrap();
-    println!("addr: {:?}", addr);
-
-    let addr = deps.api.addr_validate(&"0x0".to_string()).unwrap();
-    println!("addr: {:?}", addr);
 }

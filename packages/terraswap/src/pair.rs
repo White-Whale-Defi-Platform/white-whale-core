@@ -111,7 +111,13 @@ impl PoolFee {
         self.swap_fee.is_valid()?;
         self.burn_fee.is_valid()?;
 
-        if self.protocol_fee.share.checked_add(self.swap_fee.share)?.checked_add(self.burn_fee.share)? >= Decimal::percent(100) {
+        if self
+            .protocol_fee
+            .share
+            .checked_add(self.swap_fee.share)?
+            .checked_add(self.burn_fee.share)?
+            >= Decimal::percent(100)
+        {
             return Err(StdError::generic_err("Invalid fees"));
         }
         Ok(())

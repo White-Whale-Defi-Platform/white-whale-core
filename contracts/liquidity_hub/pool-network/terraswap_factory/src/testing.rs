@@ -184,6 +184,9 @@ fn create_pair() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -215,6 +218,9 @@ fn create_pair() {
                         },
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
@@ -284,6 +290,9 @@ fn create_pair_native_token_and_ibc_token() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -315,6 +324,9 @@ fn create_pair_native_token_and_ibc_token() {
                         },
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
@@ -391,6 +403,9 @@ fn create_ibc_tokens_pair() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -422,6 +437,9 @@ fn create_ibc_tokens_pair() {
                         },
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
@@ -581,6 +599,9 @@ fn fail_to_create_same_pair() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -618,6 +639,9 @@ fn fail_to_create_existing_pair() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
     };
@@ -677,6 +701,9 @@ fn fail_to_create_pair_with_inactive_denoms() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -716,6 +743,9 @@ fn fail_to_create_pair_with_invalid_denom() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -746,6 +776,9 @@ fn fail_to_create_pair_with_invalid_denom() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
     };
@@ -795,6 +828,9 @@ fn fail_to_create_pair_with_unknown_token() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -842,6 +878,9 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
     };
@@ -1093,6 +1132,9 @@ fn execute_transactions_unauthorized() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1298,6 +1340,9 @@ fn update_pair_config() {
             swap_fee: Fee {
                 share: Decimal::percent(5u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         }),
         feature_toggle: None,
     };
@@ -1322,6 +1367,9 @@ fn update_pair_config() {
                         },
                         swap_fee: Fee {
                             share: Decimal::percent(5u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
                         },
                     }),
                     feature_toggle: None,

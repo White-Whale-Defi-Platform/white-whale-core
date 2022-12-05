@@ -31,6 +31,7 @@ impl Fee {
 pub struct VaultFee {
     pub protocol_fee: Fee,
     pub flash_loan_fee: Fee,
+    pub burn_fee: Fee,
 }
 
 impl VaultFee {
@@ -39,11 +40,13 @@ impl VaultFee {
     pub fn is_valid(&self) -> StdResult<()> {
         self.protocol_fee.is_valid()?;
         self.flash_loan_fee.is_valid()?;
+        self.burn_fee.is_valid()?;
 
         if self
             .protocol_fee
             .share
             .checked_add(self.flash_loan_fee.share)?
+            .checked_add(self.burn_fee.share)?
             >= Decimal::percent(100)
         {
             return Err(StdError::generic_err("Invalid fees"));
@@ -110,6 +113,9 @@ mod tests {
             flash_loan_fee: Fee {
                 share: Decimal::percent(50),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         };
         assert_eq!(
             vault_fee.is_valid(),
@@ -122,6 +128,9 @@ mod tests {
             },
             flash_loan_fee: Fee {
                 share: Decimal::percent(20),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         };
         assert_eq!(
@@ -136,6 +145,9 @@ mod tests {
             flash_loan_fee: Fee {
                 share: Decimal::percent(200),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         };
         assert_eq!(
             vault_fee.is_valid(),
@@ -144,10 +156,29 @@ mod tests {
 
         let vault_fee = VaultFee {
             protocol_fee: Fee {
-                share: Decimal::percent(40),
+                share: Decimal::percent(20),
+            },
+            flash_loan_fee: Fee {
+                share: Decimal::percent(20),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(200),
+            },
+        };
+        assert_eq!(
+            vault_fee.is_valid(),
+            Err(StdError::generic_err("Invalid fee"))
+        );
+
+        let vault_fee = VaultFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(20),
             },
             flash_loan_fee: Fee {
                 share: Decimal::percent(60),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(20),
             },
         };
         assert_eq!(
@@ -161,6 +192,9 @@ mod tests {
             },
             flash_loan_fee: Fee {
                 share: Decimal::percent(60),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         };
         assert_eq!(vault_fee.is_valid(), Ok(()));

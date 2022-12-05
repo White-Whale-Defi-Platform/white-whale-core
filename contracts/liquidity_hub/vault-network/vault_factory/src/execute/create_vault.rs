@@ -223,6 +223,9 @@ mod tests {
                     protocol_fee: Fee {
                         share: Decimal::percent(30),
                     },
+                    burn_fee: Fee {
+                        share: Decimal::zero(),
+                    },
                 },
             },
         );
@@ -248,6 +251,9 @@ mod tests {
                     },
                     protocol_fee: Fee {
                         share: Decimal::percent(150),
+                    },
+                    burn_fee: Fee {
+                        share: Decimal::zero(),
                     },
                 },
             },

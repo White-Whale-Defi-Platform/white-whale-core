@@ -438,6 +438,10 @@ mod tests {
                     key: "flash_loan_fee".to_string(),
                     value: (transfer_amount / 2).to_string(),
                 },
+                Attribute {
+                    key: "burn_fee".to_string(),
+                    value: 0u128.to_string(),
+                },
             ]),
         ];
 

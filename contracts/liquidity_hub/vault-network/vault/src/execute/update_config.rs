@@ -196,6 +196,9 @@ mod test {
                     flash_loan_fee: Fee {
                         share: Decimal::from_ratio(Uint128::new(2), Uint128::one()),
                     },
+                    burn_fee: Fee {
+                        share: Decimal::zero(),
+                    },
                 }),
             }),
         )
@@ -233,6 +236,9 @@ mod test {
             },
             protocol_fee: Fee {
                 share: Decimal::from_ratio(100u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         };
 

@@ -1,6 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
-use terraswap::asset::AssetInfo;
+
+use terraswap::asset::{Asset, AssetInfo};
 
 use crate::{
     error::{StdResult, VaultError},
@@ -16,7 +17,7 @@ pub fn after_trade(
     let config = CONFIG.load(deps.storage)?;
 
     // query balance
-    let new_balance = match config.asset_info {
+    let new_balance = match config.asset_info.clone() {
         AssetInfo::NativeToken { denom } => {
             deps.querier
                 .query_balance(env.contract.address.into_string(), denom)?
@@ -42,10 +43,12 @@ pub fn after_trade(
             .flash_loan_fee
             .compute(Uint256::from(loan_amount)),
     )?;
+    let burn_fee = Uint128::try_from(config.fees.burn_fee.compute(Uint256::from(loan_amount)))?;
 
     let required_amount = old_balance
         .checked_add(protocol_fee)?
-        .checked_add(flash_loan_fee)?;
+        .checked_add(flash_loan_fee)?
+        .checked_add(burn_fee)?;
 
     if required_amount > new_balance {
         return Err(VaultError::NegativeProfit {
@@ -58,7 +61,8 @@ pub fn after_trade(
     let profit = new_balance
         .checked_sub(old_balance)?
         .checked_sub(protocol_fee)?
-        .checked_sub(flash_loan_fee)?;
+        .checked_sub(flash_loan_fee)?
+        .checked_sub(burn_fee)?;
 
     // increment protocol fees
     COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
@@ -75,11 +79,22 @@ pub fn after_trade(
     // deduct loan counter
     LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))?;
 
-    Ok(Response::new().add_attributes(vec![
+    let mut response = Response::new();
+    if !burn_fee.is_zero() {
+        let burn_asset = Asset {
+            info: config.asset_info,
+            amount: burn_fee,
+        };
+
+        response = response.add_message(burn_asset.into_burn_msg()?);
+    }
+
+    Ok(response.add_attributes(vec![
         ("method", "after_trade".to_string()),
         ("profit", profit.to_string()),
         ("protocol_fee", protocol_fee.to_string()),
         ("flash_loan_fee", flash_loan_fee.to_string()),
+        ("burn_fee", burn_fee.to_string()),
     ]))
 }
 
@@ -90,6 +105,7 @@ mod test {
         testing::{mock_env, mock_info},
         Addr, Response, Uint128,
     };
+
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::Config;
 
@@ -147,7 +163,8 @@ mod test {
                 ("method", "after_trade"),
                 ("profit", "2490"),
                 ("protocol_fee", "5"),
-                ("flash_loan_fee", "5")
+                ("flash_loan_fee", "5"),
+                ("burn_fee", "0"),
             ])
         );
 
@@ -159,7 +176,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
         let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
@@ -171,7 +188,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
     }
@@ -253,7 +270,8 @@ mod test {
                 ("method", "after_trade"),
                 ("profit", "2490"),
                 ("protocol_fee", "5"),
-                ("flash_loan_fee", "5")
+                ("flash_loan_fee", "5"),
+                ("burn_fee", "0"),
             ])
         );
 
@@ -265,7 +283,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
         let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
@@ -277,7 +295,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
     }
