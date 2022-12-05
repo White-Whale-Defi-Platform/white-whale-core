@@ -109,6 +109,7 @@ pub fn query_simulation(
         spread_amount: swap_computation.spread_amount,
         swap_fee_amount: swap_computation.swap_fee_amount,
         protocol_fee_amount: swap_computation.protocol_fee_amount,
+        burn_fee_amount: swap_computation.burn_fee_amount,
     })
 }
 
@@ -163,6 +164,7 @@ pub fn query_reverse_simulation(
         spread_amount: offer_amount_computation.spread_amount,
         swap_fee_amount: offer_amount_computation.swap_fee_amount,
         protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+        burn_fee_amount: offer_amount_computation.burn_fee_amount,
     })
 }
 

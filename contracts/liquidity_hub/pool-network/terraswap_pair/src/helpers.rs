@@ -66,7 +66,9 @@ pub fn compute_offer_amount(
 
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool
-    let fees = pool_fees.swap_fee.to_decimal_256() + pool_fees.protocol_fee.to_decimal_256();
+    let fees = pool_fees.swap_fee.to_decimal_256()
+        + pool_fees.protocol_fee.to_decimal_256()
+        + pool_fees.burn_fee.to_decimal_256();
     let one_minus_commission = Decimal256::one() - fees;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
@@ -87,12 +89,14 @@ pub fn compute_offer_amount(
 
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
+    let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(before_commission_deduction);
 
     Ok(OfferAmountComputation {
         offer_amount: offer_amount.try_into()?,
         spread_amount: spread_amount.try_into()?,
         swap_fee_amount: swap_fee_amount.try_into()?,
         protocol_fee_amount: protocol_fee_amount.try_into()?,
+        burn_fee_amount: burn_fee_amount.try_into()?,
     })
 }
 
@@ -103,6 +107,7 @@ pub struct OfferAmountComputation {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 /// If `belief_price` and `max_spread` both are given,

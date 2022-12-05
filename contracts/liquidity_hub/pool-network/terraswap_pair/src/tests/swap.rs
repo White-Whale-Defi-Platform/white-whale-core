@@ -85,7 +85,7 @@ fn try_native_to_token() {
                 share: Decimal::from_ratio(3u128, 1000u128),
             },
             burn_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::from_ratio(1u128, 1000u128),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -137,17 +137,20 @@ fn try_native_to_token() {
 
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
+    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee - burn_fee
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
         .unwrap();
     let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
+    let expected_burn_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_return_amount = expected_ret_amount
         .checked_sub(expected_swap_fee_amount)
         .unwrap()
         .checked_sub(expected_protocol_fee_amount)
+        .unwrap()
+        .checked_sub(expected_burn_fee_amount)
         .unwrap();
 
     // as we swapped native to token, we accumulate the protocol fees in token
@@ -218,6 +221,7 @@ fn try_native_to_token() {
 
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
+    assert_eq!(expected_burn_fee_amount, simulation_res.burn_fee_amount);
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
     assert_eq!(
         expected_protocol_fee_amount,
@@ -285,6 +289,13 @@ fn try_native_to_token() {
             < 3i128
     );
 
+    assert!(
+        (expected_burn_fee_amount.u128() as i128
+            - reverse_simulation_res.burn_fee_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
+
     assert_eq!(
         res.attributes,
         vec![
@@ -301,7 +312,7 @@ fn try_native_to_token() {
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
-            attr("burn_fee_amount", Uint128::zero().to_string(),),
+            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),),
         ]
     );
 

@@ -178,6 +178,7 @@ impl WasmMockQuerier {
                             swap_fee_amount: Uint128::zero(),
                             spread_amount: Uint128::zero(),
                             protocol_fee_amount: Uint128::zero(),
+                            burn_fee_amount: Uint128::zero(),
                         })))
                     }
                     Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
@@ -186,6 +187,7 @@ impl WasmMockQuerier {
                             swap_fee_amount: Uint128::zero(),
                             spread_amount: Uint128::zero(),
                             protocol_fee_amount: Uint128::zero(),
+                            burn_fee_amount: Uint128::zero(),
                         })),
                     ),
                     _ => match from_binary(msg).unwrap() {

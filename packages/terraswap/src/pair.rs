@@ -148,6 +148,7 @@ pub struct SimulationResponse {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
@@ -163,6 +164,7 @@ pub struct ReverseSimulationResponse {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 /// We currently take no arguments for migrations
