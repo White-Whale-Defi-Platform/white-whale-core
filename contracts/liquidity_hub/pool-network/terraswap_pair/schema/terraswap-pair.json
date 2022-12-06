@@ -1017,12 +1017,16 @@
       "description": "ReverseSimulationResponse returns reverse swap simulation response",
       "type": "object",
       "required": [
+        "burn_fee_amount",
         "offer_amount",
         "protocol_fee_amount",
         "spread_amount",
         "swap_fee_amount"
       ],
       "properties": {
+        "burn_fee_amount": {
+          "$ref": "#/definitions/Uint128"
+        },
         "offer_amount": {
           "$ref": "#/definitions/Uint128"
         },
@@ -1050,12 +1054,16 @@
       "description": "SimulationResponse returns swap simulation response",
       "type": "object",
       "required": [
+        "burn_fee_amount",
         "protocol_fee_amount",
         "return_amount",
         "spread_amount",
         "swap_fee_amount"
       ],
       "properties": {
+        "burn_fee_amount": {
+          "$ref": "#/definitions/Uint128"
+        },
         "protocol_fee_amount": {
           "$ref": "#/definitions/Uint128"
         },

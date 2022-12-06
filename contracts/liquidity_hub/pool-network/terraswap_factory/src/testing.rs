@@ -516,6 +516,9 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
     };
 
@@ -547,6 +550,9 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                         },
                         swap_fee: Fee {
                             share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
                         },
                     },
                     fee_collector_addr: "collector".to_string(),

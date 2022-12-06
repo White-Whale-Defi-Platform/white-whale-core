@@ -82,7 +82,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     const CONFIG_V110: Item<ConfigV110> = Item::new("config");
     let config_v110 = CONFIG_V110.load(deps.storage)?;
 
-    // Add burn fee to config
+    // Add burn fee to config. Zero fee is used as default.
     let config = Config {
         owner: config_v110.owner,
         fee_collector_addr: config_v110.fee_collector_addr,

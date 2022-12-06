@@ -16,6 +16,7 @@ use vault_network::vault::{
 use crate::{
     error::{StdResult, VaultError},
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
+    migrations,
     queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
@@ -141,7 +142,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     // initialize the loan counter
     LOAN_COUNTER.save(deps.storage, &0)?;
 
@@ -158,6 +159,13 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
             new_version: storage_version,
             current_version: version,
         });
+    }
+
+    if storage_version
+        <= Version::parse("1.1.3")
+            .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?
+    {
+        migrations::migrate_to_v120(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

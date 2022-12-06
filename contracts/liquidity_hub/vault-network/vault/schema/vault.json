@@ -652,11 +652,20 @@
       "title": "PaybackAmountResponse",
       "type": "object",
       "required": [
+        "burn_fee",
         "flash_loan_fee",
         "payback_amount",
         "protocol_fee"
       ],
       "properties": {
+        "burn_fee": {
+          "description": "The amount of fee to be burned",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
         "flash_loan_fee": {
           "description": "The amount of fee paid to vault holders",
           "allOf": [
@@ -666,7 +675,7 @@
           ]
         },
         "payback_amount": {
-          "description": "The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.",
+          "description": "The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`+ `burn_fee`.",
           "allOf": [
             {
               "$ref": "#/definitions/Uint128"
