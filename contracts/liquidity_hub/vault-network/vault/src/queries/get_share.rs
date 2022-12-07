@@ -3,10 +3,11 @@ use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 use terraswap::asset::AssetInfo;
 
+use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
-use crate::{error::StdResult, state::CONFIG};
+use crate::state::CONFIG;
 
-pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> StdResult<Binary> {
+pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     let lp_amount: TokenInfoResponse = deps

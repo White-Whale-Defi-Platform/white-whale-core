@@ -6,12 +6,14 @@ use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
 use terraswap::asset::AssetInfo;
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
-use crate::{
-    error::{StdResult, VaultError},
-    state::CONFIG,
-};
+use crate::{error::VaultError, state::CONFIG};
 
-pub fn withdraw(deps: DepsMut, env: Env, sender: String, amount: Uint128) -> StdResult<Response> {
+pub fn withdraw(
+    deps: DepsMut,
+    env: Env,
+    sender: String,
+    amount: Uint128,
+) -> Result<Response, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // check that withdrawals are enabled

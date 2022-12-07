@@ -7,9 +7,12 @@ use terraswap::pair::Config;
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 
+// Fees that have been accrued by the pool, still unclaimed by the fee collector
 pub const COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> = Item::new("collected_protocol_fees");
+// Fees that have been accrued by the pool since the pool's inception
 pub const ALL_TIME_COLLECTED_PROTOCOL_FEES: Item<Vec<Asset>> =
     Item::new("all_time_collected_protocol_fees");
+// Fees that have been burned by the pool since the pool's inception
 pub const ALL_TIME_BURNED_FEES: Item<Vec<Asset>> = Item::new("all_time_burned_fees");
 
 /// Stores the fee for an asset in the given fees_storage_item

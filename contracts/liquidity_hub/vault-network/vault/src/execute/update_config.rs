@@ -2,16 +2,13 @@ use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use vault_network::vault::UpdateConfigParams;
 
-use crate::{
-    error::{StdResult, VaultError},
-    state::CONFIG,
-};
+use crate::{error::VaultError, state::CONFIG};
 
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     params: UpdateConfigParams,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     let UpdateConfigParams {
         flash_loan_enabled,
         withdraw_enabled,

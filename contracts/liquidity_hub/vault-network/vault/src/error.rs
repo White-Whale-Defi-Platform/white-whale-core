@@ -1,13 +1,11 @@
-use cosmwasm_std::{ConversionOverflowError, DivideByZeroError, OverflowError, Uint128};
+use cosmwasm_std::{ConversionOverflowError, DivideByZeroError, OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
-
-pub type StdResult<T> = Result<T, VaultError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum VaultError {
     #[error("{0}")]
-    Std(#[from] cosmwasm_std::StdError),
+    Std(#[from] StdError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),

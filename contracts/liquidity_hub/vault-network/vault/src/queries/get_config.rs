@@ -1,8 +1,9 @@
 use cosmwasm_std::{to_binary, Binary, Deps};
 
-use crate::{error::StdResult, state::CONFIG};
+use crate::error::VaultError;
+use crate::state::CONFIG;
 
-pub fn get_config(deps: Deps) -> StdResult<Binary> {
+pub fn get_config(deps: Deps) -> Result<Binary, VaultError> {
     Ok(to_binary(&CONFIG.load(deps.storage)?)?)
 }
 

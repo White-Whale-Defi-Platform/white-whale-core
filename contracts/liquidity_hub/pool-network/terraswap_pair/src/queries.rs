@@ -180,7 +180,6 @@ pub fn query_fees(
     fees_storage_item: Item<Vec<Asset>>,
     all_time_fees_storage_item: Option<Item<Vec<Asset>>>,
 ) -> Result<ProtocolFeesResponse, ContractError> {
-
     if let (Some(all_time), Some(all_time_fees_storage_item)) =
         (all_time, all_time_fees_storage_item)
     {

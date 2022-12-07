@@ -5,14 +5,14 @@ pub use after_trade::after_trade;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 use vault_network::vault::CallbackMsg;
 
-use crate::error::{StdResult, VaultError};
+use crate::error::VaultError;
 
 pub fn callback(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: CallbackMsg,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     // callback can only be called by contract
     if info.sender != env.contract.address {
         return Err(VaultError::ExternalCallback {});

@@ -1,4 +1,4 @@
-use crate::state::CONFIG;
+use crate::state::{initialize_fee, ALL_TIME_BURNED_FEES, CONFIG};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError};
 use cw_storage_plus::Item;
@@ -55,6 +55,9 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     };
 
     CONFIG.save(deps.storage, &config)?;
+
+    // initialize the burned fee storage item
+    initialize_fee(deps.storage, ALL_TIME_BURNED_FEES, config.asset_info)?;
 
     Ok(())
 }

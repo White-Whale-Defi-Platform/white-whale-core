@@ -3,8 +3,9 @@ use cw20::{BalanceResponse, Cw20QueryMsg};
 
 use terraswap::asset::{Asset, AssetInfo};
 
+use crate::state::{store_fee, ALL_TIME_BURNED_FEES};
 use crate::{
-    error::{StdResult, VaultError},
+    error::VaultError,
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
@@ -13,7 +14,7 @@ pub fn after_trade(
     env: Env,
     old_balance: Uint128,
     loan_amount: Uint128,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // query balance
@@ -64,17 +65,13 @@ pub fn after_trade(
         .checked_sub(flash_loan_fee)?
         .checked_sub(burn_fee)?;
 
-    // increment protocol fees
-    COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
-        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
+    // store fees
+    store_fee(deps.storage, COLLECTED_PROTOCOL_FEES, protocol_fee)?;
+    store_fee(deps.storage, ALL_TIME_COLLECTED_PROTOCOL_FEES, protocol_fee)?;
 
-        Ok(protocol_fees)
-    })?;
-    ALL_TIME_COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
-        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
-
-        Ok(protocol_fees)
-    })?;
+    if !burn_fee.is_zero() {
+        store_fee(deps.storage, ALL_TIME_BURNED_FEES, burn_fee)?;
+    }
 
     // deduct loan counter
     LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))?;

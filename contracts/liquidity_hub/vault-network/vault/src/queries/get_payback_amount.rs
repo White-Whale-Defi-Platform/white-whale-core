@@ -1,9 +1,10 @@
 use cosmwasm_std::{to_binary, Binary, Deps, Uint128, Uint256};
 use vault_network::vault::PaybackAmountResponse;
 
-use crate::{error::StdResult, state::CONFIG};
+use crate::error::VaultError;
+use crate::state::CONFIG;
 
-pub fn get_payback_amount(deps: Deps, amount: Uint128) -> StdResult<Binary> {
+pub fn get_payback_amount(deps: Deps, amount: Uint128) -> Result<Binary, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // check that balance is greater than expected
