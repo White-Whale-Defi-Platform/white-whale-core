@@ -1,3 +1,4 @@
+#![cfg(not(tarpaulin_include))]
 use crate::state::{initialize_fee, ALL_TIME_BURNED_FEES, CONFIG};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError};

@@ -1,3 +1,4 @@
+#![cfg(not(tarpaulin_include))]
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, CanonicalAddr, Decimal, DepsMut, StdError, Uint128};
 use cw_storage_plus::Item;

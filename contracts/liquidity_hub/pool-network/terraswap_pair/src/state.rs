@@ -22,22 +22,22 @@ pub fn store_fee(
     asset_id: String,
     fees_storage_item: Item<Vec<Asset>>,
 ) -> StdResult<()> {
-    let protocol_fees = fees_storage_item
+    let fees = fees_storage_item
         .load(storage)?
         .iter()
-        .map(|protocol_fee_asset| {
-            if protocol_fee_asset.clone().get_id() == asset_id {
+        .map(|fee_asset| {
+            if fee_asset.clone().get_id() == asset_id {
                 Asset {
-                    info: protocol_fee_asset.info.clone(),
-                    amount: protocol_fee_asset.amount + fee_amount,
+                    info: fee_asset.info.clone(),
+                    amount: fee_asset.amount + fee_amount,
                 }
             } else {
-                protocol_fee_asset.clone()
+                fee_asset.clone()
             }
         })
         .collect();
 
-    fees_storage_item.save(storage, &protocol_fees)
+    fees_storage_item.save(storage, &fees)
 }
 
 /// Gets the fees for an asset from the given fees_storage_item

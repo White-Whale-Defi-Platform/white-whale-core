@@ -4,7 +4,8 @@ use cosmwasm_std::{
 };
 use terraswap::asset::AssetInfo;
 
-use crate::{contract::execute, error::StdResult};
+use crate::contract::execute;
+use crate::error::VaultError;
 
 use super::{mock_creator, mock_instantiate::mock_instantiate};
 
@@ -13,7 +14,7 @@ pub fn mock_execute(
     asset_info: AssetInfo,
     msg: vault_network::vault::ExecuteMsg,
 ) -> (
-    StdResult<Response>,
+    Result<Response, VaultError>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,
     Env,
 ) {

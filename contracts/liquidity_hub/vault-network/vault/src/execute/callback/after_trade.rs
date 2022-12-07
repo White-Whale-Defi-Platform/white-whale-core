@@ -69,10 +69,6 @@ pub fn after_trade(
     store_fee(deps.storage, COLLECTED_PROTOCOL_FEES, protocol_fee)?;
     store_fee(deps.storage, ALL_TIME_COLLECTED_PROTOCOL_FEES, protocol_fee)?;
 
-    if !burn_fee.is_zero() {
-        store_fee(deps.storage, ALL_TIME_BURNED_FEES, burn_fee)?;
-    }
-
     // deduct loan counter
     LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))?;
 
@@ -82,6 +78,8 @@ pub fn after_trade(
             info: config.asset_info,
             amount: burn_fee,
         };
+
+        store_fee(deps.storage, ALL_TIME_BURNED_FEES, burn_fee)?;
 
         response = response.add_message(burn_asset.into_burn_msg()?);
     }
@@ -108,6 +106,7 @@ mod test {
     use vault_network::vault::Config;
     use white_whale::fee::{Fee, VaultFee};
 
+    use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
@@ -275,6 +274,17 @@ mod test {
                 },
             )
             .unwrap();
+        ALL_TIME_BURNED_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
 
         // inject loan counter
         LOAN_COUNTER.save(&mut deps.storage, &1).unwrap();
@@ -335,6 +345,16 @@ mod test {
             protocol_fee,
             Asset {
                 amount: Uint128::new(5),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                },
+            }
+        );
+        let burned_fees = ALL_TIME_BURNED_FEES.load(&deps.storage).unwrap();
+        assert_eq!(
+            burned_fees,
+            Asset {
+                amount: Uint128::new(1),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
                 },

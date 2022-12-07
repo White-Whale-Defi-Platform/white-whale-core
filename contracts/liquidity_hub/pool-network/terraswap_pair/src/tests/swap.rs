@@ -1,8 +1,10 @@
 use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::compute_swap;
-use crate::queries::query_protocol_fees;
-use crate::state::COLLECTED_PROTOCOL_FEES;
+use crate::queries::query_fees;
+use crate::state::{
+    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
+};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, coins, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, SubMsg,
@@ -172,20 +174,56 @@ fn try_native_to_token() {
     assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
 
     // as we swapped native to token, we accumulate the protocol fees in token
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let burned_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        ALL_TIME_BURNED_FEES,
+        None,
+    )
+    .unwrap()
+    .fees;
+    assert_eq!(
+        burned_fees_for_token.first().unwrap().amount,
+        expected_burn_fee_amount
+    );
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
+        Uint128::zero()
+    );
+    let burned_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        ALL_TIME_BURNED_FEES,
+        None,
+    )
+    .unwrap()
+    .fees;
+    assert_eq!(
+        burned_fees_for_native.first().unwrap().amount,
         Uint128::zero()
     );
 
@@ -587,18 +625,28 @@ fn try_token_to_native() {
     assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
 
     // as we swapped token to native, we accumulate the protocol fees in native
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()

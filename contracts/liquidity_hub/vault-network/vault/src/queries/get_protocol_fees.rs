@@ -35,6 +35,7 @@ mod test {
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::{ProtocolFeesResponse, QueryMsg};
 
+    use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{
         contract::query,
         state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES},
@@ -128,6 +129,38 @@ mod test {
             ProtocolFeesResponse {
                 fees: Asset {
                     amount: Uint128::new(5_000),
+                    info: asset,
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn get_burned_fees() {
+        let mut deps = mock_dependencies();
+
+        let asset = AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        };
+
+        ALL_TIME_BURNED_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(1_000),
+                    info: asset.clone(),
+                },
+            )
+            .unwrap();
+
+        let res: ProtocolFeesResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap())
+                .unwrap();
+        assert_eq!(
+            res,
+            ProtocolFeesResponse {
+                fees: Asset {
+                    amount: Uint128::new(1_000),
                     info: asset,
                 }
             }

@@ -1,5 +1,6 @@
 use crate::contract::{execute, instantiate, reply};
-use crate::queries::query_protocol_fees;
+use crate::queries::query_fees;
+use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
@@ -109,18 +110,28 @@ fn test_protocol_fees() {
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as we swapped native to token, we accumulate the protocol fees in token. Native token fees should be 0
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_amount
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
@@ -154,19 +165,29 @@ fn test_protocol_fees() {
     let new_expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // the new protocol fees should have increased from the previous time
-    let new_protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let new_protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert!(new_protocol_fees_for_token.first().unwrap().amount > expected_protocol_fee_amount);
     assert_eq!(
         new_protocol_fees_for_token.first().unwrap().amount,
         new_expected_protocol_fee_amount + expected_protocol_fee_amount // fees collected in the first + second swap
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
@@ -290,19 +311,29 @@ fn test_collect_protocol_fees_successful() {
     let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // as we swapped both native and token, we should have collected fees in both of them
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
 
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         expected_protocol_fee_token_amount
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         expected_protocol_fee_native_amount
@@ -341,27 +372,43 @@ fn test_collect_protocol_fees_successful() {
     );
 
     // now collected protocol fees should be reset to zero
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
     );
 
     // all time collected protocol fees should remain intact
-    let all_time_protocol_fees = query_protocol_fees(deps.as_ref(), None, Some(true))
-        .unwrap()
-        .fees;
+    let all_time_protocol_fees = query_fees(
+        deps.as_ref(),
+        None,
+        Some(true),
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
 
     assert_eq!(
         all_time_protocol_fees[0].amount,
@@ -471,7 +518,15 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as did only one swap from native -> token, we should have collected fees in token
-    let protocol_fees = query_protocol_fees(deps.as_ref(), None, None).unwrap().fees;
+    let protocol_fees = query_fees(
+        deps.as_ref(),
+        None,
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(protocol_fees[0].amount, Uint128::zero());
     assert_eq!(protocol_fees[1].amount, expected_protocol_fee_token_amount);
 
@@ -497,27 +552,43 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     );
 
     // now collected protocol fees should be reset to zero
-    let protocol_fees_for_token =
-        query_protocol_fees(deps.as_ref(), Some("asset0000".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0000".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
     );
-    let protocol_fees_for_native =
-        query_protocol_fees(deps.as_ref(), Some("uusd".to_string()), None)
-            .unwrap()
-            .fees;
+    let protocol_fees_for_native = query_fees(
+        deps.as_ref(),
+        Some("uusd".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_native.first().unwrap().amount,
         Uint128::zero()
     );
 
     // all time collected protocol fees should remain intact
-    let all_time_protocol_fees = query_protocol_fees(deps.as_ref(), None, Some(true))
-        .unwrap()
-        .fees;
+    let all_time_protocol_fees = query_fees(
+        deps.as_ref(),
+        None,
+        Some(true),
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+    .unwrap()
+    .fees;
 
     assert_eq!(all_time_protocol_fees[0].amount, Uint128::zero());
     assert_eq!(
