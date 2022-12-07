@@ -2,23 +2,25 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
-    StdError, StdResult, Storage, SubMsg, Uint128, WasmMsg,
+    StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
-use cw_storage_plus::Item;
 use protobuf::Message;
 use semver::Version;
 
-use terraswap::asset::{Asset, AssetInfo, PairInfoRaw};
+use terraswap::asset::PairInfoRaw;
 use terraswap::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::response::MsgInstantiateContractResponse;
-use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};
-use crate::{commands, queries};
+use crate::state::{
+    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    PAIR_INFO,
+};
+use crate::{commands, helpers, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-pool";
@@ -71,17 +73,23 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
-    instantiate_protocol_fees(
+    helpers::instantiate_fees(
         deps.storage,
         asset_info_0.clone(),
         asset_info_1.clone(),
         COLLECTED_PROTOCOL_FEES,
     )?;
-    instantiate_protocol_fees(
+    helpers::instantiate_fees(
+        deps.storage,
+        asset_info_0.clone(),
+        asset_info_1.clone(),
+        ALL_TIME_COLLECTED_PROTOCOL_FEES,
+    )?;
+    helpers::instantiate_fees(
         deps.storage,
         asset_info_0,
         asset_info_1,
-        ALL_TIME_COLLECTED_PROTOCOL_FEES,
+        ALL_TIME_BURNED_FEES,
     )?;
 
     Ok(Response::new().add_submessage(SubMsg {
@@ -107,27 +115,6 @@ pub fn instantiate(
         id: INSTANTIATE_REPLY_ID,
         reply_on: ReplyOn::Success,
     }))
-}
-
-fn instantiate_protocol_fees(
-    storage: &mut dyn Storage,
-    asset_info_0: AssetInfo,
-    asset_info_1: AssetInfo,
-    protocol_fee_storage_item: Item<Vec<Asset>>,
-) -> StdResult<()> {
-    protocol_fee_storage_item.save(
-        storage,
-        &vec![
-            Asset {
-                info: asset_info_0,
-                amount: Uint128::zero(),
-            },
-            Asset {
-                info: asset_info_1,
-                amount: Uint128::zero(),
-            },
-        ],
-    )
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -225,9 +212,20 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             &queries::query_reverse_simulation(deps, ask_asset)?,
         )?),
         QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(
-            &queries::query_protocol_fees(deps, asset_id, all_time)?,
-        )?),
+        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
+            deps,
+            asset_id,
+            all_time,
+            COLLECTED_PROTOCOL_FEES,
+            Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+        )?)?),
+        QueryMsg::BurnedFees { asset_id } => Ok(to_binary(&queries::query_fees(
+            deps,
+            asset_id,
+            None,
+            ALL_TIME_BURNED_FEES,
+            None,
+        )?)?),
     }
 }
 

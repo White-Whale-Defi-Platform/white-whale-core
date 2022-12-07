@@ -9,18 +9,6 @@ use cw20::Cw20ExecuteMsg;
 
 use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
 
-#[cw_serde]
-pub struct Asset {
-    pub info: AssetInfo,
-    pub amount: Uint128,
-}
-
-impl fmt::Display for Asset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.amount, self.info)
-    }
-}
-
 pub const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000u128);
 const IBC_HASH_TAKE: usize = 4usize;
 const IBC_HASH_SIZE: usize = 64usize;
@@ -32,6 +20,18 @@ pub const PEGGY_PREFIX: &str = "peggy";
 const PEGGY_ADDR_SIZE: usize = 47usize;
 #[cfg(feature = "injective")]
 const PEGGY_ADDR_TAKE: usize = 3usize;
+
+#[cw_serde]
+pub struct Asset {
+    pub info: AssetInfo,
+    pub amount: Uint128,
+}
+
+impl fmt::Display for Asset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.amount, self.info)
+    }
+}
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {

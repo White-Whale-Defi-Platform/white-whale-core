@@ -75,6 +75,9 @@ pub enum QueryMsg {
         asset_id: Option<String>,
         all_time: Option<bool>,
     },
+    /// Retrieves the fees that have been burned by the pool.
+    #[returns(ProtocolFeesResponse)]
+    BurnedFees { asset_id: Option<String> },
     /// Retrieves the pool information.
     #[returns(PoolResponse)]
     Pool {},

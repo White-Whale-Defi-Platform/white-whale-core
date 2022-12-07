@@ -2,9 +2,10 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Uint128, Uint256};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
+use cw_storage_plus::Item;
 
-use terraswap::asset::Asset;
+use terraswap::asset::{Asset, AssetInfo};
 use terraswap::pair::PoolFee;
 
 use crate::error::ContractError;
@@ -227,4 +228,26 @@ pub fn get_protocol_fee_for_asset(
     } else {
         Uint128::zero()
     }
+}
+
+/// Instantiates fees for a given fee_storage_item
+pub fn instantiate_fees(
+    storage: &mut dyn Storage,
+    asset_info_0: AssetInfo,
+    asset_info_1: AssetInfo,
+    fee_storage_item: Item<Vec<Asset>>,
+) -> StdResult<()> {
+    fee_storage_item.save(
+        storage,
+        &vec![
+            Asset {
+                info: asset_info_0,
+                amount: Uint128::zero(),
+            },
+            Asset {
+                info: asset_info_1,
+                amount: Uint128::zero(),
+            },
+        ],
+    )
 }

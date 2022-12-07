@@ -4,11 +4,12 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::helpers::instantiate_fees;
 use terraswap::asset::AssetInfo;
 use terraswap::pair::{Config, FeatureToggle};
 use white_whale::fee::Fee;
 
-use crate::state::CONFIG;
+use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
 
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`]
@@ -97,6 +98,18 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     };
 
     CONFIG.save(deps.storage, &config)?;
+
+    // Instantiates the ALL_TIME_BURNED_FEES
+    let pair_info = PAIR_INFO.load(deps.storage)?;
+    let asset_info_0 = pair_info.asset_infos[0].to_normal(deps.api)?;
+    let asset_info_1 = pair_info.asset_infos[1].to_normal(deps.api)?;
+
+    instantiate_fees(
+        deps.storage,
+        asset_info_0,
+        asset_info_1,
+        ALL_TIME_BURNED_FEES,
+    )?;
 
     Ok(())
 }
