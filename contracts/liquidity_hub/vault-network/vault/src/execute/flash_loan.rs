@@ -7,7 +7,7 @@ use terraswap::asset::AssetInfo;
 use vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::{
-    error::{StdResult, VaultError},
+    error::VaultError,
     state::{CONFIG, LOAN_COUNTER},
 };
 
@@ -17,7 +17,7 @@ pub fn flash_loan(
     info: MessageInfo,
     amount: Uint128,
     msg: Binary,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     // check that flash loans are enabled
     let config = CONFIG.load(deps.storage)?;
     if !config.flash_loan_enabled {

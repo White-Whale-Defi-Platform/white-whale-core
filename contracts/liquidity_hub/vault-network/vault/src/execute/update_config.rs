@@ -2,16 +2,13 @@ use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use vault_network::vault::UpdateConfigParams;
 
-use crate::{
-    error::{StdResult, VaultError},
-    state::CONFIG,
-};
+use crate::{error::VaultError, state::CONFIG};
 
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     params: UpdateConfigParams,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     let UpdateConfigParams {
         flash_loan_enabled,
         withdraw_enabled,
@@ -196,6 +193,9 @@ mod test {
                     flash_loan_fee: Fee {
                         share: Decimal::from_ratio(Uint128::new(2), Uint128::one()),
                     },
+                    burn_fee: Fee {
+                        share: Decimal::zero(),
+                    },
                 }),
             }),
         )
@@ -233,6 +233,9 @@ mod test {
             },
             protocol_fee: Fee {
                 share: Decimal::from_ratio(100u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         };
 

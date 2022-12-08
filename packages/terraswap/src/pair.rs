@@ -75,6 +75,9 @@ pub enum QueryMsg {
         asset_id: Option<String>,
         all_time: Option<bool>,
     },
+    /// Retrieves the fees that have been burned by the pool.
+    #[returns(ProtocolFeesResponse)]
+    BurnedFees { asset_id: Option<String> },
     /// Retrieves the pool information.
     #[returns(PoolResponse)]
     Pool {},
@@ -100,6 +103,7 @@ pub struct FeatureToggle {
 pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
+    pub burn_fee: Fee,
 }
 
 impl PoolFee {
@@ -108,8 +112,15 @@ impl PoolFee {
     pub fn is_valid(&self) -> StdResult<()> {
         self.protocol_fee.is_valid()?;
         self.swap_fee.is_valid()?;
+        self.burn_fee.is_valid()?;
 
-        if self.protocol_fee.share.checked_add(self.swap_fee.share)? >= Decimal::percent(100) {
+        if self
+            .protocol_fee
+            .share
+            .checked_add(self.swap_fee.share)?
+            .checked_add(self.burn_fee.share)?
+            >= Decimal::percent(100)
+        {
             return Err(StdError::generic_err("Invalid fees"));
         }
         Ok(())
@@ -140,6 +151,7 @@ pub struct SimulationResponse {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
@@ -155,6 +167,7 @@ pub struct ReverseSimulationResponse {
     pub spread_amount: Uint128,
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
 }
 
 /// We currently take no arguments for migrations

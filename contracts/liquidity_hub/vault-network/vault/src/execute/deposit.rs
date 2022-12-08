@@ -4,11 +4,16 @@ use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 use terraswap::{asset::AssetInfo, querier::query_token_info};
 
 use crate::{
-    error::{StdResult, VaultError},
+    error::VaultError,
     state::{COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
-pub fn deposit(deps: DepsMut, env: Env, info: MessageInfo, amount: Uint128) -> StdResult<Response> {
+pub fn deposit(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // check that deposits are enabled

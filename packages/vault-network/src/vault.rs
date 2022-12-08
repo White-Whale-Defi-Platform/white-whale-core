@@ -87,6 +87,9 @@ pub enum QueryMsg {
     /// Retrieves the protocol fees that have been collected. If `all_time` is `true`, will return the all time collected fees.
     #[returns(ProtocolFeesResponse)]
     ProtocolFees { all_time: bool },
+    /// Retrieves the fees that have been burned by the vault.
+    #[returns(ProtocolFeesResponse)]
+    BurnedFees {},
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
     #[returns(PaybackAmountResponse)]
     GetPaybackAmount { amount: Uint128 },
@@ -125,10 +128,12 @@ pub struct Config {
 
 #[cw_serde]
 pub struct PaybackAmountResponse {
-    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
+    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`+ `burn_fee`.
     pub payback_amount: Uint128,
     /// The amount of fee paid to the protocol
     pub protocol_fee: Uint128,
     /// The amount of fee paid to vault holders
     pub flash_loan_fee: Uint128,
+    /// The amount of fee to be burned
+    pub burn_fee: Uint128,
 }

@@ -1,4 +1,5 @@
 use cosmwasm_std::{Deps, StdResult, Uint128};
+use cw_storage_plus::Item;
 
 use terraswap::asset::{Asset, PairInfo, PairInfoRaw};
 use terraswap::pair::{
@@ -10,10 +11,7 @@ use terraswap::querier::query_token_info;
 use crate::error::ContractError;
 use crate::helpers;
 use crate::helpers::get_protocol_fee_for_asset;
-use crate::state::{
-    get_protocol_fees_for_asset, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
-    PAIR_INFO,
-};
+use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};
 
 /// Queries the [PairInfo] of the pool
 pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
@@ -109,6 +107,7 @@ pub fn query_simulation(
         spread_amount: swap_computation.spread_amount,
         swap_fee_amount: swap_computation.swap_fee_amount,
         protocol_fee_amount: swap_computation.protocol_fee_amount,
+        burn_fee_amount: swap_computation.burn_fee_amount,
     })
 }
 
@@ -163,6 +162,7 @@ pub fn query_reverse_simulation(
         spread_amount: offer_amount_computation.spread_amount,
         swap_fee_amount: offer_amount_computation.swap_fee_amount,
         protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+        burn_fee_amount: offer_amount_computation.burn_fee_amount,
     })
 }
 
@@ -172,24 +172,28 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     Ok(config)
 }
 
-/// Queries the protocol fees on the pool
-pub fn query_protocol_fees(
+/// Queries the fees on the pool for the given fees_storage_item
+pub fn query_fees(
     deps: Deps,
     asset_id: Option<String>,
     all_time: Option<bool>,
+    fees_storage_item: Item<Vec<Asset>>,
+    all_time_fees_storage_item: Option<Item<Vec<Asset>>>,
 ) -> Result<ProtocolFeesResponse, ContractError> {
-    if let Some(all_time) = all_time {
+    if let (Some(all_time), Some(all_time_fees_storage_item)) =
+        (all_time, all_time_fees_storage_item)
+    {
         if all_time {
-            let fees = ALL_TIME_COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+            let fees = all_time_fees_storage_item.load(deps.storage)?;
             return Ok(ProtocolFeesResponse { fees });
         }
     }
 
     if let Some(asset_id) = asset_id {
-        let fee = get_protocol_fees_for_asset(deps.storage, asset_id)?;
+        let fee = get_fees_for_asset(deps.storage, asset_id, fees_storage_item)?;
         return Ok(ProtocolFeesResponse { fees: vec![fee] });
     }
 
-    let fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    let fees = fees_storage_item.load(deps.storage)?;
     Ok(ProtocolFeesResponse { fees })
 }

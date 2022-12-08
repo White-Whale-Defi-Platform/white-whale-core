@@ -1,19 +1,26 @@
-use cosmwasm_std::{to_binary, Binary, Deps};
+use cosmwasm_std::{to_binary, Binary, Deps, StdError};
+use cw_storage_plus::Item;
+
+use terraswap::asset::Asset;
 use vault_network::vault::ProtocolFeesResponse;
 
-use crate::{
-    error::VaultError,
-    state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES},
-};
+use crate::error::VaultError;
 
-/// Queries the protocol fees on the pool
-pub fn get_protocol_fees(deps: Deps, all_time: bool) -> Result<Binary, VaultError> {
+/// Queries fees on the pool
+pub fn get_fees(
+    deps: Deps,
+    all_time: bool,
+    all_time_fees_storage_item: Item<Asset>,
+    fees_storage_item: Option<Item<Asset>>,
+) -> Result<Binary, VaultError> {
     if all_time {
-        let fees = ALL_TIME_COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+        let fees = all_time_fees_storage_item.load(deps.storage)?;
         return Ok(to_binary(&ProtocolFeesResponse { fees })?);
     }
 
-    let fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+    let fees = fees_storage_item
+        .ok_or_else(|| StdError::generic_err("fees_storage_item was None"))?
+        .load(deps.storage)?;
     Ok(to_binary(&ProtocolFeesResponse { fees })?)
 }
 
@@ -24,9 +31,11 @@ mod test {
         testing::{mock_dependencies, mock_env},
         Uint128,
     };
+
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::{ProtocolFeesResponse, QueryMsg};
 
+    use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{
         contract::query,
         state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES},
@@ -73,7 +82,7 @@ mod test {
             ProtocolFeesResponse {
                 fees: Asset {
                     amount: Uint128::new(1_000),
-                    info: asset
+                    info: asset,
                 }
             }
         );
@@ -120,7 +129,39 @@ mod test {
             ProtocolFeesResponse {
                 fees: Asset {
                     amount: Uint128::new(5_000),
-                    info: asset
+                    info: asset,
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn get_burned_fees() {
+        let mut deps = mock_dependencies();
+
+        let asset = AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        };
+
+        ALL_TIME_BURNED_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(1_000),
+                    info: asset.clone(),
+                },
+            )
+            .unwrap();
+
+        let res: ProtocolFeesResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap())
+                .unwrap();
+        assert_eq!(
+            res,
+            ProtocolFeesResponse {
+                fees: Asset {
+                    amount: Uint128::new(1_000),
+                    info: asset,
                 }
             }
         );

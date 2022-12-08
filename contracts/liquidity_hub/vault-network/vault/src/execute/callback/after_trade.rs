@@ -1,9 +1,11 @@
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
-use terraswap::asset::AssetInfo;
 
+use terraswap::asset::{Asset, AssetInfo};
+
+use crate::state::{store_fee, ALL_TIME_BURNED_FEES};
 use crate::{
-    error::{StdResult, VaultError},
+    error::VaultError,
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
@@ -12,11 +14,11 @@ pub fn after_trade(
     env: Env,
     old_balance: Uint128,
     loan_amount: Uint128,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // query balance
-    let new_balance = match config.asset_info {
+    let new_balance = match config.asset_info.clone() {
         AssetInfo::NativeToken { denom } => {
             deps.querier
                 .query_balance(env.contract.address.into_string(), denom)?
@@ -42,10 +44,12 @@ pub fn after_trade(
             .flash_loan_fee
             .compute(Uint256::from(loan_amount)),
     )?;
+    let burn_fee = Uint128::try_from(config.fees.burn_fee.compute(Uint256::from(loan_amount)))?;
 
     let required_amount = old_balance
         .checked_add(protocol_fee)?
-        .checked_add(flash_loan_fee)?;
+        .checked_add(flash_loan_fee)?
+        .checked_add(burn_fee)?;
 
     if required_amount > new_balance {
         return Err(VaultError::NegativeProfit {
@@ -58,28 +62,34 @@ pub fn after_trade(
     let profit = new_balance
         .checked_sub(old_balance)?
         .checked_sub(protocol_fee)?
-        .checked_sub(flash_loan_fee)?;
+        .checked_sub(flash_loan_fee)?
+        .checked_sub(burn_fee)?;
 
-    // increment protocol fees
-    COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
-        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
-
-        Ok(protocol_fees)
-    })?;
-    ALL_TIME_COLLECTED_PROTOCOL_FEES.update::<_, StdError>(deps.storage, |mut protocol_fees| {
-        protocol_fees.amount = protocol_fees.amount.checked_add(protocol_fee)?;
-
-        Ok(protocol_fees)
-    })?;
+    // store fees
+    store_fee(deps.storage, COLLECTED_PROTOCOL_FEES, protocol_fee)?;
+    store_fee(deps.storage, ALL_TIME_COLLECTED_PROTOCOL_FEES, protocol_fee)?;
 
     // deduct loan counter
     LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))?;
 
-    Ok(Response::new().add_attributes(vec![
+    let mut response = Response::new();
+    if !burn_fee.is_zero() {
+        let burn_asset = Asset {
+            info: config.asset_info,
+            amount: burn_fee,
+        };
+
+        store_fee(deps.storage, ALL_TIME_BURNED_FEES, burn_fee)?;
+
+        response = response.add_message(burn_asset.into_burn_msg()?);
+    }
+
+    Ok(response.add_attributes(vec![
         ("method", "after_trade".to_string()),
         ("profit", profit.to_string()),
         ("protocol_fee", protocol_fee.to_string()),
         ("flash_loan_fee", flash_loan_fee.to_string()),
+        ("burn_fee", burn_fee.to_string()),
     ]))
 }
 
@@ -88,11 +98,15 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        Addr, Response, Uint128,
+        to_binary, Addr, BankMsg, CosmosMsg, Decimal, ReplyOn, Response, SubMsg, Uint128, WasmMsg,
     };
+    use cw20::Cw20ExecuteMsg;
+
     use terraswap::asset::{Asset, AssetInfo};
     use vault_network::vault::Config;
+    use white_whale::fee::{Fee, VaultFee};
 
+    use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{
         contract::{execute, instantiate},
         error::VaultError,
@@ -123,7 +137,17 @@ mod test {
                     denom: "uluna".to_string(),
                 },
                 fee_collector_addr: "fee_collector".to_string(),
-                vault_fees: get_fees(),
+                vault_fees: VaultFee {
+                    flash_loan_fee: Fee {
+                        share: Decimal::permille(5),
+                    },
+                    protocol_fee: Fee {
+                        share: Decimal::permille(5),
+                    },
+                    burn_fee: Fee {
+                        share: Decimal::permille(1),
+                    },
+                },
             },
         )
         .unwrap();
@@ -143,12 +167,22 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![
-                ("method", "after_trade"),
-                ("profit", "2490"),
-                ("protocol_fee", "5"),
-                ("flash_loan_fee", "5")
-            ])
+            Response::new()
+                .add_submessage(SubMsg {
+                    id: 0,
+                    msg: CosmosMsg::Bank(BankMsg::Burn {
+                        amount: coins(Uint128::new(1).u128(), "uluna"),
+                    }),
+                    gas_limit: None,
+                    reply_on: ReplyOn::Never,
+                })
+                .add_attributes(vec![
+                    ("method", "after_trade"),
+                    ("profit", "2489"),
+                    ("protocol_fee", "5"),
+                    ("flash_loan_fee", "5"),
+                    ("burn_fee", "1"),
+                ])
         );
 
         // should have updated the protocol fee and all time fee
@@ -159,7 +193,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
         let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
@@ -171,7 +205,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
     }
@@ -202,7 +236,17 @@ mod test {
                     flash_loan_enabled: true,
                     withdraw_enabled: true,
                     fee_collector_addr: Addr::unchecked("fee_collector"),
-                    fees: get_fees(),
+                    fees: VaultFee {
+                        flash_loan_fee: Fee {
+                            share: Decimal::permille(5),
+                        },
+                        protocol_fee: Fee {
+                            share: Decimal::permille(5),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::permille(1),
+                        },
+                    },
                 },
             )
             .unwrap();
@@ -220,6 +264,17 @@ mod test {
             )
             .unwrap();
         ALL_TIME_COLLECTED_PROTOCOL_FEES
+            .save(
+                &mut deps.storage,
+                &Asset {
+                    amount: Uint128::new(0),
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                },
+            )
+            .unwrap();
+        ALL_TIME_BURNED_FEES
             .save(
                 &mut deps.storage,
                 &Asset {
@@ -249,12 +304,27 @@ mod test {
 
         assert_eq!(
             res,
-            Response::new().add_attributes(vec![
-                ("method", "after_trade"),
-                ("profit", "2490"),
-                ("protocol_fee", "5"),
-                ("flash_loan_fee", "5")
-            ])
+            Response::new()
+                .add_submessage(SubMsg {
+                    id: 0,
+                    msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: "vault_token".to_string(),
+                        msg: to_binary(&Cw20ExecuteMsg::Burn {
+                            amount: Uint128::new(1),
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                    }),
+                    gas_limit: None,
+                    reply_on: ReplyOn::Never,
+                })
+                .add_attributes(vec![
+                    ("method", "after_trade"),
+                    ("profit", "2489"),
+                    ("protocol_fee", "5"),
+                    ("flash_loan_fee", "5"),
+                    ("burn_fee", "1"),
+                ])
         );
 
         // should have updated the protocol fee and all time fee
@@ -265,7 +335,7 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
             }
         );
         let protocol_fee = ALL_TIME_COLLECTED_PROTOCOL_FEES
@@ -277,7 +347,17 @@ mod test {
                 amount: Uint128::new(5),
                 info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
-                }
+                },
+            }
+        );
+        let burned_fees = ALL_TIME_BURNED_FEES.load(&deps.storage).unwrap();
+        assert_eq!(
+            burned_fees,
+            Asset {
+                amount: Uint128::new(1),
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string()
+                },
             }
         );
     }

@@ -1,22 +1,24 @@
 use cosmwasm_std::{
     attr, entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError, SubMsg, Uint128, WasmMsg,
+    StdError, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use semver::Version;
 
+use terraswap::asset::IBC_PREFIX;
 #[cfg(feature = "injective")]
 use terraswap::asset::PEGGY_PREFIX;
-use terraswap::asset::{Asset, IBC_PREFIX};
 use vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
 
+use crate::state::{initialize_fee, ALL_TIME_BURNED_FEES};
 use crate::{
-    error::{StdResult, VaultError},
+    error::VaultError,
     execute::{callback, collect_protocol_fees, deposit, flash_loan, receive, update_config},
-    queries::{get_config, get_payback_amount, get_protocol_fees, get_share},
+    migrations,
+    queries::{get_config, get_fees, get_payback_amount, get_share},
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
@@ -29,7 +31,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     // check the fees are valid
@@ -103,21 +105,18 @@ pub fn instantiate(
         .into(),
     };
 
-    // save protocol fee state
-    COLLECTED_PROTOCOL_FEES.save(
+    // initialize fees in state
+    initialize_fee(
         deps.storage,
-        &Asset {
-            amount: Uint128::zero(),
-            info: msg.asset_info.clone(),
-        },
+        COLLECTED_PROTOCOL_FEES,
+        msg.asset_info.clone(),
     )?;
-    ALL_TIME_COLLECTED_PROTOCOL_FEES.save(
+    initialize_fee(
         deps.storage,
-        &Asset {
-            amount: Uint128::zero(),
-            info: msg.asset_info,
-        },
+        ALL_TIME_COLLECTED_PROTOCOL_FEES,
+        msg.asset_info.clone(),
     )?;
+    initialize_fee(deps.storage, ALL_TIME_BURNED_FEES, msg.asset_info)?;
 
     // set loan counter to zero
     LOAN_COUNTER.save(deps.storage, &0)?;
@@ -128,7 +127,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> Result<Response, VaultError> {
     match msg {
         ExecuteMsg::UpdateConfig(params) => update_config(deps, info, params),
         ExecuteMsg::Deposit { amount } => deposit(deps, env, info, amount),
@@ -141,7 +145,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, VaultError> {
     // initialize the loan counter
     LOAN_COUNTER.save(deps.storage, &0)?;
 
@@ -160,17 +164,30 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
         });
     }
 
+    if storage_version
+        <= Version::parse("1.1.3")
+            .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?
+    {
+        migrations::migrate_to_v120(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, VaultError> {
     match msg {
         QueryMsg::Config {} => get_config(deps),
         QueryMsg::Share { amount } => get_share(deps, env, amount),
-        QueryMsg::ProtocolFees { all_time } => get_protocol_fees(deps, all_time),
+        QueryMsg::ProtocolFees { all_time } => get_fees(
+            deps,
+            all_time,
+            ALL_TIME_COLLECTED_PROTOCOL_FEES,
+            Some(COLLECTED_PROTOCOL_FEES),
+        ),
         QueryMsg::GetPaybackAmount { amount } => get_payback_amount(deps, amount),
+        QueryMsg::BurnedFees {} => get_fees(deps, true, ALL_TIME_BURNED_FEES, None),
     }
 }

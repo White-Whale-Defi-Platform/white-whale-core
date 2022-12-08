@@ -1,5 +1,6 @@
 pub mod contract;
 pub mod execute;
+mod migrations;
 pub mod queries;
 pub mod reply;
 

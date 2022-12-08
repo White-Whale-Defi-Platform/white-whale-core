@@ -9,5 +9,8 @@ pub fn get_fees() -> VaultFee {
         protocol_fee: Fee {
             share: Decimal::from_ratio(100u128, 3000u128),
         },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
     }
 }

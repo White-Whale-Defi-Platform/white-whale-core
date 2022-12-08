@@ -2,24 +2,12 @@ use std::fmt;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
+    coins, to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
 use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
-
-#[cw_serde]
-pub struct Asset {
-    pub info: AssetInfo,
-    pub amount: Uint128,
-}
-
-impl fmt::Display for Asset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.amount, self.info)
-    }
-}
 
 pub const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000u128);
 const IBC_HASH_TAKE: usize = 4usize;
@@ -32,6 +20,18 @@ pub const PEGGY_PREFIX: &str = "peggy";
 const PEGGY_ADDR_SIZE: usize = 47usize;
 #[cfg(feature = "injective")]
 const PEGGY_ADDR_TAKE: usize = 3usize;
+
+#[cw_serde]
+pub struct Asset {
+    pub info: AssetInfo,
+    pub amount: Uint128,
+}
+
+impl fmt::Display for Asset {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.amount, self.info)
+    }
+}
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -62,6 +62,23 @@ impl Asset {
 
     pub fn into_submsg(self, recipient: Addr) -> StdResult<SubMsg> {
         Ok(SubMsg::new(self.into_msg(recipient)?))
+    }
+
+    pub fn into_burn_msg(self) -> StdResult<CosmosMsg> {
+        let burn_msg = match self.info {
+            AssetInfo::Token { contract_addr } => CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr,
+                msg: to_binary(&Cw20ExecuteMsg::Burn {
+                    amount: self.amount,
+                })?,
+                funds: vec![],
+            }),
+            AssetInfo::NativeToken { denom } => CosmosMsg::Bank(BankMsg::Burn {
+                amount: coins(self.amount.u128(), denom),
+            }),
+        };
+
+        Ok(burn_msg)
     }
 
     pub fn assert_sent_native_token_balance(&self, message_info: &MessageInfo) -> StdResult<()> {

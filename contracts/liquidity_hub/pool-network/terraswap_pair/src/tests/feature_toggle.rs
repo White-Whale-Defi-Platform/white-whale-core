@@ -42,6 +42,9 @@ fn test_feature_toggle_swap_disabled() {
             swap_fee: Fee {
                 share: Decimal::percent(3u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -147,6 +150,9 @@ fn test_feature_toggle_withdrawals_disabled() {
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
             },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
         },
         fee_collector_addr: "collector".to_string(),
     };
@@ -223,6 +229,9 @@ fn test_feature_toggle_deposits_disabled() {
             },
             swap_fee: Fee {
                 share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
             },
         },
         fee_collector_addr: "collector".to_string(),

@@ -1,10 +1,7 @@
 use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response};
 use vault_network::vault::{Cw20HookMsg, Cw20ReceiveMsg};
 
-use crate::{
-    error::{StdResult, VaultError},
-    state::CONFIG,
-};
+use crate::{error::VaultError, state::CONFIG};
 
 mod withdraw;
 
@@ -16,7 +13,7 @@ pub fn receive(
     env: Env,
     info: MessageInfo,
     msg: Cw20ReceiveMsg,
-) -> StdResult<Response> {
+) -> Result<Response, VaultError> {
     // callback can only be called by liquidity token
     let config = CONFIG.load(deps.storage)?;
 
