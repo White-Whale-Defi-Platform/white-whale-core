@@ -402,7 +402,7 @@ dependencies = [
 
 [[package]]
 name = "fee_collector"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
