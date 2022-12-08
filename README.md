@@ -40,7 +40,7 @@ in the [documentation](https://ww0-1.gitbook.io/migaloo-docs/smart-contracts/dep
 
 ## Building and Deploying Migaloo
 
-To build and deploy Migaloo´s smart contracts there are a series of deployment scripts under `scripts/`. You need at 
+To build and deploy Migaloo's smart contracts, there are a series of deployment scripts under `scripts/`. You need at 
 least Rust v1.65.0 to compile the contracts. 
 
 ### Build scripts
