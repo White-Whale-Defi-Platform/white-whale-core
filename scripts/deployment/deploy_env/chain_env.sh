@@ -40,6 +40,7 @@ function init_chain_env() {
 
   chihuahua)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/chihuahua.env)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_chihuahua.env)
     ;;
 
   *)
@@ -48,5 +49,7 @@ function init_chain_env() {
     ;;
   esac
 
-  source <(cat "$project_root_path"/scripts/deployment/deploy_env/base.env)
+  if [[ $chain != "chihuahua" ]]; then
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base.env)
+  fi
 }
