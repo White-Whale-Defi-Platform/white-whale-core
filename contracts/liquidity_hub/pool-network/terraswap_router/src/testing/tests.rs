@@ -926,7 +926,7 @@ fn add_swap_routes() {
         terraswap_factory: "terraswapfactory".to_string(),
     };
 
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info("creator", &[]);
 
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -1090,7 +1090,7 @@ fn add_swap_routes() {
         swap_routes: vec![swap_route_1.clone(), swap_route_2.clone()],
     };
 
-    let res = execute(deps.as_mut(), mock_env(), mock_info("addr0000", &[]), msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
     let expected_attributes = vec![
         attr("action", "add_swap_routes"),
         attr("swap_route", swap_route_1.to_string()),
@@ -1119,7 +1119,7 @@ fn add_swap_routes_invalid_route() {
         terraswap_factory: "terraswapfactory".to_string(),
     };
 
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info("creator", &[]);
 
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -1202,7 +1202,7 @@ fn add_swap_routes_invalid_route() {
         swap_routes: vec![swap_route_1.clone()],
     };
 
-    let error = execute(deps.as_mut(), mock_env(), mock_info("addr0000", &[]), msg).unwrap_err();
+    let error = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap_err();
 
     match error {
         ContractError::InvalidSwapRoute(swap_route) => assert_eq!(swap_route, swap_route_1),
@@ -1226,5 +1226,68 @@ fn add_swap_routes_invalid_route() {
             assert_eq!(ask_asset_info.to_string(), ask_asset);
         }
         _ => panic!("should return ContractError::NoSwapRouteForAssets"),
+    }
+}
+
+#[test]
+fn add_swap_routes_unauthorized() {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        terraswap_factory: "terraswapfactory".to_string(),
+    };
+
+    let info = mock_info("creator", &[]);
+
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "ukrw".to_string(),
+    };
+
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "uluna".to_string(),
+    };
+
+    let swap_route_1 = SwapRoute {
+        offer_asset_info: offer_asset_info.clone(),
+        ask_asset_info: ask_asset_info.clone(),
+        swap_operations: vec![
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+        ],
+    };
+
+    // add swap route
+    let msg = ExecuteMsg::AddSwapRoutes {
+        swap_routes: vec![swap_route_1.clone()],
+    };
+
+    let error = execute(
+        deps.as_mut(),
+        mock_env(),
+        mock_info("unauthorized", &[]),
+        msg,
+    )
+    .unwrap_err();
+
+    match error {
+        ContractError::Unauthorized {} => (),
+        _ => panic!("should return ContractError::Unauthorized"),
     }
 }

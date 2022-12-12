@@ -31,7 +31,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -39,7 +39,6 @@ pub fn instantiate(
     CONFIG.save(
         deps.storage,
         &Config {
-            owner: deps.api.addr_validate(info.sender.as_str())?,
             terraswap_factory: deps.api.addr_canonicalize(&msg.terraswap_factory)?,
         },
     )?;
@@ -94,7 +93,7 @@ pub fn execute(
             deps.api.addr_validate(&receiver)?,
         ),
         ExecuteMsg::AddSwapRoutes { swap_routes } => {
-            add_swap_routes(deps, info.sender, swap_routes)
+            add_swap_routes(deps, env, info.sender, swap_routes)
         }
     }
 }
@@ -221,11 +220,17 @@ fn assert_minimum_receive(
 
 fn add_swap_routes(
     deps: DepsMut,
+    env: Env,
     sender: Addr,
     swap_routes: Vec<SwapRoute>,
 ) -> Result<Response, ContractError> {
-    if sender != CONFIG.load(deps.storage)?.owner {
-        return Err(ContractError::Unauthorized {});
+    let contract_info = deps
+        .querier
+        .query_wasm_contract_info(env.contract.address)?;
+    if let Some(admin) = contract_info.admin {
+        if sender != deps.api.addr_validate(admin.as_str())? {
+            return Err(ContractError::Unauthorized {});
+        }
     }
 
     let mut attributes = vec![];
@@ -513,8 +518,6 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             new_version: version,
         });
     }
-
-    //TODO migrate to new config
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
