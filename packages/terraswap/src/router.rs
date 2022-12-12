@@ -1,7 +1,8 @@
+use std::fmt;
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
-use std::fmt;
 
 use crate::asset::AssetInfo;
 
@@ -113,6 +114,12 @@ pub enum QueryMsg {
     ReverseSimulateSwapOperations {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
+    },
+    /// Gets the swap route for the given offer and ask assets.
+    #[returns(Vec<SwapOperation>)]
+    SwapRoute {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
     },
 }
 

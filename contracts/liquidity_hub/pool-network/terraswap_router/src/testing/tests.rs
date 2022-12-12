@@ -846,7 +846,7 @@ fn assert_minimum_receive_native_token() {
     };
     let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
-        Err(ContractError::MiminumReceiveAssertion {
+        Err(ContractError::MinimumReceiveAssertion {
             minimum_receive,
             swap_amount,
         }) => {
@@ -888,7 +888,7 @@ fn assert_minimum_receive_token() {
     };
     let res = execute(deps.as_mut(), mock_env(), info, msg);
     match res {
-        Err(ContractError::MiminumReceiveAssertion {
+        Err(ContractError::MinimumReceiveAssertion {
             minimum_receive,
             swap_amount,
         }) => {
@@ -1100,15 +1100,15 @@ fn add_swap_routes() {
     assert_eq!(res.messages.len(), 0usize);
     assert_eq!(res.attributes, expected_attributes);
 
-    // verify the keys are in storage
-    assert_eq!(
-        swap_route_1.swap_operations,
-        swap_route_1_key.load(&deps.storage).unwrap()
-    );
-    assert_eq!(
-        swap_route_2.swap_operations,
-        swap_route_2_key.load(&deps.storage).unwrap()
-    );
+    // query swap route
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_1.offer_asset_info.clone(),
+        ask_asset_info: swap_route_1.ask_asset_info.clone(),
+    };
+
+    let res: Vec<SwapOperation> =
+        from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+    assert_eq!(res, swap_route_1.swap_operations);
 }
 
 #[test]
@@ -1166,13 +1166,17 @@ fn add_swap_routes_invalid_route() {
         ],
     );
 
+    let offer_asset_info = AssetInfo::NativeToken {
+        denom: "ukrw".to_string(),
+    };
+
+    let ask_asset_info = AssetInfo::NativeToken {
+        denom: "uluna".to_string(),
+    };
+
     let swap_route_1 = SwapRoute {
-        offer_asset_info: AssetInfo::NativeToken {
-            denom: "ukrw".to_string(),
-        },
-        ask_asset_info: AssetInfo::NativeToken {
-            denom: "uluna".to_string(),
-        },
+        offer_asset_info: offer_asset_info.clone(),
+        ask_asset_info: ask_asset_info.clone(),
         swap_operations: vec![
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::NativeToken {
@@ -1205,5 +1209,22 @@ fn add_swap_routes_invalid_route() {
         _ => panic!("should return ContractError::InvalidSwapRoute"),
     }
 
-    assert!(SWAP_ROUTES.is_empty(&deps.storage));
+    // query swap route
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: offer_asset_info.clone(),
+        ask_asset_info: ask_asset_info.clone(),
+    };
+
+    let error = query(deps.as_ref(), mock_env(), msg).unwrap_err();
+
+    match error {
+        ContractError::NoSwapRouteForAssets {
+            offer_asset,
+            ask_asset,
+        } => {
+            assert_eq!(offer_asset_info.to_string(), offer_asset);
+            assert_eq!(ask_asset_info.to_string(), ask_asset);
+        }
+        _ => panic!("should return ContractError::NoSwapRouteForAssets"),
+    }
 }

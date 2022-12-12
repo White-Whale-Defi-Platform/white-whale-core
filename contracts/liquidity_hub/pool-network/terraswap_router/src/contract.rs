@@ -210,7 +210,7 @@ fn assert_minimum_receive(
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
     if swap_amount < minimum_receive {
-        return Err(ContractError::MiminumReceiveAssertion {
+        return Err(ContractError::MinimumReceiveAssertion {
             minimum_receive,
             swap_amount,
         });
@@ -261,23 +261,35 @@ fn add_swap_routes(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
-        } => to_binary(&simulate_swap_operations(deps, offer_amount, operations)?),
+        } => Ok(to_binary(&simulate_swap_operations(
+            deps,
+            offer_amount,
+            operations,
+        )?)?),
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
             operations,
-        } => to_binary(&reverse_simulate_swap_operations(
+        } => Ok(to_binary(&reverse_simulate_swap_operations(
             deps, ask_amount, operations,
-        )?),
+        )?)?),
+        QueryMsg::SwapRoute {
+            offer_asset_info,
+            ask_asset_info,
+        } => Ok(to_binary(&get_swap_route(
+            deps,
+            offer_asset_info,
+            ask_asset_info,
+        )?)?),
     }
 }
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -293,15 +305,13 @@ fn simulate_swap_operations(
     deps: Deps,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
-) -> StdResult<SimulateSwapOperationsResponse> {
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err(
-            "Must provide swap operations to execute",
-        ));
+        return Err(ContractError::NoSwapOperationsProvided {});
     }
 
     let mut offer_amount = offer_amount;
@@ -340,14 +350,12 @@ fn reverse_simulate_swap_operations(
     deps: Deps,
     ask_amount: Uint128,
     operations: Vec<SwapOperation>,
-) -> StdResult<SimulateSwapOperationsResponse> {
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err(
-            "Must provide swap operations to execute",
-        ));
+        return Err(ContractError::NoSwapOperationsProvided {});
     }
 
     let mut ask_amount = ask_amount;
@@ -396,6 +404,24 @@ fn reverse_simulate_return_amount(
     )?;
 
     Ok(res.offer_amount)
+}
+
+fn get_swap_route(
+    deps: Deps,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> Result<Vec<SwapOperation>, ContractError> {
+    let swap_route_key = SWAP_ROUTES.key((
+        offer_asset_info.clone().get_label(&deps)?.as_str(),
+        ask_asset_info.clone().get_label(&deps)?.as_str(),
+    ));
+
+    swap_route_key
+        .load(deps.storage)
+        .map_err(|_| ContractError::NoSwapRouteForAssets {
+            offer_asset: offer_asset_info.to_string(),
+            ask_asset: ask_asset_info.to_string(),
+        })
 }
 
 fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
