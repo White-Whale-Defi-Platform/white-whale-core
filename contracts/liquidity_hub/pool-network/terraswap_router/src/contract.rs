@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -15,13 +15,13 @@ use terraswap::pair::SimulationResponse;
 use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
 use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-    SimulateSwapOperationsResponse, SwapOperation,
+    SimulateSwapOperationsResponse, SwapOperation, SwapRoute,
 };
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG};
+use crate::state::{Config, CONFIG, SWAP_ROUTES};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-pool_router";
@@ -31,7 +31,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -39,6 +39,7 @@ pub fn instantiate(
     CONFIG.save(
         deps.storage,
         &Config {
+            owner: deps.api.addr_validate(info.sender.as_str())?,
             terraswap_factory: deps.api.addr_canonicalize(&msg.terraswap_factory)?,
         },
     )?;
@@ -92,6 +93,9 @@ pub fn execute(
             minimum_receive,
             deps.api.addr_validate(&receiver)?,
         ),
+        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+            add_swap_routes(deps, info.sender, swap_routes)
+        }
     }
 }
 
@@ -213,6 +217,47 @@ fn assert_minimum_receive(
     }
 
     Ok(Response::default())
+}
+
+fn add_swap_routes(
+    deps: DepsMut,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    if sender != CONFIG.load(deps.storage)?.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        simulate_swap_operations(
+            deps.as_ref(),
+            Uint128::one(),
+            swap_route.clone().swap_operations,
+        )
+        .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
+
+        let swap_route_key = SWAP_ROUTES.key((
+            swap_route
+                .clone()
+                .offer_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+            swap_route
+                .clone()
+                .ask_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+        ));
+        swap_route_key.save(deps.storage, &swap_route.clone().swap_operations)?;
+
+        attributes.push(attr("swap_route", swap_route.clone().to_string()));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "add_swap_routes")
+        .add_attributes(attributes))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -442,6 +487,8 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             new_version: version,
         });
     }
+
+    //TODO migrate to new config
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

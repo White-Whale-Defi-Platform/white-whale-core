@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
 use cw20::Cw20ReceiveMsg;
+use std::fmt;
 
 use crate::asset::AssetInfo;
 
@@ -25,6 +26,38 @@ impl SwapOperation {
     }
 }
 
+impl fmt::Display for SwapOperation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SwapOperation::TerraSwap {
+                offer_asset_info,
+                ask_asset_info,
+            } => write!(
+                f,
+                "TerraSwap {{ offer_asset_info: {}, ask_asset_info: {} }}",
+                offer_asset_info, ask_asset_info
+            ),
+        }
+    }
+}
+
+#[cw_serde]
+pub struct SwapRoute {
+    pub offer_asset_info: AssetInfo,
+    pub ask_asset_info: AssetInfo,
+    pub swap_operations: Vec<SwapOperation>,
+}
+
+impl fmt::Display for SwapRoute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SwapRoute {{ offer_asset_info: {}, ask_asset_info: {}, swap_operations: {:?} }}",
+            self.offer_asset_info, self.ask_asset_info, self.swap_operations
+        )
+    }
+}
+
 #[cw_serde]
 pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
@@ -46,6 +79,10 @@ pub enum ExecuteMsg {
         prev_balance: Uint128,
         minimum_receive: Uint128,
         receiver: String,
+    },
+    /// Adds swap routes to the router.
+    AddSwapRoutes {
+        swap_routes: Vec<SwapRoute>,
     },
 }
 
