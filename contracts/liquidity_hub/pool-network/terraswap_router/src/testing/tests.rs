@@ -445,6 +445,19 @@ fn query_buy_with_routes() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+    // try simulating with empty operations
+    let empty_operations_msg = QueryMsg::SimulateSwapOperations {
+        offer_amount: Uint128::from(1000000u128),
+        operations: vec![],
+    };
+
+    let error = query(deps.as_ref(), mock_env(), empty_operations_msg).unwrap_err();
+
+    match error {
+        ContractError::NoSwapOperationsProvided {} => (),
+        _ => panic!("should return ContractError::NoSwapOperationsProvided"),
+    }
+
     let msg = QueryMsg::SimulateSwapOperations {
         offer_amount: Uint128::from(1000000u128),
         operations: vec![
@@ -543,6 +556,19 @@ fn query_reverse_routes_with_from_native() {
         &"asset0001".to_string(),
         &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(1000000u128))],
     )]);
+
+    // try simulating with empty operations
+    let empty_operations_msg = QueryMsg::ReverseSimulateSwapOperations {
+        ask_amount: Uint128::from(target_amount),
+        operations: vec![],
+    };
+
+    let error = query(deps.as_ref(), mock_env(), empty_operations_msg).unwrap_err();
+
+    match error {
+        ContractError::NoSwapOperationsProvided {} => (),
+        _ => panic!("should return ContractError::NoSwapOperationsProvided"),
+    }
 
     let msg = QueryMsg::ReverseSimulateSwapOperations {
         ask_amount: Uint128::from(target_amount),
