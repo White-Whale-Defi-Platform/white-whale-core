@@ -59,6 +59,7 @@ fn test_protocol_fees() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -241,6 +242,7 @@ fn test_collect_protocol_fees_successful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -467,6 +469,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();

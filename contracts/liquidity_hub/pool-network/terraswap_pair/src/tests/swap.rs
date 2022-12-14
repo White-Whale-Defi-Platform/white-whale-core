@@ -21,8 +21,18 @@ use white_whale::fee::Fee;
 
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
-    let offer_pool = Uint128::from(395451850234u128);
-    let ask_pool = Uint128::from(317u128);
+    let offer_pool = Asset {
+        info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        amount: Uint128::from(395451850234u128),
+    };
+    let ask_pool = Asset {
+        info: AssetInfo::NativeToken {
+            denom: "ujuno".to_string(),
+        },
+        amount: Uint128::from(317u128),
+    };
     let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::percent(1u64),
@@ -36,9 +46,10 @@ fn test_compute_swap_with_huge_pool_variance() {
     };
 
     assert_eq!(
-        compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees)
+        compute_swap(offer_pool, ask_pool, Uint128::from(1u128), pool_fees, None)
             .unwrap()
-            .return_amount,
+            .return_asset
+            .amount,
         Uint128::zero()
     );
 }
@@ -91,6 +102,7 @@ fn try_native_to_token() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -363,11 +375,12 @@ fn try_native_to_token() {
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
+            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),),
             attr(
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
-            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),),
+            attr("collected_fees_in", "asset0000".to_string(),),
         ]
     );
 
@@ -432,6 +445,7 @@ fn try_swap_invalid_token() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -533,6 +547,7 @@ fn try_token_to_native() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -791,11 +806,12 @@ fn try_token_to_native() {
             attr("return_amount", expected_return_amount.to_string()),
             attr("spread_amount", expected_spread_amount.to_string()),
             attr("swap_fee_amount", expected_swap_fee_amount.to_string()),
+            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),),
             attr(
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
-            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),)
+            attr("collected_fees_in", "uusd".to_string(),),
         ]
     );
 
@@ -877,6 +893,7 @@ fn test_swap_to_third_party() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();

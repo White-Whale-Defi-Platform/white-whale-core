@@ -69,6 +69,7 @@ pub fn instantiate(
             deposits_enabled: true,
             swaps_enabled: true,
         },
+        collect_protocol_fees_in: msg.collect_protocol_fees_in,
     };
     CONFIG.save(deps.storage, &config)?;
 

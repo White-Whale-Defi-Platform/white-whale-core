@@ -188,6 +188,7 @@ fn create_pair() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -224,6 +225,7 @@ fn create_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    collect_protocol_fees_in: None,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -294,6 +296,7 @@ fn create_pair_native_token_and_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -330,6 +333,7 @@ fn create_pair_native_token_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    collect_protocol_fees_in: None,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -407,6 +411,7 @@ fn create_ibc_tokens_pair() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -443,6 +448,7 @@ fn create_ibc_tokens_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    collect_protocol_fees_in: None,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -520,6 +526,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -556,6 +563,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    collect_protocol_fees_in: None,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -609,6 +617,7 @@ fn fail_to_create_same_pair() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -650,6 +659,7 @@ fn fail_to_create_existing_pair() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -711,6 +721,7 @@ fn fail_to_create_pair_with_inactive_denoms() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -753,6 +764,7 @@ fn fail_to_create_pair_with_invalid_denom() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -787,6 +799,7 @@ fn fail_to_create_pair_with_invalid_denom() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -838,6 +851,7 @@ fn fail_to_create_pair_with_unknown_token() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -889,6 +903,7 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -1142,6 +1157,7 @@ fn execute_transactions_unauthorized() {
                 share: Decimal::zero(),
             },
         },
+        collect_protocol_fees_in: None,
     };
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 

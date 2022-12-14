@@ -65,7 +65,8 @@ pub fn execute(
         ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,
-        } => commands::create_pair(deps, env, asset_infos, pool_fees),
+            collect_protocol_fees_in,
+        } => commands::create_pair(deps, env, asset_infos, pool_fees, collect_protocol_fees_in),
         ExecuteMsg::RemovePair { asset_infos } => commands::remove_pair(deps, env, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             commands::add_native_token_decimals(deps, env, denom, decimals)

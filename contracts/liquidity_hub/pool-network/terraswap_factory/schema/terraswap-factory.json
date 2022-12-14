@@ -154,6 +154,16 @@
                 "maxItems": 2,
                 "minItems": 2
               },
+              "collect_protocol_fees_in": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/AssetInfo"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "pool_fees": {
                 "$ref": "#/definitions/PoolFee"
               }

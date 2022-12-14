@@ -49,6 +49,7 @@ fn provide_liquidity() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -517,6 +518,7 @@ fn provide_liquidity_zero_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -615,6 +617,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();

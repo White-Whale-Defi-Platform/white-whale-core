@@ -11,48 +11,85 @@ use terraswap::pair::PoolFee;
 use crate::error::ContractError;
 
 pub fn compute_swap(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
+    offer_pool_asset: Asset,
+    ask_pool_asset: Asset,
     offer_amount: Uint128,
     pool_fees: PoolFee,
+    collect_fees_in: Option<AssetInfo>,
 ) -> StdResult<SwapComputation> {
-    let offer_pool: Uint256 = Uint256::from(offer_pool);
-    let ask_pool: Uint256 = ask_pool.into();
-    let offer_amount: Uint256 = offer_amount.into();
+    let offer_pool: Uint256 = offer_pool_asset.amount.into();
+    let ask_pool: Uint256 = ask_pool_asset.amount.into();
+    let mut offer_amount: Uint256 = offer_amount.into();
+
+    let mut protocol_fee_amount: Uint256 = Uint256::zero();
+
+    // check if protocol fees are collected in offer_asset
+    if is_protocol_fee_collected_in_asset(&collect_fees_in, &offer_pool_asset.info) {
+        protocol_fee_amount = pool_fees.protocol_fee.compute(offer_amount);
+        offer_amount -= protocol_fee_amount;
+    }
 
     // offer => ask
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee
-    let return_amount: Uint256 = Uint256::one()
+    let mut return_amount: Uint256 = Uint256::one()
         * Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
 
     // calculate spread, swap and protocol fees
     let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
     let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
+
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
-    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
     let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-    // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
-    let return_amount: Uint256 =
-        return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
+    // protocol fee is subtracted from the return_amount if the fee is collected in the ask asset
+    if !is_protocol_fee_collected_in_asset(&collect_fees_in, &offer_pool_asset.info) {
+        protocol_fee_amount = pool_fees.protocol_fee.compute(return_amount);
+        return_amount -= protocol_fee_amount;
+    }
+
+    // swap fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg. The
+    return_amount = return_amount - swap_fee_amount - burn_fee_amount;
 
     Ok(SwapComputation {
-        return_amount: return_amount.try_into()?,
+        return_asset: Asset {
+            info: ask_pool_asset.info.clone(),
+            amount: return_amount.try_into()?,
+        },
         spread_amount: spread_amount.try_into()?,
-        swap_fee_amount: swap_fee_amount.try_into()?,
-        protocol_fee_amount: protocol_fee_amount.try_into()?,
-        burn_fee_amount: burn_fee_amount.try_into()?,
+        swap_fee_asset: Asset {
+            info: ask_pool_asset.info.clone(),
+            amount: swap_fee_amount.try_into()?,
+        },
+        protocol_fee_asset: Asset {
+            info: collect_fees_in.unwrap_or_else(|| ask_pool_asset.info.clone()),
+            amount: protocol_fee_amount.try_into()?,
+        },
+        burn_fee_asset: Asset {
+            info: ask_pool_asset.info,
+            amount: burn_fee_amount.try_into()?,
+        },
     })
+}
+
+fn is_protocol_fee_collected_in_asset(
+    collect_protocol_fees_in: &Option<AssetInfo>,
+    asset_info: &AssetInfo,
+) -> bool {
+    if let Some(collect_protocol_fees_in) = collect_protocol_fees_in {
+        return collect_protocol_fees_in == asset_info;
+    }
+
+    false
 }
 
 /// Represents the swap computation values
 #[cw_serde]
 pub struct SwapComputation {
-    pub return_amount: Uint128,
+    pub return_asset: Asset,
     pub spread_amount: Uint128,
-    pub swap_fee_amount: Uint128,
-    pub protocol_fee_amount: Uint128,
-    pub burn_fee_amount: Uint128,
+    pub swap_fee_asset: Asset,
+    pub protocol_fee_asset: Asset,
+    pub burn_fee_asset: Asset,
 }
 
 pub fn compute_offer_amount(

@@ -93,21 +93,23 @@ pub fn query_simulation(
         return Err(ContractError::AssetMismatch {});
     }
 
-    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    let config = CONFIG.load(deps.storage)?;
+    let pool_fees = config.pool_fees;
 
     let swap_computation = helpers::compute_swap(
-        offer_pool.amount,
-        ask_pool.amount,
+        offer_pool,
+        ask_pool,
         offer_asset.amount,
         pool_fees,
+        config.collect_protocol_fees_in,
     )?;
 
     Ok(SimulationResponse {
-        return_amount: swap_computation.return_amount,
+        return_amount: swap_computation.return_asset.amount,
         spread_amount: swap_computation.spread_amount,
-        swap_fee_amount: swap_computation.swap_fee_amount,
-        protocol_fee_amount: swap_computation.protocol_fee_amount,
-        burn_fee_amount: swap_computation.burn_fee_amount,
+        swap_fee_amount: swap_computation.swap_fee_asset.amount,
+        protocol_fee_amount: swap_computation.protocol_fee_asset.amount,
+        burn_fee_amount: swap_computation.burn_fee_asset.amount,
     })
 }
 

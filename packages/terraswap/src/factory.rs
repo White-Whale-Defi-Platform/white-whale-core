@@ -33,6 +33,7 @@ pub enum ExecuteMsg {
         /// Asset infos
         asset_infos: [AssetInfo; 2],
         pool_fees: PoolFee,
+        collect_protocol_fees_in: Option<AssetInfo>,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
     AddNativeTokenDecimals { denom: String, decimals: u8 },

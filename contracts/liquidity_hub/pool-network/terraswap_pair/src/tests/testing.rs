@@ -49,6 +49,7 @@ fn proper_initialization() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -146,6 +147,7 @@ fn test_initialization_invalid_fees() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -190,6 +192,7 @@ fn can_migrate_contract() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -413,6 +416,7 @@ fn test_update_config_unsuccessful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();
@@ -497,6 +501,7 @@ fn test_update_config_successful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        collect_protocol_fees_in: None,
     };
 
     let env = mock_env();

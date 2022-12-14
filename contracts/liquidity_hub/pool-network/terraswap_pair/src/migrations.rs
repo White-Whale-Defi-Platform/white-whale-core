@@ -96,6 +96,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
             },
         },
         feature_toggle: config_v110.feature_toggle,
+        collect_protocol_fees_in: None,
     };
 
     CONFIG.save(deps.storage, &config)?;

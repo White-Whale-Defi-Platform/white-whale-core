@@ -76,6 +76,7 @@ pub fn create_pair(
     env: Env,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
+    collect_protocol_fees_in: Option<AssetInfo>,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -149,6 +150,7 @@ pub fn create_pair(
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
+                    collect_protocol_fees_in,
                 })?,
             }),
             reply_on: ReplyOn::Success,

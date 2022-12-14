@@ -115,6 +115,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    collect_protocol_fees_in: None,
                 },
                 &[],
             )
@@ -457,6 +458,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    collect_protocol_fees_in: None,
                 },
                 &[],
             )
@@ -900,6 +902,7 @@ fn collect_pools_native_fees_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    collect_protocol_fees_in: None,
                 },
                 &[],
             )
@@ -1295,6 +1298,7 @@ fn collect_fees_with_pagination_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    collect_protocol_fees_in: None,
                 },
                 &[],
             )

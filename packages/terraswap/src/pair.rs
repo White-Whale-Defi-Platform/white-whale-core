@@ -15,6 +15,8 @@ pub struct InstantiateMsg {
     pub asset_decimals: [u8; 2],
     pub pool_fees: PoolFee,
     pub fee_collector_addr: String,
+    /// Assets to collect protocol fees in
+    pub collect_protocol_fees_in: Option<AssetInfo>,
 }
 
 #[cw_serde]
@@ -133,6 +135,7 @@ pub struct Config {
     pub fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
+    pub collect_protocol_fees_in: Option<AssetInfo>,
 }
 
 pub type ConfigResponse = Config;
