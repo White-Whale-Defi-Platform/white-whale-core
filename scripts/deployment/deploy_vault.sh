@@ -21,6 +21,7 @@ function display_usage() {
 #  "asset": "ujuno", //or contract
 #  "protocol_fee": "0.01",
 #  "flash_loan_fee": "0.02",
+#  "burn_fee": "0.02",
 #  "is_native": true //or false
 # }
 #
@@ -35,6 +36,7 @@ function read_vault_config() {
   asset=$(jq -r '.asset' $vault)
   protocol_fee=$(jq -r '.protocol_fee' $vault)
   flash_loan_fee=$(jq -r '.flash_loan_fee' $vault)
+  burn_fee=$(jq -r '.burn_fee' $vault)
   is_native=$(jq -r '.is_native' $vault)
 }
 
@@ -56,12 +58,13 @@ function create_vault() {
     asset_info='{"token":{"contract_addr":"'$asset'"}}'
   fi
 
-  create_vault_msg='{"create_vault":{"asset_info":'$asset_info',"fees":{"protocol_fee":{"share":"'$protocol_fee'"},"flash_loan_fee":{"share":"'$flash_loan_fee'"}}}}'
+  create_vault_msg='{"create_vault":{"asset_info":'$asset_info',"fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"flash_loan_fee":{"share":"'$flash_loan_fee'"}}}}'
 
   echo "Creating vault with the following configuration:"
   echo "Asset: $asset"
   echo "Protocol fee: $protocol_fee"
   echo -e "Flash loan fee: $flash_loan_fee\n"
+  echo -e "Burn fee: $burn_fee\n"
 
   local res=$($BINARY tx wasm execute $vault_factory_addr "$create_vault_msg" $TXFLAG --from $deployer_address)
   echo $res
