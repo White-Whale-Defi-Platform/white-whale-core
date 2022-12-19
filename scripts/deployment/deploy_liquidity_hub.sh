@@ -11,7 +11,7 @@ function display_usage() {
   echo -e "\nUsage:./deploy_liquidity_hub.sh [flags]. Two flags should be used, -c to specify the chain and then either -d or -s.\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
-  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet)"
+  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|injective|injective-testnet|chihuahua|archway-testnet|comdex|comdex-testnet)"
   echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
   echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
 }
