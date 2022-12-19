@@ -12,7 +12,7 @@ function display_usage() {
   echo -e "\nUsage:./deploy_pool.sh [flags].\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
-  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet)"
+  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|injective|injective-testnet|chihuahua|archway-testnet|comdex|comdex-testnet)"
   echo -e "  -p \tPool configuration file to get deployment info from."
 }
 
