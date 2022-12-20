@@ -15,7 +15,7 @@ pub fn compute_swap(
     ask_pool_asset: Asset,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-    collect_fees_in: Option<AssetInfo>,
+    collect_protocol_fees_in: Option<AssetInfo>,
 ) -> StdResult<SwapComputation> {
     let offer_pool: Uint256 = offer_pool_asset.amount.into();
     let ask_pool: Uint256 = ask_pool_asset.amount.into();
@@ -24,7 +24,7 @@ pub fn compute_swap(
     let mut protocol_fee_amount: Uint256 = Uint256::zero();
 
     // check if protocol fees are collected in offer_asset
-    if is_protocol_fee_collected_in_asset(&collect_fees_in, &offer_pool_asset.info) {
+    if is_protocol_fee_collected_in_asset(&collect_protocol_fees_in, &offer_pool_asset.info) {
         protocol_fee_amount = pool_fees.protocol_fee.compute(offer_amount);
         offer_amount -= protocol_fee_amount;
     }
@@ -42,7 +42,7 @@ pub fn compute_swap(
     let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
     // protocol fee is subtracted from the return_amount if the fee is collected in the ask asset
-    if !is_protocol_fee_collected_in_asset(&collect_fees_in, &offer_pool_asset.info) {
+    if !is_protocol_fee_collected_in_asset(&collect_protocol_fees_in, &offer_pool_asset.info) {
         protocol_fee_amount = pool_fees.protocol_fee.compute(return_amount);
         return_amount -= protocol_fee_amount;
     }
@@ -61,7 +61,7 @@ pub fn compute_swap(
             amount: swap_fee_amount.try_into()?,
         },
         protocol_fee_asset: Asset {
-            info: collect_fees_in.unwrap_or_else(|| ask_pool_asset.info.clone()),
+            info: collect_protocol_fees_in.unwrap_or_else(|| ask_pool_asset.info.clone()),
             amount: protocol_fee_amount.try_into()?,
         },
         burn_fee_asset: Asset {
@@ -93,41 +93,62 @@ pub struct SwapComputation {
 }
 
 pub fn compute_offer_amount(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
+    offer_pool_asset: Asset,
+    ask_pool_asset: Asset,
     ask_amount: Uint128,
     pool_fees: PoolFee,
+    collect_protocol_fees_in: Option<AssetInfo>,
 ) -> StdResult<OfferAmountComputation> {
-    let offer_pool: Uint256 = offer_pool.into();
-    let ask_pool: Uint256 = ask_pool.into();
+    let offer_pool: Uint256 = offer_pool_asset.amount.into();
+    let ask_pool: Uint256 = ask_pool_asset.amount.into();
     let ask_amount: Uint256 = ask_amount.into();
 
     // ask => offer
+
+    // if fees are collected in the ask asset:
+    // fees = protocol_fee + swap_fee + burn_fee
     // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool
-    let fees = pool_fees.swap_fee.to_decimal_256()
-        + pool_fees.protocol_fee.to_decimal_256()
-        + pool_fees.burn_fee.to_decimal_256();
+    // if fees are collected in the offer asset:
+    // fees = swap_fee + burn_fee
+    // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool + protocol_fee
+    let mut fees = pool_fees.swap_fee.to_decimal_256() + pool_fees.burn_fee.to_decimal_256();
+    let mut protocol_fee_amount: Uint256 = Uint256::zero();
+
+    // if fees are collected in the ask asset, add protocol fees to the fees amount
+    if !is_protocol_fee_collected_in_asset(&collect_protocol_fees_in, &offer_pool_asset.info) {
+        fees += pool_fees.protocol_fee.to_decimal_256();
+    }
+
     let one_minus_commission = Decimal256::one() - fees;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
     let cp: Uint256 = offer_pool * ask_pool;
-    let offer_amount: Uint256 = Uint256::one()
+    let mut offer_amount: Uint256 = Uint256::one()
         .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
         - offer_pool;
 
     let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
-    let before_spread_deduction: Uint256 =
-        offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
+    let spread_amount = (offer_amount * Decimal256::from_ratio(ask_pool, offer_pool))
+        .saturating_sub(before_commission_deduction);
 
-    let spread_amount = if before_spread_deduction > before_commission_deduction {
-        before_spread_deduction - before_commission_deduction
-    } else {
-        Uint256::zero()
-    };
+    // if fees are collected in the offer asset, recalculate the offer amount adding the protocol fee to it
+    // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool + protocol_fee
+    // offer_amount = x + (offer_amount * (1 - protocol_fee))
+    // offer_amount = x / (1 - protocol_fee)
+    if is_protocol_fee_collected_in_asset(&collect_protocol_fees_in, &offer_pool_asset.info) {
+        let one_minus_protocol_fees = Decimal256::one() - pool_fees.protocol_fee.to_decimal_256();
+        let inv_one_minus_protocol_fees = Decimal256::one() / one_minus_protocol_fees;
+        offer_amount = offer_amount * inv_one_minus_protocol_fees;
+        protocol_fee_amount = pool_fees.protocol_fee.compute(offer_amount);
+    }
 
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
-    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
     let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(before_commission_deduction);
+
+    if !is_protocol_fee_collected_in_asset(&collect_protocol_fees_in, &offer_pool_asset.info) {
+        // if collecting protocol fees on ask asset
+        protocol_fee_amount = pool_fees.protocol_fee.compute(before_commission_deduction);
+    }
 
     Ok(OfferAmountComputation {
         offer_amount: offer_amount.try_into()?,
