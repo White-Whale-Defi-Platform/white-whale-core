@@ -63,7 +63,7 @@ function create_vault() {
   echo "Creating vault with the following configuration:"
   echo "Asset: $asset"
   echo "Protocol fee: $protocol_fee"
-  echo -e "Flash loan fee: $flash_loan_fee\n"
+  echo -e "Flash loan fee: $flash_loan_fee"
   echo -e "Burn fee: $burn_fee\n"
 
   local res=$($BINARY tx wasm execute $vault_factory_addr "$create_vault_msg" $TXFLAG --from $deployer_address)
