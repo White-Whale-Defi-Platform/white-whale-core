@@ -11,7 +11,7 @@ function display_usage() {
   echo -e "\nUsage:./deploy_vault.sh [flags].\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
-  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|injective|injective-testnet|chihuahua|archway-testnet|comdex|comdex-testnet)"
+  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
   echo -e "  -v \tVault configuration file to get deployment info from."
 }
 

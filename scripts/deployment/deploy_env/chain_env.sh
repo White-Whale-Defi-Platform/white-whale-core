@@ -61,6 +61,14 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/comdex.env)
     ;;
 
+  sei-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/sei.env)
+    ;;
+
+  stargaze-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/stargaze.env)
+    ;;
+
   *)
     echo "Network $chain not defined"
     exit 1

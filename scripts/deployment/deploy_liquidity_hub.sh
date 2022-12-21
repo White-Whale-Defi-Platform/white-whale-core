@@ -12,7 +12,7 @@ function display_usage() {
   echo -e "To deploy a new hub the contracts need to be stored first, running -s. With the code_ids in place, the contracts can be deployed with -d.\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
-  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|injective|injective-testnet|chihuahua|archway-testnet|comdex|comdex-testnet)"
+  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
   echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
   echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
 }
