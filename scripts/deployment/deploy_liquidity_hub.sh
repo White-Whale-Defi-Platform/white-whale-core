@@ -8,7 +8,8 @@ tx_delay=8s
 # Displays tool usage
 function display_usage() {
   echo "WW Liquidity Hub Deployer"
-  echo -e "\nUsage:./deploy_liquidity_hub.sh [flags]. Two flags should be used, -c to specify the chain and then either -d or -s.\n"
+  echo -e "\nUsage:./deploy_liquidity_hub.sh [flags]. Two flags should be used, -c to specify the chain and then either -d or -s."
+  echo -e "To deploy a new hub the contracts need to be stored first, running -s. With the code_ids in place, the contracts can be deployed with -d.\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|injective|injective-testnet|chihuahua|archway-testnet|comdex|comdex-testnet)"
@@ -47,46 +48,6 @@ function store_artifact_on_chain() {
   mv $tmpfile $output_file
   echo -e "Stored artifact $(basename "$artifact") on $CHAIN_ID successfully\n"
   sleep $tx_delay
-}
-
-function store() {
-  mkdir -p $project_root_path/scripts/deployment/output
-  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
-
-  if [[ ! -f "$output_file" ]]; then
-    # create file to dump results into
-    echo '{"contracts": []}' | jq '.' >$output_file
-  fi
-
-  case $1 in
-  fee-collector)
-    store_artifact_on_chain $project_root_path/artifacts/fee_collector.wasm
-    ;;
-  pool-factory)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_factory.wasm
-    ;;
-  pool)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_pair.wasm
-    ;;
-  token)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_token.wasm
-    ;;
-  pool-router)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_router.wasm
-    ;;
-  vault)
-    store_artifact_on_chain $project_root_path/artifacts/vault.wasm
-    ;;
-  vault-factory)
-    store_artifact_on_chain $project_root_path/artifacts/vault_factory.wasm
-    ;;
-  vault-router)
-    store_artifact_on_chain $project_root_path/artifacts/vault_router.wasm
-    ;;
-  *) # store all
-    store_artifacts_on_chain
-    ;;
-  esac
 }
 
 function store_artifacts_on_chain() {
@@ -262,7 +223,6 @@ function deploy() {
     init_vault_router
     ;;
   *) # deploy all
-    store_artifacts_on_chain
     init_liquidity_hub
     ;;
   esac
@@ -277,6 +237,46 @@ function deploy() {
 
   echo -e "\n**** Deployment successful ****\n"
   jq '.' $output_file
+}
+
+function store() {
+  mkdir -p $project_root_path/scripts/deployment/output
+  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
+
+  if [[ ! -f "$output_file" ]]; then
+    # create file to dump results into
+    echo '{"contracts": []}' | jq '.' >$output_file
+  fi
+
+  case $1 in
+  fee-collector)
+    store_artifact_on_chain $project_root_path/artifacts/fee_collector.wasm
+    ;;
+  pool-factory)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_factory.wasm
+    ;;
+  pool)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_pair.wasm
+    ;;
+  token)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_token.wasm
+    ;;
+  pool-router)
+    store_artifact_on_chain $project_root_path/artifacts/terraswap_router.wasm
+    ;;
+  vault)
+    store_artifact_on_chain $project_root_path/artifacts/vault.wasm
+    ;;
+  vault-factory)
+    store_artifact_on_chain $project_root_path/artifacts/vault_factory.wasm
+    ;;
+  vault-router)
+    store_artifact_on_chain $project_root_path/artifacts/vault_router.wasm
+    ;;
+  *) # store all
+    store_artifacts_on_chain
+    ;;
+  esac
 }
 
 if [ -z $1 ]; then

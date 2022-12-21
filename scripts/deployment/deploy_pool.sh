@@ -98,7 +98,7 @@ function create_pool() {
   echo "Asset 0: ${asset_infos[0]}"
   echo "Asset 1: ${asset_infos[1]}"
   echo "Protocol fee: $protocol_fee"
-  echo -e "Swap fee: $swap_fee\n"
+  echo -e "Swap fee: $swap_fee"
   echo -e "Burn fee: $burn_fee\n"
 
   local res=$($BINARY tx wasm execute $pool_factory_addr "$create_pool_msg" $TXFLAG --from $deployer_address)
