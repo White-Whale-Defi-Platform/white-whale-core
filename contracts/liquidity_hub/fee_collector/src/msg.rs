@@ -9,17 +9,26 @@ pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Collects protocol fees based on the configuration indicated by [CollectFeesFor]
-    CollectFees { collect_fees_for: CollectFeesFor },
+    /// Collects protocol fees based on the configuration indicated by [FeesFor]
+    CollectFees { collect_fees_for: FeesFor },
+    /// Swaps the assets (fees) sitting in the fee collector into the given [AssetInfo] if possible.
+    /// A [SwapRoute] should be available at the router to be able to make the swaps.
+    AggregateFees {
+        asset_info: AssetInfo,
+        aggregate_fees_for: FeesFor,
+    },
     /// Updates the config
-    UpdateConfig { owner: Option<String> },
+    UpdateConfig {
+        owner: Option<String>,
+        pool_router: Option<String>,
+    },
 }
 
 #[cw_serde]
-pub enum CollectFeesFor {
-    /// Collects the fees accumulated by the given contracts
+pub enum FeesFor {
+    /// Refers to the fees on the given contracts
     Contracts { contracts: Vec<Contract> },
-    /// Collects the fees accumulated by the contracts the given factory created
+    /// Refers to the fees on the contracts the given factory created
     Factory {
         factory_addr: String,
         factory_type: FactoryType,

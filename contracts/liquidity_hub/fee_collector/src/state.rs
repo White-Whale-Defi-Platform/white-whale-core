@@ -5,6 +5,7 @@ use cw_storage_plus::Item;
 #[cw_serde]
 pub struct Config {
     pub owner: Addr,
+    pub pool_router: Addr,
 }
 
 pub type ConfigResponse = Config;

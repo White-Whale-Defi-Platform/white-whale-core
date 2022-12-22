@@ -6,7 +6,7 @@ use std::env;
 use crate::contract::{execute, instantiate, migrate, query};
 use terraswap::mock_querier::mock_dependencies;
 
-use crate::msg::{CollectFeesFor, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, FeesFor, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::ConfigResponse;
 use crate::ContractError;
 
@@ -38,7 +38,7 @@ fn collect_fees_unsuccessfully_unauthorized() {
     // unauthorized tries collecting fees
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::CollectFees {
-        collect_fees_for: CollectFeesFor::Contracts { contracts: vec![] },
+        collect_fees_for: FeesFor::Contracts { contracts: vec![] },
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);

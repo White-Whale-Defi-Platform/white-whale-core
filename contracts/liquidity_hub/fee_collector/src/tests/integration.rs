@@ -13,7 +13,7 @@ use white_whale::fee::{Fee, VaultFee};
 
 use crate::msg::ExecuteMsg::CollectFees;
 use crate::msg::{
-    CollectFeesFor, Contract, ContractType, FactoryType, InstantiateMsg, QueryFeesFor, QueryMsg,
+    Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryFeesFor, QueryMsg,
 };
 use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
@@ -314,7 +314,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
-            collect_fees_for: CollectFeesFor::Factory {
+            collect_fees_for: FeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
                 factory_type: FactoryType::Pool {
                     start_after: None,
@@ -736,7 +736,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
-            collect_fees_for: CollectFeesFor::Contracts { contracts },
+            collect_fees_for: FeesFor::Contracts { contracts },
         },
         &[],
     )
@@ -1073,7 +1073,7 @@ fn collect_pools_native_fees_successfully() {
         creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
-            collect_fees_for: CollectFeesFor::Factory {
+            collect_fees_for: FeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
                 factory_type: FactoryType::Pool {
                     start_after: None,
@@ -1461,7 +1461,7 @@ fn collect_fees_with_pagination_successfully() {
             creator.sender.clone(),
             fee_collector_address.clone(),
             &CollectFees {
-                collect_fees_for: CollectFeesFor::Factory {
+                collect_fees_for: FeesFor::Factory {
                     factory_addr: pool_factory_address.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: start_after.clone(),
@@ -1736,7 +1736,7 @@ fn collect_fees_for_vault() {
         creator.sender,
         fee_collector_address.clone(),
         &CollectFees {
-            collect_fees_for: CollectFeesFor::Factory {
+            collect_fees_for: FeesFor::Factory {
                 factory_addr: vault_factory_address.to_string(),
                 factory_type: FactoryType::Vault {
                     start_after: None,

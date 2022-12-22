@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
@@ -24,6 +24,7 @@ pub fn instantiate(
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
+        pool_router: Addr::unchecked(""),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -36,7 +37,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -44,7 +45,13 @@ pub fn execute(
         ExecuteMsg::CollectFees { collect_fees_for } => {
             commands::collect_fees(deps, info, collect_fees_for)
         }
-        ExecuteMsg::UpdateConfig { owner } => commands::update_config(deps, info, owner),
+        ExecuteMsg::UpdateConfig { owner, pool_router } => {
+            commands::update_config(deps, info, owner, pool_router)
+        }
+        ExecuteMsg::AggregateFees {
+            asset_info,
+            aggregate_fees_for,
+        } => commands::aggregate_fees(deps, info, env, asset_info, aggregate_fees_for),
     }
 }
 
@@ -75,6 +82,8 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             new_version: version,
         });
     }
+
+    //TODO migrate state for router addr and other ones that got added
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
