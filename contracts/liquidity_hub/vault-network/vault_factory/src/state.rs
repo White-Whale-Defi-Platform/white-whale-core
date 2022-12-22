@@ -3,6 +3,8 @@ use cw_storage_plus::{Bound, Item, Map};
 
 use vault_network::vault_factory::{Config, VaultInfo};
 
+use crate::asset::from_reference;
+
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");
@@ -28,8 +30,10 @@ pub fn read_vaults(
         .take(limit)
         .map(|item| {
             let (key, v) = item?;
+
             Ok(VaultInfo {
                 vault: v.to_string(),
+                asset_info: from_reference(key.clone())?, //todo write tests for this new query response
                 asset_info_reference: key,
             })
         })

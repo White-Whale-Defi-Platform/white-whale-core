@@ -1,6 +1,6 @@
 [package]
 name = "vault-network"
-version = "1.0.0"
+version = "1.0.1"
 edition.workspace = true
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 description = "Messages for the Vault Network"
