@@ -1,6 +1,7 @@
 mod commands;
 pub mod contract;
 mod error;
+mod migrations;
 pub mod msg;
 mod queries;
 pub mod state;
