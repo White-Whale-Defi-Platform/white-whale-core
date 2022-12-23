@@ -6,7 +6,7 @@ use terraswap::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
 use vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{ContractType, FactoryType, QueryFeesFor};
+use crate::msg::{ContractType, FactoryType, FeesFor};
 use crate::state::{ConfigResponse, CONFIG};
 
 /// Queries the [Config], which contains the owner address
@@ -15,16 +15,12 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(config)
 }
 
-/// Queries the fees in [Asset] for contracts or Factories defined by [QueryFeesFor]
-pub fn query_fees(
-    deps: Deps,
-    query_fees_for: QueryFeesFor,
-    all_time: bool,
-) -> StdResult<Vec<Asset>> {
+/// Queries the fees in [Asset] for contracts or Factories defined by [FeesFor]
+pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdResult<Vec<Asset>> {
     let mut fees: Vec<Asset> = Vec::new();
 
     match query_fees_for {
-        QueryFeesFor::Contracts { mut contracts } => {
+        FeesFor::Contracts { mut contracts } => {
             contracts.dedup_by(|a, b| a.address == b.address);
 
             for contract in contracts {
@@ -44,7 +40,7 @@ pub fn query_fees(
                 }
             }
         }
-        QueryFeesFor::Factory {
+        FeesFor::Factory {
             factory_addr,
             factory_type,
         } => {

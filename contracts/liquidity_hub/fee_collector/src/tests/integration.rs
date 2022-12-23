@@ -12,9 +12,7 @@ use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
 
 use crate::msg::ExecuteMsg::CollectFees;
-use crate::msg::{
-    Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryFeesFor, QueryMsg,
-};
+use crate::msg::{Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg};
 use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_pair_code,
@@ -543,7 +541,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Contracts {
+                query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
                         address: pair_tokens[1].clone().to_string(),
                         contract_type: ContractType::Pool {},
@@ -663,7 +661,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Contracts {
+                query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
                         address: pair_tokens[1].clone().to_string(),
                         contract_type: ContractType::Pool {},
@@ -771,7 +769,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Contracts {
+                query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
                         address: pair_tokens[1].clone().to_string(),
                         contract_type: ContractType::Pool {},
@@ -965,7 +963,7 @@ fn collect_pools_native_fees_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Factory {
+                query_fees_for: FeesFor::Factory {
                     factory_addr: pool_factory_address.clone().to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
@@ -1091,7 +1089,7 @@ fn collect_pools_native_fees_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Factory {
+                query_fees_for: FeesFor::Factory {
                     factory_addr: pool_factory_address.clone().to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
@@ -1164,7 +1162,7 @@ fn collect_pools_native_fees_successfully() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Factory {
+                query_fees_for: FeesFor::Factory {
                     factory_addr: pool_factory_address.clone().to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
@@ -1670,7 +1668,7 @@ fn collect_fees_for_vault() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Factory {
+                query_fees_for: FeesFor::Factory {
                     factory_addr: vault_factory_address.clone().to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
@@ -1780,7 +1778,7 @@ fn collect_fees_for_vault() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Factory {
+                query_fees_for: FeesFor::Factory {
                     factory_addr: vault_factory_address.clone().to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
@@ -1804,7 +1802,7 @@ fn collect_fees_for_vault() {
         .query_wasm_smart(
             fee_collector_address.clone(),
             &QueryMsg::Fees {
-                query_fees_for: QueryFeesFor::Contracts {
+                query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
                         address: vaults[0].to_string(),
                         contract_type: ContractType::Vault {},

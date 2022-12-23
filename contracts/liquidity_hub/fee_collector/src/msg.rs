@@ -44,7 +44,7 @@ pub enum QueryMsg {
     /// Queries fees collected by a given factory's children or individual contracts
     #[returns(Vec<Asset>)]
     Fees {
-        query_fees_for: QueryFeesFor,
+        query_fees_for: FeesFor,
         all_time: Option<bool>,
     },
 }
@@ -63,17 +63,6 @@ pub enum FactoryType {
     Pool {
         start_after: Option<[AssetInfo; 2]>,
         limit: Option<u32>,
-    },
-}
-
-#[cw_serde]
-pub enum QueryFeesFor {
-    /// Specifies list of [Contract]s to query fees for
-    Contracts { contracts: Vec<Contract> },
-    /// Defines a factory for which to query fees from its children
-    Factory {
-        factory_addr: String,
-        factory_type: FactoryType,
     },
 }
 

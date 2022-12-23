@@ -354,7 +354,7 @@
                 ]
               },
               "query_fees_for": {
-                "$ref": "#/definitions/QueryFeesFor"
+                "$ref": "#/definitions/FeesFor"
               }
             },
             "additionalProperties": false
@@ -533,10 +533,10 @@
           }
         ]
       },
-      "QueryFeesFor": {
+      "FeesFor": {
         "oneOf": [
           {
-            "description": "Specifies list of [Contract]s to query fees for",
+            "description": "Refers to the fees on the given contracts",
             "type": "object",
             "required": [
               "contracts"
@@ -561,7 +561,7 @@
             "additionalProperties": false
           },
           {
-            "description": "Defines a factory for which to query fees from its children",
+            "description": "Refers to the fees on the contracts the given factory created",
             "type": "object",
             "required": [
               "factory"

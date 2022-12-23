@@ -8,6 +8,7 @@ use crate::err::{StdResult, VaultFactoryError};
 use crate::execute::{
     create_vault, migrate_vaults, remove_vault, update_config, update_vault_config,
 };
+use crate::migrations;
 use crate::queries::{get_config, get_vault, get_vaults};
 use crate::state::CONFIG;
 
@@ -63,7 +64,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
@@ -74,15 +75,20 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response
         });
     }
 
+    if storage_version <= Version::parse("1.0.9")? {
+        migrations::migrate_to_v110(deps.branch())?;
+    }
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
 
 #[cfg(test)]
 mod test {
+    use vault_network::vault_factory::MigrateMsg;
+
     use crate::err::VaultFactoryError;
     use crate::tests::mock_instantiate::mock_instantiate;
-    use vault_network::vault_factory::MigrateMsg;
 
     use super::migrate;
 

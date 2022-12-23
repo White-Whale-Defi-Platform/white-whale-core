@@ -62,6 +62,7 @@ fn test_update_config_successfully() {
 
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("new_owner".to_string()),
+        pool_router: Some("new_router".to_string()),
     };
 
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -69,6 +70,7 @@ fn test_update_config_successfully() {
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
+    assert_eq!(config_res.pool_router, Addr::unchecked("new_router"));
 }
 
 #[test]
@@ -84,6 +86,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("new_owner".to_string()),
+        pool_router: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
