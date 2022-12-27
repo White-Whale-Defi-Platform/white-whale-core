@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use terraswap::asset::{AssetInfoRaw, PairInfo, PairInfoRaw};
+use terraswap::asset::{AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
 
 #[cw_serde]
 pub struct Config {
@@ -18,6 +18,7 @@ pub struct TmpPairInfo {
     pub pair_key: Vec<u8>,
     pub asset_infos: [AssetInfoRaw; 2],
     pub asset_decimals: [u8; 2],
+    pub pair_type: PairType,
 }
 
 pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");

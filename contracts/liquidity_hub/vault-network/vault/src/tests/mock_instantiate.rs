@@ -117,7 +117,7 @@ fn can_instantiate_with_different_tokens() {
         .unwrap();
 
     let cw20_asset = AssetInfo::Token {
-        contract_addr: token_addr.clone().into_string(),
+        contract_addr: token_addr.into_string(),
     };
 
     app_mock_instantiate(&mut app, cw20_asset);

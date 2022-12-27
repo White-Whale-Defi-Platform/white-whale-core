@@ -45,6 +45,7 @@ pub fn instantiate(
             msg.asset_infos[1].to_raw(deps.api)?,
         ],
         asset_decimals: msg.asset_decimals,
+        pair_type: msg.pair_type.clone(),
     };
 
     PAIR_INFO.save(deps.storage, pair_info)?;

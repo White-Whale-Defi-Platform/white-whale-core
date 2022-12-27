@@ -56,10 +56,10 @@ mod tests {
         // remove vault
         let res = app
             .execute_contract(
-                creator.sender.clone(),
+                creator.sender,
                 factory_addr.clone(),
                 &vault_network::vault_factory::ExecuteMsg::RemoveVault {
-                    asset_info: asset_info_1.clone(),
+                    asset_info: asset_info_1,
                 },
                 &[],
             )
