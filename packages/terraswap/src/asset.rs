@@ -130,6 +130,7 @@ impl Asset {
 
 /// AssetInfo contract_addr is usually passed from the cw20 hook
 /// so we can trust the contract_addr is properly validated.
+#[derive(PartialOrd)]
 #[cw_serde]
 pub enum AssetInfo {
     Token { contract_addr: String },

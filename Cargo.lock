@@ -416,6 +416,7 @@ dependencies = [
  "terraswap",
  "terraswap-factory",
  "terraswap-pair",
+ "terraswap-router",
  "terraswap-token",
  "thiserror",
  "vault",

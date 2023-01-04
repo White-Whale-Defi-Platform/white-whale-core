@@ -42,6 +42,7 @@ cosmwasm-schema.workspace = true
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"
+terraswap-router = { path = "../pool-network/terraswap_router" }
 terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }
 terraswap-token = { path = "../pool-network/terraswap_token" }

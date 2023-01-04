@@ -11,7 +11,7 @@ use terraswap::router::{ExecuteMsg, SwapOperation};
 use vault_network::vault_factory::VaultsResponse;
 
 use crate::msg::{ContractType, FactoryType, FeesFor};
-use crate::state::{Config, CONFIG};
+use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, Config, CONFIG};
 use crate::ContractError;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
@@ -149,7 +149,7 @@ pub fn update_config(
 
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
-    deps: DepsMut,
+    mut deps: DepsMut,
     info: MessageInfo,
     env: Env,
     ask_asset_info: AssetInfo,
@@ -160,7 +160,6 @@ pub fn aggregate_fees(
     let config: Config = CONFIG.load(deps.storage)?;
 
     let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
-    let mut asset_infos: Vec<AssetInfo> = Vec::new();
 
     match aggregate_fees_for {
         FeesFor::Contracts { .. } => return Err(ContractError::InvalidContractsFeeAggregation {}),
@@ -182,7 +181,7 @@ pub fn aggregate_fees(
                         }))?;
 
                     for vault_info in response.vaults {
-                        asset_infos.push(vault_info.asset_info);
+                        store_temporal_asset_info(deps.branch(), vault_info.asset_info.clone())?;
                     }
                 }
                 FactoryType::Pool { start_after, limit } => {
@@ -193,14 +192,15 @@ pub fn aggregate_fees(
                         }))?;
 
                     for pair in response.pairs {
-                        asset_infos.append(&mut pair.asset_infos.to_vec());
+                        store_temporal_asset_info(deps.branch(), pair.asset_infos[0].clone())?;
+                        store_temporal_asset_info(deps.branch(), pair.asset_infos[1].clone())?;
                     }
                 }
             }
         }
     }
 
-    asset_infos.dedup_by(|a, b| a.to_string() == b.to_string());
+    let asset_infos: Vec<AssetInfo> = read_temporal_asset_infos(&mut deps)?;
 
     for offer_asset_info in asset_infos {
         if offer_asset_info == ask_asset_info {
@@ -259,23 +259,36 @@ pub fn aggregate_fees(
 
             match operations_res {
                 Ok(operations) => {
-                    let funds = match offer_asset_info.clone() {
-                        AssetInfo::Token { .. } => vec![], // no funds needed for cw20
-                        AssetInfo::NativeToken { denom } => vec![Coin {
-                            denom,
-                            amount: balance,
-                        }],
-                    };
-
-                    aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                        contract_addr: config.pool_router.to_string(),
-                        funds,
-                        msg: to_binary(&ExecuteMsg::ExecuteSwapOperations {
+                    let execute_swap_operations_msg =
+                        to_binary(&ExecuteMsg::ExecuteSwapOperations {
                             operations,
                             minimum_receive: None,
                             to: None,
-                        })?,
-                    }));
+                        })?;
+
+                    match offer_asset_info.clone() {
+                        AssetInfo::Token { contract_addr } => {
+                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                                contract_addr,
+                                funds: vec![],
+                                msg: to_binary(&Cw20ExecuteMsg::Send {
+                                    contract: config.pool_router.to_string(),
+                                    amount: balance,
+                                    msg: execute_swap_operations_msg,
+                                })?,
+                            }));
+                        }
+                        AssetInfo::NativeToken { denom } => {
+                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                                contract_addr: config.pool_router.to_string(),
+                                funds: vec![Coin {
+                                    denom,
+                                    amount: balance,
+                                }],
+                                msg: execute_swap_operations_msg,
+                            }));
+                        }
+                    };
                 }
                 Err(_) => {
                     // if there is no swap route, skip swap and keep the asset in contract
