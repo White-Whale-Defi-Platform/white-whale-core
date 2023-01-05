@@ -626,6 +626,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -637,6 +638,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             attr("action", "create_pair"),
             attr("pair", "peggy0x87a...1B5-ibc/2739...5EB2"),
             attr("pair_label", "peggy0x87a...1B5-ibc/2739...5EB2 pair"),
+            attr("pair_type", "ConstantProduct")
         ]
     );
     assert_eq!(
@@ -662,6 +664,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::ConstantProduct
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -684,6 +687,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 6u8],
+            pair_type: PairType::ConstantProduct
         }
     );
 }
