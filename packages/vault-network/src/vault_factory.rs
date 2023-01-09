@@ -92,5 +92,6 @@ pub struct VaultsResponse {
 #[cw_serde]
 pub struct VaultInfo {
     pub vault: String,
+    pub asset_info: AssetInfo,
     pub asset_info_reference: Vec<u8>,
 }

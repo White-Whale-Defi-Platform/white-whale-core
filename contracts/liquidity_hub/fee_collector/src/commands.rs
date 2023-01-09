@@ -1,13 +1,17 @@
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, QueryRequest, Response, StdResult, Storage,
-    WasmMsg, WasmQuery,
+    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    QueryRequest, Response, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
+use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
+use terraswap::asset::AssetInfo;
 use terraswap::factory::{PairsResponse, QueryMsg};
+use terraswap::router;
+use terraswap::router::{ExecuteMsg, SwapOperation};
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{CollectFeesFor, ContractType, FactoryType};
-use crate::state::{Config, CONFIG};
+use crate::msg::{ContractType, FactoryType, FeesFor};
+use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, Config, CONFIG};
 use crate::ContractError;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
@@ -15,7 +19,7 @@ use crate::ContractError;
 pub fn collect_fees(
     deps: DepsMut,
     info: MessageInfo,
-    collect_fees_for: CollectFeesFor,
+    collect_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
     // only the owner can trigger the fees collection
     validate_owner(deps.storage, info.sender)?;
@@ -23,7 +27,7 @@ pub fn collect_fees(
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
     match collect_fees_for {
-        CollectFeesFor::Contracts { contracts } => {
+        FeesFor::Contracts { contracts } => {
             for contract in contracts {
                 collect_fees_messages.push(collect_fees_for_contract(
                     deps.api.addr_validate(contract.address.as_str())?,
@@ -31,7 +35,7 @@ pub fn collect_fees(
                 )?);
             }
         }
-        CollectFeesFor::Factory {
+        FeesFor::Factory {
             factory_addr,
             factory_type,
         } => {
@@ -120,6 +124,7 @@ pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     owner: Option<String>,
+    pool_router: Option<String>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
@@ -129,11 +134,171 @@ pub fn update_config(
     }
 
     if let Some(owner) = owner {
-        // validate address format
         let owner_addr = deps.api.addr_validate(&owner)?;
         config.owner = owner_addr;
     }
 
+    if let Some(pool_router) = pool_router {
+        let pool_router = deps.api.addr_validate(&pool_router)?;
+        config.pool_router = pool_router;
+    }
+
     CONFIG.save(deps.storage, &config)?;
     Ok(Response::new().add_attribute("action", "update_config"))
+}
+
+/// Aggregates the fees collected into the given asset_info.
+pub fn aggregate_fees(
+    mut deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    ask_asset_info: AssetInfo,
+    aggregate_fees_for: FeesFor,
+) -> Result<Response, ContractError> {
+    // only the owner can aggregate the fees
+    validate_owner(deps.storage, info.sender)?;
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
+
+    match aggregate_fees_for {
+        FeesFor::Contracts { .. } => return Err(ContractError::InvalidContractsFeeAggregation {}),
+        FeesFor::Factory {
+            factory_addr,
+            factory_type,
+        } => {
+            let factory = deps.api.addr_validate(factory_addr.as_str())?;
+
+            match factory_type {
+                FactoryType::Vault { start_after, limit } => {
+                    let response: VaultsResponse =
+                        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                            contract_addr: factory.to_string(),
+                            msg: to_binary(&vault_network::vault_factory::QueryMsg::Vaults {
+                                start_after,
+                                limit,
+                            })?,
+                        }))?;
+
+                    for vault_info in response.vaults {
+                        store_temporal_asset_info(deps.branch(), vault_info.asset_info.clone())?;
+                    }
+                }
+                FactoryType::Pool { start_after, limit } => {
+                    let response: PairsResponse =
+                        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                            contract_addr: factory.to_string(),
+                            msg: to_binary(&QueryMsg::Pairs { start_after, limit })?,
+                        }))?;
+
+                    for pair in response.pairs {
+                        store_temporal_asset_info(deps.branch(), pair.asset_infos[0].clone())?;
+                        store_temporal_asset_info(deps.branch(), pair.asset_infos[1].clone())?;
+                    }
+                }
+            }
+        }
+    }
+
+    let asset_infos: Vec<AssetInfo> = read_temporal_asset_infos(&mut deps)?;
+
+    for offer_asset_info in asset_infos {
+        if offer_asset_info == ask_asset_info {
+            continue;
+        }
+
+        // get balance of the asset to aggregate
+        let balance: Uint128 = match offer_asset_info.clone() {
+            AssetInfo::Token { contract_addr } => {
+                let contract_addr = deps.api.addr_validate(contract_addr.as_str())?;
+                let balance_response: cw20::BalanceResponse =
+                    deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                        contract_addr: contract_addr.to_string(),
+                        msg: to_binary(&Cw20QueryMsg::Balance {
+                            address: env.contract.address.to_string(),
+                        })?,
+                    }))?;
+
+                if balance_response.balance > Uint128::zero() {
+                    // if balance is greater than zero, some swap will occur
+                    // Increase the allowance for the cw20 token so the router can perform the swap
+                    aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                        contract_addr: contract_addr.to_string(),
+                        msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                            spender: config.pool_router.to_string(),
+                            amount: balance_response.balance,
+                            expires: None,
+                        })?,
+                        funds: vec![],
+                    }));
+                }
+
+                balance_response.balance
+            }
+            AssetInfo::NativeToken { denom } => {
+                let balance_response: BalanceResponse =
+                    deps.querier.query(&QueryRequest::Bank(BankQuery::Balance {
+                        address: env.contract.address.to_string(),
+                        denom: denom.clone(),
+                    }))?;
+                balance_response.amount.amount
+            }
+        };
+
+        // if the balance is greater than zero, swap the asset to the ask_asset
+        if balance > Uint128::zero() {
+            // query swap route from router
+            let operations_res: StdResult<Vec<SwapOperation>> =
+                deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: config.pool_router.to_string(),
+                    msg: to_binary(&router::QueryMsg::SwapRoute {
+                        offer_asset_info: offer_asset_info.clone(),
+                        ask_asset_info: ask_asset_info.clone(),
+                    })?,
+                }));
+
+            match operations_res {
+                Ok(operations) => {
+                    let execute_swap_operations_msg =
+                        to_binary(&ExecuteMsg::ExecuteSwapOperations {
+                            operations,
+                            minimum_receive: None,
+                            to: None,
+                        })?;
+
+                    match offer_asset_info.clone() {
+                        AssetInfo::Token { contract_addr } => {
+                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                                contract_addr,
+                                funds: vec![],
+                                msg: to_binary(&Cw20ExecuteMsg::Send {
+                                    contract: config.pool_router.to_string(),
+                                    amount: balance,
+                                    msg: execute_swap_operations_msg,
+                                })?,
+                            }));
+                        }
+                        AssetInfo::NativeToken { denom } => {
+                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                                contract_addr: config.pool_router.to_string(),
+                                funds: vec![Coin {
+                                    denom,
+                                    amount: balance,
+                                }],
+                                msg: execute_swap_operations_msg,
+                            }));
+                        }
+                    };
+                }
+                Err(_) => {
+                    // if there is no swap route, skip swap and keep the asset in contract
+                    continue;
+                }
+            };
+        }
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "aggregate_fees")
+        .add_messages(aggregate_fees_messages))
 }

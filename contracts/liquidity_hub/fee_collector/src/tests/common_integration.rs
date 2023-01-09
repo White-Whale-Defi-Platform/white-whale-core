@@ -93,6 +93,7 @@ pub fn store_vault_factory_code(app: &mut App) -> u64 {
 
     app.store_code(contract)
 }
+
 /// Stores the vault contract to the app.
 pub fn store_vault_code(app: &mut App) -> u64 {
     let contract = Box::new(
@@ -102,6 +103,20 @@ pub fn store_vault_code(app: &mut App) -> u64 {
             vault::contract::query,
         )
         .with_reply(vault::reply::reply),
+    );
+
+    app.store_code(contract)
+}
+
+/// Stores the pool router contract to the app.
+pub fn store_pool_router_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new(
+            terraswap_router::contract::execute,
+            terraswap_router::contract::instantiate,
+            terraswap_router::contract::query,
+        )
+        .with_migrate(terraswap_router::contract::migrate),
     );
 
     app.store_code(contract)

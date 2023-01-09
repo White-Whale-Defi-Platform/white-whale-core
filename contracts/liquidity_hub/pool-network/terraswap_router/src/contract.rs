@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -15,13 +15,13 @@ use terraswap::pair::SimulationResponse;
 use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
 use terraswap::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-    SimulateSwapOperationsResponse, SwapOperation,
+    SimulateSwapOperationsResponse, SwapOperation, SwapRoute,
 };
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG};
+use crate::state::{Config, CONFIG, SWAP_ROUTES};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-pool_router";
@@ -92,6 +92,9 @@ pub fn execute(
             minimum_receive,
             deps.api.addr_validate(&receiver)?,
         ),
+        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+            add_swap_routes(deps, env, info.sender, swap_routes)
+        }
     }
 }
 
@@ -206,7 +209,7 @@ fn assert_minimum_receive(
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
     if swap_amount < minimum_receive {
-        return Err(ContractError::MiminumReceiveAssertion {
+        return Err(ContractError::MinimumReceiveAssertion {
             minimum_receive,
             swap_amount,
         });
@@ -215,24 +218,83 @@ fn assert_minimum_receive(
     Ok(Response::default())
 }
 
+fn add_swap_routes(
+    deps: DepsMut,
+    env: Env,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    let contract_info = deps
+        .querier
+        .query_wasm_contract_info(env.contract.address)?;
+    if let Some(admin) = contract_info.admin {
+        if sender != deps.api.addr_validate(admin.as_str())? {
+            return Err(ContractError::Unauthorized {});
+        }
+    }
+
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        simulate_swap_operations(
+            deps.as_ref(),
+            Uint128::one(),
+            swap_route.clone().swap_operations,
+        )
+        .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
+
+        let swap_route_key = SWAP_ROUTES.key((
+            swap_route
+                .clone()
+                .offer_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+            swap_route
+                .clone()
+                .ask_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+        ));
+        swap_route_key.save(deps.storage, &swap_route.clone().swap_operations)?;
+
+        attributes.push(attr("swap_route", swap_route.clone().to_string()));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "add_swap_routes")
+        .add_attributes(attributes))
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
-        } => to_binary(&simulate_swap_operations(deps, offer_amount, operations)?),
+        } => Ok(to_binary(&simulate_swap_operations(
+            deps,
+            offer_amount,
+            operations,
+        )?)?),
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
             operations,
-        } => to_binary(&reverse_simulate_swap_operations(
+        } => Ok(to_binary(&reverse_simulate_swap_operations(
             deps, ask_amount, operations,
-        )?),
+        )?)?),
+        QueryMsg::SwapRoute {
+            offer_asset_info,
+            ask_asset_info,
+        } => Ok(to_binary(&get_swap_route(
+            deps,
+            offer_asset_info,
+            ask_asset_info,
+        )?)?),
     }
 }
 
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -248,15 +310,13 @@ fn simulate_swap_operations(
     deps: Deps,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
-) -> StdResult<SimulateSwapOperationsResponse> {
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err(
-            "Must provide swap operations to execute",
-        ));
+        return Err(ContractError::NoSwapOperationsProvided {});
     }
 
     let mut offer_amount = offer_amount;
@@ -295,14 +355,12 @@ fn reverse_simulate_swap_operations(
     deps: Deps,
     ask_amount: Uint128,
     operations: Vec<SwapOperation>,
-) -> StdResult<SimulateSwapOperationsResponse> {
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     let operations_len = operations.len();
     if operations_len == 0 {
-        return Err(StdError::generic_err(
-            "Must provide swap operations to execute",
-        ));
+        return Err(ContractError::NoSwapOperationsProvided {});
     }
 
     let mut ask_amount = ask_amount;
@@ -351,6 +409,24 @@ fn reverse_simulate_return_amount(
     )?;
 
     Ok(res.offer_amount)
+}
+
+fn get_swap_route(
+    deps: Deps,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> Result<Vec<SwapOperation>, ContractError> {
+    let swap_route_key = SWAP_ROUTES.key((
+        offer_asset_info.clone().get_label(&deps)?.as_str(),
+        ask_asset_info.clone().get_label(&deps)?.as_str(),
+    ));
+
+    swap_route_key
+        .load(deps.storage)
+        .map_err(|_| ContractError::NoSwapRouteForAssets {
+            offer_asset: offer_asset_info.to_string(),
+            ask_asset: ask_asset_info.to_string(),
+        })
 }
 
 fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {

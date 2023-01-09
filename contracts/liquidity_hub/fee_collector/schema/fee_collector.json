@@ -13,7 +13,7 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
-        "description": "Collects protocol fees based on the configuration indicated by [CollectFeesFor]",
+        "description": "Collects protocol fees based on the configuration indicated by [FeesFor]",
         "type": "object",
         "required": [
           "collect_fees"
@@ -26,7 +26,33 @@
             ],
             "properties": {
               "collect_fees_for": {
-                "$ref": "#/definitions/CollectFeesFor"
+                "$ref": "#/definitions/FeesFor"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Swaps the assets (fees) sitting in the fee collector into the given [AssetInfo] if possible. A [SwapRoute] should be available at the router to be able to make the swaps.",
+        "type": "object",
+        "required": [
+          "aggregate_fees"
+        ],
+        "properties": {
+          "aggregate_fees": {
+            "type": "object",
+            "required": [
+              "aggregate_fees_for",
+              "asset_info"
+            ],
+            "properties": {
+              "aggregate_fees_for": {
+                "$ref": "#/definitions/FeesFor"
+              },
+              "asset_info": {
+                "$ref": "#/definitions/AssetInfo"
               }
             },
             "additionalProperties": false
@@ -45,6 +71,12 @@
             "type": "object",
             "properties": {
               "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pool_router": {
                 "type": [
                   "string",
                   "null"
@@ -105,61 +137,6 @@
           }
         ]
       },
-      "CollectFeesFor": {
-        "oneOf": [
-          {
-            "description": "Collects the fees accumulated by the given contracts",
-            "type": "object",
-            "required": [
-              "contracts"
-            ],
-            "properties": {
-              "contracts": {
-                "type": "object",
-                "required": [
-                  "contracts"
-                ],
-                "properties": {
-                  "contracts": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/Contract"
-                    }
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          },
-          {
-            "description": "Collects the fees accumulated by the contracts the given factory created",
-            "type": "object",
-            "required": [
-              "factory"
-            ],
-            "properties": {
-              "factory": {
-                "type": "object",
-                "required": [
-                  "factory_addr",
-                  "factory_type"
-                ],
-                "properties": {
-                  "factory_addr": {
-                    "type": "string"
-                  },
-                  "factory_type": {
-                    "$ref": "#/definitions/FactoryType"
-                  }
-                },
-                "additionalProperties": false
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
       "Contract": {
         "type": "object",
         "required": [
@@ -281,6 +258,61 @@
             "additionalProperties": false
           }
         ]
+      },
+      "FeesFor": {
+        "oneOf": [
+          {
+            "description": "Refers to the fees on the given contracts",
+            "type": "object",
+            "required": [
+              "contracts"
+            ],
+            "properties": {
+              "contracts": {
+                "type": "object",
+                "required": [
+                  "contracts"
+                ],
+                "properties": {
+                  "contracts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/Contract"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Refers to the fees on the contracts the given factory created",
+            "type": "object",
+            "required": [
+              "factory"
+            ],
+            "properties": {
+              "factory": {
+                "type": "object",
+                "required": [
+                  "factory_addr",
+                  "factory_type"
+                ],
+                "properties": {
+                  "factory_addr": {
+                    "type": "string"
+                  },
+                  "factory_type": {
+                    "$ref": "#/definitions/FactoryType"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       }
     }
   },
@@ -322,7 +354,7 @@
                 ]
               },
               "query_fees_for": {
-                "$ref": "#/definitions/QueryFeesFor"
+                "$ref": "#/definitions/FeesFor"
               }
             },
             "additionalProperties": false
@@ -501,10 +533,10 @@
           }
         ]
       },
-      "QueryFeesFor": {
+      "FeesFor": {
         "oneOf": [
           {
-            "description": "Specifies list of [Contract]s to query fees for",
+            "description": "Refers to the fees on the given contracts",
             "type": "object",
             "required": [
               "contracts"
@@ -529,7 +561,7 @@
             "additionalProperties": false
           },
           {
-            "description": "Defines a factory for which to query fees from its children",
+            "description": "Refers to the fees on the contracts the given factory created",
             "type": "object",
             "required": [
               "factory"
@@ -571,10 +603,14 @@
       "title": "Config",
       "type": "object",
       "required": [
-        "owner"
+        "owner",
+        "pool_router"
       ],
       "properties": {
         "owner": {
+          "$ref": "#/definitions/Addr"
+        },
+        "pool_router": {
           "$ref": "#/definitions/Addr"
         }
       },

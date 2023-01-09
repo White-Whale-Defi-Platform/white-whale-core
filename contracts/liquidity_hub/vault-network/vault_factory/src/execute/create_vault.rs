@@ -20,7 +20,7 @@ pub fn create_vault(
 
     // check that existing vault does not exist
     let existing_addr = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
-    if let Some(addr) = existing_addr {
+    if let Some((addr, _)) = existing_addr {
         return Err(VaultFactoryError::ExistingVault { addr });
     }
 
@@ -53,7 +53,10 @@ pub fn create_vault(
     };
 
     // store asset for use in reply callback
-    TMP_VAULT_ASSET.save(deps.storage, &asset_info.get_reference().to_vec())?;
+    TMP_VAULT_ASSET.save(
+        deps.storage,
+        &(asset_info.get_reference().to_vec(), asset_info),
+    )?;
 
     Ok(Response::new()
         .add_submessage(vault_instantiate_msg)
@@ -152,7 +155,7 @@ mod tests {
 
         let factory_addr = app_mock_instantiate(&mut app);
 
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 

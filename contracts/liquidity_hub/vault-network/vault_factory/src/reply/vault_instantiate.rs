@@ -30,10 +30,14 @@ pub fn vault_instantiate(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Resp
     let vault_address = deps.api.addr_validate(&res.contract_address)?;
 
     // retrieve stored key from temp storage
-    let asset_info_key = TMP_VAULT_ASSET.load(deps.storage)?;
+    let (asset_info_key, asset_info) = TMP_VAULT_ASSET.load(deps.storage)?;
 
     // save to vault storage
-    VAULTS.save(deps.storage, asset_info_key.as_slice(), &vault_address)?;
+    VAULTS.save(
+        deps.storage,
+        asset_info_key.as_slice(),
+        &(vault_address.clone(), asset_info),
+    )?;
 
     Ok(Response::new().add_attributes(vec![
         ("action", "reply_vault_instantiate"),

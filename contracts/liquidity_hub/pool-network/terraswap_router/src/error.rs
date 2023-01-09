@@ -2,6 +2,8 @@ use cosmwasm_std::{OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
+use terraswap::router::SwapRoute;
+
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -22,10 +24,22 @@ pub enum ContractError {
     #[error("Invalid operations; multiple output token")]
     MultipleOutputToken {},
 
+    #[error("Invalid swap route: {0}")]
+    InvalidSwapRoute(SwapRoute),
+
+    #[error("No swap route found for {offer_asset} -> {ask_asset}")]
+    NoSwapRouteForAssets {
+        offer_asset: String,
+        ask_asset: String,
+    },
+
+    #[error("Must provide swap operations to execute")]
+    NoSwapOperationsProvided {},
+
     #[error(
         "Assertion failed; minimum receive amount: {minimum_receive}, swap amount: {swap_amount}"
     )]
-    MiminumReceiveAssertion {
+    MinimumReceiveAssertion {
         minimum_receive: Uint128,
         swap_amount: Uint128,
     },

@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Coin, ContractResult, Empty, OwnedDeps, Querier,
-    QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
+    from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
+    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -258,6 +258,14 @@ impl WasmMockQuerier {
                     },
                 },
             },
+            QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
+                let mut contract_info_response = ContractInfoResponse::new(0, "creator");
+                contract_info_response.admin = Some("creator".to_string());
+
+                SystemResult::Ok(ContractResult::Ok(
+                    to_binary(&contract_info_response).unwrap(),
+                ))
+            }
             _ => self.base.handle_query(request),
         }
     }

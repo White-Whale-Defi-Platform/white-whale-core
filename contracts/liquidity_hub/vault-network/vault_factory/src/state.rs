@@ -1,14 +1,15 @@
 use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
+use terraswap::asset::AssetInfo;
 
 use vault_network::vault_factory::{Config, VaultInfo};
 
 pub const CONFIG: Item<Config> = Item::new("config");
 
-pub const VAULTS: Map<&[u8], Addr> = Map::new("vaults");
+pub const VAULTS: Map<&[u8], (Addr, AssetInfo)> = Map::new("vaults");
 
 /// Used to temporarily store the asset being instantiated between `create_vault` and `reply` callback
-pub const TMP_VAULT_ASSET: Item<Vec<u8>> = Item::new("tmp_vault_asset");
+pub const TMP_VAULT_ASSET: Item<(Vec<u8>, AssetInfo)> = Item::new("tmp_vault_asset");
 
 // settings for pagination
 const MAX_LIMIT: u32 = 30;
@@ -27,9 +28,12 @@ pub fn read_vaults(
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
-            let (key, v) = item?;
+            let (key, vault_data) = item?;
+            let (vault_addr, asset_info) = vault_data;
+
             Ok(VaultInfo {
-                vault: v.to_string(),
+                vault: vault_addr.to_string(),
+                asset_info,
                 asset_info_reference: key,
             })
         })

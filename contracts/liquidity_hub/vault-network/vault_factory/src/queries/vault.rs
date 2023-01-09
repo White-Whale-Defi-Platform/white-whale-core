@@ -7,9 +7,12 @@ use crate::state::read_vaults;
 use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
 
 pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
-    Ok(to_binary(
-        &VAULTS.may_load(deps.storage, asset_info.get_reference())?,
-    )?)
+    let vault_option = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
+    if let Some((vault_addr, _)) = vault_option {
+        return Ok(to_binary(&vault_addr)?);
+    }
+
+    Ok(to_binary(&vault_option)?)
 }
 
 pub fn get_vaults(
@@ -24,6 +27,7 @@ pub fn get_vaults(
 #[cfg(test)]
 mod tests {
     use cw_multi_test::Executor;
+    use terraswap::asset::AssetInfo;
 
     use vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultsResponse};
 
@@ -37,7 +41,7 @@ mod tests {
             5,
             6,
             QueryMsg::Vault {
-                asset_info: terraswap::asset::AssetInfo::NativeToken {
+                asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
             },
@@ -94,9 +98,9 @@ mod tests {
         let creator = mock_creator();
 
         // create some vaults
-        let mut vault_addresses: Vec<String> = Vec::new();
+        let mut vaults: Vec<(String, AssetInfo)> = Vec::new();
         for i in 0..7 {
-            let asset_info = terraswap::asset::AssetInfo::NativeToken {
+            let asset_info = AssetInfo::NativeToken {
                 denom: format!("uluna-{}", (i + b'a') as char),
             };
 
@@ -119,7 +123,7 @@ mod tests {
                 .find(|attribute| attribute.key == "vault_address")
                 .unwrap();
 
-            vault_addresses.push(created_vault_addr.value.clone());
+            vaults.push((created_vault_addr.value.clone(), asset_info.clone()));
         }
 
         // check that the addresses were stored, without pagination. Default limit is 10, so it
@@ -139,13 +143,13 @@ mod tests {
             vaults_response
                 .vaults
                 .into_iter()
-                .map(|r| r.vault)
+                .map(|v| (v.vault, v.asset_info))
                 .collect::<Vec<_>>(),
-            vault_addresses
+            vaults
         );
 
         // check that the addresses were stored, with pagination
-        let mut paginated_vault_addresses: Vec<String> = Vec::new();
+        let mut paginated_vaults: Vec<(String, AssetInfo)> = Vec::new();
         let mut start_after: Option<Vec<u8>> = None;
         // there are 7 vaults in the factory, let's take 4 vaults at a time so we query 2 times
         for _ in 0..2 {
@@ -173,14 +177,14 @@ mod tests {
             let vaults = vaults_response
                 .vaults
                 .into_iter()
-                .map(|vault_info| vault_info.vault);
+                .map(|vault_info| (vault_info.vault, vault_info.asset_info));
 
-            paginated_vault_addresses = paginated_vault_addresses
+            paginated_vaults = paginated_vaults
                 .into_iter()
                 .chain(vaults.into_iter())
                 .collect();
         }
 
-        assert_eq!(paginated_vault_addresses, vault_addresses);
+        assert_eq!(paginated_vaults, vaults);
     }
 }

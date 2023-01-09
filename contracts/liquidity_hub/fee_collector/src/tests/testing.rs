@@ -2,11 +2,13 @@ use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, ContractVersion};
 use std::env;
+use terraswap::asset::AssetInfo;
 
 use crate::contract::{execute, instantiate, migrate, query};
 use terraswap::mock_querier::mock_dependencies;
 
-use crate::msg::{CollectFeesFor, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use crate::msg::ExecuteMsg::AggregateFees;
+use crate::msg::{ExecuteMsg, FeesFor, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::ConfigResponse;
 use crate::ContractError;
 
@@ -38,7 +40,7 @@ fn collect_fees_unsuccessfully_unauthorized() {
     // unauthorized tries collecting fees
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::CollectFees {
-        collect_fees_for: CollectFeesFor::Contracts { contracts: vec![] },
+        collect_fees_for: FeesFor::Contracts { contracts: vec![] },
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
@@ -62,6 +64,7 @@ fn test_update_config_successfully() {
 
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("new_owner".to_string()),
+        pool_router: Some("new_router".to_string()),
     };
 
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -69,6 +72,7 @@ fn test_update_config_successfully() {
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
+    assert_eq!(config_res.pool_router, Addr::unchecked("new_router"));
 }
 
 #[test]
@@ -84,6 +88,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("new_owner".to_string()),
+        pool_router: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
@@ -115,5 +120,28 @@ fn test_migration() {
     match res {
         Err(ContractError::MigrateInvalidVersion { .. }) => (),
         _ => panic!("should return ContractError::MigrateInvalidVersion"),
+    }
+}
+
+#[test]
+fn test_aggregate_fee_for_contracts_err() {
+    let mut deps = mock_dependencies(&[]);
+    let info = mock_info("owner", &[]);
+    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+
+    // should error, can't collect fees for contracts
+    let msg = AggregateFees {
+        asset_info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        aggregate_fees_for: FeesFor::Contracts { contracts: vec![] },
+    };
+
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
+
+    match res {
+        Ok(_) => panic!("should return ContractError::InvalidContractsFeeAggregation"),
+        Err(ContractError::InvalidContractsFeeAggregation {}) => (),
+        _ => panic!("should return ContractError::InvalidContractsFeeAggregation"),
     }
 }

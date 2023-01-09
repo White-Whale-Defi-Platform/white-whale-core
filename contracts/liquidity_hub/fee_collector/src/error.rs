@@ -13,6 +13,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Can't aggregate fees provided specific contracts")]
+    InvalidContractsFeeAggregation {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,
