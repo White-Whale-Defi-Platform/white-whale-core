@@ -12,7 +12,7 @@ function import_deployer_wallet() {
     exit 1
   fi
 
-  if [[ "$(echo ${chain##*-})" = "testnet" ]]; then
+  if [[ "$(echo ${chain##*-})" = "testnet" ]] || [[ "$chain" = "local" ]]; then
     deployer='deployer_wallet_testnet'
     local mnemonic=$(cat "$project_root_path"/scripts/deployment/deploy_env/mnemonics/deployer_mnemonic_testnet.txt)
   else

@@ -3,7 +3,6 @@ set -e
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8s
 
 # Displays tool usage
 function display_usage() {
@@ -294,6 +293,11 @@ while getopts $optstring arg; do
     chain=$OPTARG
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
+    if [[ "$chain" = "local" ]]; then
+      tx_delay=500ms
+    else
+      tx_delay=8s
+    fi
     ;;
   d)
     import_deployer_wallet $chain
