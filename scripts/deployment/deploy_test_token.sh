@@ -14,16 +14,25 @@ function display_usage() {
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
 }
 
+function make_symbol() {
+  alphabet=({a..z})
+  random_index=$(shuf -i 0-25 -n1)
+  random_letter=${alphabet[$random_index]}
+  symbol="willy"
+  symbol+=$random_letter
+}
+
 function deploy_token() {
   mkdir -p $project_root_path/scripts/deployment/output
-  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_token.json
+  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
   deployment_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
 
   if [[ ! -f "$output_file" ]]; then
     # create file to dump results into
-    echo '{"test_token": {}}' | jq '.' >$output_file
+    echo '{"test_tokens": []}' | jq '.' >$output_file
   fi
 
+  make_symbol
   amount=1000000000000000000000
   decimals=6
   token_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $deployment_file)
@@ -43,7 +52,7 @@ function deploy_token() {
 
   # Store on output file
   tmpfile=$(mktemp)
-  jq -r --arg token_address $token_address --arg code_id $token_code_id --arg symbol $symbol --arg amount $amount --arg decimals $decimals --arg minted_to $deployer_address --arg tx_hash $tx_hash '.test_token += {token_address: $token_address, code_id: $code_id, symbol: $symbol, decimals: $decimals, amount: $amount, minted_to: $minted_to, tx_hash: $tx_hash}' $output_file >$tmpfile
+  jq -r --arg token_address $token_address --arg code_id $token_code_id --arg symbol $symbol --arg amount $amount --arg decimals $decimals --arg minted_to $deployer_address --arg tx_hash $tx_hash '.test_tokens += [{token_address: $token_address, code_id: $code_id, symbol: $symbol, decimals: $decimals, amount: $amount, minted_to: $minted_to, tx_hash: $tx_hash}]' $output_file >$tmpfile
   mv $tmpfile $output_file
 
   # Add additional deployment information
@@ -72,8 +81,6 @@ while getopts $optstring arg; do
     source $deployment_script_dir/wallet_importer.sh
     import_deployer_wallet $chain
 
-    # Set default value for symbol
-    symbol="willy"
     deploy_token
     ;;
   h)
