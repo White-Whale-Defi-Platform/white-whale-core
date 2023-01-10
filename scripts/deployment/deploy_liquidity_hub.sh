@@ -294,7 +294,7 @@ while getopts $optstring arg; do
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
     if [[ "$chain" = "local" ]]; then
-      tx_delay=500ms
+      tx_delay=0.5s
     else
       tx_delay=8s
     fi
