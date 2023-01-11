@@ -21,3 +21,5 @@ artifacts
 /scripts/deployment/deploy_env/mnemonics/
 /scripts/deployment/output/
 /scripts/deployment/input/
+/scripts/testing/input/
+/scripts/testing/output/
