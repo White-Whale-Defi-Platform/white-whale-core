@@ -4,7 +4,6 @@ set -e
 # Import the deploy_liquidity_hub script
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8s
 
 # Displays tool usage
 function display_usage() {
@@ -62,6 +61,7 @@ function check_decimals() {
     echo "Adding native decimals to factory..."
     # the factory doesn't have the decimals for this denom, registration needs to happen before creating the pool
     add_native_decimals_msg='{"add_native_token_decimals":{"denom":"'$denom'","decimals":'$decimals'}}'
+
     local res=$($BINARY tx wasm execute $pool_factory_addr "$add_native_decimals_msg" $TXFLAG --amount 1$DENOM --from $deployer_address)
     echo $res
     sleep $tx_delay
@@ -137,6 +137,11 @@ while getopts $optstring arg; do
     chain=$OPTARG
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
+    if [[ "$chain" = "local" ]]; then
+      tx_delay=0.5s
+    else
+      tx_delay=8s
+    fi
     ;;
   p)
     source $deployment_script_dir/wallet_importer.sh
