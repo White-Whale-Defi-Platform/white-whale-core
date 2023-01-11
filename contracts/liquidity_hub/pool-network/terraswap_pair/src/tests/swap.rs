@@ -1345,3 +1345,35 @@ fn stableswap_with_different_precisions() {
         msg_transfer,
     );
 }
+
+#[test]
+fn test_stableswap_with_no_swap_amount() {
+    let offer_pool = Uint128::from(25000000u128);
+    let ask_pool = Uint128::from(25000000u128);
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        burn_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+    };
+
+    assert_eq!(
+        compute_swap(
+            offer_pool,
+            ask_pool,
+            Uint128::zero(),
+            pool_fees,
+            &PairType::ConstantProduct,
+            6,
+            6
+        )
+        .unwrap()
+        .return_amount,
+        Uint128::zero()
+    );
+}
