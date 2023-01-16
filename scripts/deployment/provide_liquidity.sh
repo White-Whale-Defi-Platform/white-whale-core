@@ -12,7 +12,6 @@ function display_usage() {
   echo -e "  -h \thelp"
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
   echo -e "  -p \tPool address."
-  echo -e "  -l \tLP token address."
   echo -e "  -a \tAmount of tokens to provide separated by comma, for asset 0 and asset 1."
 }
 
@@ -76,7 +75,7 @@ if [ -z $1 ]; then
 fi
 
 # get args
-optstring=':c:p:l:f:a:h'
+optstring=':c:p:f:a:h'
 while getopts $optstring arg; do
   case "$arg" in
   c)
@@ -94,9 +93,6 @@ while getopts $optstring arg; do
     ;;
   p)
     pool_address=$OPTARG
-    ;;
-  l)
-    lp_address=$OPTARG
     ;;
   a)
     readarray -t amounts < <(awk -F',' '{ for( i=1; i<=NF; i++ ) print $i }' <<<"$OPTARG")
