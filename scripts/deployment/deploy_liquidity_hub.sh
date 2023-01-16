@@ -3,6 +3,7 @@ set -e
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+artifacts_path=$project_root_path/artifacts
 
 # Displays tool usage
 function display_usage() {
@@ -14,6 +15,7 @@ function display_usage() {
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
   echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
   echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
+  echo -e "  -a \tArtifacts folder path (default: $project_root_path/artifacts)"
 }
 
 function store_artifact_on_chain() {
@@ -50,7 +52,7 @@ function store_artifact_on_chain() {
 }
 
 function store_artifacts_on_chain() {
-  for artifact in $project_root_path/artifacts/*.wasm; do
+  for artifact in $artifacts_path/*.wasm; do
     store_artifact_on_chain $artifact
   done
 
@@ -249,28 +251,28 @@ function store() {
 
   case $1 in
   fee-collector)
-    store_artifact_on_chain $project_root_path/artifacts/fee_collector.wasm
+    store_artifact_on_chain $artifacts_path/fee_collector.wasm
     ;;
   pool-factory)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_factory.wasm
+    store_artifact_on_chain $artifacts_path/terraswap_factory.wasm
     ;;
   pool)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_pair.wasm
+    store_artifact_on_chain $artifacts_path/terraswap_pair.wasm
     ;;
   token)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_token.wasm
+    store_artifact_on_chain $artifacts_path/terraswap_token.wasm
     ;;
   pool-router)
-    store_artifact_on_chain $project_root_path/artifacts/terraswap_router.wasm
+    store_artifact_on_chain $artifacts_path/terraswap_router.wasm
     ;;
   vault)
-    store_artifact_on_chain $project_root_path/artifacts/vault.wasm
+    store_artifact_on_chain $artifacts_path/vault.wasm
     ;;
   vault-factory)
-    store_artifact_on_chain $project_root_path/artifacts/vault_factory.wasm
+    store_artifact_on_chain $artifacts_path/vault_factory.wasm
     ;;
   vault-router)
-    store_artifact_on_chain $project_root_path/artifacts/vault_router.wasm
+    store_artifact_on_chain $artifacts_path/vault_router.wasm
     ;;
   *) # store all
     store_artifacts_on_chain
@@ -284,7 +286,7 @@ if [ -z $1 ]; then
 fi
 
 # get args
-optstring=':c:d:s:h'
+optstring=':c:d:s:a:h'
 while getopts $optstring arg; do
   source $deployment_script_dir/wallet_importer.sh
 
@@ -294,7 +296,7 @@ while getopts $optstring arg; do
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
     if [[ "$chain" = "local" ]]; then
-      tx_delay=500ms
+      tx_delay=0.5s
     else
       tx_delay=8s
     fi
@@ -306,6 +308,9 @@ while getopts $optstring arg; do
   s)
     import_deployer_wallet $chain
     store $OPTARG
+    ;;
+  a)
+    artifacts_path=$OPTARG
     ;;
   h)
     display_usage
