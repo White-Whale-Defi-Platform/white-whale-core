@@ -1,5 +1,3 @@
-use cosmwasm_std::StdResult;
-
 use crate::ContractError;
 
 /// Validates the grace period.
