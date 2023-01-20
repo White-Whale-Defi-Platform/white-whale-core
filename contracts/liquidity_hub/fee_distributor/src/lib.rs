@@ -4,6 +4,7 @@ mod error;
 pub mod helpers;
 pub mod msg;
 pub mod state;
+mod queries;
 
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
