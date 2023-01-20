@@ -24,6 +24,18 @@ pub struct Epoch {
     pub claimed: Vec<Asset>,
 }
 
+impl Epoch {
+    // Returns the default, non-initialized version of an [Epoch].
+    pub fn default() -> Self {
+        Self {
+            id: 0,
+            total: vec![],
+            available: vec![],
+            claimed: vec![],
+        }
+    }
+}
+
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, u128> = Map::new("last_claimed_epoch");
 pub const EPOCHS: Map<&[u8], Epoch> = Map::new("epochs");
@@ -36,12 +48,19 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<Epoch> {
 
     let epoch = match option {
         Some(Ok((_, epoch))) => epoch,
-        _ => Epoch {
-            id: 0,
-            total: vec![],
-            available: vec![],
-            claimed: vec![],
-        },
+        _ => Epoch::default(),
+    };
+
+    Ok(epoch)
+}
+
+/// Returns the [Epoch] with the given id.
+pub fn get_epoch(deps: Deps, id: u128) -> StdResult<Epoch> {
+    let option = EPOCHS.may_load(deps.storage, &id.to_be_bytes())?;
+
+    let epoch = match option {
+        Some(epoch) => epoch,
+        None => Epoch::default(),
     };
 
     Ok(epoch)

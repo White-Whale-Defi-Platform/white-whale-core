@@ -1,9 +1,9 @@
-use crate::commands;
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
+use crate::{commands, queries, state};
 use crate::error::ContractError;
 use crate::helpers::validate_grace_period;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -58,9 +58,11 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::CurrentEpoch {} => Ok(to_binary(&state::get_current_epoch(deps)?)?),
+        QueryMsg::Epoch { id } => Ok(to_binary(&state::get_epoch(deps, id)?)?),
+        QueryMsg::ClaimableEpochs {} => Ok(to_binary(&state::get_claimable_epochs(deps)?)?),
+        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
+    }
 }
-
-#[cfg(test)]
-mod tests {}
