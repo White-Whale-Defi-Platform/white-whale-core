@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{DivideByZeroError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -14,4 +14,13 @@ pub enum ContractError {
 
     #[error("The assets sent don't match the assets expected.")]
     AssetMismatch {},
+
+    #[error("There are no claimable fees.")]
+    NothingToClaim {},
+
+    #[error("The rewards cannot exceed the available claimable fees.")]
+    InvalidReward {},
+
+    #[error("{0}")]
+    DivideByZeroError(#[from] DivideByZeroError),
 }
