@@ -20,6 +20,14 @@ pub enum ExecuteMsg {
     /// Claims tokens from the current epoch and all epochs that are in the grace period.
     /// Sends all tokens to the sender.
     Claim {},
+
+    /// Updates the [Config] of the contract.
+    UpdateConfig {
+        owner: Option<String>,
+        staking_contract_addr: Option<String>,
+        fee_collector_addr: Option<String>,
+        grace_period: Option<u128>,
+    },
 }
 
 #[cw_serde]

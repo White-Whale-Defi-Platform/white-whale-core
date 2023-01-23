@@ -1,7 +1,10 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, Uint128};
+use std::intrinsics::atomic_and_acqrel;
+
+use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, StdResult, Uint128};
 
 use terraswap::asset::{Asset, AssetInfo};
 
+use crate::helpers::validate_grace_period;
 use crate::state::{
     get_claimable_epochs, get_current_epoch, get_expiring_epoch, Epoch, CONFIG, EPOCHS,
     LAST_CLAIMED_EPOCH,
@@ -176,4 +179,51 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
     Ok(Response::new()
         .add_attributes(vec![("action", "claim")])
         .add_messages(messages))
+}
+
+/// Updates the [Config] of the contract
+pub fn update_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    owner: Option<String>,
+    staking_contract_addr: Option<String>,
+    fee_collector_addr: Option<String>,
+    grace_period: Option<u128>,
+) -> Result<Response, ContractError> {
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if info.sender != config.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(owner) = owner {
+        config.owner = deps.api.addr_validate(&owner)?;
+    }
+
+    if let Some(staking_contract_addr) = staking_contract_addr {
+        config.staking_contract_addr = deps.api.addr_validate(&staking_contract_addr)?;
+    }
+
+    if let Some(fee_collector_addr) = fee_collector_addr {
+        config.fee_collector_addr = deps.api.addr_validate(&fee_collector_addr)?;
+    }
+
+    if let Some(grace_period) = grace_period {
+        validate_grace_period(&grace_period)?;
+
+        config.grace_period = grace_period;
+    }
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "update_config"),
+        ("owner", config.owner.to_string()),
+        (
+            "staking_contract_addr",
+            config.staking_contract_addr.to_string(),
+        ),
+        ("fee_collector_addr", config.fee_collector_addr.to_string()),
+        ("grace_period", config.grace_period.to_string()),
+    ]))
 }

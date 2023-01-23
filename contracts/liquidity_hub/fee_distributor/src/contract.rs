@@ -1,13 +1,13 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::{commands, queries, state};
 use crate::error::ContractError;
 use crate::helpers::validate_grace_period;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{Config, CONFIG};
+use crate::{commands, queries, state};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
@@ -52,8 +52,20 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::NewEpoch { fees } => commands::create_new_epoch(deps, info, fees),
         ExecuteMsg::Claim {} => commands::claim(deps, info),
+        ExecuteMsg::UpdateConfig {
+            owner,
+            staking_contract_addr,
+            fee_collector_addr,
+            grace_period,
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            staking_contract_addr,
+            fee_collector_addr,
+            grace_period,
+        ),
     }
 }
 
