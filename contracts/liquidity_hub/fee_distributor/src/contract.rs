@@ -52,6 +52,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::NewEpoch { fees } => commands::create_new_epoch(deps, info, fees),
         ExecuteMsg::Claim {} => commands::claim(deps, info),
         ExecuteMsg::UpdateConfig {
             owner,
