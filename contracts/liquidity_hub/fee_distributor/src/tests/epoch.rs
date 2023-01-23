@@ -63,35 +63,54 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
                 },
-                amount: Uint128::from(3_000_000u128),
+                amount: Uint128::from(15_000_000u128),
             }],
-            claimed: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::from(12_000_000u128),
-            }],
+            claimed: vec![],
         },
         Epoch {
-            id: 2,
-            total: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uatom".to_string(),
+            id: 3,
+            total: vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uatom".to_string(),
+                    },
+                    amount: Uint128::from(5_000_000u128),
                 },
-                amount: Uint128::from(5_000_000u128),
-            }],
-            available: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(5_000_000u128),
                 },
-                amount: Uint128::zero(),
-            }],
-            claimed: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
+            ],
+            available: vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uatom".to_string(),
+                    },
+                    amount: Uint128::from(4_000_000u128),
                 },
-                amount: Uint128::from(5_000_000u128),
-            }],
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(4_000_000u128),
+                },
+            ],
+            claimed: vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uatom".to_string(),
+                    },
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(1_000_000u128),
+                },
+            ],
         },
     ]
 }

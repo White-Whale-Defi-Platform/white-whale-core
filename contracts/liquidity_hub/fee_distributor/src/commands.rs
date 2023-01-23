@@ -1,5 +1,3 @@
-use std::intrinsics::atomic_and_acqrel;
-
 use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, StdResult, Uint128};
 
 use terraswap::asset::{Asset, AssetInfo};
@@ -9,7 +7,7 @@ use crate::state::{
     get_claimable_epochs, get_current_epoch, get_expiring_epoch, Epoch, CONFIG, EPOCHS,
     LAST_CLAIMED_EPOCH,
 };
-use crate::ContractError;
+use crate::{helpers, ContractError};
 
 /// Creates a new epoch, forwarding available tokens from epochs that are past the grace period.
 pub fn create_new_epoch(
@@ -47,7 +45,7 @@ pub fn create_new_epoch(
         .map(|epoch| epoch.available)
         .unwrap_or(vec![]);
 
-    fees = aggregate_fees(fees, unclaimed_fees);
+    fees = helpers::aggregate_fees(fees, unclaimed_fees);
 
     let new_epoch = Epoch {
         id: current_epoch
@@ -66,28 +64,6 @@ pub fn create_new_epoch(
         ("new_epoch", new_epoch.id.to_string()),
         ("fees_to_distribute", format!("{:?}", fees)),
     ]))
-}
-
-/// Aggregates assets from two fee vectors, summing up the amounts of assets that are the same.
-fn aggregate_fees(fees: Vec<Asset>, other_fees: Vec<Asset>) -> Vec<Asset> {
-    let mut aggregated_fees = fees;
-
-    for fee in other_fees {
-        let mut found = false;
-        for aggregated_fee in &mut aggregated_fees {
-            if fee.info == aggregated_fee.info {
-                aggregated_fee.amount += fee.amount;
-                found = true;
-                break;
-            }
-        }
-
-        if !found {
-            aggregated_fees.push(fee);
-        }
-    }
-
-    aggregated_fees
 }
 
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
@@ -142,7 +118,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
             }
 
             // add the reward to the claimable fees
-            claimable_fees = aggregate_fees(
+            claimable_fees = helpers::aggregate_fees(
                 claimable_fees,
                 vec![Asset {
                     info: fee.info.clone(),
@@ -217,7 +193,7 @@ pub fn update_config(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attributes(vec![
-        ("action", "update_config"),
+        ("action", "update_config".to_string()),
         ("owner", config.owner.to_string()),
         (
             "staking_contract_addr",
