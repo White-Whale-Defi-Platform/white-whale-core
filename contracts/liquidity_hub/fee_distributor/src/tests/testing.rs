@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{coin, Addr, Coin, Response, Uint128};
+use cosmwasm_std::{coin, Addr, Uint128};
 
 use terraswap::asset::{Asset, AssetInfo};
 
@@ -107,11 +107,11 @@ fn test_create_new_epoch() {
         .create_new_epoch(
             mock_info("fee_collector_addr", &coins),
             fees.clone(),
-            |res| {},
+            |_| {},
         )
         .assert_current_epoch(&expected_new_epoch)
         .assert_expiring_epoch(Some(&epoch::get_epochs()[1])) // make sure the second epoch is now expiring
-        .create_new_epoch(mock_info("fee_collector_addr", &[]), vec![], |res| {})
+        .create_new_epoch(mock_info("fee_collector_addr", &[]), vec![], |_| {})
         .query_epoch(5, |res| {
             let (r, epoch) = res.unwrap();
             r.assert_current_epoch(&epoch);
@@ -219,6 +219,6 @@ fn test_update_config() {
                 _ => panic!("should have returned ContractError::InvalidGracePeriod"),
             },
         )
-        .update_config(mock_info("owner", &[]), new_config.clone(), |res| {})
+        .update_config(mock_info("owner", &[]), new_config.clone(), |_| {})
         .asset_config(new_config.clone());
 }

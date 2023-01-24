@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, StdResult, Uint128};
+use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, Uint128};
 
 use terraswap::asset::{Asset, AssetInfo};
 
@@ -23,7 +23,7 @@ pub fn create_new_epoch(
     }
 
     // make sure the fees match the funds sent
-    let invalid_funds: Vec<Asset> = info
+    if info
         .funds
         .iter()
         .map(|coin| Asset {
@@ -32,9 +32,8 @@ pub fn create_new_epoch(
             },
             amount: coin.amount,
         })
-        .filter(|asset| !fees.contains(asset))
-        .collect();
-    if !invalid_funds.is_empty() {
+        .any(|asset| !fees.contains(&asset))
+    {
         return Err(ContractError::AssetMismatch {});
     }
 
@@ -43,7 +42,7 @@ pub fn create_new_epoch(
     let expiring_epoch = get_expiring_epoch(deps.as_ref())?;
     let unclaimed_fees = expiring_epoch
         .map(|epoch| epoch.available)
-        .unwrap_or(vec![]);
+        .unwrap_or_default();
 
     fees = helpers::aggregate_fees(fees, unclaimed_fees);
 
@@ -51,7 +50,7 @@ pub fn create_new_epoch(
         id: current_epoch
             .id
             .checked_add(1)
-            .ok_or(StdError::generic_err("couldn't compute epoch id"))?,
+            .ok_or_else(|| StdError::generic_err("couldn't compute epoch id"))?,
         total: fees.clone(),
         available: fees.clone(),
         claimed: vec![],
@@ -84,10 +83,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     // filter out epochs that have already been claimed by the user
     if let Some(last_claimed_epoch) = last_claimed_epoch {
-        claimable_epochs = claimable_epochs
-            .into_iter()
-            .filter(|epoch| epoch.id > last_claimed_epoch)
-            .collect();
+        claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
 
         // the user has already claimed fees on all claimable epochs
         if claimable_epochs.is_empty() {
@@ -111,7 +107,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                         None
                     }
                 })
-                .ok_or(StdError::generic_err("Invalid fee"))?;
+                .ok_or_else(|| StdError::generic_err("Invalid fee"))?;
 
             if reward > fee_available {
                 return Err(ContractError::InvalidReward {});

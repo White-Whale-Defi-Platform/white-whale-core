@@ -1,12 +1,11 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::WasmMsg::Execute;
-use cosmwasm_std::{from_binary, DepsMut, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult};
+use cosmwasm_std::{from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult};
 
 use terraswap::asset::Asset;
 
 use crate::contract::{execute, instantiate, query};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{get_current_epoch, get_expiring_epoch, Config, Epoch, CONFIG, EPOCHS};
+use crate::state::{get_expiring_epoch, Config, Epoch, EPOCHS};
 use crate::ContractError;
 
 pub struct TestingRobot {
