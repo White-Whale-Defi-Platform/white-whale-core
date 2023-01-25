@@ -14,6 +14,30 @@ pub struct Config {
 }
 
 #[cw_serde]
+pub struct InstantiateMsg {
+    /// Unstaking period in number of blocks
+    pub unstaking_period: u64,
+    /// Weight grow rate
+    pub growth_rate: u8,
+}
+
+#[cw_serde]
+pub enum ExecuteMsg {
+    /// Stakes the specified amount of tokens.
+    Stake { amount: Uint128 },
+    /// Unstakes the specified amount of tokens.
+    Unstake { amount: Uint128 },
+    /// Sends claimable unstaked tokens to the user.
+    Claim {},
+    /// Updates the [Config] of the contract.
+    UpdateConfig {
+        owner: Option<Addr>,
+        unstaking_period: Option<u64>,
+        growth_rate: Option<u8>,
+    },
+}
+
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Returns the [Config] of te contract.
@@ -37,7 +61,6 @@ pub enum QueryMsg {
     #[returns(StakingWeightResponse)]
     Weight { address: String },
 }
-
 
 /// Response for the vaults query
 #[cw_serde]
