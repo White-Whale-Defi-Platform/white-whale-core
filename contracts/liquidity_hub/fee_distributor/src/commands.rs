@@ -1,6 +1,7 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response, StdError, Uint128};
+use cosmwasm_std::{to_binary, DepsMut, MessageInfo, QueryRequest, Response, StdError, WasmQuery};
 
 use terraswap::asset::{Asset, AssetInfo};
+use white_whale::whale_lair::{QueryMsg, StakingWeightResponse};
 
 use crate::helpers::validate_grace_period;
 use crate::state::{
@@ -67,16 +68,17 @@ pub fn create_new_epoch(
 
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
-    /*
+
     let config = CONFIG.load(deps.storage)?;
-    let staking_weight = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: config.staking_contract_addr.to_string(),
-        msg: to_binary(&())?,
-    }))?;
+    let staking_weight_response: StakingWeightResponse =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: config.staking_contract_addr.to_string(),
+            msg: to_binary(&QueryMsg::Weight {
+                address: info.sender.to_string(),
+            })?,
+        }))?;
 
-    let fee_share = staking_weight.user_weight / staking_weight.global_weight;*/
-
-    let fee_share = Uint128::from(3u128);
+    let fee_share = staking_weight_response.share;
 
     let mut claimable_epochs = get_claimable_epochs(deps.as_ref())?;
     let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &info.sender)?;
@@ -97,21 +99,17 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
             let reward = fee.amount.checked_div(fee_share)?;
 
             // make sure the reward is sound
-            let fee_available = epoch
+            let _ = epoch
                 .available
                 .iter()
-                .find_map(|available_fee| {
-                    if available_fee.info == fee.info {
-                        Some(available_fee.amount)
-                    } else {
-                        None
+                .find(|available_fee| available_fee.info == fee.info)
+                .map(|available_fee| {
+                    if reward > available_fee.amount {
+                        return Err(ContractError::InvalidReward {});
                     }
+                    Ok(())
                 })
                 .ok_or_else(|| StdError::generic_err("Invalid fee"))?;
-
-            if reward > fee_available {
-                return Err(ContractError::InvalidReward {});
-            }
 
             // add the reward to the claimable fees
             claimable_fees = helpers::aggregate_fees(

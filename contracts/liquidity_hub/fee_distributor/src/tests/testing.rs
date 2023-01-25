@@ -164,6 +164,11 @@ fn test_current_epoch_no_epochs() {
         .query_current_epoch(|res| {
             let epoch = res.unwrap();
             assert_eq!(epoch, Epoch::default());
+        })
+        .query_epoch(10, |res| {
+            // epoch 10 doesn't exist, it should return the default value
+            let (_, epoch) = res.unwrap();
+            assert_eq!(epoch, Epoch::default());
         });
 }
 
