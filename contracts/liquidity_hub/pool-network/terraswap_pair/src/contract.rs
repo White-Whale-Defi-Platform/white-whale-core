@@ -250,6 +250,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     } else if storage_version == Version::parse("1.1.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
+    if storage_version == Version::parse("1.2.0")? {
+        migrations::migrate_to_v130(deps.branch())?;
+    }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
