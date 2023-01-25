@@ -180,7 +180,8 @@ pub fn update_config(
 
     if let Some(grace_period) = grace_period {
         validate_grace_period(&grace_period)?;
-
+        //TODO check if grace period is lower than the current one.
+        // If so, we need to forward the fees to a new/current epoch
         config.grace_period = grace_period;
     }
 
