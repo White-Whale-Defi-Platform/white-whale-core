@@ -61,7 +61,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
         QueryMsg::Staked { address } => to_binary(&queries::query_staked(deps, address)?),
@@ -75,7 +75,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             start_after,
             limit,
         )?),
-        QueryMsg::Claimable { address } => to_binary(&queries::query_claimable(deps, address)?),
-        QueryMsg::Weight { address } => to_binary(&queries::query_weight(deps, address)?),
+        QueryMsg::Claimable { address } => {
+            to_binary(&queries::query_claimable(deps, env.block.height, address)?)
+        }
+        QueryMsg::Weight { address } => {
+            to_binary(&queries::query_weight(deps, env.block.height, address)?)
+        }
     }
 }

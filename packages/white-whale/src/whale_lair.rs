@@ -81,7 +81,7 @@ pub enum QueryMsg {
     Config {},
 
     /// Returns the amount of tokens that have been staked by the specified address.
-    #[returns(Uint128)]
+    #[returns(StakedResponse)]
     Staked { address: String },
 
     /// Returns the amount of tokens that are been unstaked by the specified address.
@@ -91,7 +91,7 @@ pub enum QueryMsg {
 
     /// Returns the amount of unstaking tokens of the specified address that can be claimed, i.e.
     /// that have passed the unstaking period.
-    #[returns(Uint128)]
+    #[returns(ClaimableResponse)]
     Claimable { address: String },
 
     /// Returns the weight of the address.
@@ -99,12 +99,23 @@ pub enum QueryMsg {
     Weight { address: String },
 }
 
+/// Response for the Staked query
+#[cw_serde]
+pub struct StakedResponse {
+    pub staked: Uint128,
+}
 
 /// Response for the Unstaking query
 #[cw_serde]
 pub struct UnstakingResponse {
     pub total_amount: Uint128,
     pub unstaking_requests: Vec<Stake>,
+}
+
+/// Response for the Claimable query
+#[cw_serde]
+pub struct ClaimableResponse {
+    pub claimable_amount: Uint128,
 }
 
 /// Response for the Weight query.

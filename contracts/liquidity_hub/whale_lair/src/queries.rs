@@ -1,8 +1,11 @@
 use cosmwasm_std::{Deps, Order, StdError, StdResult, Uint128};
 
-use white_whale::whale_lair::{Config, Stake, UnstakingResponse};
+use white_whale::whale_lair::{
+    ClaimableResponse, Config, GlobalIndex, Stake, StakedResponse, StakingWeightResponse,
+    UnstakingResponse,
+};
 
-use crate::state::{CONFIG, STAKE, UNSTAKE};
+use crate::state::{CONFIG, GLOBAL, STAKE, UNSTAKE};
 
 /// Queries the current configuration of the contract.
 pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
@@ -10,12 +13,14 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 }
 
 /// Queries the current staked amount of the given address.
-pub(crate) fn query_staked(deps: Deps, address: String) -> StdResult<Uint128> {
+pub(crate) fn query_staked(deps: Deps, address: String) -> StdResult<StakedResponse> {
     let address = deps.api.addr_validate(&address)?;
     let stake = STAKE.may_load(deps.storage, &address)?;
 
     if let Some(stake) = stake {
-        Ok(stake.amount)
+        Ok(StakedResponse {
+            staked: stake.amount,
+        })
     } else {
         Err(StdError::generic_err(format!(
             "No stake found for {}",
@@ -61,17 +66,76 @@ pub(crate) fn query_unstaking(
 }
 
 /// Queries the amount of unstaking tokens of the specified address that have passed the unstaking period.
-pub(crate) fn query_claimable(_deps: Deps, _address: String) -> StdResult<Uint128> {
-    unimplemented!()
+pub(crate) fn query_claimable(
+    deps: Deps,
+    block_height: u64,
+    address: String,
+) -> StdResult<ClaimableResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let unstaking: StdResult<Vec<_>> = UNSTAKE
+        .prefix(address.as_bytes())
+        .range(deps.storage, None, None, Order::Ascending)
+        .take(MAX_CLAIM_LIMIT as usize)
+        .collect();
+
+    let mut claimable_amount = Uint128::zero();
+    for (_, stake) in unstaking? {
+        if block_height
+            >= stake
+                .block_height
+                .checked_add(config.unstaking_period)
+                .ok_or_else(|| StdError::generic_err("Invalid block height"))?
+        {
+            claimable_amount += stake.amount;
+        }
+    }
+
+    Ok(ClaimableResponse { claimable_amount })
 }
 
 /// Queries the current weight of the given address.
-pub(crate) fn query_weight(deps: Deps, address: String) -> StdResult<Uint128> {
-    todo!("this is returning the weight that is recorded on the state, but it's not the current one, i.e. it's not updated to the current block height. Maybe this is the desired behavior?");
+pub(crate) fn query_weight(
+    deps: Deps,
+    block_height: u64,
+    address: String,
+) -> StdResult<StakingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
     let stake = STAKE.may_load(deps.storage, &address)?;
-    if let Some(stake) = stake {
-        Ok(stake.weight)
+
+    if let Some(mut stake) = stake {
+        let config = CONFIG.load(deps.storage)?;
+
+        stake.weight += stake
+            .amount
+            .checked_mul(Uint128::from(config.growth_rate))?
+            .checked_mul(Uint128::from(
+                block_height
+                    .checked_sub(stake.block_height)
+                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+            ))?;
+
+        let mut global_index = GLOBAL
+            .may_load(deps.storage)
+            .unwrap_or_else(|_| Some(GlobalIndex::default()))
+            .ok_or_else(|| StdError::generic_err("Global index not found"))?;
+
+        global_index.weight += global_index
+            .stake
+            .checked_mul(Uint128::from(config.growth_rate))?
+            .checked_mul(Uint128::from(
+                block_height
+                    .checked_sub(global_index.block_height)
+                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+            ))?;
+
+        let share = stake.weight.checked_div(global_index.weight)?;
+
+        Ok(StakingWeightResponse {
+            address: address.to_string(),
+            weight: stake.weight,
+            global_weight: global_index.weight,
+            share,
+        })
     } else {
         Err(StdError::generic_err(format!(
             "No weight found for {}",
