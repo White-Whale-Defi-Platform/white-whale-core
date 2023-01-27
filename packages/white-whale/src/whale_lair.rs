@@ -5,12 +5,46 @@ use cosmwasm_std::{Addr, Uint128};
 pub struct Config {
     /// Owner of the contract.
     pub owner: Addr,
-    /// Unstaking period in number of blocks
+    /// Unstaking period in seconds
     pub unstaking_period: u64,
     /// A scalar that controls the effect of time on the weight of a stake. If the growth rate is set
     /// to zero, time will have no impact on the weight. If the growth rate is set to one, the stake's
     /// weight will increase by one for each block.
     pub growth_rate: u8,
+    /// Denom of the asset to be staked. Can't only be set at instantiation.
+    pub staking_denom: String,
+}
+
+#[cw_serde]
+#[derive(Default)]
+pub struct Stake {
+    /// The amount of staked tokens.
+    pub amount: Uint128,
+    /// The block height at which the stake was done.
+    pub block_height: u64,
+    /// The weight of the stake at the given block height.
+    pub weight: Uint128,
+}
+
+impl Stake {
+    pub fn default() -> Self {
+        Self {
+            amount: Uint128::zero(),
+            block_height: 0u64,
+            weight: Uint128::zero(),
+        }
+    }
+}
+
+#[cw_serde]
+#[derive(Default)]
+pub struct GlobalIndex {
+    /// The total amount of tokens staked in the contract.
+    pub stake: Uint128,
+    /// The block height at which the total stake was registered.
+    pub block_height: u64,
+    /// The total weight of the stake at the given block height.
+    pub weight: Uint128,
 }
 
 #[cw_serde]
@@ -19,6 +53,8 @@ pub struct InstantiateMsg {
     pub unstaking_period: u64,
     /// Weight grow rate
     pub growth_rate: u8,
+    /// Denom of the asset to be staked
+    pub staking_denom: String,
 }
 
 #[cw_serde]
@@ -31,7 +67,7 @@ pub enum ExecuteMsg {
     Claim {},
     /// Updates the [Config] of the contract.
     UpdateConfig {
-        owner: Option<Addr>,
+        owner: Option<String>,
         unstaking_period: Option<u64>,
         growth_rate: Option<u8>,
     },
@@ -49,8 +85,9 @@ pub enum QueryMsg {
     Staked { address: String },
 
     /// Returns the amount of tokens that are been unstaked by the specified address.
-    #[returns(Uint128)]
-    Unstaking { address: String },
+    /// Allows pagination with start_after and limit.
+    #[returns(UnstakingResponse)]
+    Unstaking { address: String, start_after: Option<u64>, limit: Option<u8> },
 
     /// Returns the amount of unstaking tokens of the specified address that can be claimed, i.e.
     /// that have passed the unstaking period.
@@ -62,7 +99,15 @@ pub enum QueryMsg {
     Weight { address: String },
 }
 
-/// Response for the vaults query
+
+/// Response for the Unstaking query
+#[cw_serde]
+pub struct UnstakingResponse {
+    pub total_amount: Uint128,
+    pub unstaking_requests: Vec<Stake>,
+}
+
+/// Response for the Weight query.
 #[cw_serde]
 pub struct StakingWeightResponse {
     pub address: String,

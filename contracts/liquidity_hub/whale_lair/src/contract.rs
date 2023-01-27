@@ -1,12 +1,13 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
+use white_whale::validators::validate_denom;
 use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use crate::error::ContractError;
-use crate::queries;
 use crate::state::CONFIG;
+use crate::{commands, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-whale_lair";
@@ -15,16 +16,19 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    validate_denom(deps.as_ref(), &env, &msg.staking_denom, &info.funds)?;
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         unstaking_period: msg.unstaking_period,
         growth_rate: msg.growth_rate,
+        staking_denom: msg.staking_denom,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -40,15 +44,19 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Stake { amount } => unimplemented!(),
-        ExecuteMsg::Unstake { amount } => unimplemented!(),
-        ExecuteMsg::Claim {} => unimplemented!(),
-        ExecuteMsg::UpdateConfig { owner, unstaking_period, growth_rate } => unimplemented!(),
+        ExecuteMsg::Stake { amount } => commands::stake(deps, env.block.height, info, amount),
+        ExecuteMsg::Unstake { amount } => commands::unstake(deps, env.block.height, info, amount),
+        ExecuteMsg::Claim {} => commands::claim(deps, env.block.height, info.sender),
+        ExecuteMsg::UpdateConfig {
+            owner,
+            unstaking_period,
+            growth_rate,
+        } => commands::update_config(deps, info, owner, unstaking_period, growth_rate),
     }
 }
 
@@ -56,9 +64,18 @@ pub fn execute(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
-        QueryMsg::Staked { address } => unimplemented!(),
-        QueryMsg::Unstaking { address } => unimplemented!(),
-        QueryMsg::Claimable { address } => unimplemented!(),
-        QueryMsg::Weight { address } => unimplemented!(),
+        QueryMsg::Staked { address } => to_binary(&queries::query_staked(deps, address)?),
+        QueryMsg::Unstaking {
+            address,
+            start_after,
+            limit,
+        } => to_binary(&queries::query_unstaking(
+            deps,
+            address,
+            start_after,
+            limit,
+        )?),
+        QueryMsg::Claimable { address } => to_binary(&queries::query_claimable(deps, address)?),
+        QueryMsg::Weight { address } => to_binary(&queries::query_weight(deps, address)?),
     }
 }
