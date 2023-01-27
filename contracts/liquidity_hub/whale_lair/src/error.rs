@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -8,6 +8,16 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+
+    #[error("The asset sent don't match the asset expected. Please check the denom and amount.")]
+    AssetMismatch {},
+
+    #[error("The amount of tokens to unstake is greater than the amount of tokens staked.")]
+    InsufficientStake {},
+
+    #[error("{0}")]
+    DivideByZeroError(#[from] DivideByZeroError),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 }
