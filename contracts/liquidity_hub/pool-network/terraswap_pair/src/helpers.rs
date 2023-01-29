@@ -210,7 +210,7 @@ pub fn compute_swap(
             // thus is it the offer_amount - return_amount
             let spread_amount = offer_amount
                 .to_uint256_with_precision(u32::from(ask_precision))?
-                .checked_sub(return_amount)?;
+                .saturating_sub(return_amount);
 
             // subtract fees from return_amount
             let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);

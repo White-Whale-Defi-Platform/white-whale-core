@@ -84,4 +84,45 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn does_stableswap_correctly_with_smaller_asset_pool() {
+        // test when asset_pool is smaller than collateral_pool
+
+        let asset_pool_amount = Uint128::from(4_607_500_000_000u128);
+        let collateral_pool_amount = Uint128::from(4_602_500_763_431u128);
+        let offer_amount = Uint128::from(1_000_000u128);
+
+        let swap_result = compute_swap(
+            collateral_pool_amount,
+            asset_pool_amount,
+            offer_amount,
+            PoolFee {
+                protocol_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                swap_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                burn_fee: Fee {
+                    share: Decimal::zero(),
+                },
+            },
+            &PairType::StableSwap { amp: 100 },
+            6,
+            6,
+        )
+        .unwrap();
+
+        assert_eq!(
+            swap_result,
+            SwapComputation {
+                protocol_fee_amount: Uint128::new(2500),
+                swap_fee_amount: Uint128::new(2500),
+                return_amount: Uint128::new(995_011),
+                spread_amount: Uint128::new(0),
+                burn_fee_amount: Uint128::zero()
+            }
+        );
+    }
 }
