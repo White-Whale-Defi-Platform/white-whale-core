@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Uint128};
 pub struct Config {
     /// Owner of the contract.
     pub owner: Addr,
-    /// Unstaking period in seconds
+    /// Unstaking period in number of blocks
     pub unstaking_period: u64,
     /// A scalar that controls the effect of time on the weight of a stake. If the growth rate is set
     /// to zero, time will have no impact on the weight. If the growth rate is set to one, the stake's
@@ -87,7 +87,11 @@ pub enum QueryMsg {
     /// Returns the amount of tokens that are been unstaked by the specified address.
     /// Allows pagination with start_after and limit.
     #[returns(UnstakingResponse)]
-    Unstaking { address: String, start_after: Option<u64>, limit: Option<u8> },
+    Unstaking {
+        address: String,
+        start_after: Option<u64>,
+        limit: Option<u8>,
+    },
 
     /// Returns the amount of unstaking tokens of the specified address that can be claimed, i.e.
     /// that have passed the unstaking period.
@@ -98,6 +102,9 @@ pub enum QueryMsg {
     #[returns(StakingWeightResponse)]
     Weight { address: String },
 }
+
+#[cw_serde]
+pub struct MigrateMsg {}
 
 /// Response for the Staked query
 #[cw_serde]

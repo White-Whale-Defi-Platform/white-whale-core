@@ -34,6 +34,12 @@ pool-network = { path = "./packages/pool-network" }
 thiserror = "1.0.21"
 vault-network = { path = "./packages/vault-network" }
 white-whale = { path = "./packages/white-whale" }
+white-whale-testing = { path = "./packages/white-whale-testing" }
+cw-multi-test = { version = "0.16.2" }
+
+# contracts
+whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
+
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

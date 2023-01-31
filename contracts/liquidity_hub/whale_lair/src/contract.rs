@@ -1,12 +1,14 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cw2::set_contract_version;
+use cw2::{get_contract_version, set_contract_version};
+use semver::Version;
 
 use white_whale::validators::validate_denom;
-use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::state::CONFIG;
+use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, queries};
 
 // version info for migration info
@@ -82,4 +84,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&queries::query_weight(deps, env.block.height, address)?)
         }
     }
+}
+
+#[cfg(not(tarpaulin_include))]
+#[entry_point]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
+
+    if storage_version >= version {
+        return Err(MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }
