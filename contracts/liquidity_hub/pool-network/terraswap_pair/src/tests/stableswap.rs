@@ -125,4 +125,85 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    #[allow(clippy::inconsistent_digit_grouping)]
+    fn does_stableswap_with_different_precisions() {
+        let mut asset_pool_amount = Uint128::from(1000000_000000000000000000u128);
+        let mut collateral_pool_amount = Uint128::from(1000000_000000u128);
+        let mut offer_amount = Uint128::from(1000_000000u128);
+
+        let swap_result = compute_swap(
+            collateral_pool_amount,
+            asset_pool_amount,
+            offer_amount,
+            PoolFee {
+                protocol_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                swap_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                burn_fee: Fee {
+                    share: Decimal::zero(),
+                },
+            },
+            &PairType::StableSwap { amp: 100 },
+            6,
+            18,
+        )
+        .unwrap();
+        assert_eq!(
+            swap_result,
+            SwapComputation {
+                protocol_fee_amount: Uint128::new(2_499975247745560004),
+                swap_fee_amount: Uint128::new(2_499975247745560004),
+                return_amount: Uint128::new(994_990148602732881842),
+                spread_amount: Uint128::new(9900901775998150),
+                burn_fee_amount: Uint128::zero()
+            }
+        );
+
+        // apply the changes of the swap
+        asset_pool_amount -= swap_result.return_amount
+            + swap_result.spread_amount
+            + swap_result.protocol_fee_amount
+            + swap_result.swap_fee_amount
+            + swap_result.burn_fee_amount;
+        collateral_pool_amount += offer_amount;
+
+        println!("asset_pool_amount = {asset_pool_amount}, collateral_pool_amount = {collateral_pool_amount}");
+        // do a new offer, in the opposite direction of 1k this time
+        offer_amount = Uint128::new(5000_000000000000000000u128);
+        let swap_result = compute_swap(
+            asset_pool_amount,
+            collateral_pool_amount,
+            offer_amount,
+            PoolFee {
+                protocol_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                swap_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 400u128),
+                },
+                burn_fee: Fee {
+                    share: Decimal::zero(),
+                },
+            },
+            &PairType::StableSwap { amp: 100 },
+            18,
+            6,
+        )
+        .unwrap();
+        assert_eq!(
+            swap_result,
+            SwapComputation {
+                protocol_fee_amount: Uint128::new(12_499628),
+                swap_fee_amount: Uint128::new(12_499628),
+                return_amount: Uint128::new(4974_852233),
+                spread_amount: Uint128::new(148511),
+                burn_fee_amount: Uint128::zero()
+            }
+        );
+    }
 }

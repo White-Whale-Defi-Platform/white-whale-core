@@ -106,7 +106,7 @@ pub fn calculate_stableswap_y(
         StableSwapDirection::Simulate => offer_pool.checked_add(offer_amount)?,
         StableSwapDirection::ReverseSimulate => ask_pool.checked_sub(offer_amount)?,
     }
-    .to_uint256_with_precision(u32::from(offer_precision.max(ask_precision)))?;
+    .to_uint256_with_precision(u32::from(ask_precision))?;
     let c = d
         .checked_multiply_ratio(d, pool_sum.checked_mul(N_COINS)?)?
         .checked_multiply_ratio(d, ann.checked_mul(N_COINS)?)?;
