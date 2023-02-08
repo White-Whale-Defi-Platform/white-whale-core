@@ -216,7 +216,6 @@ pub fn query_reverse_simulation(
                 ask_pool,
                 before_fees,
                 &amp,
-                offer_decimal,
                 ask_decimal,
                 StableSwapDirection::ReverseSimulate,
             )?;

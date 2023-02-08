@@ -23,7 +23,6 @@ mod tests {
             offer_amount,
             &amp,
             6,
-            6,
             StableSwapDirection::Simulate,
         )
         .unwrap();
@@ -38,7 +37,6 @@ mod tests {
             ask_pool,
             offer_amount,
             &amp,
-            6,
             6,
             StableSwapDirection::Simulate,
         )

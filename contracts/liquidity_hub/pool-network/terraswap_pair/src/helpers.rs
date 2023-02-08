@@ -30,9 +30,11 @@ fn calculate_stableswap_d(
         // there was nothing to swap, return `0`.
         return Ok(Decimal256::zero());
     }
+    println!("sum_pools={sum_pools}");
 
     // ann = amp * n_coins
     let ann = Decimal256::from_ratio(Uint256::from_u128((*amp).into()).checked_mul(N_COINS)?, 1u8);
+    println!("ann={ann}");
 
     // perform Newton-Raphson method
     let mut current_d = sum_pools;
@@ -45,6 +47,7 @@ fn calculate_stableswap_d(
                 let mul_pools = pool.checked_mul(n_coins)?;
                 acc.checked_multiply_ratio(current_d, mul_pools)
             })?;
+        println!("new_d={new_d}");
 
         let old_d = current_d;
         // current_d = ((ann * sum_pools + new_d * n_coins) * current_d) / ((ann - 1) * current_d + (n_coins + 1) * new_d)
@@ -57,17 +60,20 @@ fn calculate_stableswap_d(
                 .checked_mul(current_d)?
                 .checked_add(n_coins.checked_add(Decimal256::one())?.checked_mul(new_d)?))?,
         )?;
+        println!("current_d={current_d}");
 
         if current_d >= old_d {
             if current_d.checked_sub(old_d)? <= Decimal256::decimal_with_precision(1u8, precision)?
             {
                 // success
+                println!("got d={current_d}");
                 return Ok(current_d);
             }
         } else if old_d.checked_sub(current_d)?
             <= Decimal256::decimal_with_precision(1u8, precision)?
         {
             // success
+            println!("got d={current_d}");
             return Ok(current_d);
         }
     }
@@ -93,7 +99,6 @@ pub fn calculate_stableswap_y(
     ask_pool: Decimal256,
     offer_amount: Decimal256,
     amp: &u64,
-    offer_precision: u8,
     ask_precision: u8,
     direction: StableSwapDirection,
 ) -> Result<Uint128, ContractError> {
@@ -101,17 +106,21 @@ pub fn calculate_stableswap_y(
 
     let d = calculate_stableswap_d(offer_pool, ask_pool, amp, ask_precision)?
         .to_uint256_with_precision(u32::from(ask_precision))?;
+    println!("d={d}");
 
     let pool_sum = match direction {
         StableSwapDirection::Simulate => offer_pool.checked_add(offer_amount)?,
         StableSwapDirection::ReverseSimulate => ask_pool.checked_sub(offer_amount)?,
     }
     .to_uint256_with_precision(u32::from(ask_precision))?;
+    println!("pool_sum={pool_sum}");
     let c = d
         .checked_multiply_ratio(d, pool_sum.checked_mul(N_COINS)?)?
         .checked_multiply_ratio(d, ann.checked_mul(N_COINS)?)?;
+    println!("c={c}");
 
     let b = pool_sum.checked_add(d.checked_div(ann)?)?;
+    println!("b={b}");
 
     // attempt to converge solution using Newton-Raphson method
     let mut y = d;
@@ -193,24 +202,30 @@ pub fn compute_swap(
             let ask_pool = Decimal256::decimal_with_precision(ask_pool, ask_precision)?;
             let offer_amount = Decimal256::decimal_with_precision(offer_amount, offer_precision)?;
 
+            println!("offer_pool={offer_pool}, ask_pool={ask_pool}, offer_amount={offer_amount}");
             let new_pool = calculate_stableswap_y(
                 offer_pool,
                 ask_pool,
                 offer_amount,
                 amp,
-                offer_precision,
                 ask_precision,
                 StableSwapDirection::Simulate,
             )?;
+            println!("new_pool={new_pool}");
+
             let return_amount = ask_pool
                 .to_uint256_with_precision(u32::from(ask_precision))?
                 .checked_sub(Uint256::from_uint128(new_pool))?;
+
+            println!("return_amount={return_amount}");
 
             // the spread is the loss from 1:1 conversion
             // thus is it the offer_amount - return_amount
             let spread_amount = offer_amount
                 .to_uint256_with_precision(u32::from(ask_precision))?
                 .saturating_sub(return_amount);
+
+            println!("spread_amount={spread_amount}");
 
             // subtract fees from return_amount
             let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
