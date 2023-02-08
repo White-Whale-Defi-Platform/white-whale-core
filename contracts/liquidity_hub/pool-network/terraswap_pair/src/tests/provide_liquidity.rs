@@ -645,7 +645,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
+                amount: (MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
             },
             Asset {
                 info: AssetInfo::NativeToken {

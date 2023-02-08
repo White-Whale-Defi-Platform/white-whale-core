@@ -1130,7 +1130,7 @@ fn execute_transactions_unauthorized() {
 
     // Try executing ExecuteMsg::CreatePair
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: asset_infos.clone(),
+        asset_infos,
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),

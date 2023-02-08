@@ -57,16 +57,14 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
-                &vault_network::vault_factory::QueryMsg::Vault {
-                    asset_info: asset_info.clone(),
-                },
+                &vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
 
         let vault_config: vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
-                vault_addr.clone().unwrap_or(Addr::unchecked("")),
+                vault_addr.clone().unwrap_or_else(|| Addr::unchecked("")),
                 &vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
@@ -77,12 +75,12 @@ mod tests {
         // disable flashloans
 
         app.execute_contract(
-            creator.sender.clone(),
-            factory_addr.clone(),
+            creator.sender,
+            factory_addr,
             &vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
                 vault_addr: vault_addr
                     .clone()
-                    .unwrap_or(Addr::unchecked(""))
+                    .unwrap_or_else(|| Addr::unchecked(""))
                     .to_string(),
                 params: vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: Some(false),
@@ -100,7 +98,7 @@ mod tests {
         let vault_config: vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
-                vault_addr.unwrap_or(Addr::unchecked("")),
+                vault_addr.unwrap_or_else(|| Addr::unchecked("")),
                 &vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
@@ -123,7 +121,7 @@ mod tests {
         let creator = mock_creator();
 
         app.execute_contract(
-            creator.sender.clone(),
+            creator.sender,
             factory_addr.clone(),
             &vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
@@ -138,9 +136,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
-                &vault_network::vault_factory::QueryMsg::Vault {
-                    asset_info: asset_info.clone(),
-                },
+                &vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
 
@@ -148,9 +144,11 @@ mod tests {
 
         let res = app.execute_contract(
             Addr::unchecked("unauthorized"),
-            factory_addr.clone(),
+            factory_addr,
             &vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
-                vault_addr: vault_addr.unwrap_or(Addr::unchecked("")).to_string(),
+                vault_addr: vault_addr
+                    .unwrap_or_else(|| Addr::unchecked(""))
+                    .to_string(),
                 params: vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: None,
                     deposit_enabled: None,

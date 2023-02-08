@@ -505,7 +505,7 @@ mod test {
         // third depositor deposits 8,000 uluna
         app.execute_contract(
             third_depositor.clone(),
-            vault_addr.clone(),
+            vault_addr,
             &vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(8_000),
             },

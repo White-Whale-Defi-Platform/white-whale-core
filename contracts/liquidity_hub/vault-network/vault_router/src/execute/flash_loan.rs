@@ -245,7 +245,7 @@ mod tests {
         let err = app
             .execute_contract(
                 mock_creator().sender,
-                router_addr.clone(),
+                router_addr,
                 &ExecuteMsg::FlashLoan {
                     assets: vec![
                         Asset {

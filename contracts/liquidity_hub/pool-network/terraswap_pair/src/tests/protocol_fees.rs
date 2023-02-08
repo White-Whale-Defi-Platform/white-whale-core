@@ -354,7 +354,7 @@ fn test_collect_protocol_fees_successful() {
             to_address: "collector".to_string(),
             amount: vec![Coin {
                 denom: "uusd".to_string(),
-                amount: protocol_fees_for_native.clone().first().unwrap().amount,
+                amount: protocol_fees_for_native.first().unwrap().amount,
             }],
         }))
     );
@@ -364,7 +364,7 @@ fn test_collect_protocol_fees_successful() {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "collector".to_string(),
-                amount: protocol_fees_for_token.clone().first().unwrap().amount,
+                amount: protocol_fees_for_token.first().unwrap().amount,
             })
             .unwrap(),
             funds: vec![],

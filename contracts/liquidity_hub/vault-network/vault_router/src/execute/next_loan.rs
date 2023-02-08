@@ -146,7 +146,7 @@ mod tests {
         let err = app
             .execute_contract(
                 Addr::unchecked("unauthorized"),
-                router_addr.clone(),
+                router_addr,
                 &ExecuteMsg::NextLoan {
                     initiator: Addr::unchecked("initiator_addr"),
                     source_vault: luna_vault.unwrap(),

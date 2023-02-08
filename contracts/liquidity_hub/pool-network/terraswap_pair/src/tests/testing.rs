@@ -509,7 +509,7 @@ fn test_update_config_successful() {
 
     // check for original config
     assert_eq!(config.owner, Addr::unchecked("addr0000"));
-    assert_eq!(config.feature_toggle.swaps_enabled, true);
+    assert!(config.feature_toggle.swaps_enabled);
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::zero());
 
     let update_config_message = UpdateConfig {
