@@ -170,7 +170,6 @@ mod tests {
             + swap_result.burn_fee_amount;
         collateral_pool_amount += offer_amount;
 
-        println!("asset_pool_amount = {asset_pool_amount}, collateral_pool_amount = {collateral_pool_amount}");
         // do a new offer, in the opposite direction of 1k this time
         offer_amount = Uint128::new(5000_000000000000000000u128);
         let swap_result = compute_swap(
