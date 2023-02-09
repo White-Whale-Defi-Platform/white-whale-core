@@ -6,10 +6,12 @@ authors = [
 	"DELIGHT LABS",
 	"Kerber0x <kerber0x@protonmail.com>",
 ]
-edition.workspace = true
+edition = "2021"
+homepage = "https://whitewhale.money"
+license = "MIT"
+repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
+publish = false
 description = "A Terraswap pair contract"
-license.workspace = true
-publish.workspace = true
 
 exclude = [
 	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -39,6 +41,6 @@ serde.workspace = true
 semver.workspace = true
 thiserror.workspace = true
 protobuf.workspace = true
-terraswap.workspace = true
-white-whale.workspace = true
+terraswap = { path = "../../../../packages/terraswap" }
+white-whale = { path = "../../../../packages/white-whale" }
 cosmwasm-schema.workspace = true

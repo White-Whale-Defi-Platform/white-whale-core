@@ -68,6 +68,21 @@ pub fn store_pair_code(app: &mut App) -> u64 {
     app.store_code(contract)
 }
 
+/// Stores the trio contract to the app
+pub fn store_trio_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new_with_empty(
+            stableswap_3pool::contract::execute,
+            stableswap_3pool::contract::instantiate,
+            stableswap_3pool::contract::query,
+        )
+        .with_reply(stableswap_3pool::contract::reply)
+        .with_migrate(stableswap_3pool::contract::migrate),
+    );
+
+    app.store_code(contract)
+}
+
 /// Stores the token contract to the app
 pub fn store_token_code(app: &mut App) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(

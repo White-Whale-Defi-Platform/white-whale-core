@@ -4,13 +4,13 @@ version = "1.1.4"
 authors = [
 	"kaimen-sano <kaimen_sano@protonmail.com>, Kerber0x <kerber0x@protonmail.com>",
 ]
-edition.workspace = true
+edition = "2021"
+homepage = "https://whitewhale.money"
+license = "MIT"
+repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
+publish = false
 description = "Contract to facilitate flash-loans in the vault network"
-license.workspace = true
-repository.workspace = true
-homepage.workspace = true
 documentation = "https://whitewhale.money"
-publish.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -28,10 +28,10 @@ protobuf.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
-terraswap.workspace = true
+terraswap = { path = "../../../../packages/terraswap" }
 thiserror.workspace = true
-vault-network.workspace = true
-white-whale.workspace = true
+vault-network = { path = "../../../../packages/vault-network" }
+white-whale = { path = "../../../../packages/white-whale" }
 cosmwasm-schema.workspace = true
 
 [dev-dependencies]

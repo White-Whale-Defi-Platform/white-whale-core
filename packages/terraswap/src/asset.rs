@@ -407,3 +407,59 @@ impl PairInfoRaw {
         ])
     }
 }
+
+#[cw_serde]
+pub struct TrioInfo {
+    pub asset_infos: [AssetInfo; 3],
+    pub contract_addr: String,
+    pub liquidity_token: String,
+    pub asset_decimals: [u8; 3],
+}
+
+#[cw_serde]
+pub struct TrioInfoRaw {
+    pub asset_infos: [AssetInfoRaw; 3],
+    pub contract_addr: CanonicalAddr,
+    pub liquidity_token: CanonicalAddr,
+    pub asset_decimals: [u8; 3],
+}
+
+impl TrioInfoRaw {
+    pub fn to_normal(&self, api: &dyn Api) -> StdResult<TrioInfo> {
+        Ok(TrioInfo {
+            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
+            asset_infos: [
+                self.asset_infos[0].to_normal(api)?,
+                self.asset_infos[1].to_normal(api)?,
+                self.asset_infos[2].to_normal(api)?,
+            ],
+            asset_decimals: self.asset_decimals,
+        })
+    }
+
+    pub fn query_pools(
+        &self,
+        querier: &QuerierWrapper,
+        api: &dyn Api,
+        contract_addr: Addr,
+    ) -> StdResult<[Asset; 3]> {
+        let info_0: AssetInfo = self.asset_infos[0].to_normal(api)?;
+        let info_1: AssetInfo = self.asset_infos[1].to_normal(api)?;
+        let info_2: AssetInfo = self.asset_infos[2].to_normal(api)?;
+        Ok([
+            Asset {
+                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                info: info_0,
+            },
+            Asset {
+                amount: info_1.query_pool(querier, api, contract_addr.clone())?,
+                info: info_1,
+            },
+            Asset {
+                amount: info_2.query_pool(querier, api, contract_addr)?,
+                info: info_2,
+            },
+        ])
+    }
+}

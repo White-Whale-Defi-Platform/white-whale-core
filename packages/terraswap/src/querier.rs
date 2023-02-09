@@ -1,6 +1,7 @@
-use crate::asset::{Asset, AssetInfo, PairInfo};
+use crate::asset::{Asset, AssetInfo, PairInfo, TrioInfo};
 use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
+use crate::trio::QueryMsg as TrioQueryMsg;
 
 use cosmwasm_std::{
     to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
@@ -121,4 +122,16 @@ pub fn query_pair_info_from_pair(
     }))?;
 
     Ok(pair_info)
+}
+
+pub fn query_trio_info_from_trio(
+    querier: &QuerierWrapper,
+    trio_contract: Addr,
+) -> StdResult<TrioInfo> {
+    let trio_info: TrioInfo = querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: trio_contract.to_string(),
+        msg: to_binary(&TrioQueryMsg::Trio {})?,
+    }))?;
+
+    Ok(trio_info)
 }

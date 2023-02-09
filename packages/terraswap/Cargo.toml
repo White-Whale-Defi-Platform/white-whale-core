@@ -6,7 +6,7 @@ authors = [
 	"DELIGHT LABS",
 	"Kerber0x <kerber0x@protonmail.com>",
 ]
-edition.workspace = true
+edition = "2021"
 description = "Common terraswap types"
 license = "Apache-2.0"
 repository = "https://github.com/terraswap/terraswap"
@@ -28,5 +28,5 @@ cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 protobuf.workspace = true
-white-whale.workspace = true
+white-whale = { path = "../white-whale" }
 cosmwasm-schema.workspace = true

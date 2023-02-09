@@ -26,6 +26,7 @@ fn proper_initialization() {
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -48,6 +49,7 @@ fn can_migrate_contract() {
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -71,6 +73,7 @@ fn update_config() {
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -85,6 +88,7 @@ fn update_config() {
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("addr0001".to_string()),
         pair_code_id: None,
+        trio_code_id: None,
         token_code_id: None,
         fee_collector_addr: None,
     };
@@ -106,6 +110,7 @@ fn update_config() {
     let msg = ExecuteMsg::UpdateConfig {
         owner: None,
         pair_code_id: Some(100u64),
+        trio_code_id: Some(300u64),
         token_code_id: Some(200u64),
         fee_collector_addr: Some("new_collector".to_string()),
     };
@@ -118,6 +123,7 @@ fn update_config() {
     let config_res: ConfigResponse = from_binary(&query_res).unwrap();
     assert_eq!(200u64, config_res.token_code_id);
     assert_eq!(100u64, config_res.pair_code_id);
+    assert_eq!(300u64, config_res.trio_code_id);
     assert_eq!("addr0001".to_string(), config_res.owner);
     assert_eq!("new_collector".to_string(), config_res.fee_collector_addr);
 
@@ -128,6 +134,7 @@ fn update_config() {
         owner: None,
         fee_collector_addr: None,
         pair_code_id: None,
+        trio_code_id: None,
         token_code_id: None,
     };
 
@@ -143,6 +150,7 @@ fn init(
 ) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -806,6 +814,7 @@ fn fail_to_create_pair_with_unknown_token() {
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -857,6 +866,7 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
 
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
+        trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
     };
@@ -1171,6 +1181,7 @@ fn execute_transactions_unauthorized() {
         fee_collector_addr: None,
         token_code_id: None,
         pair_code_id: None,
+        trio_code_id: None,
     };
 
     let res = execute(deps.as_mut(), env, info, msg);
