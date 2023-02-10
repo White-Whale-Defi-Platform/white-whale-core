@@ -63,41 +63,44 @@ pub fn compute_offer_amount(
     unswapped_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
+    amp_factor: u64,
 ) -> StdResult<OfferAmountComputation> {
-    let offer_pool: Uint256 = offer_pool.into();
-    let ask_pool: Uint256 = ask_pool.into();
-    let ask_amount: Uint256 = ask_amount.into();
+    let fees = pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
+    let one_minus_commission = Decimal::one() - fees;
+    let inv_one_minus_commission = Decimal::one() / one_minus_commission;
 
-    // ask => offer
-    // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool
-    let fees = pool_fees.swap_fee.to_decimal_256()
-        + pool_fees.protocol_fee.to_decimal_256()
-        + pool_fees.burn_fee.to_decimal_256();
-    let one_minus_commission = Decimal256::one() - fees;
-    let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
+    let before_commission_deduction: Uint128 = ask_amount * inv_one_minus_commission;
 
-    let cp: Uint256 = offer_pool * ask_pool;
-    let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
-        - offer_pool;
+    let invariant = StableSwap::new(amp_factor, amp_factor, 0, 0, 0);
 
-    let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
-    let before_spread_deduction: Uint256 =
-        offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
+    let offer_amount = invariant
+        .reverse_sim(
+            before_commission_deduction,
+            offer_pool,
+            ask_pool,
+            unswapped_pool,
+        )
+        .unwrap();
 
-    let spread_amount = if before_spread_deduction > before_commission_deduction {
-        before_spread_deduction - before_commission_deduction
+    let spread_amount = if before_commission_deduction > offer_amount {
+        before_commission_deduction - offer_amount
     } else {
-        Uint256::zero()
+        offer_amount - before_commission_deduction
     };
 
-    let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
-    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
-    let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(before_commission_deduction);
+    let swap_fee_amount = pool_fees
+        .swap_fee
+        .compute(before_commission_deduction.into());
+    let protocol_fee_amount = pool_fees
+        .protocol_fee
+        .compute(before_commission_deduction.into());
+    let burn_fee_amount = pool_fees
+        .burn_fee
+        .compute(before_commission_deduction.into());
 
     Ok(OfferAmountComputation {
-        offer_amount: offer_amount.try_into()?,
-        spread_amount: spread_amount.try_into()?,
+        offer_amount,
+        spread_amount,
         swap_fee_amount: swap_fee_amount.try_into()?,
         protocol_fee_amount: protocol_fee_amount.try_into()?,
         burn_fee_amount: burn_fee_amount.try_into()?,

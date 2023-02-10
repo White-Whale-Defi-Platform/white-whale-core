@@ -217,13 +217,14 @@ pub fn query_reverse_simulation(
         return Err(ContractError::AssetMismatch {});
     }
 
-    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    let config = CONFIG.load(deps.storage)?;
     let offer_amount_computation = helpers::compute_offer_amount(
         offer_pool.amount,
         ask_pool.amount,
         unswapped_pool.amount,
         ask_asset.amount,
-        pool_fees,
+        config.pool_fees,
+        config.amp_factor,
     )?;
 
     Ok(ReverseSimulationResponse {

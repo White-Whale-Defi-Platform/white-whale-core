@@ -1,3 +1,5 @@
+use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
+
 use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
 };
@@ -7,17 +9,15 @@ use terraswap::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 
-use terraswap::querier::query_balance;
-use terraswap::trio::{
-    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee,
-};
-
-use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 use crate::error::ContractError;
 use crate::state::{
     add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
     TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
+};
+use terraswap::querier::query_balance;
+use terraswap::trio::{
+    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
+    PoolFee as TrioPoolFee,
 };
 
 /// Updates the contract's [Config]

@@ -6,5 +6,3 @@
 #![deny(clippy::integer_arithmetic)]
 
 pub mod curve;
-pub mod math;
-pub mod price;

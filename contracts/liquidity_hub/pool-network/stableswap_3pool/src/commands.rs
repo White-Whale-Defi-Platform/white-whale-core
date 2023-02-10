@@ -7,11 +7,11 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
 use terraswap::querier::query_token_info;
 use terraswap::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use terraswap::U256;
 
 use crate::error::ContractError;
 use crate::helpers;
 use crate::helpers::get_protocol_fee_for_asset;
+use crate::stableswap_math::curve::StableSwap;
 use crate::state::{
     store_fee, ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
     CONFIG, TRIO_INFO,
@@ -108,9 +108,9 @@ pub fn provide_liquidity(
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
     // check if the deposit feature is enabled
-    let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
-    if !feature_toggle.deposits_enabled {
+    if !config.feature_toggle.deposits_enabled {
         return Err(ContractError::OperationDisabled(
             "provide_liquidity".to_string(),
         ));
@@ -178,45 +178,40 @@ pub fn provide_liquidity(
 
     let liquidity_token = deps.api.addr_humanize(&trio_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
+    let invariant = StableSwap::new(config.amp_factor, config.amp_factor, 0, 0, 0);
     let share = if total_share == Uint128::zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
-        let share = Uint128::new(
-            (U256::from(deposits[0].u128())
-                .checked_mul(U256::from(deposits[1].u128()))
-                .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
-            .integer_sqrt()
-            .as_u128(),
+        let min_lp_token_amount = MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8);
+        let share = Uint128::try_from(
+            invariant
+                .compute_d(deposits[0], deposits[1], deposits[2])
+                .unwrap(),
         )
-        .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-        .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
+        .unwrap()
+        .checked_sub(min_lp_token_amount)
+        .map_err(|_| ContractError::InvalidInitialLiquidityAmount(min_lp_token_amount))?;
 
         messages.push(mint_lp_token_msg(
             deps.api
                 .addr_humanize(&trio_info.liquidity_token)?
                 .to_string(),
             env.contract.address.to_string(),
-            MINIMUM_LIQUIDITY_AMOUNT,
+            min_lp_token_amount,
         )?);
-
-        // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
-        if share.is_zero() {
-            return Err(ContractError::InvalidInitialLiquidityAmount(
-                MINIMUM_LIQUIDITY_AMOUNT,
-            ));
-        }
-
         share
     } else {
-        // min(1, 2)
-        // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
-        // == deposit_0 * total_share / pool_0
-        // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
-        // == deposit_1 * total_share / pool_1
-        std::cmp::min(
-            deposits[0].multiply_ratio(total_share, pools[0].amount),
-            deposits[1].multiply_ratio(total_share, pools[1].amount),
-        )
+        invariant
+            .compute_mint_amount_for_deposit(
+                deposits[0],
+                deposits[1],
+                deposits[2],
+                pools[0].amount,
+                pools[1].amount,
+                pools[2].amount,
+                total_share,
+            )
+            .unwrap()
     };
 
     // mint LP token to sender

@@ -84,19 +84,19 @@ fn provide_liquidity() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
+                amount: MINIMUM_LIQUIDITY_AMOUNT - Uint128::one(),
             },
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
+                amount: MINIMUM_LIQUIDITY_AMOUNT - Uint128::one(),
             },
             Asset {
                 info: AssetInfo::Token {
                     contract_addr: "asset0001".to_string(),
                 },
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
+                amount: MINIMUM_LIQUIDITY_AMOUNT - Uint128::one(),
             },
         ],
         slippage_tolerance: None,
@@ -108,7 +108,7 @@ fn provide_liquidity() {
         "addr0000",
         &[Coin {
             denom: "uusd".to_string(),
-            amount: MINIMUM_LIQUIDITY_AMOUNT,
+            amount: MINIMUM_LIQUIDITY_AMOUNT - Uint128::one(),
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
@@ -177,7 +177,7 @@ fn provide_liquidity() {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "cosmos2contract".to_string(),
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
+                amount: MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8),
             })
             .unwrap(),
             funds: vec![],
@@ -189,7 +189,7 @@ fn provide_liquidity() {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "addr0000".to_string(),
-                amount: Uint128::from(1_000u128),
+                amount: Uint128::from(3_000u128),
             })
             .unwrap(),
             funds: vec![],
@@ -282,7 +282,7 @@ fn provide_liquidity() {
             contract_addr: "liquidity0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
-                amount: Uint128::from(50u128),
+                amount: Uint128::from(57u128),
             })
             .unwrap(),
             funds: vec![],

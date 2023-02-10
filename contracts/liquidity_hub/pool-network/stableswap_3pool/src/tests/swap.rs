@@ -56,7 +56,6 @@ fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
     let asset_pool_amount = Uint128::from(20000000000u128);
     let collateral_pool_amount = Uint128::from(30000000000u128);
-    let exchange_rate: Decimal = Decimal::from_ratio(asset_pool_amount, collateral_pool_amount);
     let offer_amount = Uint128::from(1500000000u128);
 
     let mut deps = mock_dependencies(&[Coin {
@@ -160,23 +159,14 @@ fn try_native_to_token() {
     assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
-    // current price is 1.5, so expected return without spread is 1000
-    // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee - burn_fee
-    let expected_ret_amount = Uint128::from(952_380_952u128);
-    let expected_spread_amount = (offer_amount * exchange_rate)
-        .checked_sub(expected_ret_amount)
-        .unwrap();
-    let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
-    let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
-    let expected_burn_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
-    let expected_return_amount = expected_ret_amount
-        .checked_sub(expected_swap_fee_amount)
-        .unwrap()
-        .checked_sub(expected_protocol_fee_amount)
-        .unwrap()
-        .checked_sub(expected_burn_fee_amount)
-        .unwrap();
+    //Expected return on a stable swap should about the same as input,
+    // swap fee will be approximately 1_500_000_000 * 0.003   4_500_000
+    // burn and protocol fees will be approximately 1_500_000_000 * 0.001 1_500_000
+    let expected_spread_amount = Uint128::from(730_134u128);
+    let expected_swap_fee_amount = Uint128::from(4_497_809u128);
+    let expected_protocol_fee_amount = Uint128::from(1_499_269u128);
+    let expected_burn_fee_amount = Uint128::from(1_499_269u128);
+    let expected_return_amount = Uint128::from(1_491_773_519u128);
 
     // since there is a burn_fee on the PoolFee, check burn message
     // since we swapped to a cw20 token, the burn message should be a Cw20ExecuteMsg::Burn
@@ -345,8 +335,8 @@ fn try_native_to_token() {
                     amount: expected_return_amount,
                 },
                 offer_asset: Asset {
-                    info: AssetInfo::Token {
-                        contract_addr: "asset0000".to_string(),
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
                     },
                     amount: Default::default(),
                 },
@@ -557,10 +547,7 @@ fn try_token_to_native() {
         ),
         (
             &"asset0001".to_string(),
-            &[(
-                &MOCK_CONTRACT_ADDR.to_string(),
-                &(asset_pool_amount + offer_amount),
-            )],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &(asset_pool_amount))],
         ),
     ]);
 
@@ -664,14 +651,14 @@ fn try_token_to_native() {
     assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
-    let expected_spread_amount = Uint128::one();
+    let expected_spread_amount = Uint128::new(830_233u128);
     //Expected return on a stable swap should about the same as input,
     // swap fee will be approximately 1_500_000_000 * 0.003   4_500_000
     // burn and protocol fees will be approximately 1_500_000_000 * 0.001 1_500_000
-    let expected_swap_fee_amount = Uint128::new(4_497_175u128);
-    let expected_protocol_fee_amount = Uint128::new(1_499_148u128);
-    let expected_burn_fee_amount = Uint128::new(1_499_148u128);
-    let expected_return_amount = Uint128::new(1_499_148_000u128);
+    let expected_swap_fee_amount = Uint128::new(4_497_509u128);
+    let expected_protocol_fee_amount = Uint128::new(1_499_169u128);
+    let expected_burn_fee_amount = Uint128::new(1_499_169u128);
+    let expected_return_amount = Uint128::new(1_491_673_920u128);
 
     // since there is a burn_fee on the PoolFee, check burn message
     // since we swapped to a native token, the burn message should be a BankMsg::Burn
@@ -721,17 +708,11 @@ fn try_token_to_native() {
         ),
         (
             &"asset0000".to_string(),
-            &[(
-                &MOCK_CONTRACT_ADDR.to_string(),
-                &(asset_pool_amount + offer_amount),
-            )],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &(asset_pool_amount))],
         ),
         (
             &"asset0001".to_string(),
-            &[(
-                &MOCK_CONTRACT_ADDR.to_string(),
-                &(asset_pool_amount + offer_amount),
-            )],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &(asset_pool_amount))],
         ),
     ]);
 

@@ -94,7 +94,7 @@ impl Model {
             .unwrap();
     }
 
-    pub fn sim_exchange(&self, i: u128, j: u128, dx: u128) -> u64 {
+    pub fn sim_exchange(&self, i: u128, j: u128, dx: u128) -> u128 {
         let gil = Python::acquire_gil();
         return self
             .call1(gil.python(), "exchange", (i, j, dx))

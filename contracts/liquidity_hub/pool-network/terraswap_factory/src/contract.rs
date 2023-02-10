@@ -130,9 +130,9 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
     match msg.id {
         CREATE_PAIR_RESPONSE => create_pair_reply(deps, msg),
         CREATE_TRIO_RESPONSE => create_trio_reply(deps, msg),
-        _ => Err(ContractError::from(StdError::generic_err(format!(
-            "invalid reply id"
-        )))),
+        _ => Err(ContractError::from(StdError::generic_err(
+            "invalid reply id",
+        ))),
     }
 }
 
