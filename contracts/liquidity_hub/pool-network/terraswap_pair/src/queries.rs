@@ -208,19 +208,20 @@ pub fn query_reverse_simulation(
                 ask_asset.amount,
                 ask_decimal,
             )?)?;
+
             let before_fees_offer = before_fees.to_uint256_with_precision(offer_decimal.into())?;
             let before_fees_ask = before_fees.to_uint256_with_precision(ask_decimal.into())?;
+
+            let max_precision = offer_decimal.max(ask_decimal);
 
             let new_offer_pool_amount = calculate_stableswap_y(
                 offer_pool,
                 ask_pool,
                 before_fees,
                 &amp,
-                ask_decimal,
+                max_precision,
                 StableSwapDirection::ReverseSimulate,
             )?;
-
-            let max_precision = offer_decimal.max(ask_decimal);
 
             let offer_amount = new_offer_pool_amount.checked_sub(Uint128::try_from(
                 offer_pool.to_uint256_with_precision(u32::from(max_precision))?,
@@ -229,6 +230,7 @@ pub fn query_reverse_simulation(
             // convert into the original offer precision
             let offer_amount = match max_precision.cmp(&offer_decimal) {
                 Ordering::Equal => offer_amount,
+                // note that Less should never happen (as max_precision = max(offer_decimal, ask_decimal))
                 Ordering::Less => offer_amount.checked_mul(Uint128::new(
                     10u128.pow((offer_decimal - max_precision).into()),
                 ))?,

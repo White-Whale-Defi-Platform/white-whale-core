@@ -1116,7 +1116,7 @@ fn stableswap_with_different_precisions() {
                 share: Decimal::from_ratio(1u128, 400u128),
             },
             burn_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::from_ratio(1u128, 500u128),
             },
         },
         fee_collector_addr: "collector".to_string(),
@@ -1166,9 +1166,9 @@ fn stableswap_with_different_precisions() {
     let msg_transfer = res.messages.get(0).expect("no message");
 
     let expected_spread_amount = Uint128::new(0);
-    let expected_swap_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.1%
-    let expected_protocol_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.1%
-    let expected_burn_fee_amount = Uint128::zero(); // 0%
+    let expected_swap_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.25%
+    let expected_protocol_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.25%
+    let expected_burn_fee_amount = asset_return_amount.multiply_ratio(1u128, 500u128); // 0.2%
     let expected_return_amount = asset_return_amount
         .checked_sub(expected_swap_fee_amount)
         .unwrap()
@@ -1316,7 +1316,7 @@ fn stableswap_with_different_precisions() {
                 "protocol_fee_amount",
                 expected_protocol_fee_amount.to_string(),
             ),
-            attr("burn_fee_amount", expected_burn_fee_amount.to_string(),),
+            attr("burn_fee_amount", expected_burn_fee_amount.to_string()),
             attr("swap_type", "StableSwap")
         ]
     );
@@ -1328,7 +1328,7 @@ fn stableswap_with_different_precisions() {
             spread_amount: Uint128::new(1),
             protocol_fee_amount: Uint128::new(2499),
             swap_fee_amount: Uint128::new(2499),
-            burn_fee_amount: Uint128::zero(),
+            burn_fee_amount: Uint128::new(1999),
         }
     );
 
