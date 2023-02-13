@@ -4,7 +4,7 @@ use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Coin, Decimal, Uint128, Uint
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
-use terraswap::asset::{Asset, AssetInfo};
+use terraswap::asset::{Asset, AssetInfo, PairType};
 use terraswap::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
 use terraswap::factory::PairsResponse;
 use terraswap::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
@@ -142,6 +142,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    pair_type: PairType::ConstantProduct,
                 },
                 &[],
             )
@@ -578,6 +579,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    pair_type: PairType::ConstantProduct,
                 },
                 &[],
             )
@@ -890,11 +892,11 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     let fee_collector_fees_query: Vec<Asset> = app
         .wrap()
         .query_wasm_smart(
-            fee_collector_address.clone(),
+            fee_collector_address,
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
-                        address: pair_tokens[1].clone().to_string(),
+                        address: pair_tokens[1].to_string(),
                         contract_type: ContractType::Pool {},
                     }],
                 },
@@ -1017,6 +1019,7 @@ fn collect_pools_native_fees_successfully() {
                 None,
             )
             .unwrap();
+
         cw20_tokens.push(token_address);
     }
 
@@ -1047,6 +1050,7 @@ fn collect_pools_native_fees_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    pair_type: PairType::ConstantProduct,
                 },
                 &[],
             )
@@ -1572,6 +1576,7 @@ fn collect_fees_with_pagination_successfully() {
                             share: Decimal::zero(),
                         },
                     },
+                    pair_type: PairType::ConstantProduct,
                 },
                 &[],
             )
@@ -2527,6 +2532,7 @@ fn aggregate_fees_for_vault() {
                         share: Decimal::zero(),
                     },
                 },
+                pair_type: PairType::ConstantProduct,
             },
             &[],
         )

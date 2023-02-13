@@ -144,7 +144,7 @@ mod tests {
             res.unwrap(),
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
-                ("owner", &mock_creator().sender.to_string()),
+                ("owner", mock_creator().sender.as_ref()),
                 ("fee_collector_addr", "fee_collector"),
                 ("vault_id", "3"),
                 ("token_id", "4")
@@ -186,7 +186,7 @@ mod tests {
             res.unwrap(),
             Response::new().add_attributes(vec![
                 ("method", "update_config"),
-                ("owner", &mock_creator().sender.to_string()),
+                ("owner", mock_creator().sender.as_ref()),
                 ("fee_collector_addr", "fee_collector"),
                 ("vault_id", "1"),
                 ("token_id", "2")

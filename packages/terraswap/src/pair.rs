@@ -4,7 +4,7 @@ use cw20::Cw20ReceiveMsg;
 
 use white_whale::fee::Fee;
 
-use crate::asset::{Asset, AssetInfo, PairInfo};
+use crate::asset::{Asset, AssetInfo, PairInfo, PairType};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -15,6 +15,8 @@ pub struct InstantiateMsg {
     pub asset_decimals: [u8; 2],
     pub pool_fees: PoolFee,
     pub fee_collector_addr: String,
+    /// The type of pair to create
+    pub pair_type: PairType,
 }
 
 #[cw_serde]

@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use crate::asset::{AssetInfo, PairInfo};
+use crate::asset::{AssetInfo, PairInfo, PairType};
 use crate::pair::{FeatureToggle, PoolFee};
 
 #[cw_serde]
@@ -33,6 +33,8 @@ pub enum ExecuteMsg {
         /// Asset infos
         asset_infos: [AssetInfo; 2],
         pool_fees: PoolFee,
+        /// The variant of pair to create
+        pair_type: PairType,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
     AddNativeTokenDecimals { denom: String, decimals: u8 },

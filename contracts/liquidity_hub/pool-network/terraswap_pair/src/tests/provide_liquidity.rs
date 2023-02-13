@@ -6,7 +6,7 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use terraswap::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 use terraswap::mock_querier::mock_dependencies;
 use terraswap::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
@@ -49,6 +49,7 @@ fn provide_liquidity() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -517,6 +518,7 @@ fn provide_liquidity_zero_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -615,6 +617,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -645,7 +648,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
+                amount: (MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
             },
             Asset {
                 info: AssetInfo::NativeToken {

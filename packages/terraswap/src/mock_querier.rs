@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic;
 
-use crate::asset::{AssetInfo, PairInfo};
+use crate::asset::{AssetInfo, PairInfo, PairType};
 use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::QueryMsg as PairQueryMsg;
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
@@ -170,6 +170,7 @@ impl WasmMockQuerier {
                             asset_decimals: [6u8, 6u8],
                             contract_addr: "pair0000".to_string(),
                             liquidity_token: "liquidity0000".to_string(),
+                            pair_type: PairType::ConstantProduct,
                         })))
                     }
                     Ok(PairQueryMsg::Simulation { offer_asset }) => {
