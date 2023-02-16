@@ -46,7 +46,7 @@ terraswap-router = { path = "../pool-network/terraswap_router" }
 terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }
 terraswap-token = { path = "../pool-network/terraswap_token" }
-pool-network = { version = "2.8.0", path = "../../../packages/pool-network" }
+pool-network = { version = "2.8.1", path = "../../../packages/pool-network" }
 vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
 vault = { version = "1.0.0", path = "../vault-network/vault" }
 cw20 = { version = "0.15.1" }
