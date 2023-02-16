@@ -3,9 +3,9 @@ use crate::error::ContractError;
 use crate::queries::query_pool;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{Coin, Decimal, Reply, SubMsgResponse, SubMsgResult, Uint128};
-use terraswap::asset::{Asset, AssetInfo, PairType};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
+use pool_network::asset::{Asset, AssetInfo, PairType};
+use pool_network::mock_querier::mock_dependencies;
+use pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
 use white_whale::fee::Fee;
 
 #[test]

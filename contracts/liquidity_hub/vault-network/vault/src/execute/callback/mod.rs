@@ -30,7 +30,7 @@ pub fn callback(
 mod test {
     use cosmwasm_std::{coins, Uint128};
     use cw_multi_test::Executor;
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
 
     use crate::{
         error::VaultError,

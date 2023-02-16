@@ -1,6 +1,6 @@
 use cosmwasm_std::Uint128;
+use pool_network::asset::Asset;
 use semver::Version;
-use terraswap::asset::Asset;
 use thiserror::Error;
 
 pub type StdResult<T> = Result<T, VaultRouterError>;

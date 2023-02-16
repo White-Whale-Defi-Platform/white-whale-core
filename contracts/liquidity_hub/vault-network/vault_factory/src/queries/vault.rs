@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_binary, Binary, Deps};
 
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 use vault_network::vault_factory::{VaultInfo, VaultsResponse};
 
 use crate::state::read_vaults;
@@ -27,7 +27,7 @@ pub fn get_vaults(
 #[cfg(test)]
 mod tests {
     use cw_multi_test::Executor;
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
 
     use vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultsResponse};
 
@@ -58,7 +58,7 @@ mod tests {
         let creator = mock_creator();
 
         // create a vault
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 

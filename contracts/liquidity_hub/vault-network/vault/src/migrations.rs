@@ -3,7 +3,7 @@ use crate::state::{initialize_fee, ALL_TIME_BURNED_FEES, CONFIG};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError};
 use cw_storage_plus::Item;
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 use vault_network::vault::Config;
 use white_whale::fee::{Fee, VaultFee};
 

@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
 
-use terraswap::asset::{Asset, AssetInfo};
+use pool_network::asset::{Asset, AssetInfo};
 use vault_network::vault_router::ExecuteMsg;
 
 use crate::err::{StdResult, VaultRouterError};
@@ -86,7 +86,7 @@ mod tests {
     use cosmwasm_std::{coins, Addr};
     use cw_multi_test::Executor;
 
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault_router::ExecuteMsg;
 
     use crate::err::VaultRouterError;

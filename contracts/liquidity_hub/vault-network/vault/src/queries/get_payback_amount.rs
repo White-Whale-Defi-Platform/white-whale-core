@@ -33,7 +33,7 @@ mod test {
     use crate::tests::mock_creator;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{from_binary, Addr, Decimal, Uint128};
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault::{Config, PaybackAmountResponse, QueryMsg};
     use white_whale::fee::{Fee, VaultFee};
 

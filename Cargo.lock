@@ -410,10 +410,10 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
+ "pool-network",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "terraswap-factory",
  "terraswap-pair",
  "terraswap-router",
@@ -570,6 +570,20 @@ checksum = "9eca2c590a5f85da82668fa685c09ce2888b9430e83299debf1f34b65fd4a4ba"
 dependencies = [
  "der",
  "spki",
+]
+
+[[package]]
+name = "pool-network"
+version = "2.8.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw20",
+ "protobuf",
+ "schemars",
+ "serde",
+ "uint",
+ "white-whale",
 ]
 
 [[package]]
@@ -832,20 +846,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terraswap"
-version = "2.8.1"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw20",
- "protobuf",
- "schemars",
- "serde",
- "uint",
- "white-whale",
-]
-
-[[package]]
 name = "terraswap-factory"
 version = "1.2.0"
 dependencies = [
@@ -854,11 +854,11 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
+ "pool-network",
  "protobuf",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
  "white-whale",
 ]
@@ -873,11 +873,11 @@ dependencies = [
  "cw2",
  "cw20",
  "integer-sqrt",
+ "pool-network",
  "protobuf",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
  "white-whale",
 ]
@@ -892,10 +892,10 @@ dependencies = [
  "cw2",
  "cw20",
  "integer-sqrt",
+ "pool-network",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
 ]
 
@@ -910,9 +910,9 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "pool-network",
  "schemars",
  "serde",
- "terraswap",
  "thiserror",
 ]
 
@@ -972,11 +972,11 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fee_collector",
+ "pool-network",
  "protobuf",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
  "vault-network",
  "white-whale",
@@ -988,9 +988,9 @@ version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "pool-network",
  "schemars",
  "serde",
- "terraswap",
  "white-whale",
 ]
 
@@ -1006,11 +1006,11 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fee_collector",
+ "pool-network",
  "protobuf",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
  "vault",
  "vault-network",
@@ -1029,11 +1029,11 @@ dependencies = [
  "cw20",
  "cw20-base",
  "fee_collector",
+ "pool-network",
  "protobuf",
  "schemars",
  "semver",
  "serde",
- "terraswap",
  "thiserror",
  "vault",
  "vault-network",

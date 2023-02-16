@@ -4,11 +4,11 @@ use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Coin, Decimal, Uint128, Uint
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
-use terraswap::asset::{Asset, AssetInfo, PairType};
-use terraswap::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
-use terraswap::factory::PairsResponse;
-use terraswap::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
-use terraswap::router::{SwapOperation, SwapRoute};
+use pool_network::asset::{Asset, AssetInfo, PairType};
+use pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
+use pool_network::factory::PairsResponse;
+use pool_network::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
+use pool_network::router::{SwapOperation, SwapRoute};
 use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
 
@@ -49,7 +49,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         .instantiate_contract(
             pool_factory_id,
             creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
+            &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -64,7 +64,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         .instantiate_contract(
             pool_router_id,
             creator.clone().sender,
-            &terraswap::router::InstantiateMsg {
+            &pool_network::router::InstantiateMsg {
                 terraswap_factory: pool_factory_address.to_string(),
             },
             &[],
@@ -93,7 +93,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             .instantiate_contract(
                 token_id,
                 creator.clone().sender,
-                &terraswap::token::InstantiateMsg {
+                &pool_network::token::InstantiateMsg {
                     name: format!("token{}", i),
                     symbol: format!("token{}", (i + b'a') as char),
                     decimals: 6,
@@ -202,7 +202,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i as usize].clone(),
-            &terraswap::pair::ExecuteMsg::ProvideLiquidity {
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
                 assets: [
                     Asset {
                         info: AssetInfo::Token {
@@ -235,7 +235,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -252,7 +252,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -268,7 +268,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i as usize - 1],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -297,7 +297,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i as usize],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -387,7 +387,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_token.clone(),
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -429,7 +429,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pool_router_address.clone(),
-            &terraswap::router::ExecuteMsg::AddSwapRoutes { swap_routes },
+            &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
             &[],
         )
         .unwrap();
@@ -511,7 +511,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         .instantiate_contract(
             pool_factory_id,
             creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
+            &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -529,7 +529,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             .instantiate_contract(
                 token_id,
                 creator.clone().sender,
-                &terraswap::token::InstantiateMsg {
+                &pool_network::token::InstantiateMsg {
                     name: format!("token{}", i),
                     symbol: "token".to_string(),
                     decimals: 6,
@@ -637,7 +637,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::ProvideLiquidity {
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
                 assets: [
                     Asset {
                         info: AssetInfo::Token {
@@ -691,7 +691,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -708,7 +708,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -724,7 +724,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i - 1],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -753,7 +753,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -832,7 +832,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     for pair_token in pair_tokens.clone() {
         let pool_res: PoolResponse = app
             .wrap()
-            .query_wasm_smart(&pair_token, &terraswap::pair::QueryMsg::Pool {})
+            .query_wasm_smart(&pair_token, &pool_network::pair::QueryMsg::Pool {})
             .unwrap();
 
         for asset in pool_res.assets {
@@ -942,7 +942,7 @@ fn collect_pools_native_fees_successfully() {
         .instantiate_contract(
             pool_factory_id,
             creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
+            &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -957,7 +957,7 @@ fn collect_pools_native_fees_successfully() {
         .instantiate_contract(
             pool_router_id,
             creator.clone().sender,
-            &terraswap::router::InstantiateMsg {
+            &pool_network::router::InstantiateMsg {
                 terraswap_factory: pool_factory_address.to_string(),
             },
             &[],
@@ -1001,7 +1001,7 @@ fn collect_pools_native_fees_successfully() {
             .instantiate_contract(
                 token_id,
                 creator.clone().sender,
-                &terraswap::token::InstantiateMsg {
+                &pool_network::token::InstantiateMsg {
                     name: format!("token{}", i),
                     symbol: symbol.clone(),
                     decimals: 6,
@@ -1085,7 +1085,7 @@ fn collect_pools_native_fees_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::ProvideLiquidity {
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
                 assets: [
                     Asset {
                         info: AssetInfo::NativeToken {
@@ -1141,7 +1141,7 @@ fn collect_pools_native_fees_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::Swap {
+            &pool_network::pair::ExecuteMsg::Swap {
                 offer_asset: Asset {
                     info: AssetInfo::NativeToken {
                         denom: "native".to_string(),
@@ -1166,7 +1166,7 @@ fn collect_pools_native_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1182,7 +1182,7 @@ fn collect_pools_native_fees_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -1306,7 +1306,7 @@ fn collect_pools_native_fees_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_token.clone(),
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -1375,7 +1375,7 @@ fn collect_pools_native_fees_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pool_router_address.clone(),
-            &terraswap::router::ExecuteMsg::AddSwapRoutes { swap_routes },
+            &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
             &[],
         )
         .unwrap();
@@ -1400,7 +1400,7 @@ fn collect_pools_native_fees_successfully() {
     app.execute_contract(
         creator.sender.clone(),
         pool_router_address.clone(),
-        &terraswap::router::ExecuteMsg::AddSwapRoutes { swap_routes },
+        &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
         &[],
     )
     .unwrap();
@@ -1494,7 +1494,7 @@ fn collect_fees_with_pagination_successfully() {
         .instantiate_contract(
             pool_factory_id,
             creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
+            &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -1527,7 +1527,7 @@ fn collect_fees_with_pagination_successfully() {
             .instantiate_contract(
                 token_id,
                 creator.clone().sender,
-                &terraswap::token::InstantiateMsg {
+                &pool_network::token::InstantiateMsg {
                     name: format!("token{}", i),
                     symbol: "token".to_string(),
                     decimals: 6,
@@ -1610,7 +1610,7 @@ fn collect_fees_with_pagination_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::ProvideLiquidity {
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
                 assets: [
                     Asset {
                         info: AssetInfo::NativeToken {
@@ -1643,7 +1643,7 @@ fn collect_fees_with_pagination_successfully() {
         app.execute_contract(
             creator.sender.clone(),
             pair_tokens[i].clone(),
-            &terraswap::pair::ExecuteMsg::Swap {
+            &pool_network::pair::ExecuteMsg::Swap {
                 offer_asset: Asset {
                     info: AssetInfo::NativeToken {
                         denom: "native".to_string(),
@@ -1668,7 +1668,7 @@ fn collect_fees_with_pagination_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1684,7 +1684,7 @@ fn collect_fees_with_pagination_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_tokens[i],
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -1732,7 +1732,7 @@ fn collect_fees_with_pagination_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pool_factory_address,
-                &terraswap::factory::QueryMsg::Pairs {
+                &pool_network::factory::QueryMsg::Pairs {
                     start_after: start_after.clone(),
                     limit: Some(u32::try_from(TOKEN_AMOUNT / 2).unwrap()),
                 },
@@ -1800,7 +1800,7 @@ fn collect_fees_with_pagination_successfully() {
             .wrap()
             .query_wasm_smart(
                 &pair_token.clone(),
-                &terraswap::pair::QueryMsg::ProtocolFees {
+                &pool_network::pair::QueryMsg::ProtocolFees {
                     asset_id: None,
                     all_time: None,
                 },
@@ -2175,7 +2175,7 @@ fn aggregate_fees_for_vault() {
         .instantiate_contract(
             pool_factory_id,
             creator.clone().sender,
-            &terraswap::factory::InstantiateMsg {
+            &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -2218,7 +2218,7 @@ fn aggregate_fees_for_vault() {
         .instantiate_contract(
             pool_router_id,
             creator.clone().sender,
-            &terraswap::router::InstantiateMsg {
+            &pool_network::router::InstantiateMsg {
                 terraswap_factory: pool_factory_address.to_string(),
             },
             &[],
@@ -2554,7 +2554,7 @@ fn aggregate_fees_for_vault() {
     app.execute_contract(
         creator.sender.clone(),
         pool_address.clone(),
-        &terraswap::pair::ExecuteMsg::ProvideLiquidity {
+        &pool_network::pair::ExecuteMsg::ProvideLiquidity {
             assets: [
                 Asset {
                     info: AssetInfo::NativeToken {
@@ -2604,7 +2604,7 @@ fn aggregate_fees_for_vault() {
     app.execute_contract(
         creator.sender.clone(),
         pool_router_address.clone(),
-        &terraswap::router::ExecuteMsg::AddSwapRoutes { swap_routes },
+        &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
         &[],
     )
     .unwrap();

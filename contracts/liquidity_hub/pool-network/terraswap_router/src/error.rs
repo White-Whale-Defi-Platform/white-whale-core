@@ -2,7 +2,7 @@ use cosmwasm_std::{OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
-use terraswap::router::SwapRoute;
+use pool_network::router::SwapRoute;
 
 #[derive(Error, Debug)]
 pub enum ContractError {

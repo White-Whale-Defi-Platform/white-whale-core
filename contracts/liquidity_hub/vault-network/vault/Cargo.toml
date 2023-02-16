@@ -14,7 +14,7 @@ publish.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
+injective = ["pool-network/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
@@ -28,7 +28,7 @@ protobuf.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
-terraswap.workspace = true
+pool-network.workspace = true
 thiserror.workspace = true
 vault-network.workspace = true
 white-whale.workspace = true

@@ -34,7 +34,7 @@ mod tests {
 
         let factory_addr = app_mock_instantiate(&mut app);
 
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -113,7 +113,7 @@ mod tests {
 
         let factory_addr = app_mock_instantiate(&mut app);
 
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 

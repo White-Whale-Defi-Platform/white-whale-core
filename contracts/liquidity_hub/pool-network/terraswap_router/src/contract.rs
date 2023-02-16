@@ -10,10 +10,10 @@ use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
 use semver::Version;
 
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::SimulationResponse;
-use terraswap::querier::{query_pair_info, reverse_simulate, simulate};
-use terraswap::router::{
+use pool_network::asset::{Asset, AssetInfo, PairInfo};
+use pool_network::pair::SimulationResponse;
+use pool_network::querier::{query_pair_info, reverse_simulate, simulate};
+use pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute,
 };

@@ -3,7 +3,7 @@ use cosmwasm_std::{
     StdError, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 use vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::{
@@ -106,7 +106,7 @@ mod test {
         testing::{mock_dependencies, mock_dependencies_with_balance, mock_env},
         to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
     };
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault::Config;
 
     use crate::{

@@ -13,7 +13,7 @@ documentation = "https://docs.cosmwasm.com"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
+injective = ["pool-network/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all init/handle/query exports
 library = []
@@ -28,7 +28,7 @@ cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-terraswap.workspace = true
+pool-network.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.1.4"

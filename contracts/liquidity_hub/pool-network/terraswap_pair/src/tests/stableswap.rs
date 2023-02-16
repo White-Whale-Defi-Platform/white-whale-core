@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{Decimal, Decimal256, Uint128};
-    use terraswap::{asset::PairType, pair::PoolFee};
+    use pool_network::{asset::PairType, pair::PoolFee};
     use white_whale::fee::Fee;
 
     use crate::{

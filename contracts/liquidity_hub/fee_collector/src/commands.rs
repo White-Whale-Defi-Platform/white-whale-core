@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
-use terraswap::asset::AssetInfo;
-use terraswap::factory::{PairsResponse, QueryMsg};
-use terraswap::router;
-use terraswap::router::{ExecuteMsg, SwapOperation};
+use pool_network::asset::AssetInfo;
+use pool_network::factory::{PairsResponse, QueryMsg};
+use pool_network::router;
+use pool_network::router::{ExecuteMsg, SwapOperation};
 use vault_network::vault_factory::VaultsResponse;
 
 use crate::msg::{ContractType, FactoryType, FeesFor};
@@ -55,7 +55,9 @@ fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> Std
         ContractType::Vault {} => {
             to_binary(&vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
         }
-        ContractType::Pool {} => to_binary(&terraswap::pair::ExecuteMsg::CollectProtocolFees {})?,
+        ContractType::Pool {} => {
+            to_binary(&pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
+        }
     };
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
