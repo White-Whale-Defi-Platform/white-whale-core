@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use terraswap::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use terraswap::querier::query_token_info;
-use terraswap::U256;
+use pool_network::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
+use pool_network::querier::query_token_info;
+use pool_network::U256;
 
 use crate::error::ContractError;
 use crate::helpers;

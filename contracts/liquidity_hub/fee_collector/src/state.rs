@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 #[cw_serde]
 pub struct Config {

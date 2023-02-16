@@ -3,7 +3,7 @@ use cosmwasm_std::{
     Addr, Env, OwnedDeps,
 };
 use cw_multi_test::{App, Executor};
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 use crate::contract::instantiate;
 

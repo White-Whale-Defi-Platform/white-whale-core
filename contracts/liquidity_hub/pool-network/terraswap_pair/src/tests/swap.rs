@@ -11,9 +11,9 @@ use cosmwasm_std::{
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terraswap::asset::{Asset, AssetInfo, PairType};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{
+use pool_network::asset::{Asset, AssetInfo, PairType};
+use pool_network::mock_querier::mock_dependencies;
+use pool_network::pair::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, QueryMsg, ReverseSimulationResponse,
     SimulationResponse,
 };

@@ -67,7 +67,7 @@ mod test {
         Addr, Decimal, Response, StdError, Uint128,
     };
 
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault::{Config, UpdateConfigParams};
     use white_whale::fee::{Fee, VaultFee};
 

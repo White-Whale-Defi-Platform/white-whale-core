@@ -1,7 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 
-use terraswap::asset::{Asset, AssetInfo};
+use pool_network::asset::{Asset, AssetInfo};
 
 use crate::state::{store_fee, ALL_TIME_BURNED_FEES};
 use crate::{
@@ -102,7 +102,7 @@ mod test {
     };
     use cw20::Cw20ExecuteMsg;
 
-    use terraswap::asset::{Asset, AssetInfo};
+    use pool_network::asset::{Asset, AssetInfo};
     use vault_network::vault::Config;
     use white_whale::fee::{Fee, VaultFee};
 

@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
-use terraswap::asset::{Asset, AssetInfo};
+use pool_network::asset::{Asset, AssetInfo};
 use vault_network::vault::PaybackAmountResponse;
 
 use crate::err::{StdResult, VaultRouterError};
@@ -113,7 +113,7 @@ pub fn complete_loan(
 mod tests {
     use cosmwasm_std::{coin, coins, Uint128};
     use cw_multi_test::Executor;
-    use terraswap::asset::{Asset, AssetInfo};
+    use pool_network::asset::{Asset, AssetInfo};
     use vault_network::vault_router::ExecuteMsg;
 
     use crate::{

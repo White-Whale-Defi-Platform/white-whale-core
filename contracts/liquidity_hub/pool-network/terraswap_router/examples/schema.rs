@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use terraswap::router::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use pool_network::router::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

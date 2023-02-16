@@ -1,8 +1,8 @@
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{Asset, PairInfoRaw};
-use terraswap::pair::Config;
+use pool_network::asset::{Asset, PairInfoRaw};
+use pool_network::pair::Config;
 
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");

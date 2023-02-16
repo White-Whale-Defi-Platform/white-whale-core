@@ -6,10 +6,10 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 
+use pool_network::asset::PairInfoRaw;
+use pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use pool_network::querier::query_pair_info_from_pair;
 use semver::Version;
-use terraswap::asset::PairInfoRaw;
-use terraswap::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use terraswap::querier::query_pair_info_from_pair;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;

@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use terraswap::asset::{AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use pool_network::asset::{AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
 
 #[cw_serde]
 pub struct Config {
@@ -81,7 +81,7 @@ pub fn add_allow_native_token(
 #[cfg(test)]
 mod allow_native_token {
 
-    use terraswap::mock_querier::mock_dependencies;
+    use pool_network::mock_querier::mock_dependencies;
 
     use super::*;
 

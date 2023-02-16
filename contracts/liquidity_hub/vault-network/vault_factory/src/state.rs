@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 use vault_network::vault_factory::{Config, VaultInfo};
 

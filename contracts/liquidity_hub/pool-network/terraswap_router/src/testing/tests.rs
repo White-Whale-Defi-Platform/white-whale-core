@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use terraswap::asset::{Asset, AssetInfo, PairInfo, PairType};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::ExecuteMsg as PairExecuteMsg;
-use terraswap::router::{
+use pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use pool_network::mock_querier::mock_dependencies;
+use pool_network::pair::ExecuteMsg as PairExecuteMsg;
+use pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute,
 };
@@ -274,7 +274,7 @@ fn execute_swap_operation() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[(
             &"uusdasset0000".to_string(),
             &PairInfo {
@@ -375,7 +375,7 @@ fn execute_swap_operation() {
             .unwrap()
         )],
     );
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[(
             &"assetuusd".to_string(),
             &PairInfo {
@@ -422,7 +422,7 @@ fn execute_swap_operation() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(1000000u128),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: Some("addr0000".to_string()),
@@ -482,7 +482,7 @@ fn query_buy_with_routes() {
         ],
     };
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[
             (
                 &"ukrwasset0000".to_string(),
@@ -586,7 +586,7 @@ fn query_reverse_routes_with_from_native() {
         }],
     };
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[
             (
                 &"ukrwasset0000".to_string(),
@@ -718,7 +718,7 @@ fn query_reverse_routes_with_to_native() {
         }],
     };
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[
             (
                 &"ukrwasset0000".to_string(),
@@ -833,7 +833,7 @@ fn query_reverse_routes_with_to_native() {
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: "pair0000".to_string(),
                 amount: Uint128::from(target_amount),
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -965,7 +965,7 @@ fn add_swap_routes() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[
             (
                 &"ukrwasset0000".to_string(),
@@ -1161,7 +1161,7 @@ fn add_swap_routes_invalid_route() {
     // we can just call .unwrap() to assert this was a success
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[
             (
                 &"ukrwasset0000".to_string(),

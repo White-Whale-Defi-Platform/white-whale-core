@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use terraswap::asset::{Asset, AssetInfo};
+use pool_network::asset::{Asset, AssetInfo};
 
 use crate::state::ConfigResponse;
 

@@ -1,11 +1,11 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, ContractVersion};
+use pool_network::asset::AssetInfo;
 use std::env;
-use terraswap::asset::AssetInfo;
 
 use crate::contract::{execute, instantiate, migrate, query};
-use terraswap::mock_querier::mock_dependencies;
+use pool_network::mock_querier::mock_dependencies;
 
 use crate::msg::ExecuteMsg::AggregateFees;
 use crate::msg::{ExecuteMsg, FeesFor, InstantiateMsg, MigrateMsg, QueryMsg};

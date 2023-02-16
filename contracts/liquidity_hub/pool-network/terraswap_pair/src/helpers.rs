@@ -5,8 +5,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{Asset, AssetInfo, PairType};
-use terraswap::pair::PoolFee;
+use pool_network::asset::{Asset, AssetInfo, PairType};
+use pool_network::pair::PoolFee;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
@@ -310,7 +310,7 @@ pub struct OfferAmountComputation {
 }
 
 /// If `belief_price` and `max_spread` both are given,
-/// we compute new spread else we just use terraswap
+/// we compute new spread else we just use pool network
 /// spread to check `max_spread`
 pub fn assert_max_spread(
     belief_price: Option<Decimal>,

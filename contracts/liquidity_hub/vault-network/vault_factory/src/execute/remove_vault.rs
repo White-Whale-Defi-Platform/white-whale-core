@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Response};
 
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 use crate::asset::AssetReference;
 use crate::err::{StdResult, VaultFactoryError};
@@ -38,7 +38,7 @@ mod tests {
         let factory_addr = app_mock_instantiate(&mut app);
 
         // create vault
-        let asset_info_1 = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info_1 = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_vault_unauthorized() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
         let (mut deps, env) = mock_instantiate(5, 6);
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_vault_non_existent() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
         let (mut deps, env) = mock_instantiate(5, 6);

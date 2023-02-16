@@ -6,12 +6,12 @@ use cosmwasm_std::{
     ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
-use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw, PairType};
-use terraswap::factory::{
+use pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw, PairType};
+use pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
-use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
-use terraswap::pair::{
+use pool_network::mock_querier::{mock_dependencies, WasmMockQuerier};
+use pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 use white_whale::fee::Fee;
@@ -165,7 +165,7 @@ fn create_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -259,7 +259,7 @@ fn create_stableswap_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -358,7 +358,7 @@ fn create_pair_native_token_and_ibc_token() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             ("uusd".to_string(), 6u8),
@@ -471,7 +471,7 @@ fn create_ibc_tokens_pair() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             (
@@ -589,7 +589,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             (
@@ -738,7 +738,7 @@ fn fail_to_create_existing_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -843,7 +843,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let mut deps = mock_dependencies(&[coin(10u128, "valid".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("valid".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("valid".to_string(), 6u8)]);
 
     let asset_infos = [
         AssetInfo::NativeToken {
@@ -1067,8 +1067,8 @@ fn reply_test() {
         }),
     };
 
-    // register terraswap pair querier
-    deps.querier.with_terraswap_factory(
+    // register pool pair querier
+    deps.querier.with_pool_factory(
         &[(
             &"0000".to_string(),
             &PairInfo {
@@ -1236,7 +1236,7 @@ fn execute_transactions_unauthorized() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1373,7 +1373,7 @@ fn delete_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1431,7 +1431,7 @@ fn delete_pair_failed_if_not_found() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1487,7 +1487,7 @@ fn update_pair_config() {
             .add_message(WasmMsg::Execute {
                 contract_addr: "pair_addr".to_string(),
                 funds: vec![],
-                msg: to_binary(&terraswap::pair::ExecuteMsg::UpdateConfig {
+                msg: to_binary(&pool_network::pair::ExecuteMsg::UpdateConfig {
                     owner: Some("new_owner".to_string()),
                     fee_collector_addr: None,
                     pool_fees: Some(PoolFee {

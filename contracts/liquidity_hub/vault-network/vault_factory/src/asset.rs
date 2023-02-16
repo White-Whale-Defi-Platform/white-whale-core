@@ -1,4 +1,4 @@
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 pub trait AssetReference {
     fn get_reference(&self) -> &[u8];

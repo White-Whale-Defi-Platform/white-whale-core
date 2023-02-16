@@ -2,11 +2,11 @@ use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
 };
 
-use terraswap::asset::{AssetInfo, PairType};
-use terraswap::pair::{
+use pool_network::asset::{AssetInfo, PairType};
+use pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use terraswap::querier::query_balance;
+use pool_network::querier::query_balance;
 
 use crate::error::ContractError;
 use crate::state::{
@@ -59,7 +59,7 @@ pub fn update_pair_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(pair_addr.as_str())?.to_string(),
-            &terraswap::pair::ExecuteMsg::UpdateConfig {
+            &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,

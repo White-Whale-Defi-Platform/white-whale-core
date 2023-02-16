@@ -2,7 +2,7 @@ use cosmwasm_std::{
     testing::{MockApi, MockQuerier, MockStorage},
     Env, OwnedDeps, Response,
 };
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 use crate::contract::execute;
 use crate::error::VaultError;

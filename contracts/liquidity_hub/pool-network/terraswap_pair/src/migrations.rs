@@ -6,8 +6,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::instantiate_fees;
-use terraswap::asset::{AssetInfo, AssetInfoRaw, PairType};
-use terraswap::pair::{Config, FeatureToggle};
+use pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use pool_network::pair::{Config, FeatureToggle};
 use white_whale::fee::Fee;
 
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
@@ -88,7 +88,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     let config = Config {
         owner: config_v110.owner,
         fee_collector_addr: config_v110.fee_collector_addr,
-        pool_fees: terraswap::pair::PoolFee {
+        pool_fees: pool_network::pair::PoolFee {
             protocol_fee: config_v110.pool_fees.protocol_fee,
             swap_fee: config_v110.pool_fees.swap_fee,
             burn_fee: Fee {
