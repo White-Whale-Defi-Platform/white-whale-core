@@ -426,6 +426,25 @@ fn get_native_asset_label() {
     };
     let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
     assert_eq!(asset_label, "native");
+
+    let asset_info = AssetInfo::NativeToken {
+        denom: "ibc/E8AC6B792CDE60AB208CA060CA010A3881F682A7307F624347AB71B6A0B0BF89".to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "ibc/E8AC...BF89");
+
+    let asset_info = AssetInfo::NativeToken {
+        denom: "factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/ulp"
+            .to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "factory/mig...pkl/ulp");
+
+    let asset_info = AssetInfo::NativeToken {
+        denom: "factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB".to_string(),
+    };
+    let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
+    assert_eq!(asset_label, "factory/mig...pkl/Qwe...CVB");
 }
 
 #[test]

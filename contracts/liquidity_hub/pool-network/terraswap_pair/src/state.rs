@@ -4,6 +4,8 @@ use cw_storage_plus::Item;
 use pool_network::asset::{Asset, PairInfoRaw};
 use pool_network::pair::Config;
 
+pub const LP_SYMBOL: &str = "uLP";
+
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 
@@ -56,8 +58,7 @@ pub fn get_fees_for_asset(
         Ok(fees)
     } else {
         Err(StdError::generic_err(format!(
-            "Fees for asset {} not found",
-            asset_id
+            "Fees for asset {asset_id} not found"
         )))
     }
 }

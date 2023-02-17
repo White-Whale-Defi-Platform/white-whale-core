@@ -35,8 +35,7 @@ impl fmt::Display for SwapOperation {
                 ask_asset_info,
             } => write!(
                 f,
-                "TerraSwap {{ offer_asset_info: {}, ask_asset_info: {} }}",
-                offer_asset_info, ask_asset_info
+                "TerraSwap {{ offer_asset_info: {offer_asset_info}, ask_asset_info: {ask_asset_info} }}"
             ),
         }
     }

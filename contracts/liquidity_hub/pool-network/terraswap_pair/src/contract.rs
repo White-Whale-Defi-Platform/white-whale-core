@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CanonicalAddr, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
-    StdError, StdResult, SubMsg, WasmMsg,
+    to_binary, Binary, CanonicalAddr, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
+    Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
@@ -10,6 +10,7 @@ use protobuf::Message;
 use semver::Version;
 
 use pool_network::asset::PairInfoRaw;
+use pool_network::denom::MsgCreateDenom;
 use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
 use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
@@ -18,7 +19,7 @@ use crate::error::ContractError::MigrateInvalidVersion;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
     ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
-    PAIR_INFO,
+    LP_SYMBOL, PAIR_INFO,
 };
 use crate::{commands, helpers, queries};
 
@@ -55,7 +56,7 @@ pub fn instantiate(
 
     let asset0_label = asset_info_0.clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_info_1.clone().get_label(&deps.as_ref())?;
-    let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
+    let lp_token_name = format!("{asset0_label}-{asset1_label}-LP");
 
     // check the fees are valid
     msg.pool_fees.is_valid()?;
@@ -93,29 +94,47 @@ pub fn instantiate(
         ALL_TIME_BURNED_FEES,
     )?;
 
-    Ok(Response::new().add_submessage(SubMsg {
-        // Create LP token
-        msg: WasmMsg::Instantiate {
-            admin: None,
-            code_id: msg.token_code_id,
-            msg: to_binary(&TokenInstantiateMsg {
-                name: lp_token_name.clone(),
-                symbol: "uLP".to_string(),
-                decimals: 6,
-                initial_balances: vec![],
-                mint: Some(MinterResponse {
-                    minter: env.contract.address.to_string(),
-                    cap: None,
-                }),
-            })?,
-            funds: vec![],
-            label: lp_token_name,
-        }
-        .into(),
-        gas_limit: None,
-        id: INSTANTIATE_REPLY_ID,
-        reply_on: ReplyOn::Success,
-    }))
+    if msg.token_factory_lp {
+        // create native LP token
+        PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
+            let factory_token_lp = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
+            pair_info.liquidity_token = deps.api.addr_canonicalize(factory_token_lp.as_str())?;
+            Ok(pair_info)
+        })?;
+
+        Ok(
+            Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
+                MsgCreateDenom {
+                    sender: env.contract.address.to_string(),
+                    subdenom: LP_SYMBOL.to_string(),
+                },
+            )),
+        )
+    } else {
+        Ok(Response::new().add_submessage(SubMsg {
+            // Create LP token
+            msg: WasmMsg::Instantiate {
+                admin: None,
+                code_id: msg.token_code_id,
+                msg: to_binary(&TokenInstantiateMsg {
+                    name: lp_token_name.clone(),
+                    symbol: LP_SYMBOL.to_string(),
+                    decimals: 6,
+                    initial_balances: vec![],
+                    mint: Some(MinterResponse {
+                        minter: env.contract.address.to_string(),
+                        cap: None,
+                    }),
+                })?,
+                funds: vec![],
+                label: lp_token_name,
+            }
+            .into(),
+            gas_limit: None,
+            id: INSTANTIATE_REPLY_ID,
+            reply_on: ReplyOn::Success,
+        }))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -132,6 +151,16 @@ pub fn execute(
             slippage_tolerance,
             receiver,
         } => commands::provide_liquidity(deps, env, info, assets, slippage_tolerance, receiver),
+        ExecuteMsg::WithdrawLiquidity {} => {
+            // validate that the asset sent is the token factory LP token
+            let pair_info = PAIR_INFO.load(deps.storage)?;
+            if info.funds.len() != 1 || info.funds[0].denom != pair_info.liquidity_token.to_string()
+            {
+                return Err(ContractError::AssetMismatch {});
+            }
+
+            commands::withdraw_liquidity(deps, env, info.sender, info.funds[0].amount)
+        }
         ExecuteMsg::Swap {
             offer_asset,
             belief_price,

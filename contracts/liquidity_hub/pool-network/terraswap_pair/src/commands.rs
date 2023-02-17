@@ -1,17 +1,19 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    coins, from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo,
+    OverflowError, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use pool_network::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use pool_network::asset::{
+    is_factory_token, Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
+};
+use pool_network::denom::{Coin, MsgBurn, MsgMint};
 use pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use pool_network::querier::query_token_info;
 use pool_network::U256;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::helpers::get_protocol_fee_for_asset;
+use crate::helpers::{get_protocol_fee_for_asset, get_total_share};
 use crate::state::{
     store_fee, ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
     CONFIG, PAIR_INFO,
@@ -91,7 +93,7 @@ pub fn receive_cw20(
             }
 
             let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            withdraw_liquidity(deps, env, info, sender_addr, cw20_msg.amount)
+            withdraw_liquidity(deps, env, sender_addr, cw20_msg.amount)
         }
         Err(err) => Err(ContractError::Std(err)),
     }
@@ -170,7 +172,7 @@ pub fn provide_liquidity(
     helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
     let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
-    let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
+    let total_share = get_total_share(&deps.querier, liquidity_token.clone())?;
     let share = if total_share == Uint128::zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
@@ -184,10 +186,9 @@ pub fn provide_liquidity(
         .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
         .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
 
-        messages.push(mint_lp_token_msg(
-            deps.api
-                .addr_humanize(&pair_info.liquidity_token)?
-                .to_string(),
+        messages.append(&mut mint_lp_token_msg(
+            liquidity_token.to_string(),
+            env.contract.address.to_string(),
             env.contract.address.to_string(),
             MINIMUM_LIQUIDITY_AMOUNT,
         )?);
@@ -214,11 +215,10 @@ pub fn provide_liquidity(
 
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
-    messages.push(mint_lp_token_msg(
-        deps.api
-            .addr_humanize(&pair_info.liquidity_token)?
-            .to_string(),
+    messages.append(&mut mint_lp_token_msg(
+        liquidity_token.to_string(),
         receiver.clone(),
+        env.contract.address.to_string(),
         share,
     )?);
 
@@ -236,16 +236,15 @@ pub fn provide_liquidity(
 pub fn withdraw_liquidity(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
     sender: Addr,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
-    let liquidity_addr: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
+    let liquidity_token: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
 
     let pool_assets: [Asset; 2] =
-        pair_info.query_pools(&deps.querier, deps.api, env.contract.address)?;
-    let total_share: Uint128 = query_token_info(&deps.querier, liquidity_addr)?.total_supply;
+        pair_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
+    let total_share = get_total_share(&deps.querier, liquidity_token.clone())?;
 
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
@@ -270,20 +269,19 @@ pub fn withdraw_liquidity(
 
     let refund_assets = refund_assets?;
 
+    let burn_lp_token_msg = burn_lp_token_msg(
+        liquidity_token.to_string(),
+        env.contract.address.to_string(),
+        amount,
+    )?;
+
     // update pool info
     Ok(Response::new()
         .add_messages(vec![
             refund_assets[0].clone().into_msg(sender.clone())?,
             refund_assets[1].clone().into_msg(sender.clone())?,
             // burn liquidity token
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: deps
-                    .api
-                    .addr_humanize(&pair_info.liquidity_token)?
-                    .to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
-                funds: vec![],
-            }),
+            burn_lp_token_msg,
         ])
         .add_attributes(vec![
             ("action", "withdraw_liquidity"),
@@ -523,13 +521,57 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
 
 /// Creates the Mint LP message
 fn mint_lp_token_msg(
-    lp_token_addr: String,
+    liquidity_token: String,
     recipient: String,
+    sender: String,
+    amount: Uint128,
+) -> Result<Vec<CosmosMsg>, ContractError> {
+    if is_factory_token(liquidity_token.as_str()) {
+        let mut messages = vec![];
+        messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
+            sender: sender.clone(),
+            amount: Some(Coin {
+                denom: liquidity_token.clone(),
+                amount: amount.to_string(),
+            }),
+        }));
+
+        if sender != recipient {
+            messages.push(CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
+                to_address: recipient,
+                amount: coins(amount.u128(), liquidity_token.as_str()),
+            }));
+        }
+
+        Ok(messages)
+    } else {
+        Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: liquidity_token,
+            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+            funds: vec![],
+        })])
+    }
+}
+
+/// Creates the Burn LP message
+fn burn_lp_token_msg(
+    liquidity_token: String,
+    sender: String,
     amount: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: lp_token_addr,
-        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
-        funds: vec![],
-    }))
+    if is_factory_token(liquidity_token.as_str()) {
+        Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
+            sender,
+            amount: Some(Coin {
+                denom: liquidity_token,
+                amount: amount.to_string(),
+            }),
+        }))
+    } else {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: liquidity_token,
+            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            funds: vec![],
+        }))
+    }
 }

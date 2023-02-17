@@ -130,12 +130,12 @@ pub fn create_pair(
     // prepare labels for creating the pair token with a meaningful name
     let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
-    let pair_label = format!("{}-{} pair", asset0_label, asset1_label);
+    let pair_label = format!("{asset0_label}-{asset1_label} pair");
 
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
-            ("pair", &format!("{}-{}", asset0_label, asset1_label)),
+            ("pair", &format!("{asset0_label}-{asset1_label}")),
             ("pair_label", pair_label.as_str()),
             ("pair_type", pair_type.get_label()),
         ])
