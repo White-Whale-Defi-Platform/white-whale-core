@@ -77,6 +77,7 @@ pub fn create_pair(
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
     pair_type: PairType,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -153,6 +154,7 @@ pub fn create_pair(
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     pair_type,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,

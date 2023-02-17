@@ -17,6 +17,9 @@ pub struct InstantiateMsg {
     pub fee_collector_addr: String,
     /// The type of pair to create
     pub pair_type: PairType,
+    /// If true, the pair will use the token factory to create the LP token. If false, it will
+    /// use a cw20 token instead.
+    pub token_factory_lp: bool,
 }
 
 #[cw_serde]
