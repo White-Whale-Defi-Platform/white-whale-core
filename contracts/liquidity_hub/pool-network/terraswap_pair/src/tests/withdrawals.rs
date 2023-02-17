@@ -54,6 +54,7 @@ fn withdraw_xyk_liquidity() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -215,6 +216,7 @@ fn withdraw_stableswap_liquidity() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::StableSwap { amp: 100 },
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -363,6 +365,7 @@ fn test_withdrawal_unauthorized() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -428,6 +431,7 @@ fn test_withdrawal_wrong_message() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();

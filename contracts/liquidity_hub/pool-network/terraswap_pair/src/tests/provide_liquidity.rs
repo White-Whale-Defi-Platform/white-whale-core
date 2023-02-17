@@ -50,6 +50,7 @@ fn provide_liquidity() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -519,6 +520,7 @@ fn provide_liquidity_zero_amount() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -618,6 +620,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
