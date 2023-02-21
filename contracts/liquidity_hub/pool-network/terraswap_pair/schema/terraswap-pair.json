@@ -12,7 +12,8 @@
       "fee_collector_addr",
       "pair_type",
       "pool_fees",
-      "token_code_id"
+      "token_code_id",
+      "token_factory_lp"
     ],
     "properties": {
       "asset_decimals": {
@@ -53,6 +54,10 @@
         "type": "integer",
         "format": "uint64",
         "minimum": 0.0
+      },
+      "token_factory_lp": {
+        "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+        "type": "boolean"
       }
     },
     "additionalProperties": false,
@@ -232,6 +237,20 @@
                 ]
               }
             },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Withdraws liquidity from the pool. Used only when the LP is a token factory token.",
+        "type": "object",
+        "required": [
+          "withdraw_liquidity"
+        ],
+        "properties": {
+          "withdraw_liquidity": {
+            "type": "object",
             "additionalProperties": false
           }
         },
@@ -936,6 +955,12 @@
         },
         "pair_type": {
           "$ref": "#/definitions/PairType"
+        },
+        "token_factory_lp": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false,
