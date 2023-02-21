@@ -121,6 +121,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
             pair_type: tmp_pair_info.pair_type,
+            token_factory_lp: None,
         },
     )?;
 

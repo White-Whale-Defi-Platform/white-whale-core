@@ -395,6 +395,7 @@ fn query_terraswap_pair_contract() {
                 liquidity_token: "liquidity0000".to_string(),
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
+                token_factory_lp: None,
             },
         )],
         &[("uusd".to_string(), 6u8)],

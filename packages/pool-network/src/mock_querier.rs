@@ -168,6 +168,7 @@ impl WasmMockQuerier {
                                 contract_addr: "pair0000".to_string(),
                                 liquidity_token: "liquidity0000".to_string(),
                                 pair_type: PairType::ConstantProduct,
+                                token_factory_lp: None,
                             })))
                         }
                         Ok(PairQueryMsg::Simulation { offer_asset }) => {

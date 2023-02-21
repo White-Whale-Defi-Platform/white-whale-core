@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    Addr, Decimal, Decimal256, QuerierWrapper, StdError, StdResult, Storage, Uint128, Uint256,
-};
+use cosmwasm_std::{Decimal, Decimal256, DepsMut, StdError, StdResult, Storage, Uint128, Uint256};
 use cw_storage_plus::Item;
 
 use pool_network::asset::{is_factory_token, Asset, AssetInfo, PairType};
@@ -450,12 +448,16 @@ pub fn instantiate_fees(
 }
 
 /// Gets the total supply of the given liquidity token
-pub fn get_total_share(querier: &QuerierWrapper, liquidity_token: Addr) -> StdResult<Uint128> {
-    let total_share = if is_factory_token(liquidity_token.to_string().as_str()) {
+pub fn get_total_share(deps: &DepsMut, liquidity_token: String) -> StdResult<Uint128> {
+    let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
-        querier.query_supply(&liquidity_token)?.amount
+        deps.querier.query_supply(&liquidity_token)?.amount
     } else {
-        query_token_info(querier, liquidity_token)?.total_supply
+        query_token_info(
+            &deps.querier,
+            deps.api.addr_validate(liquidity_token.as_str())?,
+        )?
+        .total_supply
     };
     Ok(total_share)
 }

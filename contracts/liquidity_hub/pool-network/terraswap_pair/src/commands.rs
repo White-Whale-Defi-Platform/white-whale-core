@@ -171,8 +171,15 @@ pub fn provide_liquidity(
     // assert slippage tolerance
     helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
-    let liquidity_token = deps.api.addr_humanize(&pair_info.liquidity_token)?;
-    let total_share = get_total_share(&deps.querier, liquidity_token.clone())?;
+    let liquidity_token = if let Some(token_factory_lp) = pair_info.token_factory_lp {
+        token_factory_lp
+    } else {
+        deps.api
+            .addr_humanize(&pair_info.liquidity_token)?
+            .to_string()
+    };
+
+    let total_share = get_total_share(&deps, liquidity_token.clone())?;
     let share = if total_share == Uint128::zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
@@ -187,7 +194,7 @@ pub fn provide_liquidity(
         .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
 
         messages.append(&mut mint_lp_token_msg(
-            liquidity_token.to_string(),
+            liquidity_token.clone(),
             env.contract.address.to_string(),
             env.contract.address.to_string(),
             MINIMUM_LIQUIDITY_AMOUNT,
@@ -216,7 +223,7 @@ pub fn provide_liquidity(
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     messages.append(&mut mint_lp_token_msg(
-        liquidity_token.to_string(),
+        liquidity_token,
         receiver.clone(),
         env.contract.address.to_string(),
         share,
@@ -240,11 +247,18 @@ pub fn withdraw_liquidity(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
-    let liquidity_token: Addr = deps.api.addr_humanize(&pair_info.liquidity_token)?;
-
     let pool_assets: [Asset; 2] =
         pair_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
-    let total_share = get_total_share(&deps.querier, liquidity_token.clone())?;
+
+    let liquidity_token = if let Some(token_factory_lp) = pair_info.token_factory_lp {
+        token_factory_lp
+    } else {
+        deps.api
+            .addr_humanize(&pair_info.liquidity_token)?
+            .to_string()
+    };
+
+    let total_share = get_total_share(&deps, liquidity_token.clone())?;
 
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
@@ -269,11 +283,8 @@ pub fn withdraw_liquidity(
 
     let refund_assets = refund_assets?;
 
-    let burn_lp_token_msg = burn_lp_token_msg(
-        liquidity_token.to_string(),
-        env.contract.address.to_string(),
-        amount,
-    )?;
+    let burn_lp_token_msg =
+        burn_lp_token_msg(liquidity_token, env.contract.address.to_string(), amount)?;
 
     // update pool info
     Ok(Response::new()

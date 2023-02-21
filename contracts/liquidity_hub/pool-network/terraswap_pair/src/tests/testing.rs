@@ -50,7 +50,7 @@ fn proper_initialization() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
-        token_factory_lp: true,
+        token_factory_lp: false,
     };
 
     // we can just call .unwrap() to assert this was a success

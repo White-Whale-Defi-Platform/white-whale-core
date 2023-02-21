@@ -241,6 +241,17 @@ impl AssetInfo {
             }
         }
     }
+
+    pub fn validate(self, deps: &Deps) -> StdResult<AssetInfo> {
+        match self.clone() {
+            AssetInfo::NativeToken { .. } => {}
+            AssetInfo::Token { contract_addr } => {
+                deps.api.addr_validate(contract_addr.as_str())?;
+            }
+        }
+
+        Ok(self)
+    }
 }
 
 /// Verifies if the given denom is an ibc token or not
@@ -414,6 +425,7 @@ pub struct PairInfo {
     pub liquidity_token: String,
     pub asset_decimals: [u8; 2],
     pub pair_type: PairType,
+    pub token_factory_lp: Option<String>,
 }
 
 #[cw_serde]
@@ -423,6 +435,7 @@ pub struct PairInfoRaw {
     pub liquidity_token: CanonicalAddr,
     pub asset_decimals: [u8; 2],
     pub pair_type: PairType,
+    pub token_factory_lp: Option<String>,
 }
 
 impl PairInfoRaw {
@@ -436,6 +449,7 @@ impl PairInfoRaw {
             ],
             asset_decimals: self.asset_decimals,
             pair_type: self.pair_type.to_owned(),
+            token_factory_lp: self.token_factory_lp.to_owned(),
         })
     }
 

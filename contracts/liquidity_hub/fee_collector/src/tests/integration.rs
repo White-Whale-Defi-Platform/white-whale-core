@@ -143,6 +143,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -580,6 +581,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -1051,6 +1053,7 @@ fn collect_pools_native_fees_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -1577,6 +1580,7 @@ fn collect_fees_with_pagination_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -2533,6 +2537,7 @@ fn aggregate_fees_for_vault() {
                     },
                 },
                 pair_type: PairType::ConstantProduct,
+                token_factory_lp: false,
             },
             &[],
         )

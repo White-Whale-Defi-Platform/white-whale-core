@@ -189,6 +189,7 @@ fn create_pair() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -226,7 +227,8 @@ fn create_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
-                    pair_type: PairType::ConstantProduct
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -283,6 +285,7 @@ fn create_stableswap_pair() {
             },
         },
         pair_type: PairType::StableSwap { amp: 100 },
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -320,7 +323,8 @@ fn create_stableswap_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
-                    pair_type: PairType::StableSwap { amp: 100 }
+                    pair_type: PairType::StableSwap { amp: 100 },
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -393,6 +397,7 @@ fn create_pair_native_token_and_ibc_token() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -431,6 +436,7 @@ fn create_pair_native_token_and_ibc_token() {
                     },
                     fee_collector_addr: "collector".to_string(),
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -510,6 +516,7 @@ fn create_ibc_tokens_pair() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -548,6 +555,7 @@ fn create_ibc_tokens_pair() {
                     },
                     fee_collector_addr: "collector".to_string(),
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -627,6 +635,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -664,7 +673,8 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
-                    pair_type: PairType::ConstantProduct
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -720,6 +730,7 @@ fn fail_to_create_same_pair() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -762,6 +773,7 @@ fn fail_to_create_existing_pair() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -784,6 +796,7 @@ fn fail_to_create_existing_pair() {
                 asset_infos: raw_infos,
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
+                token_factory_lp: None,
             },
         )
         .unwrap();
@@ -825,6 +838,7 @@ fn fail_to_create_pair_with_inactive_denoms() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -868,6 +882,7 @@ fn fail_to_create_pair_with_invalid_denom() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -903,6 +918,7 @@ fn fail_to_create_pair_with_invalid_denom() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -955,6 +971,7 @@ fn fail_to_create_pair_with_unknown_token() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -1007,6 +1024,7 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -1084,6 +1102,7 @@ fn reply_test() {
                 liquidity_token: "liquidity0000".to_string(),
                 asset_decimals: [8u8, 8u8],
                 pair_type: PairType::ConstantProduct,
+                token_factory_lp: None,
             },
         )],
         &[],
@@ -1109,6 +1128,7 @@ fn reply_test() {
             asset_infos,
             asset_decimals: [8u8, 8u8],
             pair_type: PairType::ConstantProduct,
+            token_factory_lp: None,
         }
     );
 }
@@ -1264,6 +1284,7 @@ fn execute_transactions_unauthorized() {
             },
         },
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
@@ -1400,6 +1421,7 @@ fn delete_pair() {
                 asset_infos: raw_infos,
                 asset_decimals: [6, 6],
                 pair_type: PairType::ConstantProduct,
+                token_factory_lp: None,
             },
         )
         .unwrap();

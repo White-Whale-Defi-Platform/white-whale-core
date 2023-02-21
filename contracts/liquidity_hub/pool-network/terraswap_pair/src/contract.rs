@@ -47,6 +47,7 @@ pub fn instantiate(
         ],
         asset_decimals: msg.asset_decimals,
         pair_type: msg.pair_type.clone(),
+        token_factory_lp: None,
     };
 
     PAIR_INFO.save(deps.storage, pair_info)?;
@@ -98,7 +99,7 @@ pub fn instantiate(
         // create native LP token
         PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
             let factory_token_lp = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
-            pair_info.liquidity_token = deps.api.addr_canonicalize(factory_token_lp.as_str())?;
+            pair_info.token_factory_lp = Some(factory_token_lp);
             Ok(pair_info)
         })?;
 
@@ -154,7 +155,11 @@ pub fn execute(
         ExecuteMsg::WithdrawLiquidity {} => {
             // validate that the asset sent is the token factory LP token
             let pair_info = PAIR_INFO.load(deps.storage)?;
-            if info.funds.len() != 1 || info.funds[0].denom != pair_info.liquidity_token.to_string()
+            if info.funds.len() != 1
+                || info.funds[0].denom
+                    != pair_info
+                        .token_factory_lp
+                        .ok_or(ContractError::AssetMismatch {})?
             {
                 return Err(ContractError::AssetMismatch {});
             }
