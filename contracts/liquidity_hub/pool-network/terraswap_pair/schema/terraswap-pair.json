@@ -951,16 +951,10 @@
           "type": "string"
         },
         "liquidity_token": {
-          "type": "string"
+          "$ref": "#/definitions/AssetInfo"
         },
         "pair_type": {
           "$ref": "#/definitions/PairType"
-        },
-        "token_factory_lp": {
-          "type": [
-            "string",
-            "null"
-          ]
         }
       },
       "additionalProperties": false,
