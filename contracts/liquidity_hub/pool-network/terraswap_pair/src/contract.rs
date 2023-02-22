@@ -1,15 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CanonicalAddr, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
-    Response, StdError, StdResult, SubMsg, WasmMsg,
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
+    StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use pool_network::asset::PairInfoRaw;
+use pool_network::asset::{AssetInfoRaw, PairInfoRaw};
 use pool_network::denom::MsgCreateDenom;
 use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
 use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
@@ -40,14 +40,15 @@ pub fn instantiate(
 
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
-        liquidity_token: CanonicalAddr::from(vec![]),
+        liquidity_token: AssetInfoRaw::NativeToken {
+            denom: "".to_string(),
+        },
         asset_infos: [
             msg.asset_infos[0].to_raw(deps.api)?,
             msg.asset_infos[1].to_raw(deps.api)?,
         ],
         asset_decimals: msg.asset_decimals,
         pair_type: msg.pair_type.clone(),
-        token_factory_lp: None,
     };
 
     PAIR_INFO.save(deps.storage, pair_info)?;
@@ -98,8 +99,9 @@ pub fn instantiate(
     if msg.token_factory_lp {
         // create native LP token
         PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
-            let factory_token_lp = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
-            pair_info.token_factory_lp = Some(factory_token_lp);
+            let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
+            pair_info.liquidity_token = AssetInfoRaw::NativeToken { denom };
+
             Ok(pair_info)
         })?;
 
@@ -155,12 +157,12 @@ pub fn execute(
         ExecuteMsg::WithdrawLiquidity {} => {
             // validate that the asset sent is the token factory LP token
             let pair_info = PAIR_INFO.load(deps.storage)?;
-            if info.funds.len() != 1
-                || info.funds[0].denom
-                    != pair_info
-                        .token_factory_lp
-                        .ok_or(ContractError::AssetMismatch {})?
-            {
+            let lp_token_denom = match pair_info.liquidity_token {
+                AssetInfoRaw::Token { .. } => String::new(),
+                AssetInfoRaw::NativeToken { denom } => denom,
+            };
+
+            if info.funds.len() != 1 || info.funds[0].denom != lp_token_denom {
                 return Err(ContractError::AssetMismatch {});
             }
 
@@ -228,7 +230,9 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 
     let api = deps.api;
     PAIR_INFO.update(deps.storage, |mut meta| -> StdResult<_> {
-        meta.liquidity_token = api.addr_canonicalize(&liquidity_token)?;
+        meta.liquidity_token = AssetInfoRaw::Token {
+            contract_addr: api.addr_canonicalize(&liquidity_token)?,
+        };
         Ok(meta)
     })?;
 

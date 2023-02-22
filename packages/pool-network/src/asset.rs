@@ -422,26 +422,24 @@ impl AssetInfoRaw {
 pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
     pub contract_addr: String,
-    pub liquidity_token: String,
+    pub liquidity_token: AssetInfo,
     pub asset_decimals: [u8; 2],
     pub pair_type: PairType,
-    pub token_factory_lp: Option<String>,
 }
 
 #[cw_serde]
 pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
     pub contract_addr: CanonicalAddr,
-    pub liquidity_token: CanonicalAddr,
+    pub liquidity_token: AssetInfoRaw,
     pub asset_decimals: [u8; 2],
     pub pair_type: PairType,
-    pub token_factory_lp: Option<String>,
 }
 
 impl PairInfoRaw {
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<PairInfo> {
         Ok(PairInfo {
-            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            liquidity_token: self.liquidity_token.to_normal(api)?,
             contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
             asset_infos: [
                 self.asset_infos[0].to_normal(api)?,
@@ -449,7 +447,6 @@ impl PairInfoRaw {
             ],
             asset_decimals: self.asset_decimals,
             pair_type: self.pair_type.to_owned(),
-            token_factory_lp: self.token_factory_lp.to_owned(),
         })
     }
 

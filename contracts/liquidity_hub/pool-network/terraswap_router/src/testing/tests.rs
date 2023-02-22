@@ -287,10 +287,11 @@ fn execute_swap_operation() {
                     },
                 ],
                 contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
+                liquidity_token: AssetInfo::Token {
+                    contract_addr: "liquidity0000".to_string(),
+                },
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )],
         &[("uusd".to_string(), 6u8)],
@@ -389,10 +390,11 @@ fn execute_swap_operation() {
                     },
                 ],
                 contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
+                liquidity_token: AssetInfo::Token {
+                    contract_addr: "liquidity0000".to_string(),
+                },
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )],
         &[("uusd".to_string(), 6u8)],
@@ -498,10 +500,11 @@ fn query_buy_with_routes() {
                         },
                     ],
                     contract_addr: "pair0000".to_string(),
-                    liquidity_token: "liquidity0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
@@ -516,10 +519,11 @@ fn query_buy_with_routes() {
                         },
                     ],
                     contract_addr: "pair0001".to_string(),
-                    liquidity_token: "liquidity0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
         ],
@@ -596,7 +600,9 @@ fn query_reverse_routes_with_from_native() {
                 &"ukrwasset0000".to_string(),
                 &PairInfo {
                     contract_addr: "pair0000".to_string(),
-                    liquidity_token: "liquidity0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
                     asset_infos: [
                         AssetInfo::Token {
                             contract_addr: "asset0000".to_string(),
@@ -607,14 +613,15 @@ fn query_reverse_routes_with_from_native() {
                     ],
                     asset_decimals: [8u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
                 &"asset0000uluna".to_string(),
                 &PairInfo {
                     contract_addr: "pair0001".to_string(),
-                    liquidity_token: "liquidity0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
                     asset_infos: [
                         AssetInfo::Token {
                             contract_addr: "asset0000".to_string(),
@@ -625,7 +632,6 @@ fn query_reverse_routes_with_from_native() {
                     ],
                     asset_decimals: [8u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
         ],
@@ -730,7 +736,9 @@ fn query_reverse_routes_with_to_native() {
                 &"ukrwasset0000".to_string(),
                 &PairInfo {
                     contract_addr: "pair0000".to_string(),
-                    liquidity_token: "liquidity0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
                     asset_infos: [
                         AssetInfo::Token {
                             contract_addr: "asset0000".to_string(),
@@ -741,14 +749,15 @@ fn query_reverse_routes_with_to_native() {
                     ],
                     asset_decimals: [8u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
                 &"asset0000uluna".to_string(),
                 &PairInfo {
                     contract_addr: "pair0001".to_string(),
-                    liquidity_token: "liquidity0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
                     asset_infos: [
                         AssetInfo::Token {
                             contract_addr: "asset0000".to_string(),
@@ -759,7 +768,6 @@ fn query_reverse_routes_with_to_native() {
                     ],
                     asset_decimals: [8u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
         ],
@@ -987,10 +995,11 @@ fn add_swap_routes() {
                         },
                     ],
                     contract_addr: "pair0000".to_string(),
-                    liquidity_token: "liquidity0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
@@ -1005,10 +1014,11 @@ fn add_swap_routes() {
                         },
                     ],
                     contract_addr: "pair0001".to_string(),
-                    liquidity_token: "liquidity0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
@@ -1023,10 +1033,11 @@ fn add_swap_routes() {
                         },
                     ],
                     contract_addr: "pair0002".to_string(),
-                    liquidity_token: "liquidity0002".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0002".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
         ],
@@ -1186,10 +1197,11 @@ fn add_swap_routes_invalid_route() {
                         },
                     ],
                     contract_addr: "pair0000".to_string(),
-                    liquidity_token: "liquidity0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
             (
@@ -1204,10 +1216,11 @@ fn add_swap_routes_invalid_route() {
                         },
                     ],
                     contract_addr: "pair0002".to_string(),
-                    liquidity_token: "liquidity0002".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0002".to_string(),
+                    },
                     asset_decimals: [6u8, 6u8],
                     pair_type: PairType::ConstantProduct,
-                    token_factory_lp: None,
                 },
             ),
         ],

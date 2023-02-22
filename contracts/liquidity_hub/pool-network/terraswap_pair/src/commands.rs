@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use pool_network::asset::{
-    is_factory_token, Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
+    is_factory_token, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 use pool_network::denom::{Coin, MsgBurn, MsgMint};
 use pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
@@ -88,7 +88,12 @@ pub fn receive_cw20(
             }
 
             let config: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
-            if deps.api.addr_canonicalize(info.sender.as_str())? != config.liquidity_token {
+            let cw20_lp_token = match config.liquidity_token {
+                AssetInfoRaw::Token { contract_addr } => contract_addr,
+                AssetInfoRaw::NativeToken { .. } => return Err(ContractError::Unauthorized {}),
+            };
+
+            if deps.api.addr_canonicalize(info.sender.as_str())? != cw20_lp_token {
                 return Err(ContractError::Unauthorized {});
             }
 
@@ -171,15 +176,14 @@ pub fn provide_liquidity(
     // assert slippage tolerance
     helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
-    let liquidity_token = if let Some(token_factory_lp) = pair_info.token_factory_lp {
-        token_factory_lp
-    } else {
-        deps.api
-            .addr_humanize(&pair_info.liquidity_token)?
-            .to_string()
+    let liquidity_token = match pair_info.liquidity_token {
+        AssetInfoRaw::Token { contract_addr } => {
+            deps.api.addr_humanize(&contract_addr)?.to_string()
+        }
+        AssetInfoRaw::NativeToken { denom } => denom,
     };
 
-    let total_share = get_total_share(&deps, liquidity_token.clone())?;
+    let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
     let share = if total_share == Uint128::zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
@@ -250,15 +254,14 @@ pub fn withdraw_liquidity(
     let pool_assets: [Asset; 2] =
         pair_info.query_pools(&deps.querier, deps.api, env.contract.address.clone())?;
 
-    let liquidity_token = if let Some(token_factory_lp) = pair_info.token_factory_lp {
-        token_factory_lp
-    } else {
-        deps.api
-            .addr_humanize(&pair_info.liquidity_token)?
-            .to_string()
+    let liquidity_token = match pair_info.liquidity_token {
+        AssetInfoRaw::Token { contract_addr } => {
+            deps.api.addr_humanize(&contract_addr)?.to_string()
+        }
+        AssetInfoRaw::NativeToken { denom } => denom,
     };
 
-    let total_share = get_total_share(&deps, liquidity_token.clone())?;
+    let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 

@@ -6,7 +6,7 @@ use cosmwasm_std::{
     ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
-use pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw, PairType};
+use pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
 use pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
@@ -201,7 +201,7 @@ fn create_pair() {
             attr("action", "create_pair"),
             attr("pair", "uusd-mAAPL"),
             attr("pair_label", "uusd-mAAPL pair"),
-            attr("pair_type", "ConstantProduct")
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -251,7 +251,7 @@ fn create_pair() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 8u8],
-            pair_type: PairType::ConstantProduct
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -297,7 +297,7 @@ fn create_stableswap_pair() {
             attr("action", "create_pair"),
             attr("pair", "uusd-mAAPL"),
             attr("pair_label", "uusd-mAAPL pair"),
-            attr("pair_type", "StableSwap")
+            attr("pair_type", "StableSwap"),
         ]
     );
     assert_eq!(
@@ -347,7 +347,7 @@ fn create_stableswap_pair() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 8u8],
-            pair_type: PairType::StableSwap { amp: 100 }
+            pair_type: PairType::StableSwap { amp: 100 },
         }
     );
 }
@@ -409,7 +409,7 @@ fn create_pair_native_token_and_ibc_token() {
             attr("action", "create_pair"),
             attr("pair", "uusd-ibc/2739...5EB2"),
             attr("pair_label", "uusd-ibc/2739...5EB2 pair"),
-            attr("pair_type", "ConstantProduct")
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -528,7 +528,7 @@ fn create_ibc_tokens_pair() {
             attr("action", "create_pair"),
             attr("pair", "ibc/4CD5...3D04-ibc/2739...5EB2"),
             attr("pair_label", "ibc/4CD5...3D04-ibc/2739...5EB2 pair"),
-            attr("pair_type", "ConstantProduct")
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -647,7 +647,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             attr("action", "create_pair"),
             attr("pair", "peggy0x87a...1B5-ibc/2739...5EB2"),
             attr("pair_label", "peggy0x87a...1B5-ibc/2739...5EB2 pair"),
-            attr("pair_type", "ConstantProduct")
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -697,7 +697,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 6u8],
-            pair_type: PairType::ConstantProduct
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -791,12 +791,13 @@ fn fail_to_create_existing_pair() {
             &mut deps.storage,
             &pair_key,
             &PairInfoRaw {
-                liquidity_token: deps.api.addr_canonicalize("lp_token").unwrap(),
+                liquidity_token: AssetInfoRaw::Token {
+                    contract_addr: CanonicalAddr::from(vec![]),
+                },
                 contract_addr: deps.api.addr_canonicalize("pair_contract").unwrap(),
                 asset_infos: raw_infos,
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )
         .unwrap();
@@ -1099,10 +1100,11 @@ fn reply_test() {
                     },
                 ],
                 contract_addr: "0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
+                liquidity_token: AssetInfo::Token {
+                    contract_addr: "liquidity0000".to_string(),
+                },
                 asset_decimals: [8u8, 8u8],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )],
         &[],
@@ -1123,12 +1125,13 @@ fn reply_test() {
     assert_eq!(
         pair_res,
         PairInfo {
-            liquidity_token: "liquidity0000".to_string(),
+            liquidity_token: AssetInfo::Token {
+                contract_addr: "liquidity0000".to_string(),
+            },
             contract_addr: "0000".to_string(),
             asset_infos,
             asset_decimals: [8u8, 8u8],
             pair_type: PairType::ConstantProduct,
-            token_factory_lp: None,
         }
     );
 }
@@ -1416,12 +1419,13 @@ fn delete_pair() {
             &mut deps.storage,
             &pair_key_vec,
             &PairInfoRaw {
-                liquidity_token: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                liquidity_token: AssetInfoRaw::Token {
+                    contract_addr: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                },
                 contract_addr: deps.api.addr_canonicalize("pair0000").unwrap(),
                 asset_infos: raw_infos,
                 asset_decimals: [6, 6],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )
         .unwrap();
@@ -1439,7 +1443,7 @@ fn delete_pair() {
         res.attributes,
         vec![
             attr("action", "remove_pair"),
-            attr("pair_contract_addr", "pair0000",),
+            attr("pair_contract_addr", "pair0000"),
         ]
     );
 
@@ -1505,7 +1509,7 @@ fn update_pair_config() {
     assert_eq!(
         res,
         Response::new()
-            .add_attributes(vec![attr("action", "update_pair_config"),])
+            .add_attributes(vec![attr("action", "update_pair_config")])
             .add_message(WasmMsg::Execute {
                 contract_addr: "pair_addr".to_string(),
                 funds: vec![],
@@ -1525,7 +1529,7 @@ fn update_pair_config() {
                     }),
                     feature_toggle: None,
                 })
-                .unwrap()
+                .unwrap(),
             })
     );
 }

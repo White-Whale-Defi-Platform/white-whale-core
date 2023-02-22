@@ -116,18 +116,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         deps.storage,
         &tmp_pair_info.pair_key,
         &PairInfoRaw {
-            liquidity_token: deps.api.addr_canonicalize(&pair_info.liquidity_token)?,
+            liquidity_token: pair_info.liquidity_token.to_raw(deps.api)?,
             contract_addr: deps.api.addr_canonicalize(pair_contract.as_str())?,
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
             pair_type: tmp_pair_info.pair_type,
-            token_factory_lp: None,
         },
     )?;
 
     Ok(Response::new().add_attributes(vec![
         ("pair_contract_addr", pair_contract.as_str()),
-        ("liquidity_token_addr", &pair_info.liquidity_token),
+        (
+            "liquidity_token_addr",
+            &pair_info.liquidity_token.to_string(),
+        ),
     ]))
 }
 

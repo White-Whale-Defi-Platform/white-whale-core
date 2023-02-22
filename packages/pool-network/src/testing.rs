@@ -1,15 +1,15 @@
-use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairType};
-use crate::mock_querier::mock_dependencies;
-use crate::querier::{
-    query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
-};
-
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cosmwasm_std::{
     coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg, Uint128,
     WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
+
+use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairType};
+use crate::mock_querier::mock_dependencies;
+use crate::querier::{
+    query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
+};
 
 #[test]
 fn token_balance_querier() {
@@ -42,7 +42,7 @@ fn balance_querier() {
         query_balance(
             &deps.as_ref().querier,
             Addr::unchecked(MOCK_CONTRACT_ADDR),
-            "uusd".to_string()
+            "uusd".to_string(),
         )
         .unwrap(),
         Uint128::from(200u128)
@@ -63,7 +63,7 @@ fn all_balances_querier() {
     ]);
 
     assert_eq!(
-        query_all_balances(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR),).unwrap(),
+        query_all_balances(&deps.as_ref().querier, Addr::unchecked(MOCK_CONTRACT_ADDR)).unwrap(),
         vec![
             Coin {
                 denom: "uusd".to_string(),
@@ -72,7 +72,7 @@ fn all_balances_querier() {
             Coin {
                 denom: "ukrw".to_string(),
                 amount: Uint128::from(300u128),
-            }
+            },
         ]
     );
 }
@@ -140,7 +140,7 @@ fn test_asset_info() {
             .query_pool(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
-                Addr::unchecked(MOCK_CONTRACT_ADDR)
+                Addr::unchecked(MOCK_CONTRACT_ADDR),
             )
             .unwrap(),
         Uint128::from(123u128)
@@ -150,7 +150,7 @@ fn test_asset_info() {
             .query_pool(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
-                Addr::unchecked(MOCK_CONTRACT_ADDR)
+                Addr::unchecked(MOCK_CONTRACT_ADDR),
             )
             .unwrap(),
         Uint128::from(123u128)
@@ -228,7 +228,7 @@ fn test_asset() {
             amount: vec![Coin {
                 denom: "uusd".to_string(),
                 amount: Uint128::from(123123u128),
-            }]
+            }],
         })
     );
 }
@@ -306,7 +306,7 @@ fn test_asset_to_raw() {
             amount: Uint128::from(1u128),
             info: AssetInfoRaw::NativeToken {
                 denom: "uluna".to_string()
-            }
+            },
         }
     );
 
@@ -330,7 +330,7 @@ fn test_asset_to_raw() {
             amount: Uint128::from(1u128),
             info: AssetInfoRaw::Token {
                 contract_addr: deps.api.addr_canonicalize("contract0000").unwrap()
-            }
+            },
         }
     );
 
@@ -392,10 +392,11 @@ fn query_terraswap_pair_contract() {
                     },
                 ],
                 contract_addr: "pair0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
+                liquidity_token: AssetInfo::Token {
+                    contract_addr: "liquidity0000".to_string(),
+                },
                 asset_decimals: [6u8, 6u8],
                 pair_type: PairType::ConstantProduct,
-                token_factory_lp: None,
             },
         )],
         &[("uusd".to_string(), 6u8)],
@@ -415,8 +416,11 @@ fn query_terraswap_pair_contract() {
     )
     .unwrap();
 
-    assert_eq!(pair_info.contract_addr, Addr::unchecked("pair0000"),);
-    assert_eq!(pair_info.liquidity_token, Addr::unchecked("liquidity0000"),);
+    assert_eq!(pair_info.contract_addr, Addr::unchecked("pair0000"));
+    assert_eq!(
+        pair_info.liquidity_token.to_string(),
+        "liquidity0000".to_string()
+    );
 }
 
 #[test]

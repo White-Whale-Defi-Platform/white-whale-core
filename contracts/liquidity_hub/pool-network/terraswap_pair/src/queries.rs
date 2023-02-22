@@ -3,16 +3,15 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use pool_network::asset::{Asset, PairInfo, PairInfoRaw, PairType};
+use pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
 use pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
-use pool_network::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::helpers::{
-    self, calculate_stableswap_y, get_protocol_fee_for_asset, StableSwapDirection,
+    self, calculate_stableswap_y, get_protocol_fee_for_asset, get_total_share, StableSwapDirection,
 };
 use crate::math::Decimal256Helper;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};
@@ -46,11 +45,14 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         })
         .collect();
 
-    let total_share: Uint128 = query_token_info(
-        &deps.querier,
-        deps.api.addr_humanize(&pair_info.liquidity_token)?,
-    )?
-    .total_supply;
+    let liquidity_token = match pair_info.liquidity_token {
+        AssetInfoRaw::Token { contract_addr } => {
+            deps.api.addr_humanize(&contract_addr)?.to_string()
+        }
+        AssetInfoRaw::NativeToken { denom } => denom,
+    };
+
+    let total_share = get_total_share(&deps, liquidity_token)?;
 
     let resp = PoolResponse {
         assets,
