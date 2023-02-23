@@ -61,6 +61,7 @@ fn withdraw_liquidity() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -251,6 +252,7 @@ fn test_withdrawal_unauthorized() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -323,6 +325,7 @@ fn test_withdrawal_wrong_message() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();

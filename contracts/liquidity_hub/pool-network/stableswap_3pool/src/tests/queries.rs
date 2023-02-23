@@ -54,6 +54,7 @@ fn test_simulations_asset_missmatch() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -160,6 +161,7 @@ fn test_query_pool() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();

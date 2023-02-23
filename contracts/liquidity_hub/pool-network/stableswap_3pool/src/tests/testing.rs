@@ -59,6 +59,7 @@ fn proper_initialization() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -110,7 +111,7 @@ fn proper_initialization() {
 
     // it worked, let's query the state
     let trio_info: TrioInfo = query_trio_info(deps.as_ref()).unwrap();
-    assert_eq!("liquidity0000", trio_info.liquidity_token.as_str());
+    assert_eq!("liquidity0000", trio_info.liquidity_token.to_string());
     assert_eq!(
         trio_info.asset_infos,
         [
@@ -163,6 +164,7 @@ fn test_initialization_invalid_fees() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -217,6 +219,7 @@ fn can_migrate_contract() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -445,6 +448,7 @@ fn test_update_config_unsuccessful() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -536,6 +540,7 @@ fn test_update_config_successful() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
