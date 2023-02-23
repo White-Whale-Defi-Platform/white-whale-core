@@ -199,6 +199,7 @@ pub fn create_trio(
     asset_infos: [AssetInfo; 3],
     pool_fees: TrioPoolFee,
     amp_factor: u64,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -290,6 +291,7 @@ pub fn create_trio(
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     amp_factor,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,

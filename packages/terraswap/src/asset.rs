@@ -13,6 +13,9 @@ pub const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000u128);
 const IBC_HASH_TAKE: usize = 4usize;
 const IBC_HASH_SIZE: usize = 64usize;
 pub const IBC_PREFIX: &str = "ibc";
+pub const FACTORY_PREFIX: &str = "factory";
+const FACTORY_SUBDENOM_SIZE: usize = 44usize;
+const FACTORY_PATH_TAKE: usize = 3usize;
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -140,8 +143,8 @@ pub enum AssetInfo {
 impl fmt::Display for AssetInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
-            AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
+            AssetInfo::NativeToken { denom } => write!(f, "{denom}"),
+            AssetInfo::Token { contract_addr } => write!(f, "{contract_addr}"),
         }
     }
 }
@@ -230,6 +233,8 @@ impl AssetInfo {
                 }
                 if is_ibc_token(&denom) {
                     get_ibc_token_label(denom)
+                } else if is_factory_token(&denom) {
+                    get_factory_token_label(denom)
                 } else {
                     Ok(denom)
                 }
@@ -247,6 +252,66 @@ fn is_ibc_token(denom: &str) -> bool {
     }
 
     false
+}
+
+/// Builds the label for an ibc token denom in such way that it returns a label like "ibc/1234...5678".
+/// Call after [is_ibc_token] has been successful
+fn get_ibc_token_label(denom: String) -> StdResult<String> {
+    let ibc_token_prefix = format!("{}{}", IBC_PREFIX, '/');
+    let mut token_hash = denom
+        .strip_prefix(ibc_token_prefix.as_str())
+        .ok_or_else(|| StdError::generic_err("Splitting ibc token denom failed"))?
+        .to_string();
+
+    token_hash.drain(IBC_HASH_TAKE..token_hash.len() - IBC_HASH_TAKE);
+    token_hash.insert_str(IBC_HASH_TAKE, "...");
+    token_hash.insert_str(0, ibc_token_prefix.as_str());
+
+    Ok(token_hash)
+}
+
+/// Verifies if the given denom is a factory token or not.
+/// A factory token has the following structure: factory/{creating contract address}/{Subdenom}
+/// Subdenom can be of length at most 44 characters, in [0-9a-zA-Z./].
+pub fn is_factory_token(denom: &str) -> bool {
+    let split: Vec<&str> = denom.splitn(3, '/').collect();
+
+    if split.len() < 3 && split[0] != FACTORY_PREFIX {
+        return false;
+    }
+
+    if split.len() > 3 {
+        let merged = split[3..].join("/");
+        if merged.len() > FACTORY_SUBDENOM_SIZE {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Builds the label for a factory token denom in such way that it returns a label like "factory/mig...xyz/123...456".
+/// Call after [is_factory_token] has been successful
+fn get_factory_token_label(denom: String) -> StdResult<String> {
+    let factory_token_prefix = format!("{}{}", FACTORY_PREFIX, '/');
+    let factory_path: Vec<&str> = denom
+        .strip_prefix(factory_token_prefix.as_str())
+        .ok_or_else(|| StdError::generic_err("Splitting factory token path failed"))?
+        .splitn(2, '/')
+        .collect();
+
+    let mut token_creator = factory_path[0].to_string();
+    let mut token_subdenom = factory_path[1].to_string();
+
+    token_creator.drain(FACTORY_PATH_TAKE..token_creator.len() - FACTORY_PATH_TAKE);
+    token_creator.insert_str(FACTORY_PATH_TAKE, "...");
+
+    if token_subdenom.len() > 2 * FACTORY_PATH_TAKE {
+        token_subdenom.drain(FACTORY_PATH_TAKE..token_subdenom.len() - FACTORY_PATH_TAKE);
+        token_subdenom.insert_str(FACTORY_PATH_TAKE, "...");
+    }
+
+    Ok(format!("{FACTORY_PREFIX}/{token_creator}/{token_subdenom}"))
 }
 
 #[cfg(feature = "injective")]
@@ -270,22 +335,6 @@ fn get_ethereum_bridged_asset_label(denom: String) -> StdResult<String> {
     asset_address.insert_str(0, ethereum_asset_prefix.as_str());
 
     Ok(asset_address)
-}
-
-/// Builds the label for an ibc token denom in such way that it returns a label like "ibc/1234...5678".
-/// Call after [is_ibc_token] has been successful
-fn get_ibc_token_label(denom: String) -> StdResult<String> {
-    let ibc_token_prefix = format!("{}{}", IBC_PREFIX, '/');
-    let mut token_hash = denom
-        .strip_prefix(ibc_token_prefix.as_str())
-        .ok_or_else(|| StdError::generic_err("Splitting ibc token denom failed"))?
-        .to_string();
-
-    token_hash.drain(IBC_HASH_TAKE..token_hash.len() - IBC_HASH_TAKE);
-    token_hash.insert_str(IBC_HASH_TAKE, "...");
-    token_hash.insert_str(0, ibc_token_prefix.as_str());
-
-    Ok(token_hash)
 }
 
 #[cw_serde]
@@ -412,7 +461,7 @@ impl PairInfoRaw {
 pub struct TrioInfo {
     pub asset_infos: [AssetInfo; 3],
     pub contract_addr: String,
-    pub liquidity_token: String,
+    pub liquidity_token: AssetInfo,
     pub asset_decimals: [u8; 3],
 }
 
@@ -420,14 +469,14 @@ pub struct TrioInfo {
 pub struct TrioInfoRaw {
     pub asset_infos: [AssetInfoRaw; 3],
     pub contract_addr: CanonicalAddr,
-    pub liquidity_token: CanonicalAddr,
+    pub liquidity_token: AssetInfoRaw,
     pub asset_decimals: [u8; 3],
 }
 
 impl TrioInfoRaw {
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<TrioInfo> {
         Ok(TrioInfo {
-            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            liquidity_token: self.liquidity_token.to_normal(api)?,
             contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
             asset_infos: [
                 self.asset_infos[0].to_normal(api)?,

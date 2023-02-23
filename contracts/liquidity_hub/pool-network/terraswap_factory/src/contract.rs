@@ -82,7 +82,15 @@ pub fn execute(
             asset_infos,
             pool_fees,
             amp_factor,
-        } => commands::create_trio(deps, env, asset_infos, pool_fees, amp_factor),
+            token_factory_lp,
+        } => commands::create_trio(
+            deps,
+            env,
+            asset_infos,
+            pool_fees,
+            amp_factor,
+            token_factory_lp,
+        ),
         ExecuteMsg::RemovePair { asset_infos } => commands::remove_pair(deps, env, asset_infos),
         ExecuteMsg::RemoveTrio { asset_infos } => commands::remove_trio(deps, env, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
@@ -179,7 +187,7 @@ fn create_trio_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractErro
         deps.storage,
         &tmp_trio_info.trio_key,
         &TrioInfoRaw {
-            liquidity_token: deps.api.addr_canonicalize(&trio_info.liquidity_token)?,
+            liquidity_token: trio_info.liquidity_token.to_raw(deps.api)?,
             contract_addr: deps.api.addr_canonicalize(trio_contract.as_str())?,
             asset_infos: tmp_trio_info.asset_infos,
             asset_decimals: tmp_trio_info.asset_decimals,
@@ -188,7 +196,10 @@ fn create_trio_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractErro
 
     Ok(Response::new().add_attributes(vec![
         ("trio_contract_addr", trio_contract.as_str()),
-        ("liquidity_token_addr", &trio_info.liquidity_token),
+        (
+            "liquidity_token_addr",
+            &trio_info.liquidity_token.to_string(),
+        ),
     ]))
 }
 

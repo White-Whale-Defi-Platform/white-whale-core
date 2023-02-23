@@ -4,6 +4,8 @@ use cw_storage_plus::Item;
 use terraswap::asset::{Asset, TrioInfoRaw};
 use terraswap::trio::Config;
 
+pub const LP_SYMBOL: &str = "uLP";
+
 pub const TRIO_INFO: Item<TrioInfoRaw> = Item::new("trio_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 
