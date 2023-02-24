@@ -1,3 +1,4 @@
-mod robot;
+mod bond;
 mod instantiate;
-mod stake;
+mod robot;
+mod update_config;

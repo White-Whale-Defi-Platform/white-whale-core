@@ -1,14 +1,15 @@
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
 };
-use cosmwasm_std::{coin, Addr, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Uint128};
 
 use white_whale::whale_lair::Config;
 
 use crate::tests::robot::TestingRobot;
+use crate::ContractError;
 
 #[test]
-fn test_stake() {
+fn test_update_config() {
     let mut robot = TestingRobot::default();
 
     robot
@@ -18,6 +19,5 @@ fn test_stake() {
             "uwhale".to_string(),
             &vec![coin(1u128, "uwhale")],
         )
-        .stake(Uint128::from(1_000u128))
-    ;
+        .update_config();
 }

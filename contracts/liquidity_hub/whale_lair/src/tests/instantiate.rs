@@ -22,8 +22,8 @@ fn test_instantiate() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unstaking_period: 1_000u64,
+            unbonding_period: 1_000u64,
             growth_rate: 1u8,
-            staking_denom: "uwhale".to_string(),
+            bonding_denom: "uwhale".to_string(),
         });
 }

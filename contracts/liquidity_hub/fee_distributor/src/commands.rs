@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, DepsMut, MessageInfo, QueryRequest, Response, StdError, WasmQuery};
 
 use terraswap::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::{QueryMsg, StakingWeightResponse};
+use white_whale::whale_lair::{QueryMsg, BondingWeightResponse};
 
 use crate::helpers::validate_grace_period;
 use crate::state::{
@@ -70,7 +70,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
 
     let config = CONFIG.load(deps.storage)?;
-    let staking_weight_response: StakingWeightResponse =
+    let staking_weight_response: BondingWeightResponse =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: config.staking_contract_addr.to_string(),
             msg: to_binary(&QueryMsg::Weight {
