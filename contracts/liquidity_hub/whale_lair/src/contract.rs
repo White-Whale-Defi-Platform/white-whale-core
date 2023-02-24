@@ -58,7 +58,8 @@ pub fn execute(
             owner,
             unbonding_period,
             growth_rate,
-        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
+            bonding_denom,
+        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate, bonding_denom),
     }
 }
 

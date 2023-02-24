@@ -19,5 +19,18 @@ fn test_update_config() {
             "uwhale".to_string(),
             &vec![coin(1u128, "uwhale")],
         )
-        .update_config();
+        .assert_config(Config {
+            owner: Addr::unchecked("owner"),
+            unbonding_period: 1_000u64,
+            growth_rate: 1u8,
+            bonding_denom: "uwhale".to_string(),
+        })
+        .update_config(robot.sender.clone(), Some("new_owner".to_string()), Some(500u64), Some(2u8), |res| {})
+        .assert_config(Config {
+            owner: Addr::unchecked("new_owner"),
+            unbonding_period: 500u64,
+            growth_rate: 2u8,
+            bonding_denom: "uwhale".to_string(),
+        })
+    ;
 }

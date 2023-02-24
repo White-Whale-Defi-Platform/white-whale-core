@@ -140,6 +140,7 @@ pub(crate) fn update_config(
     owner: Option<String>,
     unbonding_period: Option<u64>,
     growth_rate: Option<u8>,
+    bonding_denom: Option<String>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
     let mut config = CONFIG.load(deps.storage)?;
@@ -157,6 +158,10 @@ pub(crate) fn update_config(
 
     if let Some(growth_rate) = growth_rate {
         config.growth_rate = growth_rate;
+    }
+
+    if let Some(bonding_denom) = bonding_denom {
+        config.bonding_denom = bonding_denom;
     }
 
     Ok(Response::new().add_attributes(vec![

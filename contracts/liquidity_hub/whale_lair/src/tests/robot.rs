@@ -112,7 +112,7 @@ fn instantiate_contract(
     let msg = InstantiateMsg {
         unbonding_period,
         growth_rate,
-        bonding_denom: bonding_denom,
+        bonding_denom,
     };
 
     let whale_lair_id = robot.app.store_code(whale_lair_contract());

@@ -70,6 +70,7 @@ pub enum ExecuteMsg {
         owner: Option<String>,
         unbonding_period: Option<u64>,
         growth_rate: Option<u8>,
+        bonding_denom: Option<String>,
     },
 }
 
