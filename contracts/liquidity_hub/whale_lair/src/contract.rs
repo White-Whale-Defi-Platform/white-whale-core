@@ -22,15 +22,15 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    validate_denom(deps.as_ref(), &env, &msg.staking_denom, &info.funds)?;
+    validate_denom(deps.as_ref(), &env, &msg.bonding_denom, &info.funds)?;
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
-        unstaking_period: msg.unstaking_period,
+        unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
-        staking_denom: msg.staking_denom,
+        bonding_denom: msg.bonding_denom,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -38,7 +38,7 @@ pub fn instantiate(
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", config.owner.to_string()),
-        ("unstaking_period", config.unstaking_period.to_string()),
+        ("unbonding_period", config.unbonding_period.to_string()),
         ("growth_rate", config.growth_rate.to_string()),
     ]))
 }
@@ -51,14 +51,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Stake { amount } => commands::stake(deps, env.block.height, info, amount),
-        ExecuteMsg::Unstake { amount } => commands::unstake(deps, env.block.height, info, amount),
-        ExecuteMsg::Claim {} => commands::claim(deps, env.block.height, info.sender),
+        ExecuteMsg::Bond { amount } => commands::bond(deps, env.block.height, info, amount),
+        ExecuteMsg::Unbond { amount } => commands::unbond(deps, env.block.height, info, amount),
+        ExecuteMsg::Withdraw {} => commands::withdraw(deps, env.block.height, info.sender),
         ExecuteMsg::UpdateConfig {
             owner,
-            unstaking_period,
+            unbonding_period,
             growth_rate,
-        } => commands::update_config(deps, info, owner, unstaking_period, growth_rate),
+            bonding_denom,
+        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate, bonding_denom),
     }
 }
 
@@ -66,20 +67,22 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
-        QueryMsg::Staked { address } => to_binary(&queries::query_staked(deps, address)?),
-        QueryMsg::Unstaking {
+        QueryMsg::Bonded { address } => to_binary(&queries::query_bonded(deps, address)?),
+        QueryMsg::Unbonding {
             address,
             start_after,
             limit,
-        } => to_binary(&queries::query_unstaking(
+        } => to_binary(&queries::query_unbonding(
             deps,
             address,
             start_after,
             limit,
         )?),
-        QueryMsg::Claimable { address } => {
-            to_binary(&queries::query_claimable(deps, env.block.height, address)?)
-        }
+        QueryMsg::Withdrawable { address } => to_binary(&queries::query_withdrawable(
+            deps,
+            env.block.height,
+            address,
+        )?),
         QueryMsg::Weight { address } => {
             to_binary(&queries::query_weight(deps, env.block.height, address)?)
         }

@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Coin, coin, coins, DepsMut, Empty, Env, from_binary, MessageInfo, OwnedDeps, Response, StdResult, Uint128};
 use cosmwasm_std::testing::{mock_dependencies, MockApi, MockQuerier, MockStorage};
-use cw_multi_test::{App, Executor};
+use cosmwasm_std::{
+    coin, coins, from_binary, Addr, Coin, DepsMut, Empty, Env, MessageInfo, OwnedDeps, Response,
+    StdResult, Uint128,
+};
+use cw_multi_test::{App, AppResponse, Executor};
 
 use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 use white_whale_testing::integration::contracts::whale_lair_contract;
@@ -11,17 +14,20 @@ use crate::ContractError;
 
 pub struct TestingRobot {
     app: App,
-    sender: Addr,
+    pub sender: Addr,
     whale_lair_addr: Addr,
 }
 
-/// instantiate / execute
+/// instantiate / execute messages
 impl TestingRobot {
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("owner");
 
         Self {
-            app: mock_app_with_balance(vec![(sender.clone(), coins(1_000_000_000, "uwhale"))]),
+            app: mock_app_with_balance(vec![(
+                sender.clone(),
+                vec![coin(1_000_000_000, "uwhale"), coin(1_000_000_000, "uusdc")],
+            )]),
             sender,
             whale_lair_addr: Addr::unchecked(""),
         }
@@ -29,13 +35,13 @@ impl TestingRobot {
 
     pub(crate) fn instantiate(
         &mut self,
-        unstaking_period: u64,
+        unbonding_period: u64,
         growth_rate: u8,
-        staking_denom: String,
+        bonding_denom: String,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let whale_lair_addr =
-            instantiate_contract(self, unstaking_period, growth_rate, staking_denom, funds)
+            instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
                 .unwrap();
         self.whale_lair_addr = whale_lair_addr;
 
@@ -44,28 +50,53 @@ impl TestingRobot {
 
     pub(crate) fn instantiate_err(
         &mut self,
-        unstaking_period: u64,
+        unbonding_period: u64,
         growth_rate: u8,
-        staking_denom: String,
+        bonding_denom: String,
         funds: &Vec<Coin>,
     ) -> &mut Self {
-        instantiate_contract(self, unstaking_period, growth_rate, staking_denom, funds)
+        instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
             .unwrap_err();
         self
     }
 
-    pub(crate) fn stake(
+    pub(crate) fn bond(
         &mut self,
-        amount: Uint128,
+        funds: &[Coin],
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = ExecuteMsg::Stake { amount };
+        let msg = ExecuteMsg::Bond {
+            amount: funds[0].amount,
+        };
 
-        self.app.execute_contract(
+        response(self.app.execute_contract(
             self.sender.clone(),
             self.whale_lair_addr.clone(),
             &msg,
-            &[coin(amount.u128(), "uwhale")])
-            .unwrap();
+            funds,
+        ));
+
+        self
+    }
+
+    pub(crate) fn update_config(
+        &mut self,
+        sender: Addr,
+        owner: Option<String>,
+        unbonding_period: Option<u64>,
+        growth_rate: Option<u8>,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::UpdateConfig {
+            owner,
+            unbonding_period,
+            growth_rate,
+        };
+
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+        );
 
         self
     }
@@ -73,15 +104,15 @@ impl TestingRobot {
 
 fn instantiate_contract(
     robot: &mut TestingRobot,
-    unstaking_period: u64,
+    unbonding_period: u64,
     growth_rate: u8,
-    staking_denom: String,
+    bonding_denom: String,
     funds: &Vec<Coin>,
 ) -> anyhow::Result<Addr> {
     let msg = InstantiateMsg {
-        unstaking_period,
+        unbonding_period,
         growth_rate,
-        staking_denom,
+        bonding_denom,
     };
 
     let whale_lair_id = robot.app.store_code(whale_lair_contract());
@@ -113,7 +144,7 @@ impl TestingRobot {
     }
 }
 
-/// assertions points
+/// assertions
 impl TestingRobot {
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {

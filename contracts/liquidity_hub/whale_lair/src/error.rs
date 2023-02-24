@@ -2,7 +2,7 @@ use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
 use semver::Version;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -16,8 +16,8 @@ pub enum ContractError {
     #[error("The asset sent don't match the asset expected. Please check the denom and amount.")]
     AssetMismatch {},
 
-    #[error("The amount of tokens to unstake is greater than the amount of tokens staked.")]
-    InsufficientStake {},
+    #[error("The amount of tokens to unbond is greater than the amount of tokens bonded.")]
+    InsufficientBond {},
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),

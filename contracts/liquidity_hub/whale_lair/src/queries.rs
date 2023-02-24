@@ -1,29 +1,29 @@
 use cosmwasm_std::{Deps, Order, StdError, StdResult, Uint128};
 
 use white_whale::whale_lair::{
-    ClaimableResponse, Config, GlobalIndex, Stake, StakedResponse, StakingWeightResponse,
-    UnstakingResponse,
+    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
+    WithdrawableResponse,
 };
 
-use crate::state::{CONFIG, GLOBAL, STAKE, UNSTAKE};
+use crate::state::{BOND, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
 pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
     CONFIG.load(deps.storage)
 }
 
-/// Queries the current staked amount of the given address.
-pub(crate) fn query_staked(deps: Deps, address: String) -> StdResult<StakedResponse> {
+/// Queries the current bonded amount of the given address.
+pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let stake = STAKE.may_load(deps.storage, &address)?;
+    let bond = BOND.may_load(deps.storage, &address)?;
 
-    if let Some(stake) = stake {
-        Ok(StakedResponse {
-            staked: stake.amount,
+    if let Some(bond) = bond {
+        Ok(BondedResponse {
+            bonded: bond.amount,
         })
     } else {
         Err(StdError::generic_err(format!(
-            "No stake found for {}",
+            "No bond found for {}",
             address
         )))
     }
@@ -32,65 +32,65 @@ pub(crate) fn query_staked(deps: Deps, address: String) -> StdResult<StakedRespo
 pub const MAX_CLAIM_LIMIT: u8 = 30u8;
 pub const DEFAULT_CLAIM_LIMIT: u8 = 10u8;
 
-/// Queries the current unstaking amount of the given address.
-pub(crate) fn query_unstaking(
+/// Queries the current unbonding amount of the given address.
+pub(crate) fn query_unbonding(
     deps: Deps,
     address: String,
     _start_after: Option<u64>,
     limit: Option<u8>,
-) -> StdResult<UnstakingResponse> {
+) -> StdResult<UnbondingResponse> {
     let address = deps.api.addr_validate(&address)?;
 
     let limit = limit.unwrap_or(DEFAULT_CLAIM_LIMIT).min(MAX_CLAIM_LIMIT) as usize;
     //let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
-    let unstaking = UNSTAKE
-        .prefix(address.as_bytes())
+    let unbonding = UNBOND
+        .prefix(&deps.api.addr_validate(address.as_str())?)
         .range(deps.storage, None, None, Order::Ascending)
         .take(limit)
         .map(|item| {
-            let (_, stake) = item?;
-            Ok(stake)
+            let (_, bond) = item?;
+            Ok(bond)
         })
-        .collect::<StdResult<Vec<Stake>>>()?;
+        .collect::<StdResult<Vec<Bond>>>()?;
 
-    // aggregate all the amounts in unstaking vec and return uint128
-    let unstaking_amount = unstaking.iter().fold(Ok(Uint128::zero()), |acc, stake| {
-        acc.and_then(|acc| acc.checked_add(stake.amount))
+    // aggregate all the amounts in unbonding vec and return uint128
+    let unbonding_amount = unbonding.iter().fold(Ok(Uint128::zero()), |acc, bond| {
+        acc.and_then(|acc| acc.checked_add(bond.amount))
     })?;
 
-    Ok(UnstakingResponse {
-        total_amount: unstaking_amount,
-        unstaking_requests: unstaking,
+    Ok(UnbondingResponse {
+        total_amount: unbonding_amount,
+        unbonding_requests: unbonding,
     })
 }
 
-/// Queries the amount of unstaking tokens of the specified address that have passed the unstaking period.
-pub(crate) fn query_claimable(
+/// Queries the amount of unbonding tokens of the specified address that have passed the unbonding period.
+pub(crate) fn query_withdrawable(
     deps: Deps,
     block_height: u64,
     address: String,
-) -> StdResult<ClaimableResponse> {
+) -> StdResult<WithdrawableResponse> {
     let config = CONFIG.load(deps.storage)?;
-    let unstaking: StdResult<Vec<_>> = UNSTAKE
-        .prefix(address.as_bytes())
+    let unbonding: StdResult<Vec<_>> = UNBOND
+        .prefix(&deps.api.addr_validate(address.as_str())?)
         .range(deps.storage, None, None, Order::Ascending)
         .take(MAX_CLAIM_LIMIT as usize)
         .collect();
 
     let mut claimable_amount = Uint128::zero();
-    for (_, stake) in unstaking? {
+    for (_, bond) in unbonding? {
         if block_height
-            >= stake
+            >= bond
                 .block_height
-                .checked_add(config.unstaking_period)
+                .checked_add(config.unbonding_period)
                 .ok_or_else(|| StdError::generic_err("Invalid block height"))?
         {
-            claimable_amount += stake.amount;
+            claimable_amount = claimable_amount.checked_add(bond.amount)?;
         }
     }
 
-    Ok(ClaimableResponse { claimable_amount })
+    Ok(WithdrawableResponse { claimable_amount })
 }
 
 /// Queries the current weight of the given address.
@@ -98,41 +98,44 @@ pub(crate) fn query_weight(
     deps: Deps,
     block_height: u64,
     address: String,
-) -> StdResult<StakingWeightResponse> {
+) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let stake = STAKE.may_load(deps.storage, &address)?;
+    let bond = BOND.may_load(deps.storage, &address)?;
 
-    if let Some(mut stake) = stake {
+    if let Some(mut bond) = bond {
         let config = CONFIG.load(deps.storage)?;
 
-        stake.weight += stake
-            .amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                block_height
-                    .checked_sub(stake.block_height)
-                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-            ))?;
+        bond.weight = bond.weight.checked_add(
+            bond.amount
+                .checked_mul(Uint128::from(config.growth_rate))?
+                .checked_mul(Uint128::from(
+                    block_height
+                        .checked_sub(bond.block_height)
+                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+                ))?,
+        )?;
 
         let mut global_index = GLOBAL
             .may_load(deps.storage)
             .unwrap_or_else(|_| Some(GlobalIndex::default()))
             .ok_or_else(|| StdError::generic_err("Global index not found"))?;
 
-        global_index.weight += global_index
-            .stake
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                block_height
-                    .checked_sub(global_index.block_height)
-                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-            ))?;
+        global_index.weight = global_index.weight.checked_add(
+            global_index
+                .bond
+                .checked_mul(Uint128::from(config.growth_rate))?
+                .checked_mul(Uint128::from(
+                    block_height
+                        .checked_sub(global_index.block_height)
+                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+                ))?,
+        )?;
 
-        let share = stake.weight.checked_div(global_index.weight)?;
+        let share = bond.weight.checked_div(global_index.weight)?;
 
-        Ok(StakingWeightResponse {
+        Ok(BondingWeightResponse {
             address: address.to_string(),
-            weight: stake.weight,
+            weight: bond.weight,
             global_weight: global_index.weight,
             share,
         })
