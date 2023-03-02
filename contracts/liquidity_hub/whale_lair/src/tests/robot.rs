@@ -66,7 +66,7 @@ impl TestingRobot {
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::Bond {
-            amount: funds[0].amount,
+            asset: funds[0].amount,
         };
 
         response(self.app.execute_contract(
@@ -112,7 +112,7 @@ fn instantiate_contract(
     let msg = InstantiateMsg {
         unbonding_period,
         growth_rate,
-        bonding_denom,
+        bonding_assets: bonding_denom,
     };
 
     let whale_lair_id = robot.app.store_code(whale_lair_contract());

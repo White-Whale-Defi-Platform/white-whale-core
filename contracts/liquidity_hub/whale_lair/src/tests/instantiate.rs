@@ -24,6 +24,6 @@ fn test_instantiate() {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
             growth_rate: 1u8,
-            bonding_denom: "uwhale".to_string(),
+            bonding_assets: "uwhale".to_string(),
         });
 }

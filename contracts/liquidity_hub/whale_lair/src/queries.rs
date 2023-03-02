@@ -13,18 +13,21 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 }
 
 /// Queries the current bonded amount of the given address.
-pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
+pub(crate) fn query_bonded(
+    deps: Deps,
+    address: String,
+    denom: String,
+) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let bond = BOND.may_load(deps.storage, &address)?;
+    let bond = BOND.may_load(deps.storage, (&address, &denom))?;
 
     if let Some(bond) = bond {
         Ok(BondedResponse {
-            bonded: bond.amount,
+            bonded: bond.asset.amount,
         })
     } else {
         Err(StdError::generic_err(format!(
-            "No bond found for {}",
-            address
+            "No {denom} bond found for {address}"
         )))
     }
 }
@@ -36,6 +39,7 @@ pub const DEFAULT_CLAIM_LIMIT: u8 = 10u8;
 pub(crate) fn query_unbonding(
     deps: Deps,
     address: String,
+    denom: String,
     _start_after: Option<u64>,
     limit: Option<u8>,
 ) -> StdResult<UnbondingResponse> {
@@ -45,7 +49,7 @@ pub(crate) fn query_unbonding(
     //let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
     let unbonding = UNBOND
-        .prefix(&deps.api.addr_validate(address.as_str())?)
+        .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
         .range(deps.storage, None, None, Order::Ascending)
         .take(limit)
         .map(|item| {
@@ -56,7 +60,7 @@ pub(crate) fn query_unbonding(
 
     // aggregate all the amounts in unbonding vec and return uint128
     let unbonding_amount = unbonding.iter().fold(Ok(Uint128::zero()), |acc, bond| {
-        acc.and_then(|acc| acc.checked_add(bond.amount))
+        acc.and_then(|acc| acc.checked_add(bond.asset.amount))
     })?;
 
     Ok(UnbondingResponse {
@@ -70,10 +74,11 @@ pub(crate) fn query_withdrawable(
     deps: Deps,
     block_height: u64,
     address: String,
+    denom: String,
 ) -> StdResult<WithdrawableResponse> {
     let config = CONFIG.load(deps.storage)?;
     let unbonding: StdResult<Vec<_>> = UNBOND
-        .prefix(&deps.api.addr_validate(address.as_str())?)
+        .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
         .range(deps.storage, None, None, Order::Ascending)
         .take(MAX_CLAIM_LIMIT as usize)
         .collect();
@@ -86,7 +91,7 @@ pub(crate) fn query_withdrawable(
                 .checked_add(config.unbonding_period)
                 .ok_or_else(|| StdError::generic_err("Invalid block height"))?
         {
-            claimable_amount = claimable_amount.checked_add(bond.amount)?;
+            claimable_amount = claimable_amount.checked_add(bond.asset.amount)?;
         }
     }
 
@@ -100,49 +105,65 @@ pub(crate) fn query_weight(
     address: String,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let bond = BOND.may_load(deps.storage, &address)?;
 
-    if let Some(mut bond) = bond {
-        let config = CONFIG.load(deps.storage)?;
+    let bonds: StdResult<Vec<_>> = BOND
+        .prefix(&address)
+        .range(deps.storage, None, None, Order::Ascending)
+        .take(MAX_CLAIM_LIMIT as usize)
+        .collect();
 
-        bond.weight = bond.weight.checked_add(
-            bond.amount
-                .checked_mul(Uint128::from(config.growth_rate))?
-                .checked_mul(Uint128::from(
-                    block_height
-                        .checked_sub(bond.block_height)
-                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-                ))?,
-        )?;
+    // create bond that will aggregate all the bonds for the given address.
+    // This assumes bonding assets are fungible.
+    let mut bond = Bond::default();
 
-        let mut global_index = GLOBAL
-            .may_load(deps.storage)
-            .unwrap_or_else(|_| Some(GlobalIndex::default()))
-            .ok_or_else(|| StdError::generic_err("Global index not found"))?;
-
-        global_index.weight = global_index.weight.checked_add(
-            global_index
-                .bond
-                .checked_mul(Uint128::from(config.growth_rate))?
-                .checked_mul(Uint128::from(
-                    block_height
-                        .checked_sub(global_index.block_height)
-                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-                ))?,
-        )?;
-
-        let share = bond.weight.checked_div(global_index.weight)?;
-
-        Ok(BondingWeightResponse {
-            address: address.to_string(),
-            weight: bond.weight,
-            global_weight: global_index.weight,
-            share,
-        })
-    } else {
-        Err(StdError::generic_err(format!(
-            "No weight found for {}",
-            address
-        )))
+    for (_, b) in bonds? {
+        bond.asset.amount = bond
+            .asset
+            .amount
+            .checked_add(b.asset.amount)
+            .expect("error");
+        bond.weight = bond.weight.checked_add(b.weight).expect("error");
+        bond.block_height = bond
+            .block_height
+            .checked_add(b.block_height)
+            .expect("error");
     }
+
+    let config = CONFIG.load(deps.storage)?;
+
+    bond.weight = bond.weight.checked_add(
+        bond.asset
+            .amount
+            .checked_mul(Uint128::from(config.growth_rate))?
+            .checked_mul(Uint128::from(
+                block_height
+                    .checked_sub(bond.block_height)
+                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+            ))?,
+    )?;
+
+    let mut global_index = GLOBAL
+        .may_load(deps.storage)
+        .unwrap_or_else(|_| Some(GlobalIndex::default()))
+        .ok_or_else(|| StdError::generic_err("Global index not found"))?;
+
+    global_index.weight = global_index.weight.checked_add(
+        global_index
+            .bond_amount
+            .checked_mul(Uint128::from(config.growth_rate))?
+            .checked_mul(Uint128::from(
+                block_height
+                    .checked_sub(global_index.block_height)
+                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+            ))?,
+    )?;
+
+    let share = bond.weight.checked_div(global_index.weight)?;
+
+    Ok(BondingWeightResponse {
+        address: address.to_string(),
+        weight: bond.weight,
+        global_weight: global_index.weight,
+        share,
+    })
 }

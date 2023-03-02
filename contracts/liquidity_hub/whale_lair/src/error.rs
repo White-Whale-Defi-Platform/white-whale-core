@@ -25,6 +25,15 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
+    #[error("The amount of bonding assets is greater than the limit allowed, {0}, send {1}.")]
+    InvalidBondingAssetsLimit(usize, usize),
+
+    #[error("Can only bond native assets.")]
+    InvalidBondingAsset {},
+
+    #[error("Nothing to unbond.")]
+    NothingToUnbond {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,
