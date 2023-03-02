@@ -4,8 +4,12 @@ use cosmwasm_std::{
     StdResult, Uint128,
 };
 use cw_multi_test::{App, AppResponse, Executor};
+use serde::de::StdError;
 
-use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::whale_lair::{
+    Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
+    QueryMsg, UnbondingResponse, WithdrawableResponse,
+};
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
@@ -15,6 +19,7 @@ use crate::ContractError;
 pub struct TestingRobot {
     app: App,
     pub sender: Addr,
+    pub another_sender: Addr,
     whale_lair_addr: Addr,
 }
 
@@ -22,26 +27,69 @@ pub struct TestingRobot {
 impl TestingRobot {
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("owner");
+        let another_sender = Addr::unchecked("random");
 
         Self {
-            app: mock_app_with_balance(vec![(
-                sender.clone(),
-                vec![coin(1_000_000_000, "uwhale"), coin(1_000_000_000, "uusdc")],
-            )]),
+            app: mock_app_with_balance(vec![
+                (
+                    sender.clone(),
+                    vec![
+                        coin(1_000_000_000, "uwhale"),
+                        coin(1_000_000_000, "uusdc"),
+                        coin(1_000_000_000, "ampWHALE"),
+                        coin(1_000_000_000, "bWHALE"),
+                        coin(1_000_000_000, "non_whitelisted_asset"),
+                    ],
+                ),
+                (
+                    another_sender.clone(),
+                    vec![
+                        coin(1_000_000_000, "uwhale"),
+                        coin(1_000_000_000, "uusdc"),
+                        coin(1_000_000_000, "ampWHALE"),
+                        coin(1_000_000_000, "bWHALE"),
+                        coin(1_000_000_000, "non_whitelisted_asset"),
+                    ],
+                ),
+            ]),
             sender,
+            another_sender,
             whale_lair_addr: Addr::unchecked(""),
         }
+    }
+
+    pub(crate) fn fast_forward(&mut self, blocks: u64) -> &mut Self {
+        self.app
+            .update_block(|b| b.height = b.height.checked_add(blocks).unwrap());
+
+        self
+    }
+
+    pub(crate) fn instantiate_default(&mut self) -> &mut Self {
+        self.instantiate(
+            1_000u64,
+            1u8,
+            vec![
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+            ],
+            &vec![],
+        )
     }
 
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: u64,
         growth_rate: u8,
-        bonding_denom: String,
+        bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let whale_lair_addr =
-            instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
+            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
         self.whale_lair_addr = whale_lair_addr;
 
@@ -52,29 +100,63 @@ impl TestingRobot {
         &mut self,
         unbonding_period: u64,
         growth_rate: u8,
-        bonding_denom: String,
+        bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
+        error: impl Fn(anyhow::Error),
     ) -> &mut Self {
-        instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
-            .unwrap_err();
+        error(
+            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
+                .unwrap_err(),
+        );
+
         self
     }
 
     pub(crate) fn bond(
         &mut self,
+        sender: Addr,
+        asset: Asset,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = ExecuteMsg::Bond {
-            amount: funds[0].amount,
-        };
+        let msg = ExecuteMsg::Bond { asset };
 
-        response(self.app.execute_contract(
-            self.sender.clone(),
-            self.whale_lair_addr.clone(),
-            &msg,
-            funds,
-        ));
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, funds),
+        );
+
+        self
+    }
+
+    pub(crate) fn unbond(
+        &mut self,
+        sender: Addr,
+        asset: Asset,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Unbond { asset };
+
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+        );
+
+        self
+    }
+
+    pub(crate) fn withdraw(
+        &mut self,
+        sender: Addr,
+        denom: String,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Withdraw { denom };
+
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+        );
 
         self
     }
@@ -106,13 +188,13 @@ fn instantiate_contract(
     robot: &mut TestingRobot,
     unbonding_period: u64,
     growth_rate: u8,
-    bonding_denom: String,
+    bonding_assets: Vec<AssetInfo>,
     funds: &Vec<Coin>,
 ) -> anyhow::Result<Addr> {
     let msg = InstantiateMsg {
         unbonding_period,
         growth_rate,
-        bonding_denom,
+        bonding_assets,
     };
 
     let whale_lair_id = robot.app.store_code(whale_lair_contract());
@@ -142,10 +224,110 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn query_weight(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
+    ) -> &mut Self {
+        let bonding_weight_response: BondingWeightResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Weight { address })
+            .unwrap();
+
+        response(Ok((self, bonding_weight_response)));
+
+        self
+    }
+
+    pub(crate) fn query_bonded(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
+    ) -> &mut Self {
+        let bonded_response: BondedResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address })
+            .unwrap();
+
+        response(Ok((self, bonded_response)));
+
+        self
+    }
+
+    pub(crate) fn query_bonded_err(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, StdResult<BondedResponse>)>),
+    ) -> &mut Self {
+        let res = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address });
+
+        response(Ok((self, res)));
+
+        self
+    }
+
+    pub(crate) fn query_unbonding(
+        &mut self,
+        address: String,
+        denom: String,
+        response: impl Fn(StdResult<(&mut Self, UnbondingResponse)>),
+    ) -> &mut Self {
+        let unbonding_response: UnbondingResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.whale_lair_addr,
+                &QueryMsg::Unbonding {
+                    address,
+                    denom,
+                    start_after: None,
+                    limit: None,
+                },
+            )
+            .unwrap();
+
+        response(Ok((self, unbonding_response)));
+
+        self
+    }
+
+    pub(crate) fn query_withdrawable(
+        &mut self,
+        address: String,
+        denom: String,
+        response: impl Fn(StdResult<(&mut Self, WithdrawableResponse)>),
+    ) -> &mut Self {
+        let withdrawable_response: WithdrawableResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.whale_lair_addr,
+                &QueryMsg::Withdrawable { address, denom },
+            )
+            .unwrap();
+
+        response(Ok((self, withdrawable_response)));
+
+        self
+    }
 }
 
 /// assertions
 impl TestingRobot {
+    pub(crate) fn assert_error(
+        &mut self,
+        found: anyhow::Error,
+        expected: ContractError,
+    ) -> &mut Self {
+        self
+    }
+
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {
             let config = res.unwrap().1;
@@ -153,5 +335,51 @@ impl TestingRobot {
         });
 
         self
+    }
+
+    pub(crate) fn assert_bonded_response(
+        &mut self,
+        address: String,
+        expected: BondedResponse,
+    ) -> &mut Self {
+        self.query_bonded(address, |res| {
+            let bonded_response = res.unwrap().1;
+            assert_eq!(bonded_response, expected);
+        })
+    }
+
+    pub(crate) fn assert_bonding_weight_response(
+        &mut self,
+        address: String,
+        expected: BondingWeightResponse,
+    ) -> &mut Self {
+        self.query_weight(address, |res| {
+            let bonding_weight_response = res.unwrap().1;
+            assert_eq!(bonding_weight_response, expected);
+        })
+    }
+
+    pub(crate) fn assert_unbonding_response(
+        &mut self,
+        address: String,
+        denom: String,
+        expected: UnbondingResponse,
+    ) -> &mut Self {
+        self.query_unbonding(address, denom, |res| {
+            let unbonding_response = res.unwrap().1;
+            assert_eq!(unbonding_response, expected);
+        })
+    }
+
+    pub(crate) fn assert_withdrawable_response(
+        &mut self,
+        address: String,
+        denom: String,
+        expected: WithdrawableResponse,
+    ) -> &mut Self {
+        self.query_withdrawable(address, denom, |res| {
+            let withdrawable_response = res.unwrap().1;
+            assert_eq!(withdrawable_response, expected);
+        })
     }
 }
