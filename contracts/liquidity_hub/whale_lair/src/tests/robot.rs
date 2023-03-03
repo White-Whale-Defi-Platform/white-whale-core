@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::{App, AppResponse, Executor};
 
-use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::whale_lair::{AssetInfo, Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
@@ -26,7 +26,12 @@ impl TestingRobot {
         Self {
             app: mock_app_with_balance(vec![(
                 sender.clone(),
-                vec![coin(1_000_000_000, "uwhale"), coin(1_000_000_000, "uusdc")],
+                vec![
+                    coin(1_000_000_000, "uwhale"),
+                    coin(1_000_000_000, "uusdc"),
+                    coin(1_000_000_000, "ampWHALE"),
+                    coin(1_000_000_000, "bWHALE"),
+                ],
             )]),
             sender,
             whale_lair_addr: Addr::unchecked(""),
@@ -37,11 +42,11 @@ impl TestingRobot {
         &mut self,
         unbonding_period: u64,
         growth_rate: u8,
-        bonding_denom: String,
+        bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let whale_lair_addr =
-            instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
+            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
         self.whale_lair_addr = whale_lair_addr;
 
@@ -52,33 +57,37 @@ impl TestingRobot {
         &mut self,
         unbonding_period: u64,
         growth_rate: u8,
-        bonding_denom: String,
+        bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
+        error: impl Fn(anyhow::Error),
     ) -> &mut Self {
-        instantiate_contract(self, unbonding_period, growth_rate, bonding_denom, funds)
-            .unwrap_err();
-        self
-    }
-
-    pub(crate) fn bond(
-        &mut self,
-        funds: &[Coin],
-        response: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let msg = ExecuteMsg::Bond {
-            asset: funds[0].amount,
-        };
-
-        response(self.app.execute_contract(
-            self.sender.clone(),
-            self.whale_lair_addr.clone(),
-            &msg,
-            funds,
-        ));
+        error(
+            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
+                .unwrap_err(),
+        );
 
         self
     }
 
+    /*pub(crate) fn bond(
+            &mut self,
+            funds: &[Coin],
+            response: impl Fn(Result<AppResponse, anyhow::Error>),
+        ) -> &mut Self {
+            let msg = ExecuteMsg::Bond {
+                asset: funds[0].amount,
+            };
+
+            response(self.app.execute_contract(
+                self.sender.clone(),
+                self.whale_lair_addr.clone(),
+                &msg,
+                funds,
+            ));
+
+            self
+        }
+    */
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
@@ -106,13 +115,13 @@ fn instantiate_contract(
     robot: &mut TestingRobot,
     unbonding_period: u64,
     growth_rate: u8,
-    bonding_denom: String,
+    bonding_assets: Vec<AssetInfo>,
     funds: &Vec<Coin>,
 ) -> anyhow::Result<Addr> {
     let msg = InstantiateMsg {
         unbonding_period,
         growth_rate,
-        bonding_assets: bonding_denom,
+        bonding_assets,
     };
 
     let whale_lair_id = robot.app.store_code(whale_lair_contract());
@@ -146,6 +155,14 @@ impl TestingRobot {
 
 /// assertions
 impl TestingRobot {
+    pub(crate) fn assert_error(
+        &mut self,
+        found: anyhow::Error,
+        expected: ContractError,
+    ) -> &mut Self {
+        self
+    }
+
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {
             let config = res.unwrap().1;

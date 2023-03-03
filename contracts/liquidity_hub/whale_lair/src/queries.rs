@@ -32,8 +32,8 @@ pub(crate) fn query_bonded(
     }
 }
 
-pub const MAX_CLAIM_LIMIT: u8 = 30u8;
-pub const DEFAULT_CLAIM_LIMIT: u8 = 10u8;
+pub const MAX_PAGE_LIMIT: u8 = 30u8;
+pub const DEFAULT_PAGE_LIMIT: u8 = 10u8;
 
 /// Queries the current unbonding amount of the given address.
 pub(crate) fn query_unbonding(
@@ -45,7 +45,7 @@ pub(crate) fn query_unbonding(
 ) -> StdResult<UnbondingResponse> {
     let address = deps.api.addr_validate(&address)?;
 
-    let limit = limit.unwrap_or(DEFAULT_CLAIM_LIMIT).min(MAX_CLAIM_LIMIT) as usize;
+    let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).min(MAX_PAGE_LIMIT) as usize;
     //let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
     let unbonding = UNBOND
@@ -80,7 +80,7 @@ pub(crate) fn query_withdrawable(
     let unbonding: StdResult<Vec<_>> = UNBOND
         .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
         .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_CLAIM_LIMIT as usize)
+        .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
     let mut claimable_amount = Uint128::zero();
@@ -109,7 +109,7 @@ pub(crate) fn query_weight(
     let bonds: StdResult<Vec<_>> = BOND
         .prefix(&address)
         .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_CLAIM_LIMIT as usize)
+        .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
     // create bond that will aggregate all the bonds for the given address.

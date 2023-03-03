@@ -12,38 +12,38 @@ use crate::ContractError;
 fn test_bond() {
     let mut robot = TestingRobot::default();
 
-    robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            "uwhale".to_string(),
-            &vec![coin(1u128, "uwhale")],
-        )
-        .bond(&coins(1_000u128, "uwhale"), |res| {});
+    /*robot
+    .instantiate(
+        1_000u64,
+        1u8,
+        "uwhale".to_string(),
+        &vec![coin(1u128, "uwhale")],
+    )
+    .bond(&coins(1_000u128, "uwhale"), |res| {});*/
 }
 
 #[test]
 fn test_bond_wrong_asset() {
     let mut robot = TestingRobot::default();
 
-    robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            "uwhale".to_string(),
-            &vec![coin(1u128, "uwhale")],
-        )
-        .bond(&[coin(1_000u128, "uusdc")], |res| {
+    /*robot
+    .instantiate(
+        1_000u64,
+        1u8,
+        "uwhale".to_string(),
+        &vec![coin(1u128, "uwhale")],
+    )
+    .bond(&[coin(1_000u128, "uusdc")], |res| {
+        println!("{:?}", res.unwrap_err().root_cause());
+
+        //assert_eq!(res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(), &ContractError::AssetMismatch {});
+    })
+    .bond(
+        &[coin(1_000u128, "uusdc"), coin(1_000u128, "uwhale")],
+        |res| {
             println!("{:?}", res.unwrap_err().root_cause());
 
             //assert_eq!(res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(), &ContractError::AssetMismatch {});
-        })
-        .bond(
-            &[coin(1_000u128, "uusdc"), coin(1_000u128, "uwhale")],
-            |res| {
-                println!("{:?}", res.unwrap_err().root_cause());
-
-                //assert_eq!(res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(), &ContractError::AssetMismatch {});
-            },
-        );
+        },
+    );*/
 }

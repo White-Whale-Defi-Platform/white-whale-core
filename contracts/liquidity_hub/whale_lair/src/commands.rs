@@ -5,7 +5,7 @@ use cosmwasm_std::{
 
 use white_whale::whale_lair::{Asset, AssetInfo, Bond};
 
-use crate::queries::MAX_CLAIM_LIMIT;
+use crate::queries::MAX_PAGE_LIMIT;
 use crate::state::{update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND};
 use crate::ContractError;
 
@@ -130,7 +130,7 @@ pub(crate) fn withdraw(
     let unbondings: Vec<(u64, Bond)> = UNBOND
         .prefix((&address, &denom))
         .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_CLAIM_LIMIT as usize)
+        .take(MAX_PAGE_LIMIT as usize)
         .collect::<StdResult<Vec<(u64, Bond)>>>()?;
 
     let mut refund_amount = Uint128::zero();
@@ -200,6 +200,8 @@ pub(crate) fn update_config(
     if let Some(growth_rate) = growth_rate {
         config.growth_rate = growth_rate;
     }
+
+    CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "update_config".to_string()),

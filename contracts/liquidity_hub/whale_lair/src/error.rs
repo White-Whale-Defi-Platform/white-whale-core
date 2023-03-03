@@ -25,7 +25,7 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("The amount of bonding assets is greater than the limit allowed, {0}, send {1}.")]
+    #[error("The amount of bonding assets is greater than the limit allowed")]
     InvalidBondingAssetsLimit(usize, usize),
 
     #[error("Can only bond native assets.")]
