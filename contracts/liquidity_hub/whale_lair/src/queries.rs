@@ -16,30 +16,28 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
 
-    let bonds: StdResult<Vec<_>> = BOND
+    let bonds: Vec<Bond> = BOND
         .prefix(&address)
         .range(deps.storage, None, None, Order::Ascending)
         .take(BONDING_ASSETS_LIMIT as usize)
-        .collect();
-
-    if let Ok(bonds) = bonds {
-        let mut total_bonded = Uint128::zero();
-        let mut bonded_assets = vec![];
-
-        for (_, bond) in bonds {
-            total_bonded = total_bonded.checked_add(bond.asset.amount)?;
-            bonded_assets.push(bond.asset);
-        }
-
-        Ok(BondedResponse {
-            total_bonded,
-            bonded_assets,
+        .map(|item| {
+            let (_, bond) = item?;
+            Ok(bond)
         })
-    } else {
-        Err(StdError::generic_err(format!(
-            "No bonded assets found for {address}"
-        )))
+        .collect::<StdResult<Vec<Bond>>>()?;
+
+    let mut total_bonded = Uint128::zero();
+    let mut bonded_assets = vec![];
+
+    for bond in bonds {
+        total_bonded = total_bonded.checked_add(bond.asset.amount)?;
+        bonded_assets.push(bond.asset);
     }
+
+    Ok(BondedResponse {
+        total_bonded,
+        bonded_assets,
+    })
 }
 
 pub const MAX_PAGE_LIMIT: u8 = 30u8;
