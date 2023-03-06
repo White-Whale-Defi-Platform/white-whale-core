@@ -89,9 +89,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
-        QueryMsg::Bonded { address, denom } => {
-            to_binary(&queries::query_bonded(deps, address, denom)?)
-        }
+        QueryMsg::Bonded { address } => to_binary(&queries::query_bonded(deps, address)?),
         QueryMsg::Unbonding {
             address,
             denom,

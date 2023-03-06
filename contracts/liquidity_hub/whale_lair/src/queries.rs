@@ -1,11 +1,11 @@
-use cosmwasm_std::{Deps, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
 
 use white_whale::whale_lair::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
     WithdrawableResponse,
 };
 
-use crate::state::{BOND, CONFIG, GLOBAL, UNBOND};
+use crate::state::{BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
 pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
@@ -13,21 +13,31 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 }
 
 /// Queries the current bonded amount of the given address.
-pub(crate) fn query_bonded(
-    deps: Deps,
-    address: String,
-    denom: String,
-) -> StdResult<BondedResponse> {
+pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let bond = BOND.may_load(deps.storage, (&address, &denom))?;
 
-    if let Some(bond) = bond {
+    let bonds: StdResult<Vec<_>> = BOND
+        .prefix(&address)
+        .range(deps.storage, None, None, Order::Ascending)
+        .take(BONDING_ASSETS_LIMIT as usize)
+        .collect();
+
+    if let Ok(bonds) = bonds {
+        let mut total_bonded = Uint128::zero();
+        let mut bonded_assets = vec![];
+
+        for (_, bond) in bonds {
+            total_bonded = total_bonded.checked_add(bond.asset.amount)?;
+            bonded_assets.push(bond.asset);
+        }
+
         Ok(BondedResponse {
-            bonded: bond.asset.amount,
+            total_bonded,
+            bonded_assets,
         })
     } else {
         Err(StdError::generic_err(format!(
-            "No {denom} bond found for {address}"
+            "No bonded assets found for {address}"
         )))
     }
 }
@@ -112,35 +122,26 @@ pub(crate) fn query_weight(
         .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
-    // create bond that will aggregate all the bonds for the given address.
-    // This assumes bonding assets are fungible.
-    let mut bond = Bond::default();
-
-    for (_, b) in bonds? {
-        bond.asset.amount = bond
-            .asset
-            .amount
-            .checked_add(b.asset.amount)
-            .expect("error");
-        bond.weight = bond.weight.checked_add(b.weight).expect("error");
-        bond.block_height = bond
-            .block_height
-            .checked_add(b.block_height)
-            .expect("error");
-    }
-
     let config = CONFIG.load(deps.storage)?;
 
-    bond.weight = bond.weight.checked_add(
-        bond.asset
-            .amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                block_height
-                    .checked_sub(bond.block_height)
-                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-            ))?,
-    )?;
+    let mut total_bond_weight = Uint128::zero();
+
+    for (_, mut bond) in bonds? {
+        bond.weight = bond.weight.checked_add(
+            bond.asset
+                .amount
+                .checked_mul(Uint128::from(config.growth_rate))?
+                .checked_mul(Uint128::from(
+                    block_height
+                        .checked_sub(bond.block_height)
+                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+                ))?,
+        )?;
+
+        // Aggregate the weights of all the bonds for the given address.
+        // This assumes bonding assets are fungible.
+        total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
+    }
 
     let mut global_index = GLOBAL
         .may_load(deps.storage)
@@ -158,12 +159,13 @@ pub(crate) fn query_weight(
             ))?,
     )?;
 
-    let share = bond.weight.checked_div(global_index.weight)?;
+    let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
 
     Ok(BondingWeightResponse {
         address: address.to_string(),
-        weight: bond.weight,
+        weight: total_bond_weight,
         global_weight: global_index.weight,
         share,
+        block_height,
     })
 }

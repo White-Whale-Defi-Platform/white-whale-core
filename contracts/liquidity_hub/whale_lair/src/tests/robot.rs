@@ -4,8 +4,12 @@ use cosmwasm_std::{
     StdResult, Uint128,
 };
 use cw_multi_test::{App, AppResponse, Executor};
+use serde::de::StdError;
 
-use white_whale::whale_lair::{AssetInfo, Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::whale_lair::{
+    Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
+    QueryMsg,
+};
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
@@ -15,6 +19,7 @@ use crate::ContractError;
 pub struct TestingRobot {
     app: App,
     pub sender: Addr,
+    pub another_sender: Addr,
     whale_lair_addr: Addr,
 }
 
@@ -22,20 +27,42 @@ pub struct TestingRobot {
 impl TestingRobot {
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("owner");
+        let another_sender = Addr::unchecked("random");
 
         Self {
-            app: mock_app_with_balance(vec![(
-                sender.clone(),
-                vec![
-                    coin(1_000_000_000, "uwhale"),
-                    coin(1_000_000_000, "uusdc"),
-                    coin(1_000_000_000, "ampWHALE"),
-                    coin(1_000_000_000, "bWHALE"),
-                ],
-            )]),
+            app: mock_app_with_balance(vec![
+                (
+                    sender.clone(),
+                    vec![
+                        coin(1_000_000_000, "uwhale"),
+                        coin(1_000_000_000, "uusdc"),
+                        coin(1_000_000_000, "ampWHALE"),
+                        coin(1_000_000_000, "bWHALE"),
+                        coin(1_000_000_000, "non_whitelisted_asset"),
+                    ],
+                ),
+                (
+                    another_sender.clone(),
+                    vec![
+                        coin(1_000_000_000, "uwhale"),
+                        coin(1_000_000_000, "uusdc"),
+                        coin(1_000_000_000, "ampWHALE"),
+                        coin(1_000_000_000, "bWHALE"),
+                        coin(1_000_000_000, "non_whitelisted_asset"),
+                    ],
+                ),
+            ]),
             sender,
+            another_sender,
             whale_lair_addr: Addr::unchecked(""),
         }
+    }
+
+    pub(crate) fn fast_forward(&mut self, blocks: u64) -> &mut Self {
+        self.app
+            .update_block(|b| b.height = b.height.checked_add(blocks).unwrap());
+
+        self
     }
 
     pub(crate) fn instantiate(
@@ -69,25 +96,23 @@ impl TestingRobot {
         self
     }
 
-    /*pub(crate) fn bond(
-            &mut self,
-            funds: &[Coin],
-            response: impl Fn(Result<AppResponse, anyhow::Error>),
-        ) -> &mut Self {
-            let msg = ExecuteMsg::Bond {
-                asset: funds[0].amount,
-            };
+    pub(crate) fn bond(
+        &mut self,
+        sender: Addr,
+        asset: Asset,
+        funds: &[Coin],
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Bond { asset };
 
-            response(self.app.execute_contract(
-                self.sender.clone(),
-                self.whale_lair_addr.clone(),
-                &msg,
-                funds,
-            ));
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, funds),
+        );
 
-            self
-        }
-    */
+        self
+    }
+
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
@@ -151,6 +176,53 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn query_weight(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
+    ) -> &mut Self {
+        let bonding_weight_response: BondingWeightResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Weight { address })
+            .unwrap();
+
+        response(Ok((self, bonding_weight_response)));
+
+        self
+    }
+
+    pub(crate) fn query_bonded(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
+    ) -> &mut Self {
+        let bonded_response: BondedResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address })
+            .unwrap();
+
+        response(Ok((self, bonded_response)));
+
+        self
+    }
+
+    pub(crate) fn query_bonded_err(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, StdResult<BondedResponse>)>),
+    ) -> &mut Self {
+        let res = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address });
+
+        response(Ok((self, res)));
+
+        self
+    }
 }
 
 /// assertions
@@ -170,5 +242,26 @@ impl TestingRobot {
         });
 
         self
+    }
+
+    pub(crate) fn assert_bonded_response(
+        &mut self,
+        address: String,
+        expected: BondedResponse,
+    ) -> &mut Self {
+        self.query_bonded(address, |res| {
+            let bonded_response = res.unwrap().1;
+            assert_eq!(bonded_response, expected);
+        })
+    }
+    pub(crate) fn assert_bonding_weight_response(
+        &mut self,
+        address: String,
+        expected: BondingWeightResponse,
+    ) -> &mut Self {
+        self.query_weight(address, |res| {
+            let bonding_weight_response = res.unwrap().1;
+            assert_eq!(bonding_weight_response, expected);
+        })
     }
 }

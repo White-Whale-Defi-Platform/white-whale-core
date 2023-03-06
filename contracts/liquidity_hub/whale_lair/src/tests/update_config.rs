@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr, coin, coins, Uint128};
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
 };
+use cosmwasm_std::{coin, coins, Addr, Uint128};
 
 use white_whale::whale_lair::{AssetInfo, Config};
 
-use crate::ContractError;
 use crate::tests::robot::TestingRobot;
+use crate::ContractError;
 
 #[test]
 fn test_update_config_successfully() {
@@ -79,7 +79,6 @@ fn test_update_config_successfully() {
 #[test]
 fn test_update_config_unsuccessfully() {
     let mut robot = TestingRobot::default();
-    let owner = robot.sender.clone();
 
     robot
         .instantiate(

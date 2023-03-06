@@ -30,7 +30,7 @@ pub(crate) fn bond(
         || !bonding_assets.iter().any(|asset_info| {
             let d = match asset_info {
                 AssetInfo::NativeToken { denom } => denom.clone(),
-                AssetInfo::Token { .. } => String::new(),
+                AssetInfo::Token { .. } => String::new(), //shouldn't reach this point
             };
             d == denom
         })
@@ -43,10 +43,19 @@ pub(crate) fn bond(
         .may_load(deps.storage)?
         .unwrap_or_default();
 
+    if bond == Bond::default() {
+        bond = Bond {
+            asset: Asset {
+                amount: Uint128::zero(),
+                ..asset.clone()
+            },
+            ..bond
+        };
+    }
+
     // update local values
     bond = update_local_weight(&mut deps, info.sender.clone(), block_height, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
-    bond.asset.info = asset.info.clone();
     BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
 
     // update global values
