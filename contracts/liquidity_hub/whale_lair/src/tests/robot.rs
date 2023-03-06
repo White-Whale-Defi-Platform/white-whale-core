@@ -276,6 +276,8 @@ impl TestingRobot {
         &mut self,
         address: String,
         denom: String,
+        start_after: Option<u64>,
+        limit: Option<u8>,
         response: impl Fn(StdResult<(&mut Self, UnbondingResponse)>),
     ) -> &mut Self {
         let unbonding_response: UnbondingResponse = self
@@ -286,8 +288,8 @@ impl TestingRobot {
                 &QueryMsg::Unbonding {
                     address,
                     denom,
-                    start_after: None,
-                    limit: None,
+                    start_after,
+                    limit,
                 },
             )
             .unwrap();
@@ -320,14 +322,6 @@ impl TestingRobot {
 
 /// assertions
 impl TestingRobot {
-    pub(crate) fn assert_error(
-        &mut self,
-        found: anyhow::Error,
-        expected: ContractError,
-    ) -> &mut Self {
-        self
-    }
-
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {
             let config = res.unwrap().1;
@@ -365,7 +359,7 @@ impl TestingRobot {
         denom: String,
         expected: UnbondingResponse,
     ) -> &mut Self {
-        self.query_unbonding(address, denom, |res| {
+        self.query_unbonding(address, denom, None, None, |res| {
             let unbonding_response = res.unwrap().1;
             assert_eq!(unbonding_response, expected);
         })

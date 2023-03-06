@@ -13,7 +13,7 @@ pub enum ContractError {
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
-    #[error("The asset sent don't match the asset expected. Please check the denom and amount.")]
+    #[error("The asset sent doesn't match the asset expected. Please check the denom and amount.")]
     AssetMismatch {},
 
     #[error("The amount of tokens to unbond is greater than the amount of tokens bonded.")]

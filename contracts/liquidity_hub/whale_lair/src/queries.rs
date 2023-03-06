@@ -1,4 +1,5 @@
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
+use cw_storage_plus::Bound;
 
 use white_whale::whale_lair::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
@@ -48,17 +49,16 @@ pub(crate) fn query_unbonding(
     deps: Deps,
     address: String,
     denom: String,
-    _start_after: Option<u64>,
+    start_after: Option<u64>,
     limit: Option<u8>,
 ) -> StdResult<UnbondingResponse> {
     let address = deps.api.addr_validate(&address)?;
-
     let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).min(MAX_PAGE_LIMIT) as usize;
-    //let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
+    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
     let unbonding = UNBOND
         .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
-        .range(deps.storage, None, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             let (_, bond) = item?;
@@ -74,6 +74,14 @@ pub(crate) fn query_unbonding(
     Ok(UnbondingResponse {
         total_amount: unbonding_amount,
         unbonding_requests: unbonding,
+    })
+}
+
+fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
+    start_after.map(|block_height| {
+        let mut v: Vec<u8> = block_height.to_be_bytes().to_vec();
+        v.push(0);
+        v
     })
 }
 
