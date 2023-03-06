@@ -79,7 +79,8 @@ pub(crate) fn query_unbonding(
     })
 }
 
-/// Queries the amount of unbonding tokens of the specified address that have passed the unbonding period.
+/// Queries the amount of unbonding tokens of the specified address that have passed the
+/// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
     deps: Deps,
     block_height: u64,
@@ -93,7 +94,7 @@ pub(crate) fn query_withdrawable(
         .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
-    let mut claimable_amount = Uint128::zero();
+    let mut withdrawable_amount = Uint128::zero();
     for (_, bond) in unbonding? {
         if block_height
             >= bond
@@ -101,11 +102,13 @@ pub(crate) fn query_withdrawable(
                 .checked_add(config.unbonding_period)
                 .ok_or_else(|| StdError::generic_err("Invalid block height"))?
         {
-            claimable_amount = claimable_amount.checked_add(bond.asset.amount)?;
+            withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
     }
 
-    Ok(WithdrawableResponse { claimable_amount })
+    Ok(WithdrawableResponse {
+        withdrawable_amount,
+    })
 }
 
 /// Queries the current weight of the given address.

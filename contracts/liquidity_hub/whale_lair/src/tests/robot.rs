@@ -8,7 +8,7 @@ use serde::de::StdError;
 
 use white_whale::whale_lair::{
     Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
-    QueryMsg, UnbondingResponse,
+    QueryMsg, UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
@@ -296,6 +296,26 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn query_withdrawable(
+        &mut self,
+        address: String,
+        denom: String,
+        response: impl Fn(StdResult<(&mut Self, WithdrawableResponse)>),
+    ) -> &mut Self {
+        let withdrawable_response: WithdrawableResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.whale_lair_addr,
+                &QueryMsg::Withdrawable { address, denom },
+            )
+            .unwrap();
+
+        response(Ok((self, withdrawable_response)));
+
+        self
+    }
 }
 
 /// assertions
@@ -348,6 +368,18 @@ impl TestingRobot {
         self.query_unbonding(address, denom, |res| {
             let unbonding_response = res.unwrap().1;
             assert_eq!(unbonding_response, expected);
+        })
+    }
+
+    pub(crate) fn assert_withdrawable_response(
+        &mut self,
+        address: String,
+        denom: String,
+        expected: WithdrawableResponse,
+    ) -> &mut Self {
+        self.query_withdrawable(address, denom, |res| {
+            let withdrawable_response = res.unwrap().1;
+            assert_eq!(withdrawable_response, expected);
         })
     }
 }

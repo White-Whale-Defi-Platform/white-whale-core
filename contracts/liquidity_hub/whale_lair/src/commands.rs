@@ -165,6 +165,10 @@ pub(crate) fn withdraw(
         }
     }
 
+    if refund_amount == Uint128::zero() {
+        return Err(ContractError::NothingToWithdraw {});
+    }
+
     let refund_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: address.to_string(),
         amount: vec![Coin {

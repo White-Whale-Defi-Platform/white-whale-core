@@ -166,7 +166,7 @@ pub struct UnbondingResponse {
 /// Response for the Withdrawable query
 #[cw_serde]
 pub struct WithdrawableResponse {
-    pub claimable_amount: Uint128,
+    pub withdrawable_amount: Uint128,
 }
 
 /// Response for the Weight query.

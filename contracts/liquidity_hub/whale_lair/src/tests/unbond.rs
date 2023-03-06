@@ -16,7 +16,6 @@ use crate::ContractError;
 fn test_unbond_successfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
-    let another_sender = robot.another_sender.clone();
 
     robot
         .instantiate_default()
