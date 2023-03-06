@@ -142,6 +142,199 @@ fn test_unbond_successfully() {
 }
 
 #[test]
+fn test_unbonding_query_pagination() {
+    let mut robot = TestingRobot::default();
+    let sender = robot.sender.clone();
+
+    robot
+        .instantiate_default()
+        .bond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            &coins(1_000u128, "ampWHALE"),
+            |res| {},
+        )
+        .fast_forward(10u64)
+        .unbond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(100u128),
+            },
+            |res| {},
+        )
+        .fast_forward(10u64)
+        .unbond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(100u128),
+            },
+            |res| {},
+        )
+        .fast_forward(10u64)
+        .unbond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(100u128),
+            },
+            |res| {},
+        )
+        .fast_forward(10u64)
+        .unbond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(100u128),
+            },
+            |res| {},
+        )
+        .fast_forward(10u64)
+        .query_unbonding(
+            sender.clone().to_string(),
+            "ampWHALE".to_string(),
+            None,
+            None,
+            |res| {
+                assert_eq!(
+                    res.unwrap().1,
+                    UnbondingResponse {
+                        total_amount: Uint128::new(400u128),
+                        unbonding_requests: vec![
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12355,
+                                weight: Uint128::zero(),
+                            },
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12365,
+                                weight: Uint128::zero(),
+                            },
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12375,
+                                weight: Uint128::zero(),
+                            },
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12385,
+                                weight: Uint128::zero(),
+                            },
+                        ],
+                    }
+                )
+            },
+        )
+        .query_unbonding(
+            sender.clone().to_string(),
+            "ampWHALE".to_string(),
+            None,
+            Some(2u8),
+            |res| {
+                assert_eq!(
+                    res.unwrap().1,
+                    UnbondingResponse {
+                        total_amount: Uint128::new(200u128),
+                        unbonding_requests: vec![
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12355,
+                                weight: Uint128::zero(),
+                            },
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12365,
+                                weight: Uint128::zero(),
+                            },
+                        ],
+                    }
+                )
+            },
+        )
+        .query_unbonding(
+            sender.clone().to_string(),
+            "ampWHALE".to_string(),
+            Some(12365u64), // start after the block height of the last item in the previous query
+            Some(2u8),
+            |res| {
+                assert_eq!(
+                    res.unwrap().1,
+                    UnbondingResponse {
+                        total_amount: Uint128::new(200u128),
+                        unbonding_requests: vec![
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12375,
+                                weight: Uint128::zero(),
+                            },
+                            Bond {
+                                asset: Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ampWHALE".to_string()
+                                    },
+                                    amount: Uint128::new(100u128),
+                                },
+                                block_height: 12385,
+                                weight: Uint128::zero(),
+                            },
+                        ],
+                    }
+                )
+            },
+        );
+}
+
+#[test]
 fn test_unbond_unsuccessfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();

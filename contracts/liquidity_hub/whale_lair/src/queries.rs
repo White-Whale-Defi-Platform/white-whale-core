@@ -1,4 +1,5 @@
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
+use cw_storage_plus::Bound;
 
 use white_whale::whale_lair::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
@@ -16,30 +17,28 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
 
-    let bonds: StdResult<Vec<_>> = BOND
+    let bonds: Vec<Bond> = BOND
         .prefix(&address)
         .range(deps.storage, None, None, Order::Ascending)
         .take(BONDING_ASSETS_LIMIT as usize)
-        .collect();
-
-    if let Ok(bonds) = bonds {
-        let mut total_bonded = Uint128::zero();
-        let mut bonded_assets = vec![];
-
-        for (_, bond) in bonds {
-            total_bonded = total_bonded.checked_add(bond.asset.amount)?;
-            bonded_assets.push(bond.asset);
-        }
-
-        Ok(BondedResponse {
-            total_bonded,
-            bonded_assets,
+        .map(|item| {
+            let (_, bond) = item?;
+            Ok(bond)
         })
-    } else {
-        Err(StdError::generic_err(format!(
-            "No bonded assets found for {address}"
-        )))
+        .collect::<StdResult<Vec<Bond>>>()?;
+
+    let mut total_bonded = Uint128::zero();
+    let mut bonded_assets = vec![];
+
+    for bond in bonds {
+        total_bonded = total_bonded.checked_add(bond.asset.amount)?;
+        bonded_assets.push(bond.asset);
     }
+
+    Ok(BondedResponse {
+        total_bonded,
+        bonded_assets,
+    })
 }
 
 pub const MAX_PAGE_LIMIT: u8 = 30u8;
@@ -50,17 +49,16 @@ pub(crate) fn query_unbonding(
     deps: Deps,
     address: String,
     denom: String,
-    _start_after: Option<u64>,
+    start_after: Option<u64>,
     limit: Option<u8>,
 ) -> StdResult<UnbondingResponse> {
     let address = deps.api.addr_validate(&address)?;
-
     let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).min(MAX_PAGE_LIMIT) as usize;
-    //let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
+    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
     let unbonding = UNBOND
         .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
-        .range(deps.storage, None, None, Order::Ascending)
+        .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             let (_, bond) = item?;
@@ -76,6 +74,14 @@ pub(crate) fn query_unbonding(
     Ok(UnbondingResponse {
         total_amount: unbonding_amount,
         unbonding_requests: unbonding,
+    })
+}
+
+fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
+    start_after.map(|block_height| {
+        let mut v: Vec<u8> = block_height.to_be_bytes().to_vec();
+        v.push(0);
+        v
     })
 }
 
