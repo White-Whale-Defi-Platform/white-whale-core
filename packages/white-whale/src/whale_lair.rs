@@ -1,7 +1,7 @@
 use std::fmt;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 
 #[cw_serde]
 pub struct Config {
@@ -122,9 +122,9 @@ pub enum QueryMsg {
     #[returns(Config)]
     Config {},
 
-    /// Returns the amount of tokens that have been bonded of the given denom by the specified address.
+    /// Returns the amount of tokens that have been bonded by the specified address.
     #[returns(BondedResponse)]
-    Bonded { address: String, denom: String },
+    Bonded { address: String },
 
     /// Returns the amount of tokens of the given denom that are been unbonded by the specified address.
     /// Allows pagination with start_after and limit.
@@ -152,7 +152,8 @@ pub struct MigrateMsg {}
 /// Response for the Bonded query
 #[cw_serde]
 pub struct BondedResponse {
-    pub bonded: Uint128,
+    pub total_bonded: Uint128,
+    pub bonded_assets: Vec<Asset>,
 }
 
 /// Response for the Unstaking query
@@ -174,5 +175,6 @@ pub struct BondingWeightResponse {
     pub address: String,
     pub weight: Uint128,
     pub global_weight: Uint128,
-    pub share: Uint128,
+    pub share: Decimal,
+    pub block_height: u64,
 }

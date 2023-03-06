@@ -87,7 +87,7 @@ pub(crate) fn unbond(
     let mut unbond = BOND
         .key((&info.sender, &denom))
         .may_load(deps.storage)?
-        .unwrap_or_default();
+        .expect("Nothing to unbond");
 
     if unbond.asset.amount < asset.amount {
         return Err(ContractError::InsufficientBond {});

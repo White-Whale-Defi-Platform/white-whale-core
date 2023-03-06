@@ -17,19 +17,7 @@ fn test_bond_successfully() {
     let another_sender = robot.another_sender.clone();
 
     robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
-            &vec![],
-        )
+        .instantiate_default()
         .bond(
             sender.clone(),
             Asset {
@@ -147,19 +135,7 @@ fn test_bond_wrong_asset() {
     let sender = robot.sender.clone();
 
     robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
-            &vec![],
-        )
+        .instantiate_default()
         .bond(
             sender.clone(),
             Asset {

@@ -65,6 +65,22 @@ impl TestingRobot {
         self
     }
 
+    pub(crate) fn instantiate_default(&mut self) -> &mut Self {
+        self.instantiate(
+            1_000u64,
+            1u8,
+            vec![
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+            ],
+            &vec![],
+        )
+    }
+
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: u64,

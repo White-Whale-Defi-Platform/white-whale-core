@@ -14,19 +14,7 @@ fn test_update_config_successfully() {
     let owner = robot.sender.clone();
 
     robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
-            &vec![],
-        )
+        .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
@@ -81,19 +69,7 @@ fn test_update_config_unsuccessfully() {
     let mut robot = TestingRobot::default();
 
     robot
-        .instantiate(
-            1_000u64,
-            1u8,
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
-            &vec![],
-        )
+        .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
