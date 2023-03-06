@@ -34,6 +34,9 @@ pub enum ContractError {
     #[error("Nothing to unbond.")]
     NothingToUnbond {},
 
+    #[error("Nothing to withdraw.")]
+    NothingToWithdraw {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,

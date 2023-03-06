@@ -208,5 +208,19 @@ fn test_bond_wrong_asset() {
                 println!("{:?}", res.unwrap_err().root_cause());
                 //assert error is InvalidBondingAsset
             },
+        )
+        .bond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            &vec![],
+            |res| {
+                println!("{:?}", res.unwrap_err().root_cause());
+                //assert error is AssetMismatch
+            },
         );
 }

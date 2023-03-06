@@ -8,7 +8,7 @@ use serde::de::StdError;
 
 use white_whale::whale_lair::{
     Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
-    QueryMsg,
+    QueryMsg, UnbondingResponse,
 };
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
@@ -129,6 +129,38 @@ impl TestingRobot {
         self
     }
 
+    pub(crate) fn unbond(
+        &mut self,
+        sender: Addr,
+        asset: Asset,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Unbond { asset };
+
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+        );
+
+        self
+    }
+
+    pub(crate) fn withdraw(
+        &mut self,
+        sender: Addr,
+        denom: String,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Withdraw { denom };
+
+        response(
+            self.app
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+        );
+
+        self
+    }
+
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
@@ -239,6 +271,31 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn query_unbonding(
+        &mut self,
+        address: String,
+        denom: String,
+        response: impl Fn(StdResult<(&mut Self, UnbondingResponse)>),
+    ) -> &mut Self {
+        let unbonding_response: UnbondingResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.whale_lair_addr,
+                &QueryMsg::Unbonding {
+                    address,
+                    denom,
+                    start_after: None,
+                    limit: None,
+                },
+            )
+            .unwrap();
+
+        response(Ok((self, unbonding_response)));
+
+        self
+    }
 }
 
 /// assertions
@@ -270,6 +327,7 @@ impl TestingRobot {
             assert_eq!(bonded_response, expected);
         })
     }
+
     pub(crate) fn assert_bonding_weight_response(
         &mut self,
         address: String,
@@ -278,6 +336,18 @@ impl TestingRobot {
         self.query_weight(address, |res| {
             let bonding_weight_response = res.unwrap().1;
             assert_eq!(bonding_weight_response, expected);
+        })
+    }
+
+    pub(crate) fn assert_unbonding_response(
+        &mut self,
+        address: String,
+        denom: String,
+        expected: UnbondingResponse,
+    ) -> &mut Self {
+        self.query_unbonding(address, denom, |res| {
+            let unbonding_response = res.unwrap().1;
+            assert_eq!(unbonding_response, expected);
         })
     }
 }

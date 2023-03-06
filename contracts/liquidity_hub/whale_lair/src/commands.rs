@@ -83,48 +83,47 @@ pub(crate) fn unbond(
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
     };
 
-    // check if the address has enough bond
-    let mut unbond = BOND
-        .key((&info.sender, &denom))
-        .may_load(deps.storage)?
-        .expect("Nothing to unbond");
+    if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
+        // check if the address has enough bond
+        if unbond.asset.amount < asset.amount {
+            return Err(ContractError::InsufficientBond {});
+        }
 
-    if unbond.asset.amount < asset.amount {
-        return Err(ContractError::InsufficientBond {});
+        // update local values, decrease the bond
+        unbond = update_local_weight(&mut deps, info.sender.clone(), block_height, unbond.clone())?;
+        let weight_slash = unbond
+            .weight
+            .checked_mul(asset.amount.checked_div(unbond.asset.amount)?)?;
+        unbond.asset.amount = unbond.asset.amount.checked_sub(asset.amount)?;
+        unbond.weight = unbond.weight.checked_sub(weight_slash)?;
+        BOND.save(deps.storage, (&info.sender, &denom), &unbond)?;
+
+        // record the unbonding
+        UNBOND.save(
+            deps.storage,
+            (&info.sender, &denom, block_height),
+            &Bond {
+                asset: asset.clone(),
+                weight: Uint128::zero(),
+                block_height,
+            },
+        )?;
+
+        // update global values
+        let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+        global_index = update_global_weight(&mut deps, block_height, global_index)?;
+        global_index.bond_amount = global_index.bond_amount.checked_sub(asset.amount)?;
+        global_index.weight = global_index.weight.checked_sub(weight_slash)?;
+        GLOBAL.save(deps.storage, &global_index)?;
+
+        Ok(Response::default().add_attributes(vec![
+            ("action", "unbond".to_string()),
+            ("address", info.sender.to_string()),
+            ("asset", asset.to_string()),
+        ]))
+    } else {
+        return Err(ContractError::NothingToUnbond {});
     }
-
-    // update local values, decrease the bond
-    unbond = update_local_weight(&mut deps, info.sender.clone(), block_height, unbond.clone())?;
-    let weight_slash = unbond
-        .weight
-        .checked_mul(asset.amount.checked_div(unbond.asset.amount)?)?;
-    unbond.asset.amount = unbond.asset.amount.checked_sub(asset.amount)?;
-    unbond.weight = unbond.weight.checked_sub(weight_slash)?;
-    BOND.save(deps.storage, (&info.sender, &denom), &unbond)?;
-
-    // record the unbonding
-    UNBOND.save(
-        deps.storage,
-        (&info.sender, &denom, block_height),
-        &Bond {
-            asset: asset.clone(),
-            weight: Uint128::zero(),
-            block_height,
-        },
-    )?;
-
-    // update global values
-    let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-    global_index = update_global_weight(&mut deps, block_height, global_index)?;
-    global_index.bond_amount = global_index.bond_amount.checked_sub(asset.amount)?;
-    global_index.weight = global_index.weight.checked_sub(weight_slash)?;
-    GLOBAL.save(deps.storage, &global_index)?;
-
-    Ok(Response::default().add_attributes(vec![
-        ("action", "unbond".to_string()),
-        ("address", info.sender.to_string()),
-        ("asset", asset.to_string()),
-    ]))
 }
 
 /// Withdraws the rewards for the provided address
@@ -145,7 +144,7 @@ pub(crate) fn withdraw(
     let mut refund_amount = Uint128::zero();
 
     if unbondings.is_empty() {
-        return Err(ContractError::NothingToUnbond {});
+        return Err(ContractError::NothingToWithdraw {});
     }
 
     for unbonding in unbondings {
