@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
-use pool_network::asset::AssetInfo;
+use pool_network::asset::{Asset, AssetInfo};
 
 #[cw_serde]
 pub struct Config {
@@ -9,7 +9,13 @@ pub struct Config {
     pub pool_router: Addr,
 }
 
+#[cw_serde]
+pub struct Fees {
+    pub fees: Vec<Asset>,
+}
+
 pub type ConfigResponse = Config;
+pub type FeesResponse = Fees;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");

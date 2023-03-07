@@ -7,7 +7,7 @@ use vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
 use vault_network::vault_factory::VaultsResponse;
 
 use crate::msg::{ContractType, FactoryType, FeesFor};
-use crate::state::{ConfigResponse, CONFIG};
+use crate::state::{ConfigResponse, FeesResponse, CONFIG,};
 
 /// Queries the [Config], which contains the owner address
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
@@ -16,7 +16,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 /// Queries the fees in [Asset] for contracts or Factories defined by [FeesFor]
-pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdResult<Vec<Asset>> {
+pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdResult<FeesResponse> {
     let mut fees: Vec<Asset> = Vec::new();
 
     match query_fees_for {
@@ -65,7 +65,7 @@ pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdRes
             acc
         });
 
-    Ok(fees)
+    Ok(FeesResponse{fees})
 }
 
 /// Queries the fees for a given vault

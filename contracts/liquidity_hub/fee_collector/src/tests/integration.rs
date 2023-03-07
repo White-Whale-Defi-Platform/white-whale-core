@@ -12,6 +12,7 @@ use pool_network::router::{SwapOperation, SwapRoute};
 use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
 
+
 use crate::msg::ExecuteMsg::{AggregateFees, CollectFees, UpdateConfig};
 use crate::msg::{Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg};
 use crate::tests::common_integration::{
@@ -20,6 +21,8 @@ use crate::tests::common_integration::{
     store_pool_factory_code, store_pool_router_code, store_token_code, store_vault_code,
     store_vault_factory_code,
 };
+use crate::state::FeesResponse;
+
 
 #[test]
 fn collect_all_factories_cw20_fees_successfully() {
@@ -661,7 +664,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     }
 
     // Verify fees for a pool via the collector's query, should be zero at this stage
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -676,9 +679,10 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 2usize);
-    for asset in fee_collector_fees_query {
+    assert_eq!(fees.len(), 2usize);
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 
@@ -781,7 +785,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     }
 
     // Verify fees for a pool via the collector's query, should not be zero at this stage
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -796,7 +800,9 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             },
         )
         .unwrap();
-    for asset in fee_collector_fees_query {
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
+
+    for asset in fees {
         assert!(asset.amount > Uint128::zero());
     }
 
@@ -889,7 +895,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     assert_eq!(tokens_in_filtered_pairs.len(), 0usize);
 
     // Verify fees for a pool via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address,
@@ -904,7 +910,9 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             },
         )
         .unwrap();
-    for asset in fee_collector_fees_query {
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
+
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 }
@@ -1112,7 +1120,7 @@ fn collect_pools_native_fees_successfully() {
     }
 
     // Verify fees for the factory via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -1128,9 +1136,11 @@ fn collect_pools_native_fees_successfully() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 4usize);
-    for asset in fee_collector_fees_query {
+
+    assert_eq!(fees.len(), 4usize);
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 
@@ -1238,7 +1248,7 @@ fn collect_pools_native_fees_successfully() {
     .unwrap();
 
     //Query fees for the factory via the collector's query, for all time
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -1254,6 +1264,7 @@ fn collect_pools_native_fees_successfully() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
     // Make sure the fee collector's balance for the assets in which fees were collected increased,
     // and matches the amount the pool reported to have collected
@@ -1270,7 +1281,7 @@ fn collect_pools_native_fees_successfully() {
             assert!(balance_res.amount > Uint128::zero());
             assert_eq!(balance_res.amount, asset.amount);
 
-            let native_asset = fee_collector_fees_query
+            let native_asset = fees
                 .iter()
                 .find(|asset| asset.is_native_token())
                 .unwrap();
@@ -1288,7 +1299,7 @@ fn collect_pools_native_fees_successfully() {
             assert!(balance_res.balance > Uint128::zero());
             assert_eq!(balance_res.balance, asset.amount);
 
-            let asset_from_query = fee_collector_fees_query
+            let asset_from_query = fees
                 .iter()
                 .find(|&a| a.info == asset.info)
                 .unwrap();
@@ -1319,7 +1330,7 @@ fn collect_pools_native_fees_successfully() {
     }
 
     // Verify protocol fees in the pools are zero via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -1335,8 +1346,9 @@ fn collect_pools_native_fees_successfully() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    for asset in fee_collector_fees_query {
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 
@@ -1947,7 +1959,7 @@ fn collect_fees_for_vault() {
     let computed_protocol_fees = flash_loan_fee.compute(Uint256::from(flash_loan_value));
 
     // Verify no fees have been generated via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -1964,8 +1976,10 @@ fn collect_fees_for_vault() {
         )
         .unwrap();
 
-    assert_eq!(fee_collector_fees_query.len(), 3usize);
-    for asset in fee_collector_fees_query {
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
+
+    assert_eq!(fees.len(), 3usize);
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 
@@ -2057,7 +2071,7 @@ fn collect_fees_for_vault() {
     }
 
     // Verify fees via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -2073,15 +2087,16 @@ fn collect_fees_for_vault() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 3usize);
-    for asset in fee_collector_fees_query {
+    assert_eq!(fees.len(), 3usize);
+    for asset in fees {
         // zero, as it was just collected
         assert_eq!(asset.amount, Uint128::zero());
     }
 
     // Verify all time fees via the collector's query for a single vault
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -2096,15 +2111,16 @@ fn collect_fees_for_vault() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 1usize);
+    assert_eq!(fees.len(), 1usize);
     let expected_asset = Asset {
         info: AssetInfo::NativeToken {
             denom: "uatom".to_string(),
         },
         amount: Uint128::new(16666),
     };
-    assert_eq!(fee_collector_fees_query[0], expected_asset);
+    assert_eq!(fees[0], expected_asset);
 }
 
 #[test]
@@ -2308,7 +2324,7 @@ fn aggregate_fees_for_vault() {
     let computed_protocol_fees = flash_loan_fee.compute(Uint256::from(flash_loan_value));
 
     // Verify no fees have been generated via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -2324,9 +2340,10 @@ fn aggregate_fees_for_vault() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 2usize);
-    for asset in fee_collector_fees_query {
+    assert_eq!(fees.len(), 2usize);
+    for asset in fees {
         assert_eq!(asset.amount, Uint128::zero());
     }
 
@@ -2418,7 +2435,7 @@ fn aggregate_fees_for_vault() {
     }
 
     // Verify fees via the collector's query
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -2434,15 +2451,16 @@ fn aggregate_fees_for_vault() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 2usize);
-    for asset in fee_collector_fees_query {
+    assert_eq!(fees.len(), 2usize);
+    for asset in fees {
         // zero, as it was just collected
         assert_eq!(asset.amount, Uint128::zero());
     }
 
     // Verify all time fees via the collector's query for a single vault
-    let fee_collector_fees_query: Vec<Asset> = app
+    let fee_collector_fees_query: FeesResponse = app
         .wrap()
         .query_wasm_smart(
             fee_collector_address.clone(),
@@ -2457,15 +2475,17 @@ fn aggregate_fees_for_vault() {
             },
         )
         .unwrap();
+    let fees: Vec<Asset> = fee_collector_fees_query.fees;
 
-    assert_eq!(fee_collector_fees_query.len(), 1usize);
+
+    assert_eq!(fees.len(), 1usize);
     let expected_asset = Asset {
         info: AssetInfo::NativeToken {
             denom: "uatom".to_string(),
         },
         amount: Uint128::new(16666),
     };
-    assert_eq!(fee_collector_fees_query[0], expected_asset);
+    assert_eq!(fees[0], expected_asset);
 
     // Try aggregating the fees without adding a swap route, this should do nothing as assets without
     // a swap route are skipped and not aggregated

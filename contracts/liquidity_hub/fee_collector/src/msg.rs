@@ -1,8 +1,8 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use pool_network::asset::{Asset, AssetInfo};
+use pool_network::asset::{AssetInfo};
 
-use crate::state::ConfigResponse;
+use crate::state::{ConfigResponse,FeesResponse};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -42,7 +42,7 @@ pub enum QueryMsg {
     #[returns(ConfigResponse)]
     Config {},
     /// Queries fees collected by a given factory's children or individual contracts
-    #[returns(Vec<Asset>)]
+    #[returns(FeesResponse)]
     Fees {
         query_fees_for: FeesFor,
         all_time: Option<bool>,
