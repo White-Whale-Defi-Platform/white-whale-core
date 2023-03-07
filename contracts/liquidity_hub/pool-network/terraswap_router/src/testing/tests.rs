@@ -15,7 +15,7 @@ use pool_network::router::{
 use crate::contract::{execute, instantiate, migrate, query};
 use crate::error::ContractError;
 use crate::operations::asset_into_swap_msg;
-use crate::state::SWAP_ROUTES;
+use crate::state::{SWAP_ROUTES, RoutesResponse};
 
 #[test]
 fn proper_initialization() {
@@ -1143,9 +1143,9 @@ fn add_swap_routes() {
         ask_asset_info: swap_route_1.ask_asset_info.clone(),
     };
 
-    let res: Vec<SwapOperation> =
+    let res: RoutesResponse =
         from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
-    assert_eq!(res, swap_route_1.swap_operations);
+    assert_eq!(res.routes, swap_route_1.swap_operations);
 }
 
 #[test]

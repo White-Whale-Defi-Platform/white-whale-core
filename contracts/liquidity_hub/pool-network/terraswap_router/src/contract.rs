@@ -21,7 +21,7 @@ use pool_network::router::{
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::operations::execute_swap_operation;
-use crate::state::{Config, CONFIG, SWAP_ROUTES};
+use crate::state::{Config, CONFIG, SWAP_ROUTES, RoutesResponse};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-pool_router";
@@ -415,18 +415,22 @@ fn get_swap_route(
     deps: Deps,
     offer_asset_info: AssetInfo,
     ask_asset_info: AssetInfo,
-) -> Result<Vec<SwapOperation>, ContractError> {
+) -> Result<RoutesResponse, ContractError> {
     let swap_route_key = SWAP_ROUTES.key((
         offer_asset_info.clone().get_label(&deps)?.as_str(),
         ask_asset_info.clone().get_label(&deps)?.as_str(),
     ));
 
-    swap_route_key
-        .load(deps.storage)
-        .map_err(|_| ContractError::NoSwapRouteForAssets {
+    let routes = swap_route_key
+        .load(deps.storage);
+
+    if routes.is_err() {
+        return Err(ContractError::NoSwapRouteForAssets {
             offer_asset: offer_asset_info.to_string(),
-            ask_asset: ask_asset_info.to_string(),
-        })
+            ask_asset: ask_asset_info.to_string()
+        });
+    }
+    Ok(RoutesResponse{routes: routes.unwrap()})
 }
 
 fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
