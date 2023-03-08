@@ -476,7 +476,7 @@ fn collect_all_factories_cw20_fees_successfully() {
         .query_wasm_smart(
             &cw20_tokens[0],
             &cw20::Cw20QueryMsg::Balance {
-                address: fee_collector_address.clone().to_string(),
+                address: fee_collector_address.to_string(),
             },
         )
         .unwrap();
@@ -1118,7 +1118,7 @@ fn collect_pools_native_fees_successfully() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: pool_factory_address.clone().to_string(),
+                    factory_addr: pool_factory_address.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
                         limit: None,
@@ -1244,7 +1244,7 @@ fn collect_pools_native_fees_successfully() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: pool_factory_address.clone().to_string(),
+                    factory_addr: pool_factory_address.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
                         limit: None,
@@ -1325,7 +1325,7 @@ fn collect_pools_native_fees_successfully() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: pool_factory_address.clone().to_string(),
+                    factory_addr: pool_factory_address.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
                         limit: None,
@@ -1343,7 +1343,7 @@ fn collect_pools_native_fees_successfully() {
     // Aggregate the fees collected by the fee collector
     // Add swap routes to the router to aggregate fees
     for cw20_token in cw20_tokens.clone() {
-        if cw20_token.to_string() == ask_asset.to_string() {
+        if cw20_token == ask_asset.to_string() {
             continue;
         }
 
@@ -1399,7 +1399,7 @@ fn collect_pools_native_fees_successfully() {
 
     app.execute_contract(
         creator.sender.clone(),
-        pool_router_address.clone(),
+        pool_router_address,
         &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
         &[],
     )
@@ -1455,7 +1455,7 @@ fn collect_pools_native_fees_successfully() {
         .query_wasm_smart(
             &cw20_tokens[0],
             &cw20::Cw20QueryMsg::Balance {
-                address: fee_collector_address.clone().to_string(),
+                address: fee_collector_address.to_string(),
             },
         )
         .unwrap();
@@ -1953,7 +1953,7 @@ fn collect_fees_for_vault() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: vault_factory_address.clone().to_string(),
+                    factory_addr: vault_factory_address.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
                         limit: None,
@@ -2063,7 +2063,7 @@ fn collect_fees_for_vault() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: vault_factory_address.clone().to_string(),
+                    factory_addr: vault_factory_address.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
                         limit: None,
@@ -2084,7 +2084,7 @@ fn collect_fees_for_vault() {
     let fee_collector_fees_query: Vec<Asset> = app
         .wrap()
         .query_wasm_smart(
-            fee_collector_address.clone(),
+            fee_collector_address,
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Contracts {
                     contracts: vec![Contract {
@@ -2314,7 +2314,7 @@ fn aggregate_fees_for_vault() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: vault_factory_address.clone().to_string(),
+                    factory_addr: vault_factory_address.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
                         limit: None,
@@ -2424,7 +2424,7 @@ fn aggregate_fees_for_vault() {
             fee_collector_address.clone(),
             &QueryMsg::Fees {
                 query_fees_for: FeesFor::Factory {
-                    factory_addr: vault_factory_address.clone().to_string(),
+                    factory_addr: vault_factory_address.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
                         limit: None,
@@ -2511,7 +2511,7 @@ fn aggregate_fees_for_vault() {
     let res = app
         .execute_contract(
             creator.sender.clone(),
-            pool_factory_address.clone(),
+            pool_factory_address,
             &CreatePair {
                 asset_infos: [
                     AssetInfo::NativeToken {
@@ -2553,7 +2553,7 @@ fn aggregate_fees_for_vault() {
     // provide liquidity to the pool
     app.execute_contract(
         creator.sender.clone(),
-        pool_address.clone(),
+        pool_address,
         &pool_network::pair::ExecuteMsg::ProvideLiquidity {
             assets: [
                 Asset {
@@ -2603,7 +2603,7 @@ fn aggregate_fees_for_vault() {
 
     app.execute_contract(
         creator.sender.clone(),
-        pool_router_address.clone(),
+        pool_router_address,
         &pool_network::router::ExecuteMsg::AddSwapRoutes { swap_routes },
         &[],
     )
@@ -2628,7 +2628,7 @@ fn aggregate_fees_for_vault() {
     .unwrap();
 
     // verify the fees collected were aggregated
-    for native_token in native_tokens.clone() {
+    for native_token in native_tokens {
         let balance_res: Coin = app
             .wrap()
             .query_balance(

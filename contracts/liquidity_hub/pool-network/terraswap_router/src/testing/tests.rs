@@ -1290,8 +1290,8 @@ fn add_swap_routes_unauthorized() {
     };
 
     let swap_route_1 = SwapRoute {
-        offer_asset_info: offer_asset_info.clone(),
-        ask_asset_info: ask_asset_info.clone(),
+        offer_asset_info,
+        ask_asset_info,
         swap_operations: vec![
             SwapOperation::TerraSwap {
                 offer_asset_info: AssetInfo::NativeToken {
@@ -1314,7 +1314,7 @@ fn add_swap_routes_unauthorized() {
 
     // add swap route
     let msg = ExecuteMsg::AddSwapRoutes {
-        swap_routes: vec![swap_route_1.clone()],
+        swap_routes: vec![swap_route_1],
     };
 
     let error = execute(
