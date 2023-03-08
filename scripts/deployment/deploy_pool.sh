@@ -62,7 +62,7 @@ function check_decimals() {
     # the factory doesn't have the decimals for this denom, registration needs to happen before creating the pool
     add_native_decimals_msg='{"add_native_token_decimals":{"denom":"'$denom'","decimals":'$decimals'}}'
 
-    local res=$($BINARY tx wasm execute $pool_factory_addr "$add_native_decimals_msg" $TXFLAG --amount 1$DENOM --from $deployer_address)
+    local res=$($BINARY tx wasm execute $pool_factory_addr "$add_native_decimals_msg" $TXFLAG --amount 1$denom --from $deployer_address)
     echo $res
     sleep $tx_delay
   fi
