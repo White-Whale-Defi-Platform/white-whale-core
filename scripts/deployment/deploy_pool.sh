@@ -130,7 +130,7 @@ function create_pool() {
   local pool_address=$(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "pair_contract_addr").value')
   local lp_address=($(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "liquidity_token_addr").value'))
   local code_ids=($(echo $res | jq -r '.logs[0].events[] | select(.type == "instantiate").attributes[] | select(.key == "code_id").value'))
-  local label="${label::-1}"
+  local label=$(echo "${label::-1}")
 
   # Store on output file
   tmpfile=$(mktemp)
