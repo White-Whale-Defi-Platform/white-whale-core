@@ -2,11 +2,11 @@ use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
 };
 
-use terraswap::asset::AssetInfo;
-use terraswap::pair::{
+use pool_network::asset::{AssetInfo, PairType};
+use pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use terraswap::querier::query_balance;
+use pool_network::querier::query_balance;
 
 use crate::error::ContractError;
 use crate::state::{
@@ -59,7 +59,7 @@ pub fn update_pair_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(pair_addr.as_str())?.to_string(),
-            &terraswap::pair::ExecuteMsg::UpdateConfig {
+            &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
@@ -76,6 +76,7 @@ pub fn create_pair(
     env: Env,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
+    pair_type: PairType,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -121,6 +122,7 @@ pub fn create_pair(
             pair_key,
             asset_infos: raw_infos,
             asset_decimals,
+            pair_type: pair_type.clone(),
         },
     )?;
 
@@ -134,6 +136,7 @@ pub fn create_pair(
             ("action", "create_pair"),
             ("pair", &format!("{}-{}", asset0_label, asset1_label)),
             ("pair_label", pair_label.as_str()),
+            ("pair_type", pair_type.get_label()),
         ])
         .add_submessage(SubMsg {
             id: 1,
@@ -149,6 +152,7 @@ pub fn create_pair(
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
+                    pair_type,
                 })?,
             }),
             reply_on: ReplyOn::Success,

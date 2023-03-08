@@ -5,11 +5,11 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::ExecuteMsg::UpdateConfig;
-use terraswap::pair::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use pool_network::mock_querier::mock_dependencies;
+use pool_network::pair::ExecuteMsg::UpdateConfig;
+use pool_network::pair::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
+use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::fee::Fee;
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
@@ -49,6 +49,7 @@ fn proper_initialization() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -146,6 +147,7 @@ fn test_initialization_invalid_fees() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -190,6 +192,7 @@ fn can_migrate_contract() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -215,15 +218,15 @@ fn test_max_spread() {
     };
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::from_ratio(1_200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
             info: offer_asset_info.clone(),
-            amount: Uint128::from(1200000000u128),
+            amount: Uint128::from(1_200_000_000u128),
         },
         Asset {
             info: ask_asset_info.clone(),
-            amount: Uint128::from(989999u128),
+            amount: Uint128::from(989_999u128),
         },
         Uint128::zero(),
         6u8,
@@ -232,15 +235,15 @@ fn test_max_spread() {
     .unwrap_err();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200u128, 1u128)),
+        Some(Decimal::from_ratio(1_200u128, 1u128)),
         Some(Decimal::percent(1)),
         Asset {
             info: offer_asset_info.clone(),
-            amount: Uint128::from(1200000000u128),
+            amount: Uint128::from(1_200_000_000u128),
         },
         Asset {
             info: ask_asset_info.clone(),
-            amount: Uint128::from(990000u128),
+            amount: Uint128::from(990_000u128),
         },
         Uint128::zero(),
         6u8,
@@ -257,9 +260,9 @@ fn test_max_spread() {
         },
         Asset {
             info: ask_asset_info.clone(),
-            amount: Uint128::from(989999u128),
+            amount: Uint128::from(989_999u128),
         },
-        Uint128::from(10001u128),
+        Uint128::from(1_0001u128),
         6u8,
         6u8,
     )
@@ -274,9 +277,9 @@ fn test_max_spread() {
         },
         Asset {
             info: ask_asset_info,
-            amount: Uint128::from(990000u128),
+            amount: Uint128::from(990_000u128),
         },
-        Uint128::from(10000u128),
+        Uint128::from(10_000u128),
         6u8,
         6u8,
     )
@@ -413,6 +416,7 @@ fn test_update_config_unsuccessful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -497,6 +501,7 @@ fn test_update_config_successful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();

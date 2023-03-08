@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
 
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
@@ -93,7 +93,7 @@ mod tests {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use terraswap::asset::{Asset, AssetInfo};
+    use pool_network::asset::{Asset, AssetInfo};
     use vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::state::COLLECTED_PROTOCOL_FEES;
@@ -114,7 +114,7 @@ mod tests {
     fn cannot_send_from_non_liquidity_token() {
         let (res, ..) = mock_execute(
             1,
-            terraswap::asset::AssetInfo::NativeToken {
+            pool_network::asset::AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
             vault_network::vault::ExecuteMsg::Receive(vault_network::vault::Cw20ReceiveMsg {

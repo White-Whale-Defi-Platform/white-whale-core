@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
-use terraswap::asset::AssetInfo;
+use pool_network::asset::AssetInfo;
 use vault_network::{vault::InstantiateMsg, vault_factory::INSTANTIATE_VAULT_REPLY_ID};
 use white_whale::fee::VaultFee;
 
@@ -69,7 +69,7 @@ mod tests {
         testing::mock_info, to_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
     };
     use cw_multi_test::Executor;
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
     use white_whale::fee::{Fee, VaultFee};
 
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn can_create_vault() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn cannot_create_vault_unauthorized() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -271,7 +271,7 @@ mod tests {
 
     #[test]
     fn can_create_ibc_token_vault() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "ibc/4CD525F166D32B0132C095F353F4C6F033B0FF5C49141470D1EFDA1D63303D04"
                 .to_string(),
         };
@@ -316,7 +316,7 @@ mod tests {
     #[cfg(feature = "injective")]
     #[test]
     fn can_create_peggy_token_vault() {
-        let asset_info = terraswap::asset::AssetInfo::NativeToken {
+        let asset_info = pool_network::asset::AssetInfo::NativeToken {
             denom: "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5".to_string(),
         };
 

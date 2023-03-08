@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint128};
-use terraswap::asset::{Asset, AssetInfo};
+use pool_network::asset::{Asset, AssetInfo};
 use white_whale::fee::VaultFee;
 
 #[cw_serde]

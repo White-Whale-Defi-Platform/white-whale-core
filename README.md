@@ -21,7 +21,7 @@
 
 ## Getting started
 
-To get started with `migaloo-core`, please go through the [contributing guide](./CONTRIBUTING.md) to see the 
+To get started with `migaloo-core`, please go through the [contributing guide](./docs/CONTRIBUTING.md) to see the 
 different ways to contribute to the project.
 
 ## Resources

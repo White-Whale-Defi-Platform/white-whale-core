@@ -41,7 +41,7 @@ mod test {
     fn cannot_receive_from_not_liquidity_token() {
         let (mut deps, env) = mock_instantiate(
             1,
-            terraswap::asset::AssetInfo::NativeToken {
+            pool_network::asset::AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
         );

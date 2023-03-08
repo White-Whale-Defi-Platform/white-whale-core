@@ -1,4 +1,4 @@
-use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo};
+use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairType};
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
     query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
@@ -379,7 +379,7 @@ fn test_asset_info_raw_equal() {
 fn query_terraswap_pair_contract() {
     let mut deps = mock_dependencies(&[]);
 
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[(
             &"asset0000uusd".to_string(),
             &PairInfo {
@@ -394,6 +394,7 @@ fn query_terraswap_pair_contract() {
                 contract_addr: "pair0000".to_string(),
                 liquidity_token: "liquidity0000".to_string(),
                 asset_decimals: [6u8, 6u8],
+                pair_type: PairType::ConstantProduct,
             },
         )],
         &[("uusd".to_string(), 6u8)],

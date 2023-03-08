@@ -6,8 +6,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::helpers::instantiate_fees;
-use terraswap::asset::AssetInfo;
-use terraswap::pair::{Config, FeatureToggle};
+use pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use pool_network::pair::{Config, FeatureToggle};
 use white_whale::fee::Fee;
 
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
@@ -88,7 +88,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     let config = Config {
         owner: config_v110.owner,
         fee_collector_addr: config_v110.fee_collector_addr,
-        pool_fees: terraswap::pair::PoolFee {
+        pool_fees: pool_network::pair::PoolFee {
             protocol_fee: config_v110.pool_fees.protocol_fee,
             swap_fee: config_v110.pool_fees.swap_fee,
             burn_fee: Fee {
@@ -110,6 +110,45 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
         asset_info_0,
         asset_info_1,
         ALL_TIME_BURNED_FEES,
+    )?;
+
+    Ok(())
+}
+
+/// Migrate to the StableSwap deployment
+///
+/// Default to a ConstantProduct pool
+pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
+    #[cw_serde]
+    pub struct PairInfoRawV120 {
+        pub asset_infos: [AssetInfoRaw; 2],
+        pub contract_addr: CanonicalAddr,
+        pub liquidity_token: CanonicalAddr,
+        pub asset_decimals: [u8; 2],
+    }
+
+    #[cw_serde]
+    pub struct PairInfoRawV130 {
+        pub asset_infos: [AssetInfoRaw; 2],
+        pub contract_addr: CanonicalAddr,
+        pub liquidity_token: CanonicalAddr,
+        pub asset_decimals: [u8; 2],
+        pub pair_type: PairType,
+    }
+
+    pub const PAIR_INFO_V120: Item<PairInfoRawV120> = Item::new("pair_info");
+    pub const PAIR_INFO_V130: Item<PairInfoRawV130> = Item::new("pair_info");
+
+    let config = PAIR_INFO_V120.load(deps.storage)?;
+    PAIR_INFO_V130.save(
+        deps.storage,
+        &PairInfoRawV130 {
+            asset_infos: config.asset_infos,
+            contract_addr: config.contract_addr,
+            liquidity_token: config.liquidity_token,
+            asset_decimals: config.asset_decimals,
+            pair_type: PairType::ConstantProduct,
+        },
     )?;
 
     Ok(())

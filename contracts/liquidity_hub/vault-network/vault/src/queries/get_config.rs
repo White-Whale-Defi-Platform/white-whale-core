@@ -14,7 +14,7 @@ mod test {
         testing::{mock_dependencies, mock_env},
         Addr,
     };
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault::Config;
 
     use crate::{

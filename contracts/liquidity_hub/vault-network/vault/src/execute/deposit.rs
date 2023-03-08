@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 
-use terraswap::{asset::AssetInfo, querier::query_token_info};
+use pool_network::{asset::AssetInfo, querier::query_token_info};
 
 use crate::{
     error::VaultError,
@@ -127,7 +127,7 @@ mod test {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use terraswap::asset::AssetInfo;
+    use pool_network::asset::AssetInfo;
     use vault_network::vault::Config;
 
     use crate::tests::mock_app::mock_app_with_balance;

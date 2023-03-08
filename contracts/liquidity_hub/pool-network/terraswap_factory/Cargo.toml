@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-factory"
-version = "1.1.2"
+version = "1.2.0"
 authors = [
 	"Terraform Labs, PTE.",
 	"DELIGHT LABS",
@@ -23,7 +23,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
+injective = ["pool-network/injective"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
@@ -38,6 +38,6 @@ cw20.workspace = true
 cw2.workspace = true
 thiserror.workspace = true
 semver.workspace = true
-terraswap.workspace = true
+pool-network.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true

@@ -6,10 +6,10 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 
+use pool_network::asset::PairInfoRaw;
+use pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use pool_network::querier::query_pair_info_from_pair;
 use semver::Version;
-use terraswap::asset::PairInfoRaw;
-use terraswap::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use terraswap::querier::query_pair_info_from_pair;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -65,7 +65,8 @@ pub fn execute(
         ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,
-        } => commands::create_pair(deps, env, asset_infos, pool_fees),
+            pair_type,
+        } => commands::create_pair(deps, env, asset_infos, pool_fees, pair_type),
         ExecuteMsg::RemovePair { asset_infos } => commands::remove_pair(deps, env, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             commands::add_native_token_decimals(deps, env, denom, decimals)
@@ -111,6 +112,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             contract_addr: deps.api.addr_canonicalize(pair_contract.as_str())?,
             asset_infos: tmp_pair_info.asset_infos,
             asset_decimals: tmp_pair_info.asset_decimals,
+            pair_type: tmp_pair_info.pair_type,
         },
     )?;
 
@@ -151,6 +153,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     if storage_version <= Version::parse("1.0.8")? {
         migrations::migrate_to_v110(deps.branch())?;
+    }
+    if storage_version <= Version::parse("1.2.0")? {
+        migrations::migrate_to_v120(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

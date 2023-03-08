@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic;
 
-use crate::asset::{AssetInfo, PairInfo};
+use crate::asset::{AssetInfo, PairInfo, PairType};
 use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use crate::pair::QueryMsg as PairQueryMsg;
 use crate::pair::{ReverseSimulationResponse, SimulationResponse};
@@ -34,7 +34,7 @@ pub fn mock_dependencies(
 pub struct WasmMockQuerier {
     base: MockQuerier,
     token_querier: TokenQuerier,
-    terraswap_factory_querier: TerraswapFactoryQuerier,
+    pool_factory_querier: PoolFactoryQuerier,
 }
 
 #[derive(Clone, Default)]
@@ -67,14 +67,14 @@ pub(crate) fn balances_to_map(
 }
 
 #[derive(Clone, Default)]
-pub struct TerraswapFactoryQuerier {
+pub struct PoolFactoryQuerier {
     pairs: HashMap<String, PairInfo>,
     native_token_decimals: HashMap<String, u8>,
 }
 
-impl TerraswapFactoryQuerier {
+impl PoolFactoryQuerier {
     pub fn new(pairs: &[(&String, &PairInfo)], native_token_decimals: &[(String, u8)]) -> Self {
-        TerraswapFactoryQuerier {
+        PoolFactoryQuerier {
             pairs: pairs_to_map(pairs),
             native_token_decimals: native_token_decimals_to_map(native_token_decimals),
         }
@@ -127,7 +127,7 @@ impl WasmMockQuerier {
                     let mut sort_key: Vec<char> = key.chars().collect();
                     sort_key.sort_by(|a, b| b.cmp(a));
                     match self
-                        .terraswap_factory_querier
+                        .pool_factory_querier
                         .pairs
                         .get(&String::from_iter(sort_key.iter()))
                     {
@@ -139,11 +139,7 @@ impl WasmMockQuerier {
                     }
                 }
                 Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
-                    match self
-                        .terraswap_factory_querier
-                        .native_token_decimals
-                        .get(&denom)
-                    {
+                    match self.pool_factory_querier.native_token_decimals.get(&denom) {
                         Some(decimals) => SystemResult::Ok(ContractResult::Ok(
                             to_binary(&NativeTokenDecimalsResponse {
                                 decimals: *decimals,
@@ -170,6 +166,7 @@ impl WasmMockQuerier {
                             asset_decimals: [6u8, 6u8],
                             contract_addr: "pair0000".to_string(),
                             liquidity_token: "liquidity0000".to_string(),
+                            pair_type: PairType::ConstantProduct,
                         })))
                     }
                     Ok(PairQueryMsg::Simulation { offer_asset }) => {
@@ -276,7 +273,7 @@ impl WasmMockQuerier {
         WasmMockQuerier {
             base,
             token_querier: TokenQuerier::default(),
-            terraswap_factory_querier: TerraswapFactoryQuerier::default(),
+            pool_factory_querier: PoolFactoryQuerier::default(),
         }
     }
 
@@ -285,13 +282,13 @@ impl WasmMockQuerier {
         self.token_querier = TokenQuerier::new(balances);
     }
 
-    // configure the terraswap pair
-    pub fn with_terraswap_factory(
+    // configure the pair
+    pub fn with_pool_factory(
         &mut self,
         pairs: &[(&String, &PairInfo)],
         native_token_decimals: &[(String, u8)],
     ) {
-        self.terraswap_factory_querier = TerraswapFactoryQuerier::new(pairs, native_token_decimals);
+        self.pool_factory_querier = PoolFactoryQuerier::new(pairs, native_token_decimals);
     }
 
     pub fn with_balance(&mut self, balances: &[(&String, Vec<Coin>)]) {

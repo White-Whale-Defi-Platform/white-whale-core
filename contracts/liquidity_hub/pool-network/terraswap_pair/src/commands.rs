@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use terraswap::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use terraswap::querier::query_token_info;
-use terraswap::U256;
+use pool_network::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
+use pool_network::querier::query_token_info;
+use pool_network::U256;
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -296,7 +296,7 @@ pub fn withdraw_liquidity(
         ]))
 }
 
-/// Swaps tokens. The user must IncreaseAllowance on the token if it is a cw20 token they want to swa
+/// Swaps tokens. The user must IncreaseAllowance on the token if it is a cw20 token they want to swap
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
@@ -310,7 +310,7 @@ pub fn swap(
 ) -> Result<Response, ContractError> {
     offer_asset.assert_sent_native_token_balance(&info)?;
 
-    let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
+    let pair_info = PAIR_INFO.load(deps.storage)?;
 
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Asset;
@@ -357,8 +357,15 @@ pub fn swap(
     let offer_amount = offer_asset.amount;
     let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
 
-    let swap_computation =
-        helpers::compute_swap(offer_pool.amount, ask_pool.amount, offer_amount, pool_fees)?;
+    let swap_computation = helpers::compute_swap(
+        offer_pool.amount,
+        ask_pool.amount,
+        offer_amount,
+        pool_fees,
+        &pair_info.pair_type,
+        offer_decimal,
+        ask_decimal,
+    )?;
 
     let return_asset = Asset {
         info: ask_pool.info.clone(),
@@ -438,6 +445,7 @@ pub fn swap(
             "burn_fee_amount",
             &swap_computation.burn_fee_amount.to_string(),
         ),
+        ("swap_type", pair_info.pair_type.get_label()),
     ]))
 }
 

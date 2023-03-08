@@ -6,9 +6,9 @@ use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use semver::Version;
 
-use terraswap::asset::IBC_PREFIX;
+use pool_network::asset::IBC_PREFIX;
 #[cfg(feature = "injective")]
-use terraswap::asset::PEGGY_PREFIX;
+use pool_network::asset::PEGGY_PREFIX;
 use vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
@@ -89,7 +89,7 @@ pub fn instantiate(
         msg: WasmMsg::Instantiate {
             admin: None,
             code_id: msg.token_id,
-            msg: to_binary(&terraswap::token::InstantiateMsg {
+            msg: to_binary(&pool_network::token::InstantiateMsg {
                 name: lp_label.clone(),
                 symbol: lp_symbol,
                 decimals: 6,

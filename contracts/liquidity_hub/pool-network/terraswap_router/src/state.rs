@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::CanonicalAddr;
 use cw_storage_plus::{Item, Map};
 
-use terraswap::router::SwapOperation;
+use pool_network::router::SwapOperation;
 
 #[cw_serde]
 pub struct Config {

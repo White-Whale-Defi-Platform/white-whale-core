@@ -9,9 +9,9 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use terraswap::asset::PairInfoRaw;
-use terraswap::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
+use pool_network::asset::PairInfoRaw;
+use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -45,6 +45,7 @@ pub fn instantiate(
             msg.asset_infos[1].to_raw(deps.api)?,
         ],
         asset_decimals: msg.asset_decimals,
+        pair_type: msg.pair_type.clone(),
     };
 
     PAIR_INFO.save(deps.storage, pair_info)?;
@@ -248,6 +249,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v110(deps.branch())?;
     } else if storage_version == Version::parse("1.1.0")? {
         migrations::migrate_to_v120(deps.branch())?;
+    }
+    if storage_version == Version::parse("1.2.0")? {
+        migrations::migrate_to_v130(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

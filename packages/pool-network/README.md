@@ -1,12 +1,14 @@
-# Terraswap: Common Types
+# Pool Network
 
-This is a collection of common types and the queriers which are commonly used in terraswap contracts.
+This is a collection of common types and the queriers which are commonly used in the pool network contracts.
+
+The pool network is derived from terraswap.
 
 ## Data Types
 
 ### AssetInfo
 
-AssetInfo is a convience wrapper to represent the native token and the contract token as a single type.
+AssetInfo is a convenience wrapper to represent the native token and the contract token as a single type.
 
 ```rust
 #[serde(rename_all = "snake_case")]
@@ -18,7 +20,7 @@ pub enum AssetInfo {
 
 ### Asset
 
-It contains asset info with the amount of token. 
+It contains asset info with the amount of token.
 
 ```rust
 pub struct Asset {
@@ -39,6 +41,7 @@ pub struct PairInfo {
     pub asset_decimals: [u8; 2],
 }
 ```
+
 ## Queriers
 
 ### Native Token Balance Querier
@@ -55,7 +58,7 @@ pub fn query_balance(
 
 ### Token Balance Querier
 
-It provides simliar query interface with [Native-Token-Balance-Querier](Native-Token-Balance-Querier) for CW20 token balance. 
+It provides similar query interface with [Native-Token-Balance-Querier](Native-Token-Balance-Querier) for CW20 token balance.
 
 ```rust
 pub fn query_token_balance(
@@ -76,7 +79,7 @@ pub fn query_token_info(
 ) -> StdResult<TokenInfoResponse>
 ```
 
-### Native Token Deimals Querier
+### Native Token Decimals Querier
 
 It provides native token decimals querier for factory contract.
 
@@ -90,7 +93,7 @@ pub fn query_native_decimals(
 
 ### Pair Info Querier From Factory
 
-It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to terraswap factory contract.
+It also provides the query interface to query available `pool-network` contract info. Any contract can query pair info to pool network factory contract.
 
 ```rust
 pub fn query_pair_info(
@@ -102,7 +105,7 @@ pub fn query_pair_info(
 
 ### Pair Info Querier From Pair
 
-It also provides the query interface to query avaliable terraswap pair contract info. Any contract can query pair info to pair contract.
+It also provides the query interface to query available `pool-network` pair contract info. Any contract can query pair info to pair contract.
 
 ```rust
 pub fn query_pair_info_from_pair(

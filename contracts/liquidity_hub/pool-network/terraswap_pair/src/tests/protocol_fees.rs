@@ -7,9 +7,9 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
+use pool_network::asset::{Asset, AssetInfo, PairType};
+use pool_network::mock_querier::mock_dependencies;
+use pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
 
 #[test]
@@ -59,6 +59,7 @@ fn test_protocol_fees() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -241,6 +242,7 @@ fn test_collect_protocol_fees_successful() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
@@ -467,6 +469,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
     };
 
     let env = mock_env();
