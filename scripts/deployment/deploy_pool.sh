@@ -80,14 +80,36 @@ function create_pool() {
 
   pool_factory_addr=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .contract_address' $deployment_file)
 
+  label=""
+
   for asset in "${assets[@]}"; do
     is_native=$(echo $asset | jq '.is_native')
 
     if [[ $is_native == "true" ]]; then
       check_decimals $(echo $asset | jq -r '.asset') $(echo $asset | jq -r '.decimals')
       asset_info='{"native_token":{"denom":"'$(echo $asset | jq -r '.asset')'"}}'
+
+      # build the label for the output file
+      denom=$(echo $asset | jq -r '.asset')
+      if [[ "$denom" == ibc/* ]]; then
+        echo here
+        local subdenom=$($BINARY q ibc-transfer denom-trace $denom --node $RPC -o json | jq -r '.denom_trace.base_denom | split("/") | .[-1]')
+      elif [[ "$asset" == factory/* ]]; then
+        local subdenom=$(basename "$asset")
+      else
+        local subdenom=$denom
+      fi
+
+      label+=$subdenom
+      label+="-"
     else
       asset_info='{"token":{"contract_addr":"'$(echo $asset | jq -r '.asset')'"}}'
+
+      local query='{"token_info":{}}'
+      local symbol=$($BINARY query wasm contract-state smart $(echo $asset | jq -r '.asset') "$query" --node $RPC --output json | jq -r '.data.symbol')
+
+      label+=$symbol
+      label+="-"
     fi
     asset_infos+=($asset_info)
   done
@@ -108,10 +130,11 @@ function create_pool() {
   local pool_address=$(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "pair_contract_addr").value')
   local lp_address=($(echo $res | jq -r '.logs[0].events[] | select(.type == "wasm").attributes[] | select(.key == "liquidity_token_addr").value'))
   local code_ids=($(echo $res | jq -r '.logs[0].events[] | select(.type == "instantiate").attributes[] | select(.key == "code_id").value'))
+  local label="${label::-1}"
 
   # Store on output file
   tmpfile=$(mktemp)
-  jq -r --arg pair $pair --arg asset0 ${asset_infos[0]} --arg asset1 ${asset_infos[1]} --arg pool_address $pool_address --arg lp_address ${lp_address[0]} --arg pool_code_id ${code_ids[0]} --arg lp_code_id ${code_ids[1]} '.pools += [{pair: $pair, assets: [$asset0, $asset1], pool_address: $pool_address, lp_address: $lp_address, pool_code_id: $pool_code_id, lp_code_id: $lp_code_id }]' $output_file >$tmpfile
+  jq -r --arg label $label --arg pair $pair --arg asset0 ${asset_infos[0]} --arg asset1 ${asset_infos[1]} --arg pool_address $pool_address --arg lp_address ${lp_address[0]} --arg pool_code_id ${code_ids[0]} --arg lp_code_id ${code_ids[1]} '.pools += [{label: $label, pair: $pair, assets: [$asset0, $asset1], pool_address: $pool_address, lp_address: $lp_address, pool_code_id: $pool_code_id, lp_code_id: $lp_code_id }]' $output_file >$tmpfile
   mv $tmpfile $output_file
 
   # Add additional deployment information
