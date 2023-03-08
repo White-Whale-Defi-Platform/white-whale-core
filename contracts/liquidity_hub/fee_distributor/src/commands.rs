@@ -1,11 +1,13 @@
 use cosmwasm_std::{
-    to_binary, Decimal, DepsMut, MessageInfo, QueryRequest, Response, StdError, Uint128, WasmQuery,
+    to_binary, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, QueryRequest, Response, StdError,
+    Uint128, WasmMsg, WasmQuery,
 };
 
 use terraswap::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::helpers::validate_grace_period;
+use crate::msg::ExecuteMsg;
 use crate::state::{
     get_claimable_epochs, get_current_epoch, get_expiring_epoch, Epoch, CONFIG, EPOCHS,
     LAST_CLAIMED_EPOCH,
@@ -16,12 +18,13 @@ use crate::{helpers, ContractError};
 pub fn create_new_epoch(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     mut fees: Vec<Asset>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // only the fee collector can call this function
-    if info.sender != config.fee_collector_addr {
+    // only the contract itself or the fee collector can call this function
+    if info.sender != config.fee_collector_addr || info.sender != env.contract.address {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -165,6 +168,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     owner: Option<String>,
     staking_contract_addr: Option<String>,
     fee_collector_addr: Option<String>,
@@ -188,15 +192,37 @@ pub fn update_config(
         config.fee_collector_addr = deps.api.addr_validate(&fee_collector_addr)?;
     }
 
+    let mut messages = vec![];
     if let Some(grace_period) = grace_period {
         validate_grace_period(&grace_period)?;
-        todo!("check if grace period is lower than the current one, If so, we need to forward the fees to a new/current epoch");
+        if grace_period < config.grace_period {
+            let claimable_epochs = get_claimable_epochs(deps.as_ref())?;
+            // check if grace period is lower than the current one. If so, we need to forward the fees
+            // to a new epoch
+
+            let (_, expired_epochs) = claimable_epochs.split_at(grace_period as usize);
+
+            let mut forwarding_assets = vec![];
+            for epoch in expired_epochs {
+                forwarding_assets =
+                    helpers::aggregate_fees(forwarding_assets, epoch.available.clone());
+            }
+
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: env.contract.address.to_string(),
+                msg: to_binary(&ExecuteMsg::NewEpoch {
+                    fees: forwarding_assets.clone(),
+                })?,
+                funds: helpers::to_coins(forwarding_assets)?,
+            }));
+        }
+
         config.grace_period = grace_period;
     }
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_attributes(vec![
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "update_config".to_string()),
         ("owner", config.owner.to_string()),
         (
