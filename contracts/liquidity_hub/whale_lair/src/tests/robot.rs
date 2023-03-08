@@ -1,10 +1,5 @@
-use cosmwasm_std::testing::{mock_dependencies, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{
-    coin, coins, from_binary, Addr, Coin, DepsMut, Empty, Env, MessageInfo, OwnedDeps, Response,
-    StdResult, Uint128,
-};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult};
 use cw_multi_test::{App, AppResponse, Executor};
-use serde::de::StdError;
 
 use white_whale::whale_lair::{
     Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
@@ -12,9 +7,6 @@ use white_whale::whale_lair::{
 };
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
-
-use crate::contract::{instantiate, query};
-use crate::ContractError;
 
 pub struct TestingRobot {
     app: App,
@@ -58,9 +50,10 @@ impl TestingRobot {
         }
     }
 
-    pub(crate) fn fast_forward(&mut self, blocks: u64) -> &mut Self {
-        self.app
-            .update_block(|b| b.height = b.height.checked_add(blocks).unwrap());
+    pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_seconds(seconds);
+        self.app.set_block(block_info);
 
         self
     }
@@ -68,7 +61,7 @@ impl TestingRobot {
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
             1_000u64,
-            1u8,
+            Decimal::one(),
             vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -84,7 +77,7 @@ impl TestingRobot {
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: u64,
-        growth_rate: u8,
+        growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
@@ -99,7 +92,7 @@ impl TestingRobot {
     pub(crate) fn instantiate_err(
         &mut self,
         unbonding_period: u64,
-        growth_rate: u8,
+        growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
         error: impl Fn(anyhow::Error),
@@ -139,7 +132,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self
@@ -155,7 +148,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self
@@ -166,7 +159,7 @@ impl TestingRobot {
         sender: Addr,
         owner: Option<String>,
         unbonding_period: Option<u64>,
-        growth_rate: Option<u8>,
+        growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
@@ -177,7 +170,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self
@@ -187,7 +180,7 @@ impl TestingRobot {
 fn instantiate_contract(
     robot: &mut TestingRobot,
     unbonding_period: u64,
-    growth_rate: u8,
+    growth_rate: Decimal,
     bonding_assets: Vec<AssetInfo>,
     funds: &Vec<Coin>,
 ) -> anyhow::Result<Addr> {
@@ -253,21 +246,6 @@ impl TestingRobot {
             .unwrap();
 
         response(Ok((self, bonded_response)));
-
-        self
-    }
-
-    pub(crate) fn query_bonded_err(
-        &mut self,
-        address: String,
-        response: impl Fn(StdResult<(&mut Self, StdResult<BondedResponse>)>),
-    ) -> &mut Self {
-        let res = self
-            .app
-            .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address });
-
-        response(Ok((self, res)));
 
         self
     }

@@ -1,5 +1,6 @@
 use crate::ContractError;
-use terraswap::asset::Asset;
+use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
+use terraswap::asset::{Asset, AssetInfo};
 
 /// Validates the grace period.
 pub fn validate_grace_period(grace_period: &u128) -> Result<(), ContractError> {
@@ -30,4 +31,25 @@ pub fn aggregate_fees(fees: Vec<Asset>, other_fees: Vec<Asset>) -> Vec<Asset> {
     }
 
     aggregated_fees
+}
+
+/// TODO move this into an impl on pool-network package
+/// Converts a vector of Native assets to a vector of coins.
+pub fn to_coins(assets: Vec<Asset>) -> StdResult<Vec<Coin>> {
+    assets
+        .into_iter()
+        .map(|asset| {
+            let denom = match asset.info {
+                AssetInfo::Token { .. } => {
+                    return Err(StdError::generic_err("Not a native token."))
+                }
+                AssetInfo::NativeToken { denom } => denom,
+            };
+
+            Ok(Coin {
+                denom,
+                amount: asset.amount,
+            })
+        })
+        .collect()
 }

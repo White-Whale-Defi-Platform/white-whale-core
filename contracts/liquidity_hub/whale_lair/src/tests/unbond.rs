@@ -1,16 +1,10 @@
-use std::error::Error;
-
-use cosmwasm_std::testing::{
-    mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
-};
-use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
+use cosmwasm_std::{coins, Decimal, Timestamp, Uint128};
 
 use white_whale::whale_lair::{
-    Asset, AssetInfo, Bond, BondedResponse, BondingWeightResponse, Config, UnbondingResponse,
+    Asset, AssetInfo, Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
 };
 
 use crate::tests::robot::TestingRobot;
-use crate::ContractError;
 
 #[test]
 fn test_unbond_successfully() {
@@ -28,17 +22,17 @@ fn test_unbond_successfully() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .assert_bonding_weight_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             BondingWeightResponse {
-                address: sender.clone().to_string(),
+                address: sender.to_string(),
                 weight: Uint128::new(10_000u128),
                 global_weight: Uint128::new(10_000u128),
                 share: Decimal::one(),
-                block_height: 12355u64,
+                timestamp: Timestamp::from_nanos(1571797429879305533u64),
             },
         )
         .unbond(
@@ -49,11 +43,11 @@ fn test_unbond_successfully() {
                 },
                 amount: Uint128::new(300u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .assert_unbonding_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             "ampWHALE".to_string(),
             UnbondingResponse {
                 total_amount: Uint128::new(300u128),
@@ -64,13 +58,13 @@ fn test_unbond_successfully() {
                         },
                         amount: Uint128::new(300u128),
                     },
-                    block_height: 12355u64,
+                    timestamp: Timestamp::from_nanos(1571797429879305533u64),
                     weight: Uint128::zero(),
                 }],
             },
         )
         .assert_unbonding_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             "bWHALE".to_string(),
             UnbondingResponse {
                 total_amount: Uint128::zero(),
@@ -78,7 +72,7 @@ fn test_unbond_successfully() {
             },
         )
         .assert_bonded_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             BondedResponse {
                 total_bonded: Uint128::new(700u128),
                 bonded_assets: vec![Asset {
@@ -90,13 +84,13 @@ fn test_unbond_successfully() {
             },
         )
         .assert_bonding_weight_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             BondingWeightResponse {
-                address: sender.clone().to_string(),
+                address: sender.to_string(),
                 weight: Uint128::new(17_000u128),
                 global_weight: Uint128::new(17_000u128),
                 share: Decimal::one(),
-                block_height: 12365u64,
+                timestamp: Timestamp::from_nanos(1571797439879305533u64),
             },
         )
         .fast_forward(10u64)
@@ -108,10 +102,10 @@ fn test_unbond_successfully() {
                 },
                 amount: Uint128::new(200u128),
             },
-            |res| {},
+            |_res| {},
         )
         .assert_unbonding_response(
-            sender.clone().to_string(),
+            sender.to_string(),
             "ampWHALE".to_string(),
             UnbondingResponse {
                 total_amount: Uint128::new(500u128),
@@ -123,7 +117,7 @@ fn test_unbond_successfully() {
                             },
                             amount: Uint128::new(300u128),
                         },
-                        block_height: 12355u64,
+                        timestamp: Timestamp::from_nanos(1571797429879305533u64),
                         weight: Uint128::zero(),
                     },
                     Bond {
@@ -133,7 +127,7 @@ fn test_unbond_successfully() {
                             },
                             amount: Uint128::new(200u128),
                         },
-                        block_height: 12375u64,
+                        timestamp: Timestamp::from_nanos(1571797449879305533u64),
                         weight: Uint128::zero(),
                     },
                 ],
@@ -157,7 +151,7 @@ fn test_unbonding_query_pagination() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -168,7 +162,7 @@ fn test_unbonding_query_pagination() {
                 },
                 amount: Uint128::new(100u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -179,7 +173,7 @@ fn test_unbonding_query_pagination() {
                 },
                 amount: Uint128::new(100u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -190,7 +184,7 @@ fn test_unbonding_query_pagination() {
                 },
                 amount: Uint128::new(100u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -201,11 +195,11 @@ fn test_unbonding_query_pagination() {
                 },
                 amount: Uint128::new(100u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .query_unbonding(
-            sender.clone().to_string(),
+            sender.to_string(),
             "ampWHALE".to_string(),
             None,
             None,
@@ -222,7 +216,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12355,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -232,7 +226,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12365,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -242,7 +236,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12375,
+                                timestamp: Timestamp::from_nanos(1571797449879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -252,7 +246,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12385,
+                                timestamp: Timestamp::from_nanos(1571797459879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],
@@ -261,7 +255,7 @@ fn test_unbonding_query_pagination() {
             },
         )
         .query_unbonding(
-            sender.clone().to_string(),
+            sender.to_string(),
             "ampWHALE".to_string(),
             None,
             Some(2u8),
@@ -278,7 +272,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12355,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -288,7 +282,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12365,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],
@@ -297,7 +291,7 @@ fn test_unbonding_query_pagination() {
             },
         )
         .query_unbonding(
-            sender.clone().to_string(),
+            sender.to_string(),
             "ampWHALE".to_string(),
             Some(12365u64), // start after the block height of the last item in the previous query
             Some(2u8),
@@ -314,7 +308,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12375,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -324,7 +318,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12385,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],
@@ -350,7 +344,7 @@ fn test_unbond_unsuccessfully() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -380,7 +374,7 @@ fn test_unbond_unsuccessfully() {
             },
         )
         .unbond(
-            sender.clone(),
+            sender,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),

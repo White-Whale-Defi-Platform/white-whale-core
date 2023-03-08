@@ -1,17 +1,8 @@
-use std::error::Error;
+use cosmwasm_std::{coins, Event, Uint128};
 
-use cosmwasm_std::testing::{
-    mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
-};
-use cosmwasm_std::{coin, coins, Addr, Attribute, Decimal, Event, StdError, StdResult, Uint128};
-
-use white_whale::whale_lair::{
-    Asset, AssetInfo, Bond, BondedResponse, BondingWeightResponse, Config, UnbondingResponse,
-    WithdrawableResponse,
-};
+use white_whale::whale_lair::{Asset, AssetInfo, WithdrawableResponse};
 
 use crate::tests::robot::TestingRobot;
-use crate::ContractError;
 
 #[test]
 fn test_withdraw_successfully() {
@@ -30,7 +21,7 @@ fn test_withdraw_successfully() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -41,7 +32,7 @@ fn test_withdraw_successfully() {
                 },
                 amount: Uint128::new(300u128),
             },
-            |res| {},
+            |_res| {},
         )
         .fast_forward(1000u64)
         .assert_withdrawable_response(
@@ -93,7 +84,7 @@ fn test_withdraw_unsuccessfully() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |res| {},
+            |_res| {},
         )
         .fast_forward(10u64)
         .unbond(
@@ -104,7 +95,7 @@ fn test_withdraw_unsuccessfully() {
                 },
                 amount: Uint128::new(300u128),
             },
-            |res| {},
+            |_res| {},
         )
         .withdraw(sender.clone(), "ampWHALE".to_string(), |res| {
             println!("{:?}", res.unwrap_err().root_cause());
@@ -116,7 +107,7 @@ fn test_withdraw_unsuccessfully() {
             //assert error is NothingToWithdraw
         })
         .fast_forward(999u64) //unbonding period is 1000
-        .withdraw(sender.clone(), "bWHALE".to_string(), |res| {
+        .withdraw(sender, "bWHALE".to_string(), |res| {
             println!("{:?}", res.unwrap_err().root_cause());
             //assert error is NothingToWithdraw
         })

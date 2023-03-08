@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Bound;
 
 use white_whale::whale_lair::{
@@ -6,7 +6,7 @@ use white_whale::whale_lair::{
     WithdrawableResponse,
 };
 
-use crate::state::{BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
+use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
 pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
@@ -20,7 +20,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     let bonds: Vec<Bond> = BOND
         .prefix(&address)
         .range(deps.storage, None, None, Order::Ascending)
-        .take(BONDING_ASSETS_LIMIT as usize)
+        .take(BONDING_ASSETS_LIMIT)
         .map(|item| {
             let (_, bond) = item?;
             Ok(bond)
@@ -89,7 +89,7 @@ fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
 /// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
     deps: Deps,
-    block_height: u64,
+    timestamp: Timestamp,
     address: String,
     denom: String,
 ) -> StdResult<WithdrawableResponse> {
@@ -102,12 +102,7 @@ pub(crate) fn query_withdrawable(
 
     let mut withdrawable_amount = Uint128::zero();
     for (_, bond) in unbonding? {
-        if block_height
-            >= bond
-                .block_height
-                .checked_add(config.unbonding_period)
-                .ok_or_else(|| StdError::generic_err("Invalid block height"))?
-        {
+        if timestamp.minus_seconds(config.unbonding_period) >= bond.timestamp {
             withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
     }
@@ -120,7 +115,7 @@ pub(crate) fn query_withdrawable(
 /// Queries the current weight of the given address.
 pub(crate) fn query_weight(
     deps: Deps,
-    block_height: u64,
+    timestamp: Timestamp,
     address: String,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
@@ -136,15 +131,12 @@ pub(crate) fn query_weight(
     let mut total_bond_weight = Uint128::zero();
 
     for (_, mut bond) in bonds? {
-        bond.weight = bond.weight.checked_add(
-            bond.asset
-                .amount
-                .checked_mul(Uint128::from(config.growth_rate))?
-                .checked_mul(Uint128::from(
-                    block_height
-                        .checked_sub(bond.block_height)
-                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-                ))?,
+        bond.weight = get_weight(
+            timestamp,
+            bond.weight,
+            bond.asset.amount,
+            config.growth_rate,
+            bond.timestamp,
         )?;
 
         // Aggregate the weights of all the bonds for the given address.
@@ -157,15 +149,12 @@ pub(crate) fn query_weight(
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
         .ok_or_else(|| StdError::generic_err("Global index not found"))?;
 
-    global_index.weight = global_index.weight.checked_add(
-        global_index
-            .bond_amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                block_height
-                    .checked_sub(global_index.block_height)
-                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
-            ))?,
+    global_index.weight = get_weight(
+        timestamp,
+        global_index.weight,
+        global_index.bond_amount,
+        config.growth_rate,
+        global_index.timestamp,
     )?;
 
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
@@ -175,6 +164,6 @@ pub(crate) fn query_weight(
         weight: total_bond_weight,
         global_weight: global_index.weight,
         share,
-        block_height,
+        timestamp,
     })
 }

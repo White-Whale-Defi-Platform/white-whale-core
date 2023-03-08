@@ -47,12 +47,12 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::NewEpoch { fees } => commands::create_new_epoch(deps, info, fees),
+        ExecuteMsg::NewEpoch { fees } => commands::create_new_epoch(deps, info, env, fees),
         ExecuteMsg::Claim {} => commands::claim(deps, info),
         ExecuteMsg::UpdateConfig {
             owner,
@@ -62,6 +62,7 @@ pub fn execute(
         } => commands::update_config(
             deps,
             info,
+            env,
             owner,
             staking_contract_addr,
             fee_collector_addr,

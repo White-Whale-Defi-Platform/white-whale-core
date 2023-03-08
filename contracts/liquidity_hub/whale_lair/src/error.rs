@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
+    #[error("The growth rate must be between 0 and 1. i.e. 0.5 for 50%")]
+    InvalidGrowthRate {},
+
     #[error(
         "The amount of bonding assets is greater than the limit allowed. Limit is {0}, sent {1}."
     )]
