@@ -1,4 +1,4 @@
-use cosmwasm_std::{DivideByZeroError, StdError};
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,4 +23,7 @@ pub enum ContractError {
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 }
