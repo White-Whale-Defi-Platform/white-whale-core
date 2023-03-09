@@ -1,10 +1,5 @@
-use cosmwasm_std::testing::{
-    mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
-};
-use cosmwasm_std::{coin, Addr, Uint128};
+use cosmwasm_std::Addr;
 
-use crate::state::BONDING_ASSETS_LIMIT;
-use crate::ContractError;
 use white_whale::whale_lair::{AssetInfo, Config};
 
 use crate::tests::robot::TestingRobot;
@@ -63,7 +58,7 @@ fn test_instantiate_unsuccessfully() {
         ],
         &vec![],
         |error| {
-            println!("1 --{:?}", error);
+            println!("1 --{error:?}");
             println!("2 --{:?}", error.root_cause());
             //println!("3 --{:?}", error.root_cause().downcast_ref::<ContractError>());
             // assert_eq!(
@@ -81,7 +76,7 @@ fn test_instantiate_unsuccessfully() {
         }],
         &vec![],
         |error| {
-            println!("1 --{:?}", error);
+            println!("1 --{error:?}");
             println!("2 --{:?}", error.root_cause());
             //println!("3 --{:?}", error.root_cause().downcast_ref::<ContractError>());
 

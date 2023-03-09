@@ -20,7 +20,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     let bonds: Vec<Bond> = BOND
         .prefix(&address)
         .range(deps.storage, None, None, Order::Ascending)
-        .take(BONDING_ASSETS_LIMIT as usize)
+        .take(BONDING_ASSETS_LIMIT)
         .map(|item| {
             let (_, bond) = item?;
             Ok(bond)

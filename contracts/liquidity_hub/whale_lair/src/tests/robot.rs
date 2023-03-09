@@ -1,10 +1,5 @@
-use cosmwasm_std::testing::{mock_dependencies, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{
-    coin, coins, from_binary, Addr, BlockInfo, Coin, DepsMut, Empty, Env, MessageInfo, OwnedDeps,
-    Response, StdResult, Uint128,
-};
+use cosmwasm_std::{coin, Addr, Coin, StdResult};
 use cw_multi_test::{App, AppResponse, Executor};
-use serde::de::StdError;
 
 use white_whale::whale_lair::{
     Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
@@ -12,9 +7,6 @@ use white_whale::whale_lair::{
 };
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
-
-use crate::contract::{instantiate, query};
-use crate::ContractError;
 
 pub struct TestingRobot {
     app: App,
@@ -140,7 +132,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self
@@ -156,7 +148,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self
@@ -178,7 +170,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
         self

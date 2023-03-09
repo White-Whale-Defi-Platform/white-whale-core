@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdError, StdResult,
-    Timestamp, Uint128,
+    Addr, BankMsg, Coin, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, Timestamp,
+    Uint128,
 };
 
 use white_whale::whale_lair::{Asset, AssetInfo, Bond};
@@ -122,7 +122,7 @@ pub(crate) fn unbond(
             ("asset", asset.to_string()),
         ]))
     } else {
-        return Err(ContractError::NothingToUnbond {});
+        Err(ContractError::NothingToUnbond {})
     }
 }
 

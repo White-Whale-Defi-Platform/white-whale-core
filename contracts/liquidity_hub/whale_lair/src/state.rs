@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut, StdError, Timestamp, Uint128};
+use cosmwasm_std::{Addr, DepsMut, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
 
 use white_whale::whale_lair::{AssetInfo, Bond, Config, GlobalIndex};
