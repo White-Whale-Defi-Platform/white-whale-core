@@ -72,10 +72,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.height, info, asset),
-        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.height, info, asset),
+        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.time, info, asset),
+        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.time, info, asset),
         ExecuteMsg::Withdraw { denom } => {
-            commands::withdraw(deps, env.block.height, info.sender, denom)
+            commands::withdraw(deps, env.block.time, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
             owner,
@@ -104,12 +104,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         )?),
         QueryMsg::Withdrawable { address, denom } => to_binary(&queries::query_withdrawable(
             deps,
-            env.block.height,
+            env.block.time,
             address,
             denom,
         )?),
         QueryMsg::Weight { address } => {
-            to_binary(&queries::query_weight(deps, env.block.height, address)?)
+            to_binary(&queries::query_weight(deps, env.block.time, address)?)
         }
     }
 }

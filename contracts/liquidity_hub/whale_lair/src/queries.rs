@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Bound;
 
 use white_whale::whale_lair::{
@@ -89,7 +89,7 @@ fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
 /// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
     deps: Deps,
-    block_height: u64,
+    timestamp: Timestamp,
     address: String,
     denom: String,
 ) -> StdResult<WithdrawableResponse> {
@@ -102,12 +102,7 @@ pub(crate) fn query_withdrawable(
 
     let mut withdrawable_amount = Uint128::zero();
     for (_, bond) in unbonding? {
-        if block_height
-            >= bond
-                .block_height
-                .checked_add(config.unbonding_period)
-                .ok_or_else(|| StdError::generic_err("Invalid block height"))?
-        {
+        if timestamp.minus_seconds(config.unbonding_period) >= bond.timestamp {
             withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
     }
@@ -120,7 +115,7 @@ pub(crate) fn query_withdrawable(
 /// Queries the current weight of the given address.
 pub(crate) fn query_weight(
     deps: Deps,
-    block_height: u64,
+    timestamp: Timestamp,
     address: String,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
@@ -141,9 +136,7 @@ pub(crate) fn query_weight(
                 .amount
                 .checked_mul(Uint128::from(config.growth_rate))?
                 .checked_mul(Uint128::from(
-                    block_height
-                        .checked_sub(bond.block_height)
-                        .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+                    timestamp.minus_seconds(bond.timestamp.seconds()).seconds(),
                 ))?,
         )?;
 
@@ -162,9 +155,9 @@ pub(crate) fn query_weight(
             .bond_amount
             .checked_mul(Uint128::from(config.growth_rate))?
             .checked_mul(Uint128::from(
-                block_height
-                    .checked_sub(global_index.block_height)
-                    .ok_or_else(|| StdError::generic_err("Invalid block height"))?,
+                timestamp
+                    .minus_seconds(global_index.timestamp.seconds())
+                    .seconds(),
             ))?,
     )?;
 
@@ -175,6 +168,6 @@ pub(crate) fn query_weight(
         weight: total_bond_weight,
         global_weight: global_index.weight,
         share,
-        block_height,
+        timestamp,
     })
 }

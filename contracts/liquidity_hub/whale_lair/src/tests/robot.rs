@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{mock_dependencies, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    coin, coins, from_binary, Addr, Coin, DepsMut, Empty, Env, MessageInfo, OwnedDeps, Response,
-    StdResult, Uint128,
+    coin, coins, from_binary, Addr, BlockInfo, Coin, DepsMut, Empty, Env, MessageInfo, OwnedDeps,
+    Response, StdResult, Uint128,
 };
 use cw_multi_test::{App, AppResponse, Executor};
 use serde::de::StdError;
@@ -58,9 +58,10 @@ impl TestingRobot {
         }
     }
 
-    pub(crate) fn fast_forward(&mut self, blocks: u64) -> &mut Self {
-        self.app
-            .update_block(|b| b.height = b.height.checked_add(blocks).unwrap());
+    pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_seconds(seconds);
+        self.app.set_block(block_info);
 
         self
     }

@@ -3,7 +3,7 @@ use std::error::Error;
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
 };
-use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Timestamp, Uint128};
 
 use white_whale::whale_lair::{Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config};
 
@@ -49,7 +49,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(10_000u128),
                 global_weight: Uint128::new(10_000u128),
                 share: Decimal::one(),
-                block_height: 12355u64,
+                timestamp: Timestamp::from_nanos(1571797429879305533u64),
             },
         )
         .fast_forward(10u64)
@@ -92,7 +92,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(60_000u128),
                 global_weight: Uint128::new(60_000u128),
                 share: Decimal::one(),
-                block_height: 12375u64,
+                timestamp: Timestamp::from_nanos(1571797449879305533u64),
             },
         )
         .bond(
@@ -114,7 +114,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(100_000u128),
                 global_weight: Uint128::new(150_000u128),
                 share: Decimal::from_ratio(100_000u128, 150_000u128),
-                block_height: 12385u64,
+                timestamp: Timestamp::from_nanos(1571797459879305533u64),
             },
         )
         .assert_bonding_weight_response(
@@ -124,7 +124,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(50_000u128),
                 global_weight: Uint128::new(150_000u128),
                 share: Decimal::from_ratio(50_000u128, 150_000u128),
-                block_height: 12385u64,
+                timestamp: Timestamp::from_nanos(1571797459879305533u64),
             },
         );
 }

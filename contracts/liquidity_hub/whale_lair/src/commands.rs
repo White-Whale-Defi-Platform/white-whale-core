@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     Addr, BankMsg, Coin, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdError, StdResult,
-    Uint128,
+    Timestamp, Uint128,
 };
 
 use white_whale::whale_lair::{Asset, AssetInfo, Bond};
@@ -12,7 +12,7 @@ use crate::ContractError;
 /// Bonds the provided asset.
 pub(crate) fn bond(
     mut deps: DepsMut,
-    block_height: u64,
+    timestamp: Timestamp,
     info: MessageInfo,
     asset: Asset,
 ) -> Result<Response, ContractError> {
@@ -54,13 +54,13 @@ pub(crate) fn bond(
     }
 
     // update local values
-    bond = update_local_weight(&mut deps, info.sender.clone(), block_height, bond)?;
+    bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-    global_index = update_global_weight(&mut deps, block_height, global_index)?;
+    global_index = update_global_weight(&mut deps, timestamp, global_index)?;
     global_index.bond_amount = global_index.bond_amount.checked_add(asset.amount)?;
     GLOBAL.save(deps.storage, &global_index)?;
 
@@ -74,7 +74,7 @@ pub(crate) fn bond(
 /// Unbonds the provided amount of tokens
 pub(crate) fn unbond(
     mut deps: DepsMut,
-    block_height: u64,
+    timestamp: Timestamp,
     info: MessageInfo,
     asset: Asset,
 ) -> Result<Response, ContractError> {
@@ -90,7 +90,7 @@ pub(crate) fn unbond(
         }
 
         // update local values, decrease the bond
-        unbond = update_local_weight(&mut deps, info.sender.clone(), block_height, unbond.clone())?;
+        unbond = update_local_weight(&mut deps, info.sender.clone(), timestamp, unbond.clone())?;
         let weight_slash = unbond
             .weight
             .checked_mul(asset.amount.checked_div(unbond.asset.amount)?)?;
@@ -101,17 +101,17 @@ pub(crate) fn unbond(
         // record the unbonding
         UNBOND.save(
             deps.storage,
-            (&info.sender, &denom, block_height),
+            (&info.sender, &denom, timestamp.seconds()),
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),
-                block_height,
+                timestamp,
             },
         )?;
 
         // update global values
         let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-        global_index = update_global_weight(&mut deps, block_height, global_index)?;
+        global_index = update_global_weight(&mut deps, timestamp, global_index)?;
         global_index.bond_amount = global_index.bond_amount.checked_sub(asset.amount)?;
         global_index.weight = global_index.weight.checked_sub(weight_slash)?;
         GLOBAL.save(deps.storage, &global_index)?;
@@ -129,7 +129,7 @@ pub(crate) fn unbond(
 /// Withdraws the rewards for the provided address
 pub(crate) fn withdraw(
     deps: DepsMut,
-    block_height: u64,
+    timestamp: Timestamp,
     address: Addr,
     denom: String,
 ) -> Result<Response, ContractError> {
@@ -148,20 +148,15 @@ pub(crate) fn withdraw(
     }
 
     for unbonding in unbondings {
-        let (block, bond) = unbonding;
-        if block_height
-            >= bond
-                .block_height
-                .checked_add(config.unbonding_period)
-                .ok_or_else(|| StdError::generic_err("Invalid block height"))?
-        {
+        let (ts, bond) = unbonding;
+        if timestamp.minus_seconds(config.unbonding_period) >= bond.timestamp {
             let denom = match bond.asset.info {
                 AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
                 AssetInfo::NativeToken { denom } => denom,
             };
 
             refund_amount = refund_amount.checked_add(bond.asset.amount)?;
-            UNBOND.remove(deps.storage, (&address, &denom, block));
+            UNBOND.remove(deps.storage, (&address, &denom, ts));
         }
     }
 

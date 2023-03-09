@@ -3,7 +3,7 @@ use std::error::Error;
 use cosmwasm_std::testing::{
     mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info,
 };
-use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal, StdError, StdResult, Timestamp, Uint128};
 
 use white_whale::whale_lair::{
     Asset, AssetInfo, Bond, BondedResponse, BondingWeightResponse, Config, UnbondingResponse,
@@ -38,7 +38,7 @@ fn test_unbond_successfully() {
                 weight: Uint128::new(10_000u128),
                 global_weight: Uint128::new(10_000u128),
                 share: Decimal::one(),
-                block_height: 12355u64,
+                timestamp: Timestamp::from_nanos(1571797429879305533u64),
             },
         )
         .unbond(
@@ -64,7 +64,7 @@ fn test_unbond_successfully() {
                         },
                         amount: Uint128::new(300u128),
                     },
-                    block_height: 12355u64,
+                    timestamp: Timestamp::from_nanos(1571797429879305533u64),
                     weight: Uint128::zero(),
                 }],
             },
@@ -96,7 +96,7 @@ fn test_unbond_successfully() {
                 weight: Uint128::new(17_000u128),
                 global_weight: Uint128::new(17_000u128),
                 share: Decimal::one(),
-                block_height: 12365u64,
+                timestamp: Timestamp::from_nanos(1571797439879305533u64),
             },
         )
         .fast_forward(10u64)
@@ -123,7 +123,7 @@ fn test_unbond_successfully() {
                             },
                             amount: Uint128::new(300u128),
                         },
-                        block_height: 12355u64,
+                        timestamp: Timestamp::from_nanos(1571797429879305533u64),
                         weight: Uint128::zero(),
                     },
                     Bond {
@@ -133,7 +133,7 @@ fn test_unbond_successfully() {
                             },
                             amount: Uint128::new(200u128),
                         },
-                        block_height: 12375u64,
+                        timestamp: Timestamp::from_nanos(1571797449879305533u64),
                         weight: Uint128::zero(),
                     },
                 ],
@@ -222,7 +222,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12355,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -232,7 +232,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12365,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -242,7 +242,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12375,
+                                timestamp: Timestamp::from_nanos(1571797449879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -252,7 +252,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12385,
+                                timestamp: Timestamp::from_nanos(1571797459879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],
@@ -278,7 +278,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12355,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -288,7 +288,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12365,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],
@@ -314,7 +314,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12375,
+                                timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
@@ -324,7 +324,7 @@ fn test_unbonding_query_pagination() {
                                     },
                                     amount: Uint128::new(100u128),
                                 },
-                                block_height: 12385,
+                                timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                         ],

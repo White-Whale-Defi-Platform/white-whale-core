@@ -1,13 +1,13 @@
 use std::fmt;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 
 #[cw_serde]
 pub struct Config {
     /// Owner of the contract.
     pub owner: Addr,
-    /// Unbonding period in number of blocks
+    /// Unbonding period in seconds.
     pub unbonding_period: u64,
     /// A scalar that controls the effect of time on the weight of a bond. If the growth rate is set
     /// to zero, time will have no impact on the weight. If the growth rate is set to one, the bond's
@@ -21,8 +21,8 @@ pub struct Config {
 pub struct Bond {
     /// The amount of bonded tokens.
     pub asset: Asset,
-    /// The block height at which the bond was done.
-    pub block_height: u64,
+    /// The timestamp at which the bond was done.
+    pub timestamp: Timestamp,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
 }
@@ -36,7 +36,7 @@ impl Default for Bond {
                 },
                 amount: Uint128::zero(),
             },
-            block_height: 0u64,
+            timestamp: Timestamp::default(),
             weight: Uint128::zero(),
         }
     }
@@ -47,19 +47,19 @@ impl Default for Bond {
 pub struct GlobalIndex {
     /// The total amount of tokens bonded in the contract.
     pub bond_amount: Uint128,
-    /// The block height at which the total bond was registered.
-    pub block_height: u64,
+    /// The timestamp at which the total bond was registered.
+    pub timestamp: Timestamp,
     /// The total weight of the bond at the given block height.
     pub weight: Uint128,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Unbonding period in number of blocks
+    /// Unbonding period in seconds.
     pub unbonding_period: u64,
-    /// Weight grow rate
+    /// Weight grow rate.
     pub growth_rate: u8,
-    /// [AssetInfo] of the assets that can be bonded
+    /// [AssetInfo] of the assets that can be bonded.
     pub bonding_assets: Vec<AssetInfo>,
 }
 
@@ -176,5 +176,5 @@ pub struct BondingWeightResponse {
     pub weight: Uint128,
     pub global_weight: Uint128,
     pub share: Decimal,
-    pub block_height: u64,
+    pub timestamp: Timestamp,
 }
