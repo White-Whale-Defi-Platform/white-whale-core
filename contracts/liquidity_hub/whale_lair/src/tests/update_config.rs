@@ -1,4 +1,4 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Decimal, Uint128};
 
 use white_whale::whale_lair::{AssetInfo, Config};
 
@@ -14,7 +14,7 @@ fn test_update_config_successfully() {
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
-            growth_rate: 1u8,
+            growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -24,11 +24,20 @@ fn test_update_config_successfully() {
                 },
             ],
         })
-        .update_config(owner.clone(), None, Some(500u64), Some(2u8), |_res| {})
+        .update_config(
+            owner.clone(),
+            None,
+            Some(500u64),
+            Some(Decimal::from_ratio(
+                Uint128::new(1u128),
+                Uint128::new(2u128),
+            )),
+            |_res| {},
+        )
         .assert_config(Config {
             owner: owner.clone(),
             unbonding_period: 500u64,
-            growth_rate: 2u8,
+            growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -42,13 +51,13 @@ fn test_update_config_successfully() {
             owner,
             Some("new_owner".to_string()),
             None,
-            Some(1u8),
+            Some(Decimal::one()),
             |_res| {},
         )
         .assert_config(Config {
             owner: Addr::unchecked("new_owner"),
             unbonding_period: 500u64,
-            growth_rate: 1u8,
+            growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -69,7 +78,7 @@ fn test_update_config_unsuccessfully() {
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
-            growth_rate: 1u8,
+            growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -83,7 +92,10 @@ fn test_update_config_unsuccessfully() {
             Addr::unchecked("unauthorized"),
             None,
             Some(500u64),
-            Some(2u8),
+            Some(Decimal::from_ratio(
+                Uint128::new(1u128),
+                Uint128::new(2u128),
+            )),
             |_res| {
                 //println!("{:?}", res.unwrap_err().root_cause());
                 // assert_eq!(
@@ -95,7 +107,36 @@ fn test_update_config_unsuccessfully() {
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
-            growth_rate: 1u8,
+            growth_rate: Decimal::one(),
+            bonding_assets: vec![
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+            ],
+        })
+        .update_config(
+            Addr::unchecked("owner"),
+            None,
+            Some(500u64),
+            Some(Decimal::from_ratio(
+                Uint128::new(2u128),
+                Uint128::new(1u128),
+            )),
+            |_res| {
+                //println!("{:?}", res.unwrap_err().root_cause());
+                // assert_eq!(
+                //     res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(),
+                //     &ContractError::Unauthorized {}
+                // );
+            },
+        )
+        .assert_config(Config {
+            owner: Addr::unchecked("owner"),
+            unbonding_period: 1_000u64,
+            growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),

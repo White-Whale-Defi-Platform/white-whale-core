@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Coin};
-use cw_multi_test::{App, AppBuilder, BankKeeper, ContractWrapper, Executor};
+use cw_multi_test::{App, AppBuilder, BankKeeper};
 
 /// Mocks the App
 pub fn mock_app() -> App {

@@ -6,7 +6,7 @@ use white_whale::whale_lair::{
     WithdrawableResponse,
 };
 
-use crate::state::{BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
+use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
 pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
@@ -131,13 +131,12 @@ pub(crate) fn query_weight(
     let mut total_bond_weight = Uint128::zero();
 
     for (_, mut bond) in bonds? {
-        bond.weight = bond.weight.checked_add(
-            bond.asset
-                .amount
-                .checked_mul(Uint128::from(config.growth_rate))?
-                .checked_mul(Uint128::from(
-                    timestamp.minus_seconds(bond.timestamp.seconds()).seconds(),
-                ))?,
+        bond.weight = get_weight(
+            timestamp,
+            bond.weight,
+            bond.asset.amount,
+            config.growth_rate,
+            bond.timestamp,
         )?;
 
         // Aggregate the weights of all the bonds for the given address.
@@ -150,15 +149,12 @@ pub(crate) fn query_weight(
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
         .ok_or_else(|| StdError::generic_err("Global index not found"))?;
 
-    global_index.weight = global_index.weight.checked_add(
-        global_index
-            .bond_amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                timestamp
-                    .minus_seconds(global_index.timestamp.seconds())
-                    .seconds(),
-            ))?,
+    global_index.weight = get_weight(
+        timestamp,
+        global_index.weight,
+        global_index.bond_amount,
+        config.growth_rate,
+        global_index.timestamp,
     )?;
 
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);

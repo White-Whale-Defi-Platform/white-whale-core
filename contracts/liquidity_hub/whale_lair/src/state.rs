@@ -1,11 +1,10 @@
-use cosmwasm_std::{Addr, DepsMut, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
 
 use white_whale::whale_lair::{AssetInfo, Bond, Config, GlobalIndex};
 
 use crate::ContractError;
 
-type BlockHeight = u64;
 type Denom = str;
 
 pub const BONDING_ASSETS_LIMIT: usize = 2;
@@ -23,13 +22,12 @@ pub fn update_local_weight(
 ) -> Result<Bond, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    bond.weight = bond.weight.checked_add(
-        bond.asset
-            .amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                timestamp.minus_seconds(bond.timestamp.seconds()).seconds(),
-            ))?,
+    bond.weight = get_weight(
+        timestamp,
+        bond.weight,
+        bond.asset.amount,
+        config.growth_rate,
+        bond.timestamp,
     )?;
 
     bond.timestamp = timestamp;
@@ -52,15 +50,12 @@ pub fn update_global_weight(
 ) -> Result<GlobalIndex, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    global_index.weight = global_index.weight.checked_add(
-        global_index
-            .bond_amount
-            .checked_mul(Uint128::from(config.growth_rate))?
-            .checked_mul(Uint128::from(
-                timestamp
-                    .minus_seconds(global_index.timestamp.seconds())
-                    .seconds(),
-            ))?,
+    global_index.weight = get_weight(
+        timestamp,
+        global_index.weight,
+        global_index.bond_amount,
+        config.growth_rate,
+        global_index.timestamp,
     )?;
 
     global_index.timestamp = timestamp;
@@ -68,4 +63,29 @@ pub fn update_global_weight(
     GLOBAL.save(deps.storage, &global_index)?;
 
     Ok(global_index)
+}
+
+/// Calculates the bonding weight of the given amount for the provided timestamps.
+pub fn get_weight(
+    current_timestamp: Timestamp,
+    weight: Uint128,
+    amount: Uint128,
+    growth_rate: Decimal,
+    timestamp: Timestamp,
+) -> StdResult<Uint128> {
+    let time_factor = Uint128::from(
+        Timestamp::from_nanos(
+            current_timestamp
+                .seconds()
+                .checked_sub(timestamp.seconds())
+                .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
+        )
+        .nanos(),
+    );
+
+    // convert Uint128 to decimal to do the operation  weight = weight + amount * (current_timestamp - timestamp) * growth_rate
+    //let amount = Decimal256::from_ratio(amount, Uint128::one());
+    //let time_factor = Decimal256::from_ratio(time_factor, Uint128::one());
+
+    Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
 }

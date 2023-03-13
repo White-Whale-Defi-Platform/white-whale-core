@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, Coin, StdResult};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult};
 use cw_multi_test::{App, AppResponse, Executor};
 
 use white_whale::whale_lair::{
@@ -61,7 +61,7 @@ impl TestingRobot {
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
             1_000u64,
-            1u8,
+            Decimal::one(),
             vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -77,7 +77,7 @@ impl TestingRobot {
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: u64,
-        growth_rate: u8,
+        growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
@@ -92,7 +92,7 @@ impl TestingRobot {
     pub(crate) fn instantiate_err(
         &mut self,
         unbonding_period: u64,
-        growth_rate: u8,
+        growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
         error: impl Fn(anyhow::Error),
@@ -159,7 +159,7 @@ impl TestingRobot {
         sender: Addr,
         owner: Option<String>,
         unbonding_period: Option<u64>,
-        growth_rate: Option<u8>,
+        growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
@@ -180,7 +180,7 @@ impl TestingRobot {
 fn instantiate_contract(
     robot: &mut TestingRobot,
     unbonding_period: u64,
-    growth_rate: u8,
+    growth_rate: Decimal,
     bonding_assets: Vec<AssetInfo>,
     funds: &Vec<Coin>,
 ) -> anyhow::Result<Addr> {
@@ -246,21 +246,6 @@ impl TestingRobot {
             .unwrap();
 
         response(Ok((self, bonded_response)));
-
-        self
-    }
-
-    pub(crate) fn query_bonded_err(
-        &mut self,
-        address: String,
-        response: impl Fn(StdResult<(&mut Self, StdResult<BondedResponse>)>),
-    ) -> &mut Self {
-        let res = self
-            .app
-            .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address });
-
-        response(Ok((self, res)));
 
         self
     }

@@ -9,10 +9,9 @@ pub struct Config {
     pub owner: Addr,
     /// Unbonding period in seconds.
     pub unbonding_period: u64,
-    /// A scalar that controls the effect of time on the weight of a bond. If the growth rate is set
-    /// to zero, time will have no impact on the weight. If the growth rate is set to one, the bond's
-    /// weight will increase by one for each block.
-    pub growth_rate: u8,
+    /// A fraction that controls the effect of time on the weight of a bond. If the growth rate is set
+    /// to zero, time will have no impact on the weight.
+    pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
     pub bonding_assets: Vec<AssetInfo>,
 }
@@ -57,8 +56,8 @@ pub struct GlobalIndex {
 pub struct InstantiateMsg {
     /// Unbonding period in seconds.
     pub unbonding_period: u64,
-    /// Weight grow rate.
-    pub growth_rate: u8,
+    /// Weight grow rate. Needs to be between 0 and 1.
+    pub growth_rate: Decimal,
     /// [AssetInfo] of the assets that can be bonded.
     pub bonding_assets: Vec<AssetInfo>,
 }
@@ -111,7 +110,7 @@ pub enum ExecuteMsg {
     UpdateConfig {
         owner: Option<String>,
         unbonding_period: Option<u64>,
-        growth_rate: Option<u8>,
+        growth_rate: Option<Decimal>,
     },
 }
 

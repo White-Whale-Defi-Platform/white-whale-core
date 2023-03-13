@@ -1,4 +1,4 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Decimal};
 
 use white_whale::whale_lair::{AssetInfo, Config};
 
@@ -11,7 +11,7 @@ fn test_instantiate_successfully() {
     robot
         .instantiate(
             1_000u64,
-            1u8,
+            Decimal::one(),
             vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -25,7 +25,7 @@ fn test_instantiate_successfully() {
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
             unbonding_period: 1_000u64,
-            growth_rate: 1u8,
+            growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -44,7 +44,7 @@ fn test_instantiate_unsuccessfully() {
     // over bonding assets limit
     robot.instantiate_err(
         1_000u64,
-        1u8,
+        Decimal::one(),
         vec![
             AssetInfo::NativeToken {
                 denom: "ampWHALE".to_string(),
@@ -70,7 +70,7 @@ fn test_instantiate_unsuccessfully() {
     // invalid tokens
     robot.instantiate_err(
         1_000u64,
-        1u8,
+        Decimal::one(),
         vec![AssetInfo::Token {
             contract_addr: "contract123".to_string(),
         }],

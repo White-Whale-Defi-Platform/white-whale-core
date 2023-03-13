@@ -1,10 +1,11 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, Timestamp,
-    Uint128,
+    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
+    Timestamp, Uint128,
 };
 
 use white_whale::whale_lair::{Asset, AssetInfo, Bond};
 
+use crate::helpers::validate_growth_rate;
 use crate::queries::MAX_PAGE_LIMIT;
 use crate::state::{update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND};
 use crate::ContractError;
@@ -188,7 +189,7 @@ pub(crate) fn update_config(
     info: MessageInfo,
     owner: Option<String>,
     unbonding_period: Option<u64>,
-    growth_rate: Option<u8>,
+    growth_rate: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
     let mut config = CONFIG.load(deps.storage)?;
@@ -205,6 +206,7 @@ pub(crate) fn update_config(
     }
 
     if let Some(growth_rate) = growth_rate {
+        validate_growth_rate(growth_rate)?;
         config.growth_rate = growth_rate;
     }
 

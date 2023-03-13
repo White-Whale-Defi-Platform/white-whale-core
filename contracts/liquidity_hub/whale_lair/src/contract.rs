@@ -8,8 +8,8 @@ use white_whale::whale_lair::{
 };
 
 use crate::error::ContractError;
+use crate::helpers::validate_growth_rate;
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
-use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, queries};
 
 // version info for migration info
@@ -29,6 +29,8 @@ pub fn instantiate(
             msg.bonding_assets.len(),
         ));
     }
+
+    validate_growth_rate(msg.growth_rate)?;
 
     for asset in &msg.bonding_assets {
         match asset {
@@ -121,7 +123,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
     if storage_version >= version {
-        return Err(MigrateInvalidVersion {
+        return Err(ContractError::MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,
         });

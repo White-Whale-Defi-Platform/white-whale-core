@@ -101,15 +101,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
         for fee in epoch.total.iter() {
-            // TODO redo these decimal/uint conversions with the helpers made in the pool-network package, once merged.
-            let reward = fee_share.checked_mul(
-                Decimal::from_atomics(fee.amount, 6)
-                    .map_err(|_| StdError::generic_err("Couldn't convert Uint128 to Decimal"))?,
-            )?;
-            let reward: Uint128 = reward
-                .atomics()
-                .checked_div(10u128.pow(reward.decimal_places() - 6).into())
-                .map_err(|_| StdError::generic_err("Couldn't convert Decimal to Uint128"))?;
+            let reward = fee.amount * fee_share;
 
             // make sure the reward is sound
             let _ = epoch
