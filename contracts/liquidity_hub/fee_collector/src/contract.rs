@@ -25,6 +25,9 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         pool_router: Addr::unchecked(""),
+        fee_distributor: Addr::unchecked(""),
+        pool_factory: Addr::unchecked(""),
+        vault_factory: Addr::unchecked(""),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -45,13 +48,28 @@ pub fn execute(
         ExecuteMsg::CollectFees { collect_fees_for } => {
             commands::collect_fees(deps, info, collect_fees_for)
         }
-        ExecuteMsg::UpdateConfig { owner, pool_router } => {
-            commands::update_config(deps, info, owner, pool_router)
-        }
+        ExecuteMsg::UpdateConfig {
+            owner,
+            pool_router,
+            fee_distributor,
+            pool_factory,
+            vault_factory,
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            pool_router,
+            fee_distributor,
+            pool_factory,
+            vault_factory,
+        ),
         ExecuteMsg::AggregateFees {
             asset_info,
             aggregate_fees_for,
         } => commands::aggregate_fees(deps, info, env, asset_info, aggregate_fees_for),
+        ExecuteMsg::ForwardFees { forward_fees_as } => {
+            commands::forward_fees(deps, info, env, forward_fees_as)
+        }
     }
 }
 
@@ -86,6 +104,8 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     if storage_version <= Version::parse("1.0.5")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
+
+    // todo fix migration for the new pub fee_distributor: Addr, in Config
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

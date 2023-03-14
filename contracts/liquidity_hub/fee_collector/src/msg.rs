@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint128;
 
 use pool_network::asset::{Asset, AssetInfo};
 
@@ -17,10 +18,15 @@ pub enum ExecuteMsg {
         asset_info: AssetInfo,
         aggregate_fees_for: FeesFor,
     },
+    /// Forward fees to the fee distributor. This will collect and aggregate the fees, to send them back to the fee distributor.
+    ForwardFees { forward_fees_as: AssetInfo },
     /// Updates the config
     UpdateConfig {
         owner: Option<String>,
         pool_router: Option<String>,
+        fee_distributor: Option<String>,
+        pool_factory: Option<String>,
+        vault_factory: Option<String>,
     },
 }
 
@@ -78,4 +84,9 @@ pub enum ContractType {
     Vault {},
     /// Pool/Pair contract type
     Pool {},
+}
+
+#[cw_serde]
+pub struct ForwardFeesResponse {
+    pub fees: Vec<Asset>,
 }

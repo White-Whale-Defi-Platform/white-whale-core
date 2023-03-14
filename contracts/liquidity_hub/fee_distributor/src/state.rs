@@ -1,7 +1,8 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, Order, StdResult};
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Timestamp, Uint64};
 use cw_storage_plus::{Item, Map};
 
+use crate::msg::EpochConfig;
 use terraswap::asset::Asset;
 
 #[cw_serde]
@@ -9,13 +10,15 @@ pub struct Config {
     pub owner: Addr,
     pub staking_contract_addr: Addr,
     pub fee_collector_addr: Addr,
-    pub grace_period: u128,
+    pub grace_period: Uint64,
+    pub epoch_config: EpochConfig,
 }
 
 #[cw_serde]
 pub struct Epoch {
     // Epoch identifier
     pub id: u128,
+    pub start_time: Timestamp,
     // Initial fees to be distributed in this epoch.
     pub total: Vec<Asset>,
     // Fees left to be claimed on this epoch. These available fees are forwarded when the epoch expires.
@@ -24,11 +27,11 @@ pub struct Epoch {
     pub claimed: Vec<Asset>,
 }
 
-impl Epoch {
-    // Returns the default, non-initialized version of an [Epoch].
-    pub fn default() -> Self {
+impl Default for Epoch {
+    fn default() -> Self {
         Self {
             id: 0,
+            start_time: Timestamp::default(),
             total: vec![],
             available: vec![],
             claimed: vec![],
@@ -73,8 +76,8 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
 
     let option = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take((grace_period + 1) as usize)
-        .nth(grace_period as usize);
+        .take(grace_period.checked_add(Uint64::one())?.u64() as usize)
+        .nth(grace_period.u64() as usize);
 
     let epoch = option
         .and_then(|result| result.ok())
@@ -90,7 +93,7 @@ pub fn get_claimable_epochs(deps: Deps) -> StdResult<Vec<Epoch>> {
 
     EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take((grace_period) as usize)
+        .take(grace_period.u64() as usize)
         .map(|item| {
             let (_, epoch) = item?;
             Ok(epoch)

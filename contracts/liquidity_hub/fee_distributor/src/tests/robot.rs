@@ -1,10 +1,10 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult};
+use cosmwasm_std::{from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64};
 
 use terraswap::asset::Asset;
 
 use crate::contract::{execute, instantiate, query};
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{EpochConfig, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{get_expiring_epoch, Config, Epoch, EPOCHS};
 use crate::ContractError;
 
@@ -26,12 +26,14 @@ impl TestingRobot {
         info: MessageInfo,
         staking_contract_addr: String,
         fee_collector_addr: String,
-        grace_period: u128,
+        grace_period: Uint64,
+        epoch_config: EpochConfig,
     ) -> &mut Self {
         let msg = InstantiateMsg {
-            staking_contract_addr,
+            bonding_contract_addr: staking_contract_addr,
             fee_collector_addr,
             grace_period,
+            epoch_config,
         };
 
         instantiate(self.owned_deps.as_mut(), self.env.clone(), info, msg).unwrap();
@@ -44,12 +46,14 @@ impl TestingRobot {
         info: MessageInfo,
         staking_contract_addr: String,
         fee_collector_addr: String,
-        grace_period: u128,
+        grace_period: Uint64,
+        epoch_config: EpochConfig,
     ) -> &mut Self {
         let msg = InstantiateMsg {
-            staking_contract_addr,
+            bonding_contract_addr: staking_contract_addr,
             fee_collector_addr,
             grace_period,
+            epoch_config,
         };
 
         instantiate(self.owned_deps.as_mut(), self.env.clone(), info, msg).unwrap_err();

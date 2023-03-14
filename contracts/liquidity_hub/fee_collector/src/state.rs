@@ -7,6 +7,9 @@ use pool_network::asset::AssetInfo;
 pub struct Config {
     pub owner: Addr,
     pub pool_router: Addr,
+    pub fee_distributor: Addr,
+    pub pool_factory: Addr,
+    pub vault_factory: Addr,
 }
 
 pub type ConfigResponse = Config;

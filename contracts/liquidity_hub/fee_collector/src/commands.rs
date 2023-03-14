@@ -4,13 +4,13 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
-use pool_network::asset::AssetInfo;
+use pool_network::asset::{Asset, AssetInfo};
 use pool_network::factory::{PairsResponse, QueryMsg};
 use pool_network::router;
 use pool_network::router::{ExecuteMsg, SwapOperation};
 use vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{ContractType, FactoryType, FeesFor};
+use crate::msg::{ContractType, ExecuteMsg, FactoryType, FeesFor, ForwardFeesResponse};
 use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, Config, CONFIG};
 use crate::ContractError;
 
@@ -127,6 +127,9 @@ pub fn update_config(
     info: MessageInfo,
     owner: Option<String>,
     pool_router: Option<String>,
+    fee_distributor: Option<String>,
+    pool_factory: Option<String>,
+    vault_factory: Option<String>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
@@ -143,6 +146,21 @@ pub fn update_config(
     if let Some(pool_router) = pool_router {
         let pool_router = deps.api.addr_validate(&pool_router)?;
         config.pool_router = pool_router;
+    }
+
+    if let Some(fee_distributor) = fee_distributor {
+        let fee_distributor = deps.api.addr_validate(&fee_distributor)?;
+        config.fee_distributor = fee_distributor;
+    }
+
+    if let Some(pool_factory) = pool_factory {
+        let pool_factory = deps.api.addr_validate(&pool_factory)?;
+        config.pool_factory = pool_factory;
+    }
+
+    if let Some(vault_factory) = vault_factory {
+        let vault_factory = deps.api.addr_validate(&vault_factory)?;
+        config.vault_factory = vault_factory;
     }
 
     CONFIG.save(deps.storage, &config)?;
@@ -262,7 +280,7 @@ pub fn aggregate_fees(
             match operations_res {
                 Ok(operations) => {
                     let execute_swap_operations_msg =
-                        to_binary(&ExecuteMsg::ExecuteSwapOperations {
+                        to_binary(&pool_network::router::ExecuteMsg::ExecuteSwapOperations {
                             operations,
                             minimum_receive: None,
                             to: None,
@@ -303,4 +321,79 @@ pub fn aggregate_fees(
     Ok(Response::new()
         .add_attribute("action", "aggregate_fees")
         .add_messages(aggregate_fees_messages))
+}
+
+/// Forwards the fees to the fee distributor.
+pub fn forward_fees(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    forward_fees_as: AssetInfo,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    // only the fee distributor can forward the fees
+    if info.sender != config.fee_distributor {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut messages = vec![];
+
+    // trigger fee aggregation
+    let pools_fee_aggregation_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        funds: vec![],
+        msg: to_binary(&ExecuteMsg::AggregateFees {
+            asset_info: forward_fees_as.clone(),
+            aggregate_fees_for: FeesFor::Factory {
+                factory_addr: config.pool_factory.to_string(),
+                factory_type: FactoryType::Pool {
+                    start_after: None,
+                    limit: None,
+                },
+            },
+        })?,
+    });
+
+    let vaults_fee_aggregation_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: env.contract.address.to_string(),
+        funds: vec![],
+        msg: to_binary(&ExecuteMsg::AggregateFees {
+            asset_info: forward_fees_as.clone(),
+            aggregate_fees_for: FeesFor::Factory {
+                factory_addr: config.vault_factory.to_string(),
+                factory_type: FactoryType::Vault {
+                    start_after: None,
+                    limit: None,
+                },
+            },
+        })?,
+    });
+
+    messages.push(pools_fee_aggregation_msg);
+    messages.push(vaults_fee_aggregation_msg);
+
+    // query amount of whale tokens in the contract with bank module
+
+    let whale_token_balance: Uint128 = match forward_fees_as.clone() {
+        AssetInfo::Token { .. } => Uint128::zero(),
+        AssetInfo::NativeToken { denom } => {
+            let balance_response: BalanceResponse =
+                deps.querier.query(&QueryRequest::Bank(BankQuery::Balance {
+                    address: env.contract.address.to_string(),
+                    denom: denom.clone(),
+                }))?;
+            balance_response.amount.amount
+        }
+    };
+
+    Ok(Response::new()
+        .add_attribute("action", "forward_fees")
+        .add_messages(messages)
+        .set_data(to_binary(&ForwardFeesResponse {
+            fees: vec![Asset {
+                info: forward_fees_as,
+                amount: whale_token_balance,
+            }],
+        })?))
 }

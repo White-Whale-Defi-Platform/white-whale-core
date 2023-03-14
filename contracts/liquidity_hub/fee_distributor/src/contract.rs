@@ -4,16 +4,17 @@ use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::helpers::validate_grace_period;
+use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG};
-use crate::{commands, queries, state};
+use crate::state::{get_expiring_epoch, Config, CONFIG, EPOCHS};
+use crate::{commands, helpers, queries, state};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const EPOCH_CREATION_REPLY_ID: u64 = 1;
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -23,12 +24,14 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     validate_grace_period(&msg.grace_period)?;
+    validate_epoch_config(&msg.epoch_config)?;
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
-        staking_contract_addr: deps.api.addr_validate(msg.staking_contract_addr.as_str())?,
+        staking_contract_addr: deps.api.addr_validate(msg.bonding_contract_addr.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
         grace_period: msg.grace_period,
+        epoch_config: msg.epoch_config,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -41,10 +44,29 @@ pub fn instantiate(
             config.staking_contract_addr.as_str(),
         )
         .add_attribute("fee_collector_addr", config.fee_collector_addr.as_str())
-        .add_attribute("grace_period", config.grace_period.to_string()))
+        .add_attribute("grace_period", config.grace_period.to_string())
+        .add_attribute("epoch_config", config.epoch_config.to_string()))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
+    // forward fees from previous epoch to the new one
+    let expiring_epoch = get_expiring_epoch(deps.as_ref())?;
+
+    let unclaimed_fees = expiring_epoch
+        .map(|epoch| epoch.available)
+        .unwrap_or_default();
+
+    // todo this fees will come from sending them from the fee collector to this contract
+    // todo should think on how to "deposit" fees to the latest epoch, i.e. when sending the tokens from the fee collector here
+    //  maybe with a submessage?
+    fees = helpers::aggregate_fees(fees, unclaimed_fees);
+
+    EPOCHS.save(deps.storage, &new_epoch.id.to_be_bytes(), &new_epoch)?;
+    Ok(Response::new())
+}
+
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -52,7 +74,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::NewEpoch { fees } => commands::create_new_epoch(deps, info, env, fees),
+        ExecuteMsg::NewEpoch {} => commands::create_new_epoch(deps, info, env, fees),
         ExecuteMsg::Claim {} => commands::claim(deps, info),
         ExecuteMsg::UpdateConfig {
             owner,
@@ -71,7 +93,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::CurrentEpoch {} => Ok(to_binary(&state::get_current_epoch(deps)?)?),

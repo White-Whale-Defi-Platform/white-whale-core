@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Timestamp, Uint128};
 
 use terraswap::asset::{Asset, AssetInfo};
 
@@ -8,6 +8,7 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
     vec![
         Epoch {
             id: 1,
+            start_time: Timestamp::from_seconds(1678726800),
             total: vec![
                 Asset {
                     info: AssetInfo::NativeToken {
@@ -53,6 +54,7 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
         },
         Epoch {
             id: 2,
+            start_time: Timestamp::from_seconds(1678813200),
             total: vec![Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -69,6 +71,7 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
         },
         Epoch {
             id: 3,
+            start_time: Timestamp::from_seconds(1678899600),
             total: vec![
                 Asset {
                     info: AssetInfo::NativeToken {
