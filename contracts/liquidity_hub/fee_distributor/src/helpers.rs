@@ -1,11 +1,10 @@
-use cosmwasm_std::{Coin, StdError, StdResult, Uint128, Uint64};
+use cosmwasm_std::Uint64;
 
 use crate::ContractError;
 use white_whale::fee_distributor::EpochConfig;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::Asset;
 
 const MAX_GRACE_PERIOD: u64 = 10u64;
-const MAX_EPOCH_START_HOUR: u64 = 23u64;
 pub const DAY_IN_SECONDS: u64 = 86400u64;
 
 /// Validates the grace period.

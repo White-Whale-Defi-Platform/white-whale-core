@@ -102,7 +102,7 @@ pub(crate) fn query_withdrawable(
 
     let mut withdrawable_amount = Uint128::zero();
     for (_, bond) in unbonding? {
-        if timestamp.minus_seconds(config.unbonding_period) >= bond.timestamp {
+        if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
             withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
     }

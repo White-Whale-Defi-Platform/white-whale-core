@@ -1,13 +1,13 @@
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Uint64};
 
 #[cw_serde]
 pub struct Config {
     /// Owner of the contract.
     pub owner: Addr,
-    /// Unbonding period in seconds.
-    pub unbonding_period: u64,
+    /// Unbonding period in nanoseconds.
+    pub unbonding_period: Uint64,
     /// A fraction that controls the effect of time on the weight of a bond. If the growth rate is set
     /// to zero, time will have no impact on the weight.
     pub growth_rate: Decimal,
@@ -53,8 +53,8 @@ pub struct GlobalIndex {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Unbonding period in seconds.
-    pub unbonding_period: u64,
+    /// Unbonding period in nanoseconds.
+    pub unbonding_period: Uint64,
     /// Weight grow rate. Needs to be between 0 and 1.
     pub growth_rate: Decimal,
     /// [AssetInfo] of the assets that can be bonded.
@@ -72,7 +72,7 @@ pub enum ExecuteMsg {
     /// Updates the [Config] of the contract.
     UpdateConfig {
         owner: Option<String>,
-        unbonding_period: Option<u64>,
+        unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
     },
 }
@@ -118,7 +118,7 @@ pub struct BondedResponse {
     pub bonded_assets: Vec<Asset>,
 }
 
-/// Response for the Unstaking query
+/// Response for the Unbonding query
 #[cw_serde]
 pub struct UnbondingResponse {
     pub total_amount: Uint128,

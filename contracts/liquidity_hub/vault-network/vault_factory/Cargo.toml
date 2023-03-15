@@ -9,7 +9,7 @@ description = "Contract to facilitate the vault network"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
+documentation.workspace = true
 publish.workspace = true
 
 [lib]

@@ -17,6 +17,9 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 fn instantiate_successfully() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
     let grace_period = Uint64::new(2);
+    let distribution_asset = AssetInfo::NativeToken {
+        denom: "uwhale".to_string(),
+    };
     let epoch_config = EpochConfig {
         duration: Uint64::new(86400u64),           // a day
         genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
@@ -25,17 +28,19 @@ fn instantiate_successfully() {
     robot
         .instantiate(
             mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
+            "bonding_contract_addr".to_string(),
             "fee_collector_addr".to_string(),
             grace_period,
             epoch_config.clone(),
+            distribution_asset.clone(),
         )
         .asset_config(Config {
             owner: Addr::unchecked("owner"),
             grace_period,
-            staking_contract_addr: Addr::unchecked("staking_contract_addr"),
+            bonding_contract_addr: Addr::unchecked("bonding_contract_addr"),
             fee_collector_addr: Addr::unchecked("fee_collector_addr"),
             epoch_config,
+            distribution_asset,
         });
 }
 
@@ -43,6 +48,9 @@ fn instantiate_successfully() {
 fn instantiate_unsuccessfully() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
     let invalid_grace_period = Uint64::zero();
+    let distribution_asset = AssetInfo::NativeToken {
+        denom: "uwhale".to_string(),
+    };
     let epoch_config = EpochConfig {
         duration: Uint64::new(86400u64),           // a day
         genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
@@ -50,84 +58,40 @@ fn instantiate_unsuccessfully() {
 
     robot.instantiate_err(
         mock_info("owner", &[]),
-        "staking_contract_addr".to_string(),
+        "bonding_contract_addr".to_string(),
         "fee_collector_addr".to_string(),
         invalid_grace_period,
         epoch_config.clone(),
+        distribution_asset.clone(),
     );
 
     let invalid_grace_period = Uint64::new(11);
     robot.instantiate_err(
         mock_info("owner", &[]),
-        "staking_contract_addr".to_string(),
+        "bonding_contract_addr".to_string(),
         "fee_collector_addr".to_string(),
         invalid_grace_period,
         epoch_config.clone(),
+        distribution_asset.clone(),
     );
 
     let invalid_epoch_duration = Uint64::new(3600u64);
     robot.instantiate_err(
         mock_info("owner", &[]),
-        "staking_contract_addr".to_string(),
+        "bonding_contract_addr".to_string(),
         "fee_collector_addr".to_string(),
         Uint64::one(),
-        epoch_config,
+        EpochConfig {
+            duration: invalid_epoch_duration,          // a day
+            genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
+        },
+        distribution_asset.clone(),
     );
-}
-
-#[test]
-fn test_epoch_stuff() {
-    let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
-    let grace_period = Uint64::new(10);
-    let epoch_config = EpochConfig {
-        duration: Uint64::new(86400u64),           // a day
-        genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
-    };
-
-    let coins = vec![coin(5_000u128, "uwhale"), coin(1_000u128, "uatom")];
-    let fees = vec![
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::from(5_000u128),
-        },
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uatom".to_string(),
-            },
-            amount: Uint128::from(1_000u128),
-        },
-    ];
-
-    robot
-        .instantiate(
-            mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
-            "fee_collector_addr".to_string(),
-            grace_period,
-            epoch_config,
-        )
-        .create_new_epoch(mock_info("owner", &[]), |res| match res {
-            _ => println!("res: {:?}", res),
-        })
-        .assert_current_epoch(&Epoch {
-            id: 0,
-            start_time: Default::default(),
-            total: vec![],
-            available: vec![],
-            claimed: vec![],
-        });
 }
 
 #[test]
 fn test_create_new_epoch() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
-    let grace_period = Uint64::new(2);
-    let epoch_config = EpochConfig {
-        duration: Uint64::new(86400u64),           // a day
-        genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
-    };
 
     let coins = vec![coin(5_000u128, "uwhale"), coin(1_000u128, "uatom")];
     let fees = vec![
@@ -149,7 +113,7 @@ fn test_create_new_epoch() {
     let total_fees = helpers::aggregate_fees(fees.clone(), expiring_epoch.available.clone());
 
     let expected_new_epoch = Epoch {
-        id: 4,
+        id: Uint64::new(4),
         start_time: Timestamp::from_seconds(1678986000),
         total: total_fees.clone(),
         available: total_fees.clone(),
@@ -157,13 +121,7 @@ fn test_create_new_epoch() {
     };
 
     robot
-        .instantiate(
-            mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
-            "fee_collector_addr".to_string(),
-            grace_period,
-            epoch_config,
-        )
+        .instantiate_default()
         .add_epochs_to_state(epoch::get_epochs())
         .assert_current_epoch(epoch::get_epochs().last().unwrap())
         .assert_expiring_epoch(Some(&expiring_epoch))
@@ -184,7 +142,7 @@ fn test_create_new_epoch() {
         .assert_current_epoch(&expected_new_epoch)
         .assert_expiring_epoch(Some(&epoch::get_epochs()[1])) // make sure the second epoch is now expiring
         .create_new_epoch(mock_info("fee_collector_addr", &[]), |_| {})
-        .query_epoch(5, |res| {
+        .query_epoch(Uint64::new(5), |res| {
             let (r, epoch) = res.unwrap();
             r.assert_current_epoch(&epoch);
         });
@@ -194,10 +152,6 @@ fn test_create_new_epoch() {
 fn test_claimable_epochs() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
     let grace_period = Uint64::new(2);
-    let epoch_config = EpochConfig {
-        duration: Uint64::new(86400u64),           // a day
-        genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
-    };
 
     let epochs = epoch::get_epochs();
     let binding = epochs.clone();
@@ -208,13 +162,7 @@ fn test_claimable_epochs() {
         .collect::<Vec<_>>();
 
     robot
-        .instantiate(
-            mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
-            "fee_collector_addr".to_string(),
-            grace_period,
-            epoch_config,
-        )
+        .instantiate_default()
         .add_epochs_to_state(epochs)
         .query_claimable_epochs(|res| {
             let (_, epochs) = res.unwrap();
@@ -229,25 +177,14 @@ fn test_claimable_epochs() {
 #[test]
 fn test_current_epoch_no_epochs() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
-    let grace_period = Uint64::new(2);
-    let epoch_config = EpochConfig {
-        duration: Uint64::new(86400u64),           // a day
-        genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
-    };
 
     robot
-        .instantiate(
-            mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
-            "fee_collector_addr".to_string(),
-            grace_period,
-            epoch_config,
-        )
+        .instantiate_default()
         .query_current_epoch(|res| {
             let epoch = res.unwrap();
             assert_eq!(epoch, Epoch::default());
         })
-        .query_epoch(10, |res| {
+        .query_epoch(Uint64::new(10), |res| {
             // epoch 10 doesn't exist, it should return the default value
             let (_, epoch) = res.unwrap();
             assert_eq!(epoch, Epoch::default());
@@ -257,38 +194,23 @@ fn test_current_epoch_no_epochs() {
 #[test]
 fn test_update_config() {
     let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
-    let grace_period = Uint64::new(2);
-    let epoch_config = EpochConfig {
-        duration: Uint64::new(86400u64),           // a day
-        genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
-    };
 
-    // let new_config = Config {
-    //     owner: Addr::unchecked("new_owner"),
-    //     staking_contract_addr: Addr::unchecked("new_staking_contract_addr"),
-    //     fee_collector_addr: Addr::unchecked("new_fee_collector_addr"),
-    //     grace_period: Uint64::new(3),
-    //     epoch_duration: Uint64::new(86400u64),
-    // };
     let new_config = Config {
         owner: Addr::unchecked("new_owner"),
-        staking_contract_addr: Addr::unchecked("new_staking_contract_addr"),
+        bonding_contract_addr: Addr::unchecked("new_bonding_contract_addr"),
         fee_collector_addr: Addr::unchecked("new_fee_collector_addr"),
         grace_period: Uint64::new(3),
         epoch_config: EpochConfig {
-            duration: Default::default(),
-            genesis_epoch: Default::default(),
+            duration: Uint64::new(86400u64),           // a day
+            genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
+        },
+        distribution_asset: AssetInfo::NativeToken {
+            denom: "uwhale".to_string(),
         },
     };
 
     robot
-        .instantiate(
-            mock_info("owner", &[]),
-            "staking_contract_addr".to_string(),
-            "fee_collector_addr".to_string(),
-            grace_period,
-            epoch_config,
-        )
+        .instantiate_default()
         .update_config(
             mock_info("unauthorized", &[]),
             new_config.clone(),

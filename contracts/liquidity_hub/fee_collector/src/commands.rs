@@ -180,9 +180,12 @@ pub fn aggregate_fees(
     ask_asset_info: AssetInfo,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
-    // only the owner can aggregate the fees
-    validate_owner(deps.storage, info.sender)?;
     let config: Config = CONFIG.load(deps.storage)?;
+
+    // only the owner or the contract itself can aggregate the fees
+    if info.sender != config.owner && info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
 
@@ -357,7 +360,7 @@ pub fn forward_fees(
                 factory_addr: config.pool_factory.to_string(),
                 factory_type: FactoryType::Pool {
                     start_after: None,
-                    limit: None,
+                    limit: Some(30u32),
                 },
             },
         })?,
@@ -372,12 +375,13 @@ pub fn forward_fees(
                 factory_addr: config.vault_factory.to_string(),
                 factory_type: FactoryType::Vault {
                     start_after: None,
-                    limit: None,
+                    limit: Some(30u32),
                 },
             },
         })?,
     });
 
+    //todo maybe i need to move this into a submessage
     // query amount of whale tokens in the contract with bank module
     let whale_token_balance: Uint128 = match forward_fees_as.clone() {
         AssetInfo::Token { .. } => Uint128::zero(),
@@ -385,14 +389,14 @@ pub fn forward_fees(
             let balance_response: BalanceResponse =
                 deps.querier.query(&QueryRequest::Bank(BankQuery::Balance {
                     address: env.contract.address.to_string(),
-                    denom: denom.clone(),
+                    denom,
                 }))?;
             balance_response.amount.amount
         }
     };
 
     let fees = vec![Asset {
-        info: forward_fees_as.clone(),
+        info: forward_fees_as,
         amount: whale_token_balance,
     }];
 

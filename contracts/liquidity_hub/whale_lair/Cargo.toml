@@ -7,7 +7,7 @@ description = "The Whale Lair is a bonding contract used to bond WHALE LSDs."
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
+documentation.workspace = true
 publish.workspace = true
 
 exclude = [

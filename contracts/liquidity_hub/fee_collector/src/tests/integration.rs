@@ -2664,7 +2664,13 @@ fn accumulate_fee(assets_collected: &mut HashMap<String, Asset>, asset: &Asset) 
             },
         );
     } else {
-        assets_collected.insert(asset_id, Asset{ info: asset.info.clone(), amount: asset.amount });
+        assets_collected.insert(
+            asset_id,
+            Asset {
+                info: asset.info.clone(),
+                amount: asset.amount,
+            },
+        );
     }
 }
 

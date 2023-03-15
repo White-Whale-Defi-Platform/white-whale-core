@@ -1,10 +1,12 @@
-use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64};
+use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
+use cosmwasm_std::{
+    from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint128, Uint64,
+};
 
 use white_whale::fee_distributor::{
-    Config, Epoch, EpochConfig, ExecuteMsg, InstantiateMsg, QueryMsg,
+    Config, Epoch, EpochConfig, EpochResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset::Asset;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::contract::{execute, instantiate, query};
 use crate::state::{get_expiring_epoch, EPOCHS};
@@ -23,19 +25,46 @@ impl TestingRobot {
         Self { owned_deps, env }
     }
 
+    pub(crate) fn instantiate_default(&mut self) -> &mut Self {
+        let msg = InstantiateMsg {
+            bonding_contract_addr: "bonding_contract_addr".to_string(),
+            fee_collector_addr: "fee_collector_addr".to_string(),
+            grace_period: Uint64::new(2),
+            epoch_config: EpochConfig {
+                duration: Uint64::new(86400u64),           // a day
+                genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
+            },
+            distribution_asset: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+        };
+
+        instantiate(
+            self.owned_deps.as_mut(),
+            self.env.clone(),
+            mock_info("owner", &[]),
+            msg,
+        )
+        .unwrap();
+
+        self
+    }
+
     pub(crate) fn instantiate(
         &mut self,
         info: MessageInfo,
-        staking_contract_addr: String,
+        bonding_contract_addr: String,
         fee_collector_addr: String,
         grace_period: Uint64,
         epoch_config: EpochConfig,
+        distribution_asset: AssetInfo,
     ) -> &mut Self {
         let msg = InstantiateMsg {
-            bonding_contract_addr: staking_contract_addr,
+            bonding_contract_addr,
             fee_collector_addr,
             grace_period,
             epoch_config,
+            distribution_asset,
         };
 
         instantiate(self.owned_deps.as_mut(), self.env.clone(), info, msg).unwrap();
@@ -46,16 +75,18 @@ impl TestingRobot {
     pub(crate) fn instantiate_err(
         &mut self,
         info: MessageInfo,
-        staking_contract_addr: String,
+        bonding_contract_addr: String,
         fee_collector_addr: String,
         grace_period: Uint64,
         epoch_config: EpochConfig,
+        distribution_asset: AssetInfo,
     ) -> &mut Self {
         let msg = InstantiateMsg {
-            bonding_contract_addr: staking_contract_addr,
+            bonding_contract_addr,
             fee_collector_addr,
             grace_period,
             epoch_config,
+            distribution_asset,
         };
 
         instantiate(self.owned_deps.as_mut(), self.env.clone(), info, msg).unwrap_err();
@@ -103,9 +134,10 @@ impl TestingRobot {
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
             owner: Some(config.owner.to_string()),
-            staking_contract_addr: Some(config.staking_contract_addr.to_string()),
+            bonding_contract_addr: Some(config.bonding_contract_addr.to_string()),
             fee_collector_addr: Some(config.fee_collector_addr.to_string()),
             grace_period: Some(config.grace_period),
+            distribution_asset: Some(config.distribution_asset),
         };
 
         response(execute(
@@ -136,7 +168,7 @@ impl TestingRobot {
 
     pub(crate) fn query_epoch(
         &mut self,
-        id: u128,
+        id: Uint64,
         response: impl Fn(StdResult<(&mut Self, Epoch)>),
     ) -> &mut Self {
         let query_res = query(
@@ -145,9 +177,9 @@ impl TestingRobot {
             QueryMsg::Epoch { id },
         )
         .unwrap();
-        let epoch: Epoch = from_binary(&query_res).unwrap();
+        let res: EpochResponse = from_binary(&query_res).unwrap();
 
-        response(Ok((self, epoch)));
+        response(Ok((self, res.epoch)));
 
         self
     }

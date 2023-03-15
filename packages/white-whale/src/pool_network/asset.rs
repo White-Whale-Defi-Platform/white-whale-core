@@ -1,4 +1,5 @@
 use std::fmt;
+use std::fmt::{Display, Formatter};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -29,8 +30,8 @@ pub struct Asset {
     pub amount: Uint128,
 }
 
-impl fmt::Display for Asset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for Asset {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}{}", self.amount, self.info)
     }
 }
@@ -139,11 +140,11 @@ pub enum AssetInfo {
     NativeToken { denom: String },
 }
 
-impl fmt::Display for AssetInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for AssetInfo {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
-            AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
+            AssetInfo::NativeToken { denom } => write!(f, "{denom}"),
+            AssetInfo::Token { contract_addr } => write!(f, "{contract_addr}"),
         }
     }
 }
@@ -437,8 +438,9 @@ pub trait ToCoins {
 }
 
 impl ToCoins for Vec<Asset> {
+    /// converts a Vec<Asset> into a Vec<Coin>
     fn to_coins(&self) -> StdResult<Vec<Coin>> {
-        self.into_iter()
+        self.iter()
             .map(|asset| {
                 let denom = match &asset.info {
                     AssetInfo::Token { .. } => {

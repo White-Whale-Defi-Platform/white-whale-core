@@ -56,8 +56,7 @@ pub fn get_fees_for_asset(
         Ok(fees)
     } else {
         Err(StdError::generic_err(format!(
-            "Fees for asset {} not found",
-            asset_id
+            "Fees for asset {asset_id} not found"
         )))
     }
 }

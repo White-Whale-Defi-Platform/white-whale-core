@@ -57,7 +57,7 @@ pub fn instantiate(
 
     let asset0_label = asset_info_0.clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_info_1.clone().get_label(&deps.as_ref())?;
-    let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
+    let lp_token_name = format!("{asset0_label}-{asset1_label}-LP");
 
     // check the fees are valid
     msg.pool_fees.is_valid()?;

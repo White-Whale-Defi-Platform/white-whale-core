@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
-    Timestamp, Uint128,
+    Timestamp, Uint128, Uint64,
 };
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
@@ -151,7 +151,7 @@ pub(crate) fn withdraw(
 
     for unbonding in unbondings {
         let (ts, bond) = unbonding;
-        if timestamp.minus_seconds(config.unbonding_period) >= bond.timestamp {
+        if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
             let denom = match bond.asset.info {
                 AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
                 AssetInfo::NativeToken { denom } => denom,
@@ -189,7 +189,7 @@ pub(crate) fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     owner: Option<String>,
-    unbonding_period: Option<u64>,
+    unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message

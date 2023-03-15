@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "fee_collector"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -489,8 +489,10 @@ dependencies = [
  "cosmwasm-std",
  "cw-multi-test 0.16.2",
  "cw-storage-plus 0.15.1",
+ "cw-utils 1.0.1",
  "cw2 0.15.1",
  "schemars",
+ "semver",
  "serde",
  "thiserror",
  "white-whale",
@@ -1116,7 +1118,7 @@ dependencies = [
 
 [[package]]
 name = "white-whale"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

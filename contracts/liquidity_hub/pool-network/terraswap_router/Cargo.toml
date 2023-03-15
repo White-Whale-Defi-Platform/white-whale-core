@@ -10,6 +10,7 @@ edition.workspace = true
 description = "A Terraswap router contract - provides multi-step operations to facilitate single sign operation"
 license = "Apache-2.0"
 publish.workspace = true
+documentation.workspace = true
 
 exclude = [
 	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.

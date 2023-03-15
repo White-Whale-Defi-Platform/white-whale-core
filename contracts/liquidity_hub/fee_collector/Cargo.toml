@@ -1,13 +1,13 @@
 [package]
 name = "fee_collector"
-version = "1.1.0"
+version = "1.2.0"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
+documentation.workspace = true
 publish.workspace = true
 
 exclude = [

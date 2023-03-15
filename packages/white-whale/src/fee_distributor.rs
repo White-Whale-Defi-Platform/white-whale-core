@@ -1,21 +1,25 @@
-use crate::pool_network::asset::Asset;
+use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Timestamp, Uint64};
 use std::fmt;
+use std::fmt::Display;
 
 #[cw_serde]
 pub struct Config {
     pub owner: Addr,
-    pub staking_contract_addr: Addr,
+    pub bonding_contract_addr: Addr,
     pub fee_collector_addr: Addr,
     pub grace_period: Uint64,
     pub epoch_config: EpochConfig,
+    pub distribution_asset: AssetInfo,
 }
 
 #[cw_serde]
+#[derive(Default)]
 pub struct Epoch {
     // Epoch identifier
-    pub id: u128,
+    pub id: Uint64,
+    // Epoch start time
     pub start_time: Timestamp,
     // Initial fees to be distributed in this epoch.
     pub total: Vec<Asset>,
@@ -25,15 +29,21 @@ pub struct Epoch {
     pub claimed: Vec<Asset>,
 }
 
-impl Default for Epoch {
-    fn default() -> Self {
-        Self {
-            id: 0,
-            start_time: Timestamp::default(),
-            total: vec![],
-            available: vec![],
-            claimed: vec![],
-        }
+impl Epoch {
+    /// Validates if the epoch can be refilled. It can only happen when the epoch has just been created
+    /// and nobody has claimed anything yet.
+    pub fn validate_refillable(&self) -> bool {
+        self != &Epoch::default() && self.available == self.total && self.claimed == vec![]
+    }
+}
+
+impl Display for Epoch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Epoch {{ id: {}, start_time: {}, total: {:?}, available: {:?}, claimed: {:?} }}",
+            self.id, self.start_time, self.total, self.available, self.claimed
+        )
     }
 }
 
@@ -45,7 +55,7 @@ pub struct EpochConfig {
     pub genesis_epoch: Uint64,
 }
 
-impl fmt::Display for EpochConfig {
+impl Display for EpochConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -66,6 +76,8 @@ pub struct InstantiateMsg {
     pub grace_period: Uint64,
     /// Configuration for the epoch.
     pub epoch_config: EpochConfig,
+    /// The asset that is going to be distributed by the contracdt.
+    pub distribution_asset: AssetInfo,
 }
 
 #[cw_serde]
@@ -81,10 +93,15 @@ pub enum ExecuteMsg {
     /// Updates the [Config] of the contract.
     UpdateConfig {
         owner: Option<String>,
-        staking_contract_addr: Option<String>,
+        bonding_contract_addr: Option<String>,
         fee_collector_addr: Option<String>,
         grace_period: Option<Uint64>,
+        distribution_asset: Option<AssetInfo>,
     },
+
+    /// Refills an epoch with the given funds. It is only possible iff the epoch rewards have not
+    /// been claimed yet.
+    RefillEpoch { epoch_id: Uint64, fees: Vec<Asset> },
 }
 
 #[cw_serde]
@@ -95,14 +112,27 @@ pub enum QueryMsg {
     Config {},
 
     /// Returns the current epoch, which is the last on the EPOCHS map.
-    #[returns(Epoch)]
+    #[returns(EpochResponse)]
     CurrentEpoch {},
 
     /// Returns the epoch with the given id.
-    #[returns(Option<Epoch>)]
-    Epoch { id: u128 },
+    #[returns(EpochResponse)]
+    Epoch { id: Uint64 },
 
     /// Returns the [Epoch]s that can be claimed.
-    #[returns(Vec<Epoch>)]
+    #[returns(ClaimableEpochsResponse)]
     ClaimableEpochs {},
 }
+
+#[cw_serde]
+pub struct EpochResponse {
+    pub epoch: Epoch,
+}
+
+#[cw_serde]
+pub struct ClaimableEpochsResponse {
+    pub epochs: Vec<Epoch>,
+}
+
+#[cw_serde]
+pub struct MigrateMsg {}

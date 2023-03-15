@@ -27,6 +27,7 @@ cw2 = "0.15.1"
 cw20 = "0.15.1"
 cw20-base = { version = "0.15.1", features = ["library"] }
 cw-storage-plus = "0.15.1"
+cw-utils = "1.0.1"
 protobuf = { version = "3.1.0", features = ["with-bytes"] }
 schemars = "0.8.3"
 semver = "1.0.12"

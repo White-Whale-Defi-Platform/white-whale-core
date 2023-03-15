@@ -44,6 +44,7 @@ function read_pool_config() {
   protocol_fee=$(jq -r '.protocol_fee' $pool)
   swap_fee=$(jq -r '.swap_fee' $pool)
   burn_fee=$(jq -r '.burn_fee' $pool)
+  pair_type=$(jq -r '.pair_type' $pool)
 }
 
 function check_decimals() {
@@ -114,7 +115,7 @@ function create_pool() {
     asset_infos+=($asset_info)
   done
 
-  create_pool_msg='{"create_pair":{"asset_infos":['${asset_infos[0]}','${asset_infos[1]}'],"pool_fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"swap_fee":{"share":"'$swap_fee'"}}}}'
+  create_pool_msg='{"create_pair":{"pair_type": "'$pair_type'", "asset_infos":['${asset_infos[0]}','${asset_infos[1]}'],"pool_fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"swap_fee":{"share":"'$swap_fee'"}}}}'
 
   echo "Creating pool with the following configuration:"
   echo "Asset 0: ${asset_infos[0]}"
