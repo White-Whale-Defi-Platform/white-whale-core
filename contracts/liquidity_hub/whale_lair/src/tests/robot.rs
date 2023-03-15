@@ -1,9 +1,10 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult};
 use cw_multi_test::{App, AppResponse, Executor};
 
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{
-    Asset, AssetInfo, BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg,
-    QueryMsg, UnbondingResponse, WithdrawableResponse,
+    BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
+    UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;

@@ -2,7 +2,7 @@ mod vault_instantiate;
 
 use cosmwasm_std::{entry_point, DepsMut, Env, Reply, Response, StdError};
 pub use vault_instantiate::vault_instantiate;
-use vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+use white_whale::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
 
 use crate::err::{StdResult, VaultFactoryError};
 

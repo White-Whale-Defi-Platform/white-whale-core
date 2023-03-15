@@ -1,18 +1,7 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, Order, StdResult};
+use cosmwasm_std::{DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
-use pool_network::asset::AssetInfo;
-
-#[cw_serde]
-pub struct Config {
-    pub owner: Addr,
-    pub pool_router: Addr,
-    pub fee_distributor: Addr,
-    pub pool_factory: Addr,
-    pub vault_factory: Addr,
-}
-
-pub type ConfigResponse = Config;
+use white_whale::fee_collector::Config;
+use white_whale::pool_network::asset::AssetInfo;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");

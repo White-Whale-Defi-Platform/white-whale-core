@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, CosmosMsg};
 
-use pool_network::asset::{Asset, AssetInfo};
+use crate::pool_network::asset::{Asset, AssetInfo};
 
 /// The instantiation message
 #[cw_serde]

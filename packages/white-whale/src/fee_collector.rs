@@ -1,9 +1,7 @@
+use crate::fee_distributor::Epoch;
+use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
-
-use pool_network::asset::{Asset, AssetInfo};
-
-use crate::state::ConfigResponse;
+use cosmwasm_std::Addr;
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -19,7 +17,10 @@ pub enum ExecuteMsg {
         aggregate_fees_for: FeesFor,
     },
     /// Forward fees to the fee distributor. This will collect and aggregate the fees, to send them back to the fee distributor.
-    ForwardFees { forward_fees_as: AssetInfo },
+    ForwardFees {
+        epoch: Epoch,
+        forward_fees_as: AssetInfo,
+    },
     /// Updates the config
     UpdateConfig {
         owner: Option<String>,
@@ -45,7 +46,7 @@ pub enum FeesFor {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Queries the configuration of this contract
-    #[returns(ConfigResponse)]
+    #[returns(Config)]
     Config {},
     /// Queries fees collected by a given factory's children or individual contracts
     #[returns(Vec<Asset>)]
@@ -88,5 +89,14 @@ pub enum ContractType {
 
 #[cw_serde]
 pub struct ForwardFeesResponse {
-    pub fees: Vec<Asset>,
+    pub epoch: Epoch,
+}
+
+#[cw_serde]
+pub struct Config {
+    pub owner: Addr,
+    pub pool_router: Addr,
+    pub fee_distributor: Addr,
+    pub pool_factory: Addr,
+    pub vault_factory: Addr,
 }

@@ -1,7 +1,9 @@
 use crate::state::{pair_key, read_pairs, Config, ALLOW_NATIVE_TOKENS, CONFIG, PAIRS};
 use cosmwasm_std::{Deps, StdResult};
-use pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw};
-use pool_network::factory::{ConfigResponse, NativeTokenDecimalsResponse, PairsResponse};
+use white_whale::pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw};
+use white_whale::pool_network::factory::{
+    ConfigResponse, NativeTokenDecimalsResponse, PairsResponse,
+};
 
 /// Queries [Config]
 pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {

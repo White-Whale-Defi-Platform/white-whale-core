@@ -1,5 +1,4 @@
-use std::fmt;
-
+use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 
@@ -60,42 +59,6 @@ pub struct InstantiateMsg {
     pub growth_rate: Decimal,
     /// [AssetInfo] of the assets that can be bonded.
     pub bonding_assets: Vec<AssetInfo>,
-}
-
-/// TODO copied from the pool-network/terraswap package due to circular dependency issue.
-///     REMOVE once the packages are merged into white-whale.
-#[derive(PartialOrd)]
-#[cw_serde]
-pub enum AssetInfo {
-    Token { contract_addr: String },
-    NativeToken { denom: String },
-}
-
-/// TODO copied from the pool-network/terraswap package due to circular dependency issue.
-///     REMOVE once the packages are merged into white-whale.
-impl fmt::Display for AssetInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            AssetInfo::NativeToken { denom } => write!(f, "{denom}"),
-            AssetInfo::Token { contract_addr } => write!(f, "{contract_addr}"),
-        }
-    }
-}
-
-/// TODO copied from the pool-network/terraswap package due to circular dependency issue.
-///     REMOVE once the packages are merged into white-whale.
-#[cw_serde]
-pub struct Asset {
-    pub info: AssetInfo,
-    pub amount: Uint128,
-}
-
-/// TODO copied from the pool-network/terraswap package due to circular dependency issue.
-///     REMOVE once the packages are merged into white-whale.
-impl fmt::Display for Asset {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}{}", self.amount, self.info)
-    }
 }
 
 #[cw_serde]

@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic;
 
-use crate::asset::{AssetInfo, PairInfo, PairType};
-use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
-use crate::pair::QueryMsg as PairQueryMsg;
-use crate::pair::{ReverseSimulationResponse, SimulationResponse};
+use crate::pool_network::asset::{AssetInfo, PairInfo, PairType};
+use crate::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
+use crate::pool_network::pair::QueryMsg as PairQueryMsg;
+use crate::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 use std::iter::FromIterator;
@@ -51,7 +51,7 @@ impl TokenQuerier {
     }
 }
 
-pub(crate) fn balances_to_map(
+pub fn balances_to_map(
     balances: &[(&String, &[(&String, &Uint128)])],
 ) -> HashMap<String, HashMap<String, Uint128>> {
     let mut balances_map: HashMap<String, HashMap<String, Uint128>> = HashMap::new();
@@ -81,7 +81,7 @@ impl PoolFactoryQuerier {
     }
 }
 
-pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, PairInfo> {
+pub fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, PairInfo> {
     let mut pairs_map: HashMap<String, PairInfo> = HashMap::new();
     for (key, pair) in pairs.iter() {
         let mut sort_key: Vec<char> = key.chars().collect();
@@ -91,9 +91,7 @@ pub(crate) fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, Pa
     pairs_map
 }
 
-pub(crate) fn native_token_decimals_to_map(
-    native_token_decimals: &[(String, u8)],
-) -> HashMap<String, u8> {
+pub fn native_token_decimals_to_map(native_token_decimals: &[(String, u8)]) -> HashMap<String, u8> {
     let mut native_token_decimals_map: HashMap<String, u8> = HashMap::new();
 
     for (denom, decimals) in native_token_decimals.iter() {

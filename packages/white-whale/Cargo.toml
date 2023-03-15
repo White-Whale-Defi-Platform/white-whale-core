@@ -15,9 +15,13 @@ documentation = "https://whitewhale.money"
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+injective = []
 
 [dependencies]
 cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 cosmwasm-schema.workspace = true
+cw20.workspace = true
+protobuf.workspace = true
+uint.workspace = true

@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, Binary, Deps, Uint128, Uint256};
-use vault_network::vault::PaybackAmountResponse;
+use white_whale::vault_network::vault::PaybackAmountResponse;
 
 use crate::error::VaultError;
 use crate::state::CONFIG;
@@ -33,9 +33,9 @@ mod test {
     use crate::tests::mock_creator;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
     use cosmwasm_std::{from_binary, Addr, Decimal, Uint128};
-    use pool_network::asset::AssetInfo;
-    use vault_network::vault::{Config, PaybackAmountResponse, QueryMsg};
     use white_whale::fee::{Fee, VaultFee};
+    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale::vault_network::vault::{Config, PaybackAmountResponse, QueryMsg};
 
     #[test]
     fn returns_payback_amount() {

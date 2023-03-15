@@ -33,7 +33,6 @@ cw2.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-terraswap.workspace = true
 white-whale.workspace = true
 
 [dev-dependencies]

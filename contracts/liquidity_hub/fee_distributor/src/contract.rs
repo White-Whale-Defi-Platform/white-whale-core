@@ -1,12 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
+use white_whale::fee_distributor::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{get_expiring_epoch, Config, CONFIG, EPOCHS};
+use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
 use crate::{commands, helpers, queries, state};
 
 // version info for migration info
@@ -51,18 +53,10 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
     // forward fees from previous epoch to the new one
-    let expiring_epoch = get_expiring_epoch(deps.as_ref())?;
 
-    let unclaimed_fees = expiring_epoch
-        .map(|epoch| epoch.available)
-        .unwrap_or_default();
+    // read temp epoch from binary data and fill in the vectors with the sent tokens
 
-    // todo this fees will come from sending them from the fee collector to this contract
-    // todo should think on how to "deposit" fees to the latest epoch, i.e. when sending the tokens from the fee collector here
-    //  maybe with a submessage?
-    fees = helpers::aggregate_fees(fees, unclaimed_fees);
-
-    EPOCHS.save(deps.storage, &new_epoch.id.to_be_bytes(), &new_epoch)?;
+    //EPOCHS.save(deps.storage, &new_epoch.id.to_be_bytes(), &new_epoch)?;
     Ok(Response::new())
 }
 
@@ -74,7 +68,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::NewEpoch {} => commands::create_new_epoch(deps, info, env, fees),
+        ExecuteMsg::NewEpoch {} => commands::create_new_epoch(deps, info, env),
         ExecuteMsg::Claim {} => commands::claim(deps, info),
         ExecuteMsg::UpdateConfig {
             owner,

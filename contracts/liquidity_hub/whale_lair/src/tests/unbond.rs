@@ -1,8 +1,8 @@
 use cosmwasm_std::{coins, Decimal, Timestamp, Uint128};
 
-use white_whale::whale_lair::{
-    Asset, AssetInfo, Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
-};
+use white_whale::whale_lair::{Bond, BondedResponse, BondingWeightResponse, UnbondingResponse};
+
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::tests::robot::TestingRobot;
 

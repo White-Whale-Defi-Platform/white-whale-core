@@ -23,7 +23,7 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["pool-network/injective"]
+injective = ["white-whale/injective"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
@@ -38,6 +38,5 @@ cw20.workspace = true
 cw2.workspace = true
 thiserror.workspace = true
 semver.workspace = true
-pool-network.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true

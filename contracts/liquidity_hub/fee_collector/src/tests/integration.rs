@@ -4,22 +4,25 @@ use cosmwasm_std::{coins, to_binary, Addr, BankMsg, Coin, Decimal, Uint128, Uint
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
-use pool_network::asset::{Asset, AssetInfo, PairType};
-use pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
-use pool_network::factory::PairsResponse;
-use pool_network::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
-use pool_network::router::{SwapOperation, SwapRoute};
-use vault_network::vault_factory::ExecuteMsg;
 use white_whale::fee::{Fee, VaultFee};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale::pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
+use white_whale::pool_network::factory::PairsResponse;
+use white_whale::pool_network::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
+use white_whale::pool_network::router::{SwapOperation, SwapRoute};
+use white_whale::vault_network::vault_factory::ExecuteMsg;
 
-use crate::msg::ExecuteMsg::{AggregateFees, CollectFees, UpdateConfig};
-use crate::msg::{Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg};
 use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_pair_code,
     store_pool_factory_code, store_pool_router_code, store_token_code, store_vault_code,
     store_vault_factory_code,
 };
+use white_whale::fee_collector::ExecuteMsg::{AggregateFees, CollectFees, UpdateConfig};
+use white_whale::fee_collector::{
+    Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg,
+};
+use white_whale::pool_network;
 
 #[test]
 fn collect_all_factories_cw20_fees_successfully() {
@@ -80,6 +83,9 @@ fn collect_all_factories_cw20_fees_successfully() {
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
+            fee_distributor: None,
+            pool_factory: None,
+            vault_factory: None,
         },
         &[],
     )
@@ -279,17 +285,16 @@ fn collect_all_factories_cw20_fees_successfully() {
             .fees
             .iter()
             .find(|&asset| {
-                let asset_addr = match asset.clone().info {
+                let asset_addr = match &asset.info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i as usize]
+                asset_addr.to_string() != cw20_tokens[i as usize]
             })
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
+        accumulate_fee(&mut assets_collected, protocol_fees);
 
         assert!(protocol_fees.amount > Uint128::zero());
 
@@ -308,17 +313,16 @@ fn collect_all_factories_cw20_fees_successfully() {
             .fees
             .iter()
             .find(|&asset| {
-                let asset_addr = match asset.clone().info {
+                let asset_addr = match &asset.info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i as usize]
+                asset_addr.to_string() != cw20_tokens[i as usize]
             })
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
+        accumulate_fee(&mut assets_collected, protocol_fees);
 
         // Verify fees are being collected
         assert!(protocol_fees.amount > Uint128::zero());
@@ -735,17 +739,16 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             .fees
             .iter()
             .find(|&asset| {
-                let asset_addr = match asset.clone().info {
+                let asset_addr = match &asset.info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i]
+                asset_addr.to_string() != cw20_tokens[i]
             })
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
+        accumulate_fee(&mut assets_collected, protocol_fees);
 
         assert!(protocol_fees.amount > Uint128::zero());
 
@@ -764,17 +767,16 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             .fees
             .iter()
             .find(|&asset| {
-                let asset_addr = match asset.clone().info {
+                let asset_addr = match &asset.info {
                     AssetInfo::Token { contract_addr } => contract_addr,
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr != cw20_tokens[i]
+                asset_addr.to_string() != cw20_tokens[i]
             })
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        accumulate_fee(&mut assets_collected, protocol_fees.clone());
+        accumulate_fee(&mut assets_collected, protocol_fees);
 
         // Verify fees are being collected
         assert!(protocol_fees.amount > Uint128::zero());
@@ -973,6 +975,9 @@ fn collect_pools_native_fees_successfully() {
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
+            fee_distributor: None,
+            pool_factory: None,
+            vault_factory: None,
         },
         &[],
     )
@@ -1191,7 +1196,7 @@ fn collect_pools_native_fees_successfully() {
 
         for asset in query_protocol_fees_res.fees {
             assert!(asset.amount > Uint128::zero());
-            accumulate_fee(&mut assets_collected, asset.clone());
+            accumulate_fee(&mut assets_collected, &asset);
         }
     }
 
@@ -1693,7 +1698,7 @@ fn collect_fees_with_pagination_successfully() {
 
         for asset in query_protocol_fees_res.fees {
             assert!(asset.amount > Uint128::zero());
-            accumulate_fee(&mut assets_collected, asset.clone());
+            accumulate_fee(&mut assets_collected, &asset);
         }
     }
 
@@ -1855,7 +1860,7 @@ fn collect_fees_for_vault() {
         .instantiate_contract(
             vault_factory_id,
             creator.clone().sender,
-            &vault_network::vault_factory::InstantiateMsg {
+            &white_whale::vault_network::vault_factory::InstantiateMsg {
                 owner: creator.clone().sender.into_string(),
                 vault_id,
                 token_id,
@@ -1921,7 +1926,7 @@ fn collect_fees_for_vault() {
         app.execute_contract(
             creator.clone().sender.clone(),
             vaults[i].clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(400_000_000u128),
             },
             &[Coin {
@@ -1972,11 +1977,11 @@ fn collect_fees_for_vault() {
     // Perform some flashloans
     for (i, coin) in native_tokens.iter().enumerate() {
         // verify the protocol fees are zero before the flashloan
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vaults[i],
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
@@ -1985,7 +1990,7 @@ fn collect_fees_for_vault() {
         app.execute_contract(
             dummy_flash_loan_address.clone(),
             vaults[i].clone(),
-            &vault_network::vault::ExecuteMsg::FlashLoan {
+            &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
                 msg: to_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
@@ -1999,11 +2004,11 @@ fn collect_fees_for_vault() {
         .unwrap();
 
         // verify the protocol fees where collected after flashloan
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vaults[i],
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert!(query_protocol_fees_res.fees.amount > Uint128::zero());
@@ -2046,11 +2051,11 @@ fn collect_fees_for_vault() {
 
     // verify the protocol fees are zero after collecting the fees from the flashloans
     for vault in vaults.clone() {
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vault,
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
@@ -2148,7 +2153,7 @@ fn aggregate_fees_for_vault() {
         .instantiate_contract(
             vault_factory_id,
             creator.clone().sender,
-            &vault_network::vault_factory::InstantiateMsg {
+            &white_whale::vault_network::vault_factory::InstantiateMsg {
                 owner: creator.clone().sender.into_string(),
                 vault_id,
                 token_id,
@@ -2234,6 +2239,9 @@ fn aggregate_fees_for_vault() {
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
+            fee_distributor: None,
+            pool_factory: None,
+            vault_factory: None,
         },
         &[],
     )
@@ -2282,7 +2290,7 @@ fn aggregate_fees_for_vault() {
         app.execute_contract(
             creator.clone().sender.clone(),
             vaults[i].clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(400_000_000u128),
             },
             &[Coin {
@@ -2333,11 +2341,11 @@ fn aggregate_fees_for_vault() {
     // Perform some flashloans
     for (i, coin) in native_tokens.iter().enumerate() {
         // verify the protocol fees are zero before the flashloan
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vaults[i],
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
@@ -2346,7 +2354,7 @@ fn aggregate_fees_for_vault() {
         app.execute_contract(
             dummy_flash_loan_address.clone(),
             vaults[i].clone(),
-            &vault_network::vault::ExecuteMsg::FlashLoan {
+            &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
                 msg: to_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
@@ -2360,11 +2368,11 @@ fn aggregate_fees_for_vault() {
         .unwrap();
 
         // verify the protocol fees where collected after flashloan
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vaults[i],
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert!(query_protocol_fees_res.fees.amount > Uint128::zero());
@@ -2407,11 +2415,11 @@ fn aggregate_fees_for_vault() {
 
     // verify the protocol fees are zero after collecting the fees from the flashloans
     for vault in vaults.clone() {
-        let query_protocol_fees_res: vault_network::vault::ProtocolFeesResponse = app
+        let query_protocol_fees_res: white_whale::vault_network::vault::ProtocolFeesResponse = app
             .wrap()
             .query_wasm_smart(
                 &vault,
-                &vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
+                &white_whale::vault_network::vault::QueryMsg::ProtocolFees { all_time: false },
             )
             .unwrap();
         assert_eq!(query_protocol_fees_res.fees.amount, Uint128::zero());
@@ -2645,19 +2653,19 @@ fn aggregate_fees_for_vault() {
     }
 }
 
-fn accumulate_fee(assets_collected: &mut HashMap<String, Asset>, asset: Asset) {
+fn accumulate_fee(assets_collected: &mut HashMap<String, Asset>, asset: &Asset) {
     let asset_id = asset.clone().get_id();
-    if let Some(collected) = assets_collected.clone().get(asset_id.clone().as_str()) {
+    if let Some(collected) = assets_collected.get(asset_id.as_str()) {
         assets_collected.insert(
-            asset_id,
+            asset_id.clone(),
             Asset {
                 info: asset.info.clone(),
                 amount: collected.amount.checked_add(asset.amount).unwrap(),
             },
-        )
+        );
     } else {
-        assets_collected.insert(asset_id, asset)
-    };
+        assets_collected.insert(asset_id, Asset{ info: asset.info.clone(), amount: asset.amount });
+    }
 }
 
 #[test]
@@ -2682,9 +2690,9 @@ fn accumulate_fee_works() {
         amount: Uint128::new(50u128),
     };
 
-    accumulate_fee(&mut assets_collected, asset_fee_1);
-    accumulate_fee(&mut assets_collected, asset_fee_2);
-    accumulate_fee(&mut assets_collected, asset_fee_3);
+    accumulate_fee(&mut assets_collected, &asset_fee_1);
+    accumulate_fee(&mut assets_collected, &asset_fee_2);
+    accumulate_fee(&mut assets_collected, &asset_fee_3);
 
     assert_eq!(assets_collected.len(), 2);
     for (id, asset) in assets_collected {

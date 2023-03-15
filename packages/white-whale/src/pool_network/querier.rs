@@ -1,6 +1,8 @@
-use crate::asset::{Asset, AssetInfo, PairInfo};
-use crate::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
-use crate::pair::{QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
+use crate::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use crate::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
+use crate::pool_network::pair::{
+    QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse,
+};
 
 use cosmwasm_std::{
     to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,

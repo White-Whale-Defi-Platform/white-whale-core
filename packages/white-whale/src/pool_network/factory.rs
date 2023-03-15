@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use crate::asset::{AssetInfo, PairInfo, PairType};
-use crate::pair::{FeatureToggle, PoolFee};
+use crate::pool_network::asset::{AssetInfo, PairInfo, PairType};
+use crate::pool_network::pair::{FeatureToggle, PoolFee};
 
 #[cw_serde]
 pub struct InstantiateMsg {

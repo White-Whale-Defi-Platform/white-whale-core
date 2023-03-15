@@ -3,12 +3,12 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use pool_network::asset::{Asset, PairInfo, PairInfoRaw, PairType};
-use pool_network::pair::{
+use white_whale::pool_network::asset::{Asset, PairInfo, PairInfoRaw, PairType};
+use white_whale::pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
-use pool_network::querier::query_token_info;
+use white_whale::pool_network::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::helpers::{

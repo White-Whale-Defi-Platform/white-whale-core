@@ -3,18 +3,19 @@ use cosmwasm_std::{
     StdError, SubMsg, Timestamp, Uint128, Uint64, WasmMsg, WasmQuery,
 };
 
-use terraswap::asset::{Asset, AssetInfo};
+use white_whale::fee_distributor::Epoch;
+use white_whale::whale_lair;
 use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
 use crate::helpers::{validate_grace_period, DAY_IN_SECONDS};
-use crate::msg::ExecuteMsg;
 use crate::state::{
-    get_claimable_epochs, get_current_epoch, get_expiring_epoch, Epoch, CONFIG, EPOCHS,
-    LAST_CLAIMED_EPOCH,
+    get_claimable_epochs, get_current_epoch, get_expiring_epoch, CONFIG, EPOCHS, LAST_CLAIMED_EPOCH,
 };
 use crate::ContractError::Std;
 use crate::{helpers, ContractError};
+use white_whale::fee_distributor::ExecuteMsg;
+use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 /// Creates a new epoch, forwarding available tokens from epochs that are past the grace period.
 pub fn create_new_epoch(
@@ -86,18 +87,21 @@ pub fn create_new_epoch(
         .add_submessage(SubMsg {
             id: EPOCH_CREATION_REPLY_ID,
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: config.fee_collector.to_string(),
-                msg: to_binary(&ExecuteMsg::ForwardFees {})?,
+                contract_addr: config.fee_collector_addr.to_string(),
+                msg: to_binary(&white_whale::fee_collector::ExecuteMsg::ForwardFees {
+                    epoch: new_epoch.clone(),
+                    forward_fees_as: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                })?,
                 funds: vec![],
             }),
             gas_limit: None,
             reply_on: ReplyOn::Success,
         })
-        .set_data(to_binary(&new_epoch))
         .add_attributes(vec![
             ("action", "create_new_epoch".to_string()),
             ("new_epoch", new_epoch.id.to_string()),
-            ("fees_to_distribute", format!("{:?}", fees)),
         ]))
 }
 
@@ -217,6 +221,8 @@ pub fn update_config(
     let mut messages = vec![];
     if let Some(grace_period) = grace_period {
         validate_grace_period(&grace_period)?;
+
+        //todo revise this logic since the epoch creation process changed
         if grace_period < config.grace_period {
             let claimable_epochs = get_claimable_epochs(deps.as_ref())?;
             // check if grace period is lower than the current one. If so, we need to forward the fees
@@ -232,10 +238,8 @@ pub fn update_config(
 
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::NewEpoch {
-                    fees: forwarding_assets.clone(),
-                })?,
-                funds: helpers::to_coins(forwarding_assets)?,
+                msg: to_binary(&ExecuteMsg::NewEpoch {})?,
+                funds: forwarding_assets.to_coins()?,
             }));
         }
 

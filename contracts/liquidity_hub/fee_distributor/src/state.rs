@@ -1,43 +1,10 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, Order, StdResult, Timestamp, Uint64};
 use cw_storage_plus::{Item, Map};
+use white_whale::fee_distributor::{Config, Epoch};
 
-use crate::msg::EpochConfig;
-use terraswap::asset::Asset;
-
-#[cw_serde]
-pub struct Config {
-    pub owner: Addr,
-    pub staking_contract_addr: Addr,
-    pub fee_collector_addr: Addr,
-    pub grace_period: Uint64,
-    pub epoch_config: EpochConfig,
-}
-
-#[cw_serde]
-pub struct Epoch {
-    // Epoch identifier
-    pub id: u128,
-    pub start_time: Timestamp,
-    // Initial fees to be distributed in this epoch.
-    pub total: Vec<Asset>,
-    // Fees left to be claimed on this epoch. These available fees are forwarded when the epoch expires.
-    pub available: Vec<Asset>,
-    // Fees that were claimed on this epoch. For keeping record on the total fees claimed.
-    pub claimed: Vec<Asset>,
-}
-
-impl Default for Epoch {
-    fn default() -> Self {
-        Self {
-            id: 0,
-            start_time: Timestamp::default(),
-            total: vec![],
-            available: vec![],
-            claimed: vec![],
-        }
-    }
-}
+use white_whale::fee_distributor::EpochConfig;
+use white_whale::pool_network::asset::Asset;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, u128> = Map::new("last_claimed_epoch");

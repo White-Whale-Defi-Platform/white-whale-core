@@ -5,13 +5,13 @@ use cosmwasm_std::{coin, Addr, Timestamp, Uint128, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use terraswap::asset::{Asset, AssetInfo};
+use white_whale::fee_distributor::{Config, Epoch};
 
-use crate::msg::EpochConfig;
-use crate::state::{Config, Epoch};
 use crate::tests::epoch;
 use crate::tests::robot::TestingRobot;
 use crate::{helpers, ContractError};
+use white_whale::fee_distributor::EpochConfig;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 #[test]
 fn instantiate_successfully() {
@@ -108,7 +108,7 @@ fn test_epoch_stuff() {
             grace_period,
             epoch_config,
         )
-        .create_new_epoch(mock_info("owner", &[]), vec![], |res| match res {
+        .create_new_epoch(mock_info("owner", &[]), |res| match res {
             _ => println!("res: {:?}", res),
         })
         .assert_current_epoch(&Epoch {
@@ -167,28 +167,23 @@ fn test_create_new_epoch() {
         .add_epochs_to_state(epoch::get_epochs())
         .assert_current_epoch(epoch::get_epochs().last().unwrap())
         .assert_expiring_epoch(Some(&expiring_epoch))
-        .create_new_epoch(mock_info("unauthorized", &[]), vec![], |res| match res {
+        .create_new_epoch(mock_info("unauthorized", &[]), |res| match res {
             Ok(_) => panic!("should have returned ContractError::Unauthorized"),
             Err(ContractError::Unauthorized {}) => (),
             _ => panic!("should have returned ContractError::Unauthorized"),
         })
         .create_new_epoch(
             mock_info("fee_collector_addr", &[coin(100u128, "uwhale")]),
-            vec![],
             |res| match res {
                 Ok(_) => panic!("should have returned ContractError::AssetMismatch"),
                 Err(ContractError::AssetMismatch {}) => (),
                 _ => panic!("should have returned ContractError::AssetMismatch"),
             },
         )
-        .create_new_epoch(
-            mock_info("fee_collector_addr", &coins),
-            fees.clone(),
-            |_| {},
-        )
+        .create_new_epoch(mock_info("fee_collector_addr", &coins), |_| {})
         .assert_current_epoch(&expected_new_epoch)
         .assert_expiring_epoch(Some(&epoch::get_epochs()[1])) // make sure the second epoch is now expiring
-        .create_new_epoch(mock_info("fee_collector_addr", &[]), vec![], |_| {})
+        .create_new_epoch(mock_info("fee_collector_addr", &[]), |_| {})
         .query_epoch(5, |res| {
             let (r, epoch) = res.unwrap();
             r.assert_current_epoch(&epoch);

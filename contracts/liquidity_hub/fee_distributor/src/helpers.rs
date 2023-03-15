@@ -1,9 +1,8 @@
 use cosmwasm_std::{Coin, StdError, StdResult, Uint128, Uint64};
 
-use terraswap::asset::{Asset, AssetInfo};
-
-use crate::msg::EpochConfig;
 use crate::ContractError;
+use white_whale::fee_distributor::EpochConfig;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 const MAX_GRACE_PERIOD: u64 = 10u64;
 const MAX_EPOCH_START_HOUR: u64 = 23u64;
@@ -47,25 +46,4 @@ pub fn aggregate_fees(fees: Vec<Asset>, other_fees: Vec<Asset>) -> Vec<Asset> {
     }
 
     aggregated_fees
-}
-
-/// TODO move this into an impl on pool-network package
-/// Converts a vector of Native assets to a vector of coins.
-pub fn to_coins(assets: Vec<Asset>) -> StdResult<Vec<Coin>> {
-    assets
-        .into_iter()
-        .map(|asset| {
-            let denom = match asset.info {
-                AssetInfo::Token { .. } => {
-                    return Err(StdError::generic_err("Not a native token."));
-                }
-                AssetInfo::NativeToken { denom } => denom,
-            };
-
-            Ok(Coin {
-                denom,
-                amount: asset.amount,
-            })
-        })
-        .collect()
 }

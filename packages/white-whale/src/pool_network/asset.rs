@@ -7,7 +7,9 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use crate::querier::{query_balance, query_native_decimals, query_token_balance, query_token_info};
+use crate::pool_network::querier::{
+    query_balance, query_native_decimals, query_token_balance, query_token_info,
+};
 
 pub const MINIMUM_LIQUIDITY_AMOUNT: Uint128 = Uint128::new(1_000u128);
 const IBC_HASH_TAKE: usize = 4usize;
@@ -427,5 +429,29 @@ impl PairType {
             PairType::ConstantProduct => "ConstantProduct",
             PairType::StableSwap { .. } => "StableSwap",
         }
+    }
+}
+
+pub trait ToCoins {
+    fn to_coins(&self) -> StdResult<Vec<Coin>>;
+}
+
+impl ToCoins for Vec<Asset> {
+    fn to_coins(&self) -> StdResult<Vec<Coin>> {
+        self.into_iter()
+            .map(|asset| {
+                let denom = match &asset.info {
+                    AssetInfo::Token { .. } => {
+                        return Err(StdError::generic_err("Not a native token."));
+                    }
+                    AssetInfo::NativeToken { denom } => denom,
+                };
+
+                Ok(Coin {
+                    denom: denom.to_string(),
+                    amount: asset.amount,
+                })
+            })
+            .collect()
     }
 }

@@ -1,22 +1,40 @@
+use crate::pool_network::asset::Asset;
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Timestamp, Uint64};
 use std::fmt;
 
-use terraswap::asset::Asset;
-
-use crate::state::{Config, Epoch};
+#[cw_serde]
+pub struct Config {
+    pub owner: Addr,
+    pub staking_contract_addr: Addr,
+    pub fee_collector_addr: Addr,
+    pub grace_period: Uint64,
+    pub epoch_config: EpochConfig,
+}
 
 #[cw_serde]
-pub struct InstantiateMsg {
-    /// Address of the bonding contract.
-    pub bonding_contract_addr: String,
-    /// Fee collector address.
-    pub fee_collector_addr: String,
-    /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
-    /// back in time after new epochs have been created.
-    pub grace_period: Uint64,
-    /// Configuration for the epoch.
-    pub epoch_config: EpochConfig,
+pub struct Epoch {
+    // Epoch identifier
+    pub id: u128,
+    pub start_time: Timestamp,
+    // Initial fees to be distributed in this epoch.
+    pub total: Vec<Asset>,
+    // Fees left to be claimed on this epoch. These available fees are forwarded when the epoch expires.
+    pub available: Vec<Asset>,
+    // Fees that were claimed on this epoch. For keeping record on the total fees claimed.
+    pub claimed: Vec<Asset>,
+}
+
+impl Default for Epoch {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            start_time: Timestamp::default(),
+            total: vec![],
+            available: vec![],
+            claimed: vec![],
+        }
+    }
 }
 
 #[cw_serde]
@@ -35,6 +53,19 @@ impl fmt::Display for EpochConfig {
             self.duration, self.genesis_epoch
         )
     }
+}
+
+#[cw_serde]
+pub struct InstantiateMsg {
+    /// Address of the bonding contract.
+    pub bonding_contract_addr: String,
+    /// Fee collector address.
+    pub fee_collector_addr: String,
+    /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
+    /// back in time after new epochs have been created.
+    pub grace_period: Uint64,
+    /// Configuration for the epoch.
+    pub epoch_config: EpochConfig,
 }
 
 #[cw_serde]

@@ -1,7 +1,7 @@
+use crate::fee::VaultFee;
+use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint128};
-use pool_network::asset::{Asset, AssetInfo};
-use white_whale::fee::VaultFee;
 
 #[cw_serde]
 pub struct InstantiateMsg {

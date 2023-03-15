@@ -5,10 +5,10 @@ use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use crate::state::{Config, CONFIG};
+use crate::state::CONFIG;
 use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, migrations, queries};
+use white_whale::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 const CONTRACT_NAME: &str = "white_whale-fee_collector";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -67,9 +67,10 @@ pub fn execute(
             asset_info,
             aggregate_fees_for,
         } => commands::aggregate_fees(deps, info, env, asset_info, aggregate_fees_for),
-        ExecuteMsg::ForwardFees { forward_fees_as } => {
-            commands::forward_fees(deps, info, env, forward_fees_as)
-        }
+        ExecuteMsg::ForwardFees {
+            epoch,
+            forward_fees_as,
+        } => commands::forward_fees(deps, info, env, epoch, forward_fees_as),
     }
 }
 

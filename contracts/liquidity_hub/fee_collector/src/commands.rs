@@ -1,18 +1,21 @@
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
-    QueryRequest, Response, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, BalanceResponse, BankMsg, BankQuery, Coin, CosmosMsg, DepsMut, Env,
+    MessageInfo, QueryRequest, Response, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
-use pool_network::asset::{Asset, AssetInfo};
-use pool_network::factory::{PairsResponse, QueryMsg};
-use pool_network::router;
-use pool_network::router::{ExecuteMsg, SwapOperation};
-use vault_network::vault_factory::VaultsResponse;
+use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use white_whale::pool_network::factory::{PairsResponse, QueryMsg};
+use white_whale::pool_network::router;
+use white_whale::pool_network::router::SwapOperation;
+use white_whale::vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{ContractType, ExecuteMsg, FactoryType, FeesFor, ForwardFeesResponse};
-use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, Config, CONFIG};
+use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, CONFIG};
 use crate::ContractError;
+use white_whale::fee_collector::{
+    Config, ContractType, ExecuteMsg, FactoryType, FeesFor, ForwardFeesResponse,
+};
+use white_whale::fee_distributor::Epoch;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
@@ -53,10 +56,10 @@ pub fn collect_fees(
 fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> StdResult<CosmosMsg> {
     let collect_protocol_fees_msg = match contract_type {
         ContractType::Vault {} => {
-            to_binary(&vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
+            to_binary(&white_whale::vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
         }
         ContractType::Pool {} => {
-            to_binary(&pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
+            to_binary(&white_whale::pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
         }
     };
 
@@ -80,10 +83,12 @@ fn collect_fees_for_factory(
             let response: VaultsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
-                    msg: to_binary(&vault_network::vault_factory::QueryMsg::Vaults {
-                        start_after,
-                        limit,
-                    })?,
+                    msg: to_binary(
+                        &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                            start_after,
+                            limit,
+                        },
+                    )?,
                 }))?;
 
             for vault_info in response.vaults {
@@ -194,10 +199,12 @@ pub fn aggregate_fees(
                     let response: VaultsResponse =
                         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                             contract_addr: factory.to_string(),
-                            msg: to_binary(&vault_network::vault_factory::QueryMsg::Vaults {
-                                start_after,
-                                limit,
-                            })?,
+                            msg: to_binary(
+                                &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                                    start_after,
+                                    limit,
+                                },
+                            )?,
                         }))?;
 
                     for vault_info in response.vaults {
@@ -280,7 +287,7 @@ pub fn aggregate_fees(
             match operations_res {
                 Ok(operations) => {
                     let execute_swap_operations_msg =
-                        to_binary(&pool_network::router::ExecuteMsg::ExecuteSwapOperations {
+                        to_binary(&router::ExecuteMsg::ExecuteSwapOperations {
                             operations,
                             minimum_receive: None,
                             to: None,
@@ -328,6 +335,7 @@ pub fn forward_fees(
     deps: DepsMut,
     info: MessageInfo,
     env: Env,
+    mut epoch: Epoch,
     forward_fees_as: AssetInfo,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
@@ -370,11 +378,7 @@ pub fn forward_fees(
         })?,
     });
 
-    messages.push(pools_fee_aggregation_msg);
-    messages.push(vaults_fee_aggregation_msg);
-
     // query amount of whale tokens in the contract with bank module
-
     let whale_token_balance: Uint128 = match forward_fees_as.clone() {
         AssetInfo::Token { .. } => Uint128::zero(),
         AssetInfo::NativeToken { denom } => {
@@ -387,13 +391,26 @@ pub fn forward_fees(
         }
     };
 
+    let fees = vec![Asset {
+        info: forward_fees_as.clone(),
+        amount: whale_token_balance,
+    }];
+
+    epoch.total = fees.clone();
+    epoch.available = fees.clone();
+
+    // send tokens to fee distributor with bank message
+    let fees_transfer_msg = CosmosMsg::Bank(BankMsg::Send {
+        to_address: config.fee_distributor.to_string(),
+        amount: fees.to_coins()?,
+    });
+
+    messages.push(pools_fee_aggregation_msg);
+    messages.push(vaults_fee_aggregation_msg);
+    messages.push(fees_transfer_msg);
+
     Ok(Response::new()
         .add_attribute("action", "forward_fees")
         .add_messages(messages)
-        .set_data(to_binary(&ForwardFeesResponse {
-            fees: vec![Asset {
-                info: forward_fees_as,
-                amount: whale_token_balance,
-            }],
-        })?))
+        .set_data(to_binary(&ForwardFeesResponse { epoch })?))
 }

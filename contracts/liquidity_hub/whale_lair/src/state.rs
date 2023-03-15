@@ -1,7 +1,8 @@
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
+use white_whale::pool_network::asset::AssetInfo;
 
-use white_whale::whale_lair::{AssetInfo, Bond, Config, GlobalIndex};
+use white_whale::whale_lair::{Bond, Config, GlobalIndex};
 
 use crate::ContractError;
 

@@ -9,9 +9,11 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use pool_network::asset::PairInfoRaw;
-use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
-use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::asset::PairInfoRaw;
+use white_whale::pool_network::pair::{
+    Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;

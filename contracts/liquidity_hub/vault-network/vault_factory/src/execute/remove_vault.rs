@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Response};
 
-use pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::asset::AssetReference;
 use crate::err::{StdResult, VaultFactoryError};
@@ -38,14 +38,14 @@ mod tests {
         let factory_addr = app_mock_instantiate(&mut app);
 
         // create vault
-        let asset_info_1 = pool_network::asset::AssetInfo::NativeToken {
+        let asset_info_1 = white_whale::pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
         app.execute_contract(
             creator.sender.clone(),
             factory_addr.clone(),
-            &vault_network::vault_factory::ExecuteMsg::CreateVault {
+            &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info_1.clone(),
                 fees: get_fees(),
             },
@@ -58,7 +58,7 @@ mod tests {
             .execute_contract(
                 creator.sender,
                 factory_addr.clone(),
-                &vault_network::vault_factory::ExecuteMsg::RemoveVault {
+                &white_whale::vault_network::vault_factory::ExecuteMsg::RemoveVault {
                     asset_info: asset_info_1,
                 },
                 &[],
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_vault_unauthorized() {
-        let asset_info = pool_network::asset::AssetInfo::NativeToken {
+        let asset_info = white_whale::pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
         let (mut deps, env) = mock_instantiate(5, 6);
@@ -99,7 +99,7 @@ mod tests {
             deps.as_mut(),
             env,
             bad_actor,
-            vault_network::vault_factory::ExecuteMsg::RemoveVault { asset_info },
+            white_whale::vault_network::vault_factory::ExecuteMsg::RemoveVault { asset_info },
         );
 
         assert_eq!(res.unwrap_err(), VaultFactoryError::Unauthorized {})
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn cannot_remove_vault_non_existent() {
-        let asset_info = pool_network::asset::AssetInfo::NativeToken {
+        let asset_info = white_whale::pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
         let (mut deps, env) = mock_instantiate(5, 6);
@@ -118,7 +118,7 @@ mod tests {
             deps.as_mut(),
             env,
             creator,
-            vault_network::vault_factory::ExecuteMsg::RemoveVault { asset_info },
+            white_whale::vault_network::vault_factory::ExecuteMsg::RemoveVault { asset_info },
         );
 
         assert_eq!(res.unwrap_err(), VaultFactoryError::NonExistentVault {})

@@ -1,8 +1,7 @@
 use cosmwasm_std::{Timestamp, Uint128};
 
-use terraswap::asset::{Asset, AssetInfo};
-
-use crate::state::Epoch;
+use white_whale::fee_distributor::Epoch;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 pub(crate) fn get_epochs() -> Vec<Epoch> {
     vec![

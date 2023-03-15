@@ -1,8 +1,8 @@
 use cosmwasm_std::{Addr, Decimal};
 
-use white_whale::whale_lair::{AssetInfo, Config};
-
 use crate::tests::robot::TestingRobot;
+use white_whale::pool_network::asset::AssetInfo;
+use white_whale::whale_lair::Config;
 
 #[test]
 fn test_instantiate_successfully() {

@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use fee_distributor::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::fee_distributor::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

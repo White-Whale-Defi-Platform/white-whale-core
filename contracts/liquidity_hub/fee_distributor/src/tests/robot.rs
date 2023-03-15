@@ -1,11 +1,13 @@
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64};
 
-use terraswap::asset::Asset;
+use white_whale::fee_distributor::{
+    Config, Epoch, EpochConfig, ExecuteMsg, InstantiateMsg, QueryMsg,
+};
+use white_whale::pool_network::asset::Asset;
 
 use crate::contract::{execute, instantiate, query};
-use crate::msg::{EpochConfig, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{get_expiring_epoch, Config, Epoch, EPOCHS};
+use crate::state::{get_expiring_epoch, EPOCHS};
 use crate::ContractError;
 
 pub struct TestingRobot {
@@ -78,11 +80,10 @@ impl TestingRobot {
     pub(crate) fn create_new_epoch(
         &mut self,
         info: MessageInfo,
-        fees: Vec<Asset>,
         response: impl Fn(Result<Response, ContractError>),
     ) -> &mut Self {
         //create new epoch with ExecuteMsg::NewEpoch
-        let msg = ExecuteMsg::NewEpoch { fees };
+        let msg = ExecuteMsg::NewEpoch {};
 
         response(execute(
             self.owned_deps.as_mut(),

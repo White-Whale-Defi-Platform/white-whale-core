@@ -2,8 +2,9 @@ use cosmwasm_std::{
     Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
     Timestamp, Uint128,
 };
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use white_whale::whale_lair::{Asset, AssetInfo, Bond};
+use white_whale::whale_lair::Bond;
 
 use crate::helpers::validate_growth_rate;
 use crate::queries::MAX_PAGE_LIMIT;

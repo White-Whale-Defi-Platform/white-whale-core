@@ -1,10 +1,9 @@
+use crate::fee::Fee;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 
-use white_whale::fee::Fee;
-
-use crate::asset::{Asset, AssetInfo, PairInfo, PairType};
+use crate::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
 
 #[cw_serde]
 pub struct InstantiateMsg {
