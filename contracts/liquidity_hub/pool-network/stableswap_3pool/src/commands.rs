@@ -558,6 +558,10 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
                 info: protocol_fees[1].clone().info,
                 amount: Uint128::zero(),
             },
+            Asset {
+                info: protocol_fees[2].clone().info,
+                amount: Uint128::zero(),
+            },
         ],
     )?;
 

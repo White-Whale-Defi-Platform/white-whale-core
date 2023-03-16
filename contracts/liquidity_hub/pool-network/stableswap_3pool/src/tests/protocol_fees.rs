@@ -347,7 +347,7 @@ fn test_collect_protocol_fees_successful() {
     let expected_protocol_fee_native_amount = Uint128::new(1_500_730);
 
     // as we swapped both native and token, we should have collected fees in both of them
-    let protocol_fees_for_token = query_fees(
+    let protocol_fees_for_asset0000 = query_fees(
         deps.as_ref(),
         Some("asset0000".to_string()),
         None,
@@ -358,7 +358,7 @@ fn test_collect_protocol_fees_successful() {
     .fees;
 
     assert_eq!(
-        protocol_fees_for_token.first().unwrap().amount,
+        protocol_fees_for_asset0000.first().unwrap().amount,
         expected_protocol_fee_token_amount
     );
     let protocol_fees_for_native = query_fees(
@@ -375,15 +375,56 @@ fn test_collect_protocol_fees_successful() {
         expected_protocol_fee_native_amount
     );
 
+    // third swap, token -> token
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "asset0000".to_string(),
+        amount: offer_amount,
+        msg: to_binary(&Cw20HookMsg::Swap {
+            ask_asset: Asset {
+                info: AssetInfo::Token {
+                    contract_addr: "asset0001".to_string(),
+                },
+                amount: Default::default(),
+            },
+            belief_price: None,
+            max_spread: None,
+            to: None,
+        })
+            .unwrap(),
+    });
+    let info = mock_info("asset0000", &[]);
+    execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+
+    //Expected return on a stable swap should about the same as input,
+    //protocol fee will be approximately 1_500_000_000 * 0.001 1_500_000
+    let expected_protocol_fee_asset_0001_amount = Uint128::new(1_500_000);
+
+    // as we swapped both native and token, we should have collected fees in both of them
+    let protocol_fees_for_asset0001 = query_fees(
+        deps.as_ref(),
+        Some("asset0001".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+        .unwrap()
+        .fees;
+
+    assert_eq!(
+        protocol_fees_for_asset0001.first().unwrap().amount,
+        expected_protocol_fee_asset_0001_amount
+    );
+
     // collect the fees
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::CollectProtocolFees {};
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     // make sure two messages were sent, one for the native token and one for the cw20
-    assert_eq!(res.messages.len(), 2);
+    assert_eq!(res.messages.len(), 3);
 
     let transfer_native_token_msg = res.messages.get(0).expect("no message");
-    let transfer_cw20_token_msg = res.messages.get(1).expect("no message");
+    let transfer_asset0000_token_msg = res.messages.get(1).expect("no message");
+    let transfer_asset0001_token_msg = res.messages.get(2).expect("no message");
     assert_eq!(
         transfer_native_token_msg,
         &SubMsg::new(CosmosMsg::Bank(BankMsg::Send {
@@ -395,14 +436,26 @@ fn test_collect_protocol_fees_successful() {
         }))
     );
     assert_eq!(
-        transfer_cw20_token_msg,
+        transfer_asset0000_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "collector".to_string(),
-                amount: protocol_fees_for_token.clone().first().unwrap().amount,
+                amount: protocol_fees_for_asset0000.clone().first().unwrap().amount,
             })
             .unwrap(),
+            funds: vec![],
+        }))
+    );
+    assert_eq!(
+        transfer_asset0001_token_msg,
+        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0001".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: "collector".to_string(),
+                amount: protocol_fees_for_asset0001.clone().first().unwrap().amount,
+            })
+                .unwrap(),
             funds: vec![],
         }))
     );
@@ -417,6 +470,19 @@ fn test_collect_protocol_fees_successful() {
     )
     .unwrap()
     .fees;
+    assert_eq!(
+        protocol_fees_for_token.first().unwrap().amount,
+        Uint128::zero()
+    );
+    let protocol_fees_for_token = query_fees(
+        deps.as_ref(),
+        Some("asset0001".to_string()),
+        None,
+        COLLECTED_PROTOCOL_FEES,
+        Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
+    )
+        .unwrap()
+        .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()
