@@ -316,7 +316,7 @@ pub fn swap(
     info: MessageInfo,
     sender: Addr,
     offer_asset: Asset,
-    ask_asset: Asset,
+    ask_asset: AssetInfo,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
@@ -352,7 +352,7 @@ pub fn swap(
     let ask_decimal: u8;
     let offer_decimal: u8;
 
-    if ask_asset.info.equal(&pools[0].info) {
+    if ask_asset.equal(&pools[0].info) {
         if offer_asset.info.equal(&pools[1].info) {
             ask_pool = pools[0].clone();
             offer_pool = pools[1].clone();
@@ -370,7 +370,7 @@ pub fn swap(
         } else {
             return Err(ContractError::AssetMismatch {});
         }
-    } else if ask_asset.info.equal(&pools[1].info) {
+    } else if ask_asset.equal(&pools[1].info) {
         if offer_asset.info.equal(&pools[0].info) {
             ask_pool = pools[1].clone();
             offer_pool = pools[0].clone();
@@ -388,7 +388,7 @@ pub fn swap(
         } else {
             return Err(ContractError::AssetMismatch {});
         }
-    } else if ask_asset.info.equal(&pools[2].info) {
+    } else if ask_asset.equal(&pools[2].info) {
         if offer_asset.info.equal(&pools[0].info) {
             ask_pool = pools[2].clone();
             offer_pool = pools[0].clone();

@@ -137,11 +137,8 @@ fn try_native_to_token() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -495,11 +492,8 @@ fn try_swap_invalid_token() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -609,11 +603,8 @@ fn try_token_to_native() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -632,11 +623,8 @@ fn try_token_to_native() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
             },
             belief_price: None,
             max_spread: None,
@@ -885,11 +873,8 @@ fn try_token_to_native() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
             },
             belief_price: None,
             max_spread: None,
@@ -991,11 +976,8 @@ fn test_swap_to_third_party() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,

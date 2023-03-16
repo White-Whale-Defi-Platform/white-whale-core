@@ -82,11 +82,8 @@ fn test_feature_toggle_swap_disabled() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -112,11 +109,8 @@ fn test_feature_toggle_swap_disabled() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
             },
             belief_price: None,
             max_spread: None,
