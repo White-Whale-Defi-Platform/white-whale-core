@@ -1,18 +1,14 @@
 use cosmwasm_std::{to_binary, Binary, Deps};
 
 use pool_network::asset::AssetInfo;
-use vault_network::vault_factory::{VaultInfo, VaultsResponse};
+use vault_network::vault_factory::{VaultInfo, VaultResponse, VaultsResponse};
 
 use crate::state::read_vaults;
 use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
 
 pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
     let vault_option = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
-    if let Some((vault_addr, _)) = vault_option {
-        return Ok(to_binary(&vault_addr)?);
-    }
-
-    Ok(to_binary(&vault_option)?)
+    Ok(to_binary(&VaultResponse{vault: vault_option})?)
 }
 
 pub fn get_vaults(
@@ -29,25 +25,28 @@ mod tests {
     use cw_multi_test::Executor;
     use pool_network::asset::AssetInfo;
 
-    use vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultsResponse};
+    use vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultResponse, VaultsResponse};
 
     use crate::tests::{
-        get_fees, mock_app, mock_creator, mock_instantiate::app_mock_instantiate, mock_query,
+        get_fees, mock_app, mock_creator, mock_instantiate::app_mock_instantiate
     };
 
     #[test]
     fn does_return_none_for_no_vault() {
-        let (res, ..) = mock_query::<Option<String>>(
-            5,
-            6,
-            QueryMsg::Vault {
-                asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
+        let mut app = mock_app();
+        let factory_addr = app_mock_instantiate(&mut app);
+        let res: VaultResponse = app
+            .wrap()
+            .query_wasm_smart(
+                factory_addr.clone(),
+                &QueryMsg::Vault {
+                    asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
                 },
-            },
-        );
-
-        assert_eq!(res, None);
+            )
+            .unwrap();
+        assert_eq!(res.vault, None);
     }
 
     #[test]
@@ -82,12 +81,14 @@ mod tests {
             .unwrap();
 
         // check that the address was stored
-        let vault_addr: Option<String> = app
+        let res: VaultResponse = app
             .wrap()
             .query_wasm_smart(factory_addr, &QueryMsg::Vault { asset_info })
             .unwrap();
 
-        assert_eq!(vault_addr, Some(created_vault_addr.value.clone()));
+        if let Some((addr, _)) = res.vault {
+            assert_eq!(addr.into_string(), created_vault_addr.value.clone());
+        }
     }
 
     #[test]

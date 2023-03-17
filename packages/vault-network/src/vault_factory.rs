@@ -84,6 +84,11 @@ pub struct Config {
 
 /// Response for the vaults query
 #[cw_serde]
+pub struct VaultResponse {
+    pub vault: Option<(Addr, AssetInfo)>,
+}
+/// Response for the vaults query
+#[cw_serde]
 pub struct VaultsResponse {
     pub vaults: Vec<VaultInfo>,
 }

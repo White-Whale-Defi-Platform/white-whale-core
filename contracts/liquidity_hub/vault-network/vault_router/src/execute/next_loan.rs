@@ -2,6 +2,7 @@ use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Respon
 
 use pool_network::asset::{Asset, AssetInfo};
 use vault_network::vault_router::ExecuteMsg;
+use vault_network::vault_factory::VaultResponse;
 
 use crate::err::{StdResult, VaultRouterError};
 use crate::state::CONFIG;
@@ -21,19 +22,20 @@ pub fn next_loan(
     // check that the source vault is executing this message and it is a vault created by the WW vault factory
     let config = CONFIG.load(deps.storage)?;
 
-    let Some(queried_vault) = deps.querier.query_wasm_smart::<Option<String>>(
+    let queried_vault_res: VaultResponse = deps.querier.query_wasm_smart(
         config.vault_factory,
         &vault_network::vault_factory::QueryMsg::Vault {
             asset_info: source_vault_asset,
-        },
-    )? else {
-        return Err(VaultRouterError::Unauthorized {});
-    };
+        }
+    )
+    .unwrap();
+
+    let (queried_vault, _) = queried_vault_res.vault.ok_or(VaultRouterError::Unauthorized {})?;
 
     let validated_source_vault = deps.api.addr_validate(&source_vault)?;
 
     if info.sender != validated_source_vault
-        || deps.api.addr_validate(&queried_vault)? != validated_source_vault
+        || deps.api.addr_validate(&queried_vault.clone().to_string())? != validated_source_vault
     {
         return Err(VaultRouterError::Unauthorized {});
     }
@@ -88,6 +90,7 @@ mod tests {
 
     use pool_network::asset::AssetInfo;
     use vault_network::vault_router::ExecuteMsg;
+    use vault_network::vault_factory::VaultResponse;
 
     use crate::err::VaultRouterError;
     use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
@@ -130,7 +133,7 @@ mod tests {
             VaultRouterError::Unauthorized {}
         );
 
-        let luna_vault: Option<String> = app
+        let luna_vault_res: VaultResponse = app
             .wrap()
             .query_wasm_smart(
                 factory_addr,
@@ -141,6 +144,7 @@ mod tests {
                 },
             )
             .unwrap();
+        let (luna_vault, _) = luna_vault_res.vault.unwrap();
 
         //query address of vault contract
         let err = app
@@ -149,7 +153,7 @@ mod tests {
                 router_addr,
                 &ExecuteMsg::NextLoan {
                     initiator: Addr::unchecked("initiator_addr"),
-                    source_vault: luna_vault.unwrap(),
+                    source_vault: luna_vault.clone().to_string(),
                     source_vault_asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },

@@ -22,6 +22,7 @@ pub fn update_vault_config(
 mod tests {
     use cosmwasm_std::Addr;
     use cw_multi_test::Executor;
+    use vault_network::vault_factory::VaultResponse;
 
     use crate::{
         err::VaultFactoryError,
@@ -53,22 +54,23 @@ mod tests {
         .unwrap();
 
         // get vault address
-        let vault_addr: Option<Addr> = app
+        let vault_res: VaultResponse = app
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
                 &vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
+        let (vault_addr, _) = vault_res.vault.unwrap();
 
         let vault_config: vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
-                vault_addr.clone().unwrap_or_else(|| Addr::unchecked("")),
+                vault_addr.to_string(),
                 &vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
-
+       
         // check that flashloans are enabled
         assert!(vault_config.flash_loan_enabled);
 
@@ -78,10 +80,7 @@ mod tests {
             creator.sender,
             factory_addr,
             &vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
-                vault_addr: vault_addr
-                    .clone()
-                    .unwrap_or_else(|| Addr::unchecked(""))
-                    .to_string(),
+                vault_addr: vault_addr.to_string(),
                 params: vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: Some(false),
                     deposit_enabled: None,
@@ -98,7 +97,7 @@ mod tests {
         let vault_config: vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
-                vault_addr.unwrap_or_else(|| Addr::unchecked("")),
+                vault_addr.to_string(),
                 &vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
@@ -132,13 +131,14 @@ mod tests {
         .unwrap();
 
         // get vault address
-        let vault_addr: Option<Addr> = app
+        let vault_res: VaultResponse = app
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
                 &vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
+        let (vault_addr, _) = vault_res.vault.unwrap();
 
         // unauthorized tries updating the config of the vault
 
@@ -146,9 +146,7 @@ mod tests {
             Addr::unchecked("unauthorized"),
             factory_addr,
             &vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
-                vault_addr: vault_addr
-                    .unwrap_or_else(|| Addr::unchecked(""))
-                    .to_string(),
+                vault_addr: vault_addr.to_string(),
                 params: vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: None,
                     deposit_enabled: None,

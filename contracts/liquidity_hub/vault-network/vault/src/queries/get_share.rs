@@ -1,11 +1,11 @@
-use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
+use cosmwasm_std::{to_binary, Decimal, Deps, Env, Uint128, Binary};
 use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
 use pool_network::asset::AssetInfo;
 
 use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
-use crate::state::CONFIG;
+use crate::state::{CONFIG, ShareResponse};
 
 pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultError> {
     let config = CONFIG.load(deps.storage)?;
@@ -37,7 +37,7 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultE
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
     let asset_share = Decimal::from_ratio(amount, lp_amount.total_supply) * balance;
-    Ok(to_binary(&asset_share)?)
+    Ok(to_binary(&ShareResponse{share: asset_share})?)
 }
 
 #[cfg(test)]
@@ -47,7 +47,7 @@ mod test {
 
     use vault_network::vault::Config;
 
-    use crate::state::COLLECTED_PROTOCOL_FEES;
+    use crate::state::{COLLECTED_PROTOCOL_FEES, ShareResponse};
     use crate::{
         contract::query,
         state::CONFIG,
@@ -107,7 +107,7 @@ mod test {
             )
             .unwrap();
 
-        let res: Uint128 = from_binary(
+        let res: ShareResponse = from_binary(
             &query(
                 deps.as_ref(),
                 env,
@@ -119,7 +119,7 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(res, Uint128::new(27_427));
+        assert_eq!(res.share, Uint128::new(27_427));
     }
 
     #[test]
@@ -176,7 +176,7 @@ mod test {
             )
             .unwrap();
 
-        let res: Uint128 = from_binary(
+        let res: ShareResponse = from_binary(
             &query(
                 deps.as_ref(),
                 env,
@@ -188,6 +188,6 @@ mod test {
         )
         .unwrap();
 
-        assert_eq!(res, Uint128::new(27_427));
+        assert_eq!(res.share, Uint128::new(27_427));
     }
 }

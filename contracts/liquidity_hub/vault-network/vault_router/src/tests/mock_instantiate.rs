@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw_multi_test::{App, Executor};
 use pool_network::asset::AssetInfo;
-
+use vault_network::vault_factory::{VaultResponse};
 use crate::contract::instantiate;
 
 use super::{
@@ -97,7 +97,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
     )
     .unwrap();
     // deposit to native vault
-    let native_vault_addr: Addr = app
+    let native_vault_res: VaultResponse = app
         .wrap()
         .query_wasm_smart(
             factory_addr.clone(),
@@ -108,6 +108,8 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
             },
         )
         .unwrap();
+    let (native_vault_addr, _) = native_vault_res.vault.unwrap();
+
     app.send_tokens(
         mock_admin(),
         native_vault_addr.clone(),
@@ -150,7 +152,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         &[],
     )
     .unwrap();
-    let token_vault_addr: Addr = app
+    let token_vault_res: VaultResponse = app
         .wrap()
         .query_wasm_smart(
             factory_addr.clone(),
@@ -161,6 +163,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
             },
         )
         .unwrap();
+    let (token_vault_addr, _) = token_vault_res.vault.unwrap();
 
     // deposit all the token funds into the vault
     app.execute_contract(

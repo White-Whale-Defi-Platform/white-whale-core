@@ -66,11 +66,11 @@ pub fn create_vault(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        testing::mock_info, to_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
+        testing::mock_info, to_binary, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
     };
     use cw_multi_test::Executor;
     use pool_network::asset::AssetInfo;
-    use vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+    use vault_network::vault_factory::{INSTANTIATE_VAULT_REPLY_ID, VaultResponse};
     use white_whale::fee::{Fee, VaultFee};
 
     use crate::{
@@ -174,7 +174,7 @@ mod tests {
         .unwrap();
 
         // get vault address
-        let vault_addr: Option<Addr> = app
+        let vault_res: VaultResponse = app
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
@@ -195,13 +195,15 @@ mod tests {
             &[],
         );
 
+        let (vault_addr, _) = vault_res.vault.unwrap();
+
         assert_eq!(
             res.unwrap_err()
                 .root_cause()
                 .downcast_ref::<VaultFactoryError>()
                 .unwrap(),
             &VaultFactoryError::ExistingVault {
-                addr: vault_addr.unwrap()
+                addr: vault_addr
             }
         );
     }

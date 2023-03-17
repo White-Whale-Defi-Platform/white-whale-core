@@ -2,6 +2,7 @@ use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg
 
 use pool_network::asset::Asset;
 use vault_network::vault_router::ExecuteMsg;
+use vault_network::vault_factory::{VaultResponse};
 
 use crate::{
     err::{StdResult, VaultRouterError},
@@ -28,7 +29,7 @@ pub fn flash_loan(
         .into_iter()
         .map(|asset| {
             // query factory for address
-            let address: Option<String> = deps.querier.query_wasm_smart(
+            let vault_res: VaultResponse = deps.querier.query_wasm_smart(
                 config.vault_factory.clone(),
                 &vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: asset.info.clone(),
@@ -36,11 +37,11 @@ pub fn flash_loan(
             )?;
 
             // return InvalidAsset if address doesn't exist
-            let address = address.ok_or(VaultRouterError::InvalidAsset {
+            let (address, _) = vault_res.vault.ok_or(VaultRouterError::InvalidAsset {
                 asset: asset.clone(),
             })?;
 
-            Ok((address, asset))
+            Ok((address.clone().to_string(), asset))
         })
         .collect::<StdResult<Vec<_>>>()?;
 

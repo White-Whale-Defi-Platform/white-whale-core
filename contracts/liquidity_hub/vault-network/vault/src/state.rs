@@ -1,4 +1,5 @@
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
+use cosmwasm_schema::cw_serde;
 use cw_storage_plus::Item;
 
 use pool_network::asset::{Asset, AssetInfo};
@@ -16,6 +17,14 @@ pub const ALL_TIME_BURNED_FEES: Item<Asset> = Item::new("all_time_burned_fees");
 
 // A counter for how many active loans are being performed
 pub const LOAN_COUNTER: Item<u32> = Item::new("loan_counter");
+
+
+#[cw_serde]
+pub struct Share {
+    pub share: Uint128,
+}
+
+pub type ShareResponse = Share;
 
 /// Stores a fee in the given fees_storage_item
 pub fn store_fee(
