@@ -177,6 +177,61 @@ fn test_initialization_invalid_fees() {
 }
 
 #[test]
+fn test_initialization_invalid_amp() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+        ),
+        (
+            &"asset0001".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(456u128))],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 0,
+    };
+
+    // we can just call .unwrap() to assert this was a success
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return StdError::generic_err(Invalid amp)"),
+        Err(StdError::GenericErr { .. }) => (),
+        _ => panic!("should return StdError::generic_err(Invalid amp)"),
+    }
+}
+
+#[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
     deps.querier.with_token_balances(&[

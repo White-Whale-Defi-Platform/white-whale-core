@@ -28,6 +28,11 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const INSTANTIATE_REPLY_ID: u64 = 1;
 
+/// Minimum amplification coefficient.
+pub const MIN_AMP: u64 = 1;
+/// Maximum amplification coefficient.
+pub const MAX_AMP: u64 = 1_000_000;
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -61,7 +66,19 @@ pub fn instantiate(
 
     // check the fees are valid
     msg.pool_fees.is_valid()?;
-
+    //check initial amp is in range
+    if msg.amp_factor < MIN_AMP {
+        return Err(StdError::generic_err(format!(
+            "Initial amp must be over {}",
+            MIN_AMP
+        )));
+    }
+    if msg.amp_factor > MAX_AMP {
+        return Err(StdError::generic_err(format!(
+            "Initial amp must be under {}",
+            MAX_AMP
+        )));
+    }
     // Set owner and initial pool fees
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
