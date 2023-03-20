@@ -167,6 +167,9 @@ pub fn assert_max_spread(
     if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
         let belief_price: Decimal256 = belief_price.into();
         let max_spread: Decimal256 = max_spread.into();
+        if max_spread > Decimal256::one() {
+            return Err(StdError::generic_err("max spread cannot bigger than 1").into());
+        }
 
         let expected_return = offer_amount * (Decimal256::one() / belief_price);
         let spread_amount = if expected_return > return_amount {
