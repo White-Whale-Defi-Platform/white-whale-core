@@ -2,6 +2,7 @@ pub mod asset;
 #[cfg(feature = "token_factory")]
 pub mod denom;
 pub mod factory;
+pub mod incentive_factory;
 pub mod pair;
 pub mod querier;
 pub mod router;
