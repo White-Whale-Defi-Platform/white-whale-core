@@ -660,6 +660,8 @@ fn test_assert_slippage_tolerance_invalid_ratio() {
                 amount: Default::default(),
             },
         ],
+        Default::default(),
+        Default::default(),
     );
 
     match res {

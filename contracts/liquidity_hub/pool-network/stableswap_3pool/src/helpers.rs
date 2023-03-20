@@ -194,13 +194,14 @@ pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 3],
     pools: &[Asset; 3],
+    amount: Uint128,
+    pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
         if slippage_tolerance > Decimal256::one() {
             return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
         }
-
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
         let deposits: [Uint256; 3] = [deposits[0].into(), deposits[1].into(), deposits[2].into()];
         let pools: [Uint256; 3] = [
@@ -209,13 +210,15 @@ pub fn assert_slippage_tolerance(
             pools[2].amount.into(),
         ];
 
-        // Ensure each prices are not dropped as much as slippage tolerance rate
-        //TODO three way slippage tolerance?
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
-        {
+        let pools_total = pools[0].checked_add(pools[1])?.checked_add(pools[2])?;
+        let deposits_total = deposits[0]
+            .checked_add(deposits[1])?
+            .checked_add(deposits[2])?;
+
+        let pool_ratio = Decimal256::from_ratio(pools_total, pool_token_supply);
+        let deposit_ratio = Decimal256::from_ratio(deposits_total, amount);
+
+        if pool_ratio * one_minus_slippage_tolerance > deposit_ratio {
             return Err(ContractError::MaxSlippageAssertion {});
         }
     }

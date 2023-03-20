@@ -346,7 +346,7 @@ fn provide_liquidity() {
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(500u128))],
         ),
         (
             &"asset0000".to_string(),
@@ -365,7 +365,7 @@ fn provide_liquidity() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(98u128),
+                amount: Uint128::from(1000u128),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -380,7 +380,7 @@ fn provide_liquidity() {
                 amount: Uint128::from(98u128),
             },
         ],
-        slippage_tolerance: Some(Decimal::percent(1)),
+        slippage_tolerance: Some(Decimal::from_ratio(1u32, 1000u32)),
         receiver: None,
     };
 
@@ -414,7 +414,7 @@ fn provide_liquidity() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1000u128),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -429,7 +429,7 @@ fn provide_liquidity() {
                 amount: Uint128::from(100u128),
             },
         ],
-        slippage_tolerance: Some(Decimal::percent(1)),
+        slippage_tolerance: Some(Decimal::from_ratio(1u32, 1000u32)),
         receiver: None,
     };
 

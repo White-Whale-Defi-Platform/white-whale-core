@@ -173,9 +173,6 @@ pub fn provide_liquidity(
         pool.amount = pool.amount.checked_sub(protocol_fee)?;
     }
 
-    // assert slippage tolerance
-    helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
-
     let liquidity_token = deps.api.addr_humanize(&trio_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
     let invariant = StableSwap::new(config.amp_factor, config.amp_factor, 0, 0, 0);
@@ -201,7 +198,7 @@ pub fn provide_liquidity(
         )?);
         share
     } else {
-        invariant
+        let amount = invariant
             .compute_mint_amount_for_deposit(
                 deposits[0],
                 deposits[1],
@@ -211,7 +208,16 @@ pub fn provide_liquidity(
                 pools[2].amount,
                 total_share,
             )
-            .unwrap()
+            .unwrap();
+        // assert slippage tolerance
+        helpers::assert_slippage_tolerance(
+            &slippage_tolerance,
+            &deposits,
+            &pools,
+            amount,
+            total_share,
+        )?;
+        amount
     };
 
     // mint LP token to sender
