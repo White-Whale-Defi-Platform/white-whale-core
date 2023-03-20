@@ -165,7 +165,7 @@ pub struct SimulationResponse {
     pub burn_fee_amount: Uint128,
 }
 
-/// ReverseSimulationResponse returns reverse swap simulation response
+/// ProtocolFeesResponse returns protocol fees response
 #[cw_serde]
 pub struct ProtocolFeesResponse {
     pub fees: Vec<Asset>,
