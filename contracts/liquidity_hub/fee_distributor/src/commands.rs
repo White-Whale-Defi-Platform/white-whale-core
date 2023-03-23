@@ -4,16 +4,14 @@ use cosmwasm_std::{
 };
 
 use white_whale::fee_distributor::Epoch;
-use white_whale::fee_distributor::ExecuteMsg;
+use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
 use crate::helpers::validate_grace_period;
-use crate::state::{
-    get_claimable_epochs, get_current_epoch, get_epoch, CONFIG, EPOCHS, LAST_CLAIMED_EPOCH,
-};
-use crate::{helpers, ContractError};
+use crate::state::{get_current_epoch, query_claimable, CONFIG, EPOCHS, LAST_CLAIMED_EPOCH};
+use crate::ContractError;
 
 /// Creates a new epoch, forwarding available tokens from epochs that are past the grace period.
 pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
@@ -23,8 +21,8 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     if env
         .block
         .time
-        .minus_seconds(current_epoch.start_time.seconds())
-        .seconds()
+        .minus_nanos(current_epoch.start_time.nanos())
+        .nanos()
         < config.epoch_config.duration.u64()
     {
         return Err(ContractError::CurrentEpochNotExpired {});
@@ -33,11 +31,11 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     let start_time =
         if current_epoch.id == Uint64::zero() && current_epoch.start_time == Timestamp::default() {
             // if it's the very first epoch, set the start time to the genesis epoch
-            Timestamp::from_seconds(config.epoch_config.genesis_epoch.u64())
+            Timestamp::from_nanos(config.epoch_config.genesis_epoch.u64())
         } else {
             current_epoch
                 .start_time
-                .plus_seconds(config.epoch_config.duration.u64())
+                .plus_nanos(config.epoch_config.duration.u64())
         };
 
     let new_epoch = Epoch {
@@ -81,18 +79,10 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     let fee_share = bonding_weight_response.share;
 
-    let mut claimable_epochs = get_claimable_epochs(deps.as_ref())?.epochs;
-    let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &info.sender)?;
-
-    // filter out epochs that have already been claimed by the user
-    if let Some(last_claimed_epoch) = last_claimed_epoch {
-        claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
-
-        // the user has already claimed fees on all claimable epochs
-        if claimable_epochs.is_empty() {
-            return Err(ContractError::NothingToClaim {});
-        }
-    };
+    let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
+    if claimable_epochs.is_empty() {
+        return Err(ContractError::NothingToClaim {});
+    }
 
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
@@ -113,13 +103,13 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 .ok_or_else(|| StdError::generic_err("Invalid fee"))?;
 
             // add the reward to the claimable fees
-            claimable_fees = helpers::aggregate_fees(
+            claimable_fees = asset::aggregate_assets(
                 claimable_fees,
                 vec![Asset {
                     info: fee.info.clone(),
                     amount: reward,
                 }],
-            );
+            )?;
 
             // modify the epoch to reflect the new available and claimed amount
             for available_fee in epoch.available.iter_mut() {
@@ -128,9 +118,16 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 }
             }
 
-            for claimed_fee in epoch.claimed.iter_mut() {
-                if claimed_fee.info == fee.info {
-                    claimed_fee.amount = claimed_fee.amount.checked_add(reward)?;
+            if epoch.claimed.is_empty() {
+                epoch.claimed = vec![Asset {
+                    info: fee.info.clone(),
+                    amount: reward,
+                }];
+            } else {
+                for claimed_fee in epoch.claimed.iter_mut() {
+                    if claimed_fee.info == fee.info {
+                        claimed_fee.amount = claimed_fee.amount.checked_add(reward)?;
+                    }
                 }
             }
 
@@ -157,7 +154,6 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
-    env: Env,
     owner: Option<String>,
     bonding_contract_addr: Option<String>,
     fee_collector_addr: Option<String>,
@@ -186,44 +182,11 @@ pub fn update_config(
         config.distribution_asset = distribution_asset;
     }
 
-    let mut messages = vec![];
     if let Some(grace_period) = grace_period {
         validate_grace_period(&grace_period)?;
 
         if grace_period < config.grace_period {
-            // if the grace period is smaller than the current one, it means the fees from the epochs
-            // that are expiring need to be forwarded to a new epoch.
-            // Create a new epoch, and then refill it with the fees from the expired epochs.
-
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::NewEpoch {})?,
-                funds: vec![],
-            }));
-
-            let claimable_epochs = get_claimable_epochs(deps.as_ref())?.epochs;
-            let (_, expired_epochs) = claimable_epochs.split_at(grace_period.u64() as usize);
-
-            let mut forwarding_assets = vec![];
-            for epoch in expired_epochs {
-                forwarding_assets =
-                    helpers::aggregate_fees(forwarding_assets, epoch.available.clone());
-            }
-
-            // the new epoch's id is the current epoch's id + 1. Refill that epoch with the fees from
-            // expiring epochs.
-            let new_epoch_id = get_current_epoch(deps.as_ref())?
-                .epoch
-                .id
-                .checked_add(Uint64::one())?;
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: env.contract.address.to_string(),
-                msg: to_binary(&ExecuteMsg::RefillEpoch {
-                    epoch_id: new_epoch_id,
-                    fees: forwarding_assets,
-                })?,
-                funds: vec![],
-            }));
+            return Err(ContractError::GracePeriodDecrease {});
         }
 
         config.grace_period = grace_period;
@@ -231,7 +194,7 @@ pub fn update_config(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
+    Ok(Response::new().add_attributes(vec![
         ("action", "update_config".to_string()),
         ("owner", config.owner.to_string()),
         (
@@ -242,46 +205,4 @@ pub fn update_config(
         ("grace_period", config.grace_period.to_string()),
         ("distribution_asset", config.distribution_asset.to_string()),
     ]))
-}
-
-/// Refills the epoch with the given fees. This is only possible to do iff the fees in the epoch have
-/// not been claimed.
-/// Used when the grace period is reduced, and the fees from the expired epochs need to be forwarded.
-pub fn refill_epoch(
-    deps: DepsMut,
-    info: MessageInfo,
-    epoch_id: Uint64,
-    fees: Vec<Asset>,
-) -> Result<Response, ContractError> {
-    // make sure the fees match the funds sent
-    if info
-        .funds
-        .iter()
-        .map(|coin| Asset {
-            info: AssetInfo::NativeToken {
-                denom: coin.denom.clone(),
-            },
-            amount: coin.amount,
-        })
-        .any(|asset| !fees.contains(&asset))
-    {
-        return Err(ContractError::AssetMismatch {});
-    }
-
-    let mut epoch = get_epoch(deps.as_ref(), epoch_id)?.epoch;
-
-    if epoch.validate_refillable() {
-        let fees = helpers::aggregate_fees(epoch.available, fees);
-        epoch.available = fees.clone();
-        epoch.total = fees;
-
-        EPOCHS.save(deps.storage, &epoch_id.to_be_bytes(), &epoch)?;
-
-        return Ok(Response::new().add_attributes(vec![
-            ("action", "refill_epoch".to_string()),
-            ("epoch_id", epoch_id.to_string()),
-        ]));
-    }
-
-    Err(ContractError::CannotRefillEpoch(epoch_id))
 }

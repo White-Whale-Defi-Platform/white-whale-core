@@ -152,7 +152,7 @@ pub(crate) fn query_weight(
     global_index.weight = get_weight(
         timestamp,
         global_index.weight,
-        global_index.bond_amount,
+        global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
     )?;
@@ -165,5 +165,13 @@ pub(crate) fn query_weight(
         global_weight: global_index.weight,
         share,
         timestamp,
+    })
+}
+
+/// Queries the total amount of assets that have been bonded to the contract.
+pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
+    GLOBAL.load(deps.storage).map(|global| BondedResponse {
+        total_bonded: global.bonded_amount,
+        bonded_assets: global.bonded_assets,
     })
 }

@@ -1,15 +1,16 @@
 use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_binary, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint128, Uint64,
+    from_binary, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,
 };
 
 use white_whale::fee_distributor::{
-    Config, Epoch, EpochConfig, EpochResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    ClaimableEpochsResponse, Config, Epoch, EpochConfig, EpochResponse, ExecuteMsg, InstantiateMsg,
+    QueryMsg,
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::contract::{execute, instantiate, query};
-use crate::state::{get_expiring_epoch, EPOCHS};
+use crate::state::{get_expiring_epoch, EPOCHS, LAST_CLAIMED_EPOCH};
 use crate::ContractError;
 
 pub struct TestingRobot {
@@ -31,8 +32,8 @@ impl TestingRobot {
             fee_collector_addr: "fee_collector_addr".to_string(),
             grace_period: Uint64::new(2),
             epoch_config: EpochConfig {
-                duration: Uint64::new(86400u64),           // a day
-                genesis_epoch: Uint64::new(1678802400u64), // March 14, 2023 2:00:00 PM
+                duration: Uint64::new(86_400_000_000_000u64), // a day
+                genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
             },
             distribution_asset: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -108,21 +109,14 @@ impl TestingRobot {
         self
     }
 
-    pub(crate) fn create_new_epoch(
+    pub(crate) fn add_last_claimed_epoch_to_state(
         &mut self,
-        info: MessageInfo,
-        response: impl Fn(Result<Response, ContractError>),
+        address: Addr,
+        epoch_id: Uint64,
     ) -> &mut Self {
-        //create new epoch with ExecuteMsg::NewEpoch
-        let msg = ExecuteMsg::NewEpoch {};
-
-        response(execute(
-            self.owned_deps.as_mut(),
-            self.env.clone(),
-            info,
-            msg,
-        ));
-
+        LAST_CLAIMED_EPOCH
+            .save(&mut self.owned_deps.storage, &address, &epoch_id)
+            .unwrap();
         self
     }
 
@@ -149,9 +143,10 @@ impl TestingRobot {
 
         self
     }
+}
 
-    /// Queries
-
+/// Queries
+impl TestingRobot {
     pub(crate) fn query_current_epoch(&mut self, response: impl Fn(StdResult<Epoch>)) -> &mut Self {
         let query_res = query(
             self.owned_deps.as_ref(),
@@ -159,9 +154,9 @@ impl TestingRobot {
             QueryMsg::CurrentEpoch {},
         )
         .unwrap();
-        let current_epoch: Epoch = from_binary(&query_res).unwrap();
+        let res: EpochResponse = from_binary(&query_res).unwrap();
 
-        response(Ok(current_epoch));
+        response(Ok(res.epoch));
 
         self
     }
@@ -186,17 +181,30 @@ impl TestingRobot {
 
     pub(crate) fn query_claimable_epochs(
         &mut self,
+        address: Option<Addr>,
         response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
     ) -> &mut Self {
-        let query_res = query(
-            self.owned_deps.as_ref(),
-            self.env.clone(),
-            QueryMsg::ClaimableEpochs {},
-        )
-        .unwrap();
-        let epochs: Vec<Epoch> = from_binary(&query_res).unwrap();
+        let query_res = if let Some(address) = address {
+            query(
+                self.owned_deps.as_ref(),
+                self.env.clone(),
+                QueryMsg::Claimable {
+                    address: address.to_string(),
+                },
+            )
+            .unwrap()
+        } else {
+            query(
+                self.owned_deps.as_ref(),
+                self.env.clone(),
+                QueryMsg::ClaimableEpochs {},
+            )
+            .unwrap()
+        };
 
-        response(Ok((self, epochs)));
+        let res: ClaimableEpochsResponse = from_binary(&query_res).unwrap();
+
+        response(Ok((self, res.epochs)));
 
         self
     }
@@ -217,9 +225,10 @@ impl TestingRobot {
 
         self
     }
+}
 
-    /// Assertions
-
+/// Assertions
+impl TestingRobot {
     pub(crate) fn assert_current_epoch(&mut self, expected: &Epoch) -> &mut Self {
         self.query_current_epoch(|epoch| {
             assert_eq!(&epoch.unwrap(), expected);

@@ -112,6 +112,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Weight { address } => {
             to_binary(&queries::query_weight(deps, env.block.time, address)?)
         }
+        QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),
     }
 }
 

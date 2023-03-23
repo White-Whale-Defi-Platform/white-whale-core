@@ -2,6 +2,7 @@ use cosmwasm_std::{
     Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
     Timestamp, Uint128, Uint64,
 };
+use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use white_whale::whale_lair::Bond;
@@ -63,7 +64,9 @@ pub(crate) fn bond(
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     global_index = update_global_weight(&mut deps, timestamp, global_index)?;
-    global_index.bond_amount = global_index.bond_amount.checked_add(asset.amount)?;
+    global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
+    global_index.bonded_assets =
+        asset::aggregate_assets(global_index.bonded_assets, vec![asset.clone()])?;
     GLOBAL.save(deps.storage, &global_index)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -118,7 +121,9 @@ pub(crate) fn unbond(
         // update global values
         let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
         global_index = update_global_weight(&mut deps, timestamp, global_index)?;
-        global_index.bond_amount = global_index.bond_amount.checked_sub(asset.amount)?;
+        global_index.bonded_amount = global_index.bonded_amount.checked_sub(asset.amount)?;
+        global_index.bonded_assets =
+            asset::deduct_assets(global_index.bonded_assets, vec![asset.clone()])?;
         global_index.weight = global_index.weight.checked_sub(weight_slash)?;
         GLOBAL.save(deps.storage, &global_index)?;
 

@@ -10,6 +10,7 @@ use crate::tests::robot::TestingRobot;
 fn test_unbond_successfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
+    let another_sender = robot.another_sender.clone();
 
     robot
         .instantiate_default()
@@ -132,7 +133,41 @@ fn test_unbond_successfully() {
                     },
                 ],
             },
-        );
+        )
+        .bond(
+            another_sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            &coins(1_000u128, "bWHALE"),
+            |_res| {},
+        )
+        .query_total_bonded(|res| {
+            let bonded_response = res.unwrap().1;
+            assert_eq!(
+                bonded_response,
+                BondedResponse {
+                    total_bonded: Uint128::new(1_500u128),
+                    bonded_assets: vec![
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "ampWHALE".to_string(),
+                            },
+                            amount: Uint128::new(500u128),
+                        },
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "bWHALE".to_string(),
+                            },
+                            amount: Uint128::new(1_000u128),
+                        },
+                    ]
+                }
+            )
+        });
 }
 
 #[test]

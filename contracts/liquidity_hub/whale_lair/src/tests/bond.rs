@@ -121,7 +121,30 @@ fn test_bond_successfully() {
                 share: Decimal::from_ratio(50_000u128, 150_000u128),
                 timestamp: Timestamp::from_nanos(1571797459879305533u64),
             },
-        );
+        )
+        .query_total_bonded(|res| {
+            let bonded_response = res.unwrap().1;
+            assert_eq!(
+                bonded_response,
+                BondedResponse {
+                    total_bonded: Uint128::new(9_000u128),
+                    bonded_assets: vec![
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "ampWHALE".to_string(),
+                            },
+                            amount: Uint128::new(6_000u128),
+                        },
+                        Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "bWHALE".to_string(),
+                            },
+                            amount: Uint128::new(3_000u128),
+                        },
+                    ]
+                }
+            )
+        });
 }
 
 #[test]

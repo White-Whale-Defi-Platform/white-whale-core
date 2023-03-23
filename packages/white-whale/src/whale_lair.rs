@@ -44,7 +44,9 @@ impl Default for Bond {
 #[derive(Default)]
 pub struct GlobalIndex {
     /// The total amount of tokens bonded in the contract.
-    pub bond_amount: Uint128,
+    pub bonded_amount: Uint128,
+    /// Assets that are bonded in the contract.
+    pub bonded_assets: Vec<Asset>,
     /// The timestamp at which the total bond was registered.
     pub timestamp: Timestamp,
     /// The total weight of the bond at the given block height.
@@ -84,7 +86,7 @@ pub enum QueryMsg {
     #[returns(Config)]
     Config {},
 
-    /// Returns the amount of tokens that have been bonded by the specified address.
+    /// Returns the amount of assets that have been bonded by the specified address.
     #[returns(BondedResponse)]
     Bonded { address: String },
 
@@ -106,6 +108,10 @@ pub enum QueryMsg {
     /// Returns the weight of the address.
     #[returns(BondingWeightResponse)]
     Weight { address: String },
+
+    /// Returns the total amount of assets that have been bonded to the contract.
+    #[returns(BondedResponse)]
+    TotalBonded {},
 }
 
 #[cw_serde]

@@ -297,6 +297,21 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn query_total_bonded(
+        &mut self,
+        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
+    ) -> &mut Self {
+        let bonded_response: BondedResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::TotalBonded {})
+            .unwrap();
+
+        response(Ok((self, bonded_response)));
+
+        self
+    }
 }
 
 /// assertions

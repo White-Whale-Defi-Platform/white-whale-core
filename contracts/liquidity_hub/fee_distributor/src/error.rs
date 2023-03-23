@@ -3,7 +3,7 @@ use cw_utils::ParseReplyError;
 use semver::Version;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
@@ -20,7 +20,7 @@ pub enum ContractError {
     #[error("Invalid grace period: {0}. Must be between 1 and 10.")]
     InvalidGracePeriod(Uint64),
 
-    #[error("Invalid epoch duration: {0}. Must be at least 1 day.")]
+    #[error("Invalid epoch duration: {0}. Must be at least 1 day, in nanoseconds.")]
     InvalidEpochDuration(Uint64),
 
     #[error("The assets sent don't match the assets expected.")]
@@ -38,8 +38,8 @@ pub enum ContractError {
     #[error("Couldn't read data for new epoch.")]
     CannotReadEpoch {},
 
-    #[error("Can't refill the epoch with id {0}. Either it hasn't been started or it has already been claimed.")]
-    CannotRefillEpoch(Uint64),
+    #[error("Can't lower the grace period.")]
+    GracePeriodDecrease {},
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),

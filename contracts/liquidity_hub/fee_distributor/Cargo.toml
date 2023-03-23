@@ -1,6 +1,6 @@
 [package]
 name = "fee_distributor"
-version = "0.1.3"
+version = "1.0.0"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "Contract to distribute the fees collected by the Fee Collector."

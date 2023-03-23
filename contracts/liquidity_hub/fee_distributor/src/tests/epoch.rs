@@ -1,118 +1,32 @@
-use cosmwasm_std::{Timestamp, Uint128, Uint64};
+use cosmwasm_std::testing::{mock_dependencies, mock_env};
+use cosmwasm_std::Uint64;
 
 use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-pub(crate) fn get_epochs() -> Vec<Epoch> {
-    vec![
-        Epoch {
-            id: Uint64::new(1u64),
-            start_time: Timestamp::from_seconds(1678726800),
-            total: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(10_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(10_000_000u128),
-                },
-            ],
-            available: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(1_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(7_000_000u128),
-                },
-            ],
-            claimed: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(9_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(3_000_000u128),
-                },
-            ],
-        },
-        Epoch {
-            id: Uint64::new(2u64),
-            start_time: Timestamp::from_seconds(1678813200),
-            total: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::from(15_000_000u128),
-            }],
-            available: vec![Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::from(15_000_000u128),
-            }],
-            claimed: vec![],
-        },
-        Epoch {
-            id: Uint64::new(3u64),
-            start_time: Timestamp::from_seconds(1678899600),
-            total: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(5_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(5_000_000u128),
-                },
-            ],
-            available: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(4_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(4_000_000u128),
-                },
-            ],
-            claimed: vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uatom".to_string(),
-                    },
-                    amount: Uint128::from(1_000_000u128),
-                },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                    amount: Uint128::from(1_000_000u128),
-                },
-            ],
-        },
-    ]
+use crate::tests::robot::TestingRobot;
+use crate::tests::test_helpers;
+
+#[test]
+fn test_current_epoch_no_epochs() {
+    let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
+
+    robot
+        .instantiate_default()
+        .assert_current_epoch(&Epoch::default())
+        .query_epoch(Uint64::new(10), |res| {
+            // epoch 10 doesn't exist, it should return the default value
+            let (_, epoch) = res.unwrap();
+            assert_eq!(epoch, Epoch::default());
+        });
+}
+
+#[test]
+fn test_expiring_epoch() {
+    let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
+    let epochs = test_helpers::get_epochs();
+
+    robot
+        .instantiate_default()
+        .add_epochs_to_state(epochs.clone())
+        .assert_expiring_epoch(Some(&epochs[1]));
 }

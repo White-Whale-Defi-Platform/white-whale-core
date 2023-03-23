@@ -29,14 +29,6 @@ pub struct Epoch {
     pub claimed: Vec<Asset>,
 }
 
-impl Epoch {
-    /// Validates if the epoch can be refilled. It can only happen when the epoch has just been created
-    /// and nobody has claimed anything yet.
-    pub fn validate_refillable(&self) -> bool {
-        self != &Epoch::default() && self.available == self.total && self.claimed == vec![]
-    }
-}
-
 impl Display for Epoch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -49,9 +41,9 @@ impl Display for Epoch {
 
 #[cw_serde]
 pub struct EpochConfig {
-    /// The duration of an epoch in seconds.
+    /// The duration of an epoch in nanoseconds.
     pub duration: Uint64,
-    /// Timestamp for the midnight when the first epoch is going to be created.
+    /// Timestamp for the first epoch, in nanoseconds.
     pub genesis_epoch: Uint64,
 }
 
@@ -98,10 +90,6 @@ pub enum ExecuteMsg {
         grace_period: Option<Uint64>,
         distribution_asset: Option<AssetInfo>,
     },
-
-    /// Refills an epoch with the given funds. It is only possible iff the epoch rewards have not
-    /// been claimed yet.
-    RefillEpoch { epoch_id: Uint64, fees: Vec<Asset> },
 }
 
 #[cw_serde]
@@ -122,6 +110,10 @@ pub enum QueryMsg {
     /// Returns the [Epoch]s that can be claimed.
     #[returns(ClaimableEpochsResponse)]
     ClaimableEpochs {},
+
+    /// Returns the [Epoch]s that can be claimed by an address.
+    #[returns(ClaimableEpochsResponse)]
+    Claimable { address: String },
 }
 
 #[cw_serde]

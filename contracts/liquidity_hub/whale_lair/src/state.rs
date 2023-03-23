@@ -54,7 +54,7 @@ pub fn update_global_weight(
     global_index.weight = get_weight(
         timestamp,
         global_index.weight,
-        global_index.bond_amount,
+        global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
     )?;
@@ -83,10 +83,6 @@ pub fn get_weight(
         )
         .nanos(),
     );
-
-    // convert Uint128 to decimal to do the operation  weight = weight + amount * (current_timestamp - timestamp) * growth_rate
-    //let amount = Decimal256::from_ratio(amount, Uint128::one());
-    //let time_factor = Decimal256::from_ratio(time_factor, Uint128::one());
 
     Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
 }

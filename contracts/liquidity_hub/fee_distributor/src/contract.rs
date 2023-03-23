@@ -14,8 +14,9 @@ use white_whale::fee_distributor::{
 use crate::error::ContractError;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
-use crate::{commands, helpers, queries, state};
+use crate::{commands, queries, state};
 use semver::Version;
+use white_whale::pool_network::asset;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
@@ -76,7 +77,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             let unclaimed_fees = expiring_epoch.available.clone();
 
             // aggregate the unclaimed fees from the expiring epoch with the ones of the new epoch
-            let fees = helpers::aggregate_fees(new_epoch.total, unclaimed_fees);
+            let fees = asset::aggregate_assets(new_epoch.total, unclaimed_fees)?;
             new_epoch = Epoch {
                 total: fees.clone(),
                 available: fees,
@@ -126,16 +127,12 @@ pub fn execute(
         } => commands::update_config(
             deps,
             info,
-            env,
             owner,
             bonding_contract_addr,
             fee_collector_addr,
             grace_period,
             distribution_asset,
         ),
-        ExecuteMsg::RefillEpoch { epoch_id, fees } => {
-            commands::refill_epoch(deps, info, epoch_id, fees)
-        }
     }
 }
 
@@ -146,6 +143,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Epoch { id } => Ok(to_binary(&state::get_epoch(deps, id)?)?),
         QueryMsg::ClaimableEpochs {} => Ok(to_binary(&state::get_claimable_epochs(deps)?)?),
         QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
+        QueryMsg::Claimable { address } => Ok(to_binary(&state::query_claimable(
+            deps,
+            &deps.api.addr_validate(&address)?,
+        )?)?),
     }
 }
 

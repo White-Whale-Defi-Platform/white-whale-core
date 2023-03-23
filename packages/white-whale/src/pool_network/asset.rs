@@ -457,3 +457,39 @@ impl ToCoins for Vec<Asset> {
             .collect()
     }
 }
+
+/// Aggregates assets from two vectors, summing up the amounts of assets that are the same.
+pub fn aggregate_assets(assets: Vec<Asset>, other_assets: Vec<Asset>) -> StdResult<Vec<Asset>> {
+    let mut aggregated_assets: Vec<Asset> = Vec::with_capacity(assets.len() + other_assets.len());
+    for asset in assets {
+        aggregated_assets.push(asset.clone());
+    }
+
+    for asset in other_assets {
+        if let Some(existing_asset) = aggregated_assets.iter_mut().find(|a| a.info == asset.info) {
+            existing_asset.amount = existing_asset.amount.checked_add(asset.amount)?;
+        } else {
+            aggregated_assets.push(asset.clone());
+        }
+    }
+
+    Ok(aggregated_assets)
+}
+
+/// Deducts assets from two vectors, subtracting the amounts of assets that are the same.
+pub fn deduct_assets(assets: Vec<Asset>, to_deduct: Vec<Asset>) -> StdResult<Vec<Asset>> {
+    let mut updated_assets = assets.to_vec();
+
+    for asset in to_deduct {
+        if let Some(existing_asset) = updated_assets.iter_mut().find(|a| a.info == asset.info) {
+            existing_asset.amount = existing_asset.amount.checked_sub(asset.amount)?;
+        } else {
+            return Err(StdError::generic_err(format!(
+                "Error: Cannot deduct {} {}. Asset not found.",
+                asset.amount, asset.info
+            )));
+        }
+    }
+
+    Ok(updated_assets)
+}
