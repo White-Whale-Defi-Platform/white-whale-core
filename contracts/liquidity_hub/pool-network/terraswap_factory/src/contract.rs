@@ -70,6 +70,7 @@ pub fn execute(
         } => commands::create_pair(
             deps,
             env,
+            info,
             asset_infos,
             pool_fees,
             pair_type,

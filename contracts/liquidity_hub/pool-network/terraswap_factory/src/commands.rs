@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg, MessageInfo
 };
 
 use pool_network::asset::{AssetInfo, PairType};
@@ -74,6 +74,7 @@ pub fn update_pair_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
     pair_type: PairType,
@@ -144,7 +145,7 @@ pub fn create_pair(
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
-                funds: vec![],
+                funds: info.funds.clone(),
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
                 msg: to_binary(&PairInstantiateMsg {
