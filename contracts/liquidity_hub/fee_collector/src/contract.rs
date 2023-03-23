@@ -1,19 +1,28 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    to_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
+};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
+use white_whale::fee_collector::{
+    Config, ExecuteMsg, ForwardFeesResponse, InstantiateMsg, MigrateMsg, QueryMsg,
+};
+use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
+
 use crate::error::ContractError;
-use crate::state::CONFIG;
+use crate::state::{CONFIG, TMP_EPOCH};
 use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, migrations, queries};
-use white_whale::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 const CONTRACT_NAME: &str = "white_whale-fee_collector";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const FEES_COLLECTION_REPLY_ID: u64 = 1u64;
+pub(crate) const FEES_AGGREGATION_REPLY_ID: u64 = 2u64;
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -37,7 +46,55 @@ pub fn instantiate(
         .add_attribute("owner", config.owner.as_str()))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    if msg.id == FEES_AGGREGATION_REPLY_ID {
+        let (mut epoch, asset_info) = TMP_EPOCH
+            .may_load(deps.storage)?
+            .ok_or(ContractError::CannotReadEpoch {})?;
+
+        let token_balance: Uint128 = match asset_info.clone() {
+            AssetInfo::Token { .. } => {
+                return Err(ContractError::InvalidContractsFeeAggregation {})
+            }
+            AssetInfo::NativeToken { denom } => {
+                let balance_response: BalanceResponse =
+                    deps.querier.query(&QueryRequest::Bank(BankQuery::Balance {
+                        address: env.contract.address.to_string(),
+                        denom,
+                    }))?;
+                balance_response.amount.amount
+            }
+        };
+
+        let fees = vec![Asset {
+            info: asset_info,
+            amount: token_balance,
+        }];
+
+        epoch.total = fees.clone();
+        epoch.available = fees.clone();
+
+        // send tokens to fee distributor
+        let config = CONFIG.load(deps.storage)?;
+        let fees_transfer_msg = CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.fee_distributor.to_string(),
+            amount: fees.to_coins()?,
+        });
+
+        TMP_EPOCH.remove(deps.storage);
+
+        Ok(Response::default()
+            .add_attribute("action", "reply")
+            .add_attribute("new_epoch", epoch.to_string())
+            .add_message(fees_transfer_msg)
+            .set_data(to_binary(&ForwardFeesResponse { epoch })?))
+    } else {
+        Err(ContractError::UnknownReplyId(msg.id))
+    }
+}
+
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -46,7 +103,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CollectFees { collect_fees_for } => {
-            commands::collect_fees(deps, info, collect_fees_for)
+            commands::collect_fees(deps, info, env, collect_fees_for)
         }
         ExecuteMsg::UpdateConfig {
             owner,
@@ -74,7 +131,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
@@ -90,7 +147,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 #[cfg(not(tarpaulin_include))]
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
@@ -105,8 +162,6 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     if storage_version <= Version::parse("1.0.5")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
-
-    // todo fix migration for the new pub fee_distributor: Addr, in Config
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())

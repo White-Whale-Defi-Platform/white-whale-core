@@ -80,6 +80,10 @@ pub(crate) fn unbond(
     info: MessageInfo,
     asset: Asset,
 ) -> Result<Response, ContractError> {
+    if asset.amount.is_zero() {
+        return Err(ContractError::InvalidUnbondingAmount {});
+    }
+
     let denom = match asset.info.clone() {
         AssetInfo::NativeToken { denom } => denom,
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
@@ -160,10 +164,6 @@ pub(crate) fn withdraw(
             refund_amount = refund_amount.checked_add(bond.asset.amount)?;
             UNBOND.remove(deps.storage, (&address, &denom, ts));
         }
-    }
-
-    if refund_amount == Uint128::zero() {
-        return Err(ContractError::NothingToWithdraw {});
     }
 
     let refund_msg = CosmosMsg::Bank(BankMsg::Send {

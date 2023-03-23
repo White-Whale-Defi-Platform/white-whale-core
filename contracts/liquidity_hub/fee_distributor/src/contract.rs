@@ -83,9 +83,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 ..new_epoch
             };
 
-            // save the new epoch
-            EPOCHS.save(deps.storage, &new_epoch.id.to_be_bytes(), &new_epoch)?;
-
             // update the expiring epoch's available fees
             expiring_epoch.available = vec![];
             EPOCHS.save(
@@ -95,9 +92,16 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             )?;
         }
 
+        // save the new epoch
+        EPOCHS.save(deps.storage, &new_epoch.id.to_be_bytes(), &new_epoch)?;
+
         Ok(Response::default()
             .add_attribute("action", "reply")
-            .add_attribute("new_epoch", new_epoch.to_string()))
+            .add_attribute("new_epoch", new_epoch.to_string())
+            .add_attribute(
+                "expiring_epoch",
+                expiring_epoch.unwrap_or_default().to_string(),
+            ))
     } else {
         Err(ContractError::UnknownReplyId(msg.id))
     }

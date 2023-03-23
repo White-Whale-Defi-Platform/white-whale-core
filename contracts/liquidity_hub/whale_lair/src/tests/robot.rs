@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -53,7 +53,7 @@ impl TestingRobot {
 
     pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
         let mut block_info = self.app.block_info();
-        block_info.time = block_info.time.plus_seconds(seconds);
+        block_info.time = block_info.time.plus_nanos(seconds * 1_000_000_000);
         self.app.set_block(block_info);
 
         self
@@ -61,7 +61,7 @@ impl TestingRobot {
 
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
-            1_000u64,
+            Uint64::new(1_000_000_000_000u64),
             Decimal::one(),
             vec![
                 AssetInfo::NativeToken {
@@ -77,7 +77,7 @@ impl TestingRobot {
 
     pub(crate) fn instantiate(
         &mut self,
-        unbonding_period: u64,
+        unbonding_period: Uint64,
         growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
@@ -92,7 +92,7 @@ impl TestingRobot {
 
     pub(crate) fn instantiate_err(
         &mut self,
-        unbonding_period: u64,
+        unbonding_period: Uint64,
         growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
@@ -159,7 +159,7 @@ impl TestingRobot {
         &mut self,
         sender: Addr,
         owner: Option<String>,
-        unbonding_period: Option<u64>,
+        unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -180,7 +180,7 @@ impl TestingRobot {
 
 fn instantiate_contract(
     robot: &mut TestingRobot,
-    unbonding_period: u64,
+    unbonding_period: Uint64,
     growth_rate: Decimal,
     bonding_assets: Vec<AssetInfo>,
     funds: &Vec<Coin>,

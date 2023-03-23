@@ -1,31 +1,35 @@
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankMsg, BankQuery, Coin, CosmosMsg, DepsMut, Env,
-    MessageInfo, QueryRequest, Response, StdResult, Storage, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use white_whale::fee_collector::{Config, ContractType, ExecuteMsg, FactoryType, FeesFor};
+use white_whale::fee_distributor::Epoch;
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::pool_network::factory::{PairsResponse, QueryMsg};
 use white_whale::pool_network::router;
 use white_whale::pool_network::router::SwapOperation;
 use white_whale::vault_network::vault_factory::VaultsResponse;
 
-use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, CONFIG};
+use crate::contract::{FEES_AGGREGATION_REPLY_ID, FEES_COLLECTION_REPLY_ID};
+use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, CONFIG, TMP_EPOCH};
 use crate::ContractError;
-use white_whale::fee_collector::{
-    Config, ContractType, ExecuteMsg, FactoryType, FeesFor, ForwardFeesResponse,
-};
-use white_whale::fee_distributor::Epoch;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
 pub fn collect_fees(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     collect_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
-    // only the owner can trigger the fees collection
-    validate_owner(deps.storage, info.sender)?;
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // only the owner or the contract itself can aggregate the fees
+    if info.sender != config.owner && info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
@@ -116,15 +120,6 @@ fn collect_fees_for_factory(
     }
 
     Ok(result)
-}
-
-/// Validates that the given sender [Addr] is the owner of the contract
-fn validate_owner(storage: &dyn Storage, sender: Addr) -> Result<(), ContractError> {
-    let config = CONFIG.load(storage)?;
-    if sender != config.owner {
-        return Err(ContractError::Unauthorized {});
-    }
-    Ok(())
 }
 
 pub fn update_config(
@@ -338,7 +333,7 @@ pub fn forward_fees(
     deps: DepsMut,
     info: MessageInfo,
     env: Env,
-    mut epoch: Epoch,
+    epoch: Epoch,
     forward_fees_as: AssetInfo,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
@@ -350,71 +345,95 @@ pub fn forward_fees(
 
     let mut messages = vec![];
 
-    // trigger fee aggregation
-    let pools_fee_aggregation_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: env.contract.address.to_string(),
-        funds: vec![],
-        msg: to_binary(&ExecuteMsg::AggregateFees {
-            asset_info: forward_fees_as.clone(),
-            aggregate_fees_for: FeesFor::Factory {
-                factory_addr: config.pool_factory.to_string(),
-                factory_type: FactoryType::Pool {
-                    start_after: None,
-                    limit: Some(30u32),
+    // trigger fee collection
+    let vaults_fee_collection_msg = SubMsg {
+        id: FEES_COLLECTION_REPLY_ID,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            funds: vec![],
+            msg: to_binary(&ExecuteMsg::CollectFees {
+                collect_fees_for: FeesFor::Factory {
+                    factory_addr: config.vault_factory.to_string(),
+                    factory_type: FactoryType::Vault {
+                        start_after: None,
+                        limit: Some(30u32),
+                    },
                 },
-            },
-        })?,
-    });
-
-    let vaults_fee_aggregation_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: env.contract.address.to_string(),
-        funds: vec![],
-        msg: to_binary(&ExecuteMsg::AggregateFees {
-            asset_info: forward_fees_as.clone(),
-            aggregate_fees_for: FeesFor::Factory {
-                factory_addr: config.vault_factory.to_string(),
-                factory_type: FactoryType::Vault {
-                    start_after: None,
-                    limit: Some(30u32),
-                },
-            },
-        })?,
-    });
-
-    //todo maybe i need to move this into a submessage
-    // query amount of whale tokens in the contract with bank module
-    let whale_token_balance: Uint128 = match forward_fees_as.clone() {
-        AssetInfo::Token { .. } => Uint128::zero(),
-        AssetInfo::NativeToken { denom } => {
-            let balance_response: BalanceResponse =
-                deps.querier.query(&QueryRequest::Bank(BankQuery::Balance {
-                    address: env.contract.address.to_string(),
-                    denom,
-                }))?;
-            balance_response.amount.amount
-        }
+            })?,
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
     };
 
-    let fees = vec![Asset {
-        info: forward_fees_as,
-        amount: whale_token_balance,
-    }];
+    let pools_fee_collection_msg = SubMsg {
+        id: FEES_COLLECTION_REPLY_ID,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            funds: vec![],
+            msg: to_binary(&ExecuteMsg::CollectFees {
+                collect_fees_for: FeesFor::Factory {
+                    factory_addr: config.pool_factory.to_string(),
+                    factory_type: FactoryType::Pool {
+                        start_after: None,
+                        limit: Some(30u32),
+                    },
+                },
+            })?,
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
+    };
 
-    epoch.total = fees.clone();
-    epoch.available = fees.clone();
+    // trigger fee aggregation
+    let vaults_fee_aggregation_msg = SubMsg {
+        id: FEES_AGGREGATION_REPLY_ID,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            funds: vec![],
+            msg: to_binary(&ExecuteMsg::AggregateFees {
+                asset_info: forward_fees_as.clone(),
+                aggregate_fees_for: FeesFor::Factory {
+                    factory_addr: config.vault_factory.to_string(),
+                    factory_type: FactoryType::Vault {
+                        start_after: None,
+                        limit: Some(30u32),
+                    },
+                },
+            })?,
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
+    };
 
-    // send tokens to fee distributor with bank message
-    let fees_transfer_msg = CosmosMsg::Bank(BankMsg::Send {
-        to_address: config.fee_distributor.to_string(),
-        amount: fees.to_coins()?,
-    });
+    let pools_fee_aggregation_msg = SubMsg {
+        id: FEES_AGGREGATION_REPLY_ID,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            funds: vec![],
+            msg: to_binary(&ExecuteMsg::AggregateFees {
+                asset_info: forward_fees_as.clone(),
+                aggregate_fees_for: FeesFor::Factory {
+                    factory_addr: config.pool_factory.to_string(),
+                    factory_type: FactoryType::Pool {
+                        start_after: None,
+                        limit: Some(30u32),
+                    },
+                },
+            })?,
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Success,
+    };
 
-    messages.push(pools_fee_aggregation_msg);
+    messages.push(vaults_fee_collection_msg);
+    messages.push(pools_fee_collection_msg);
     messages.push(vaults_fee_aggregation_msg);
-    messages.push(fees_transfer_msg);
+    messages.push(pools_fee_aggregation_msg);
+
+    // saving the epoch and the asset info to forward the fees as in temp storage
+    TMP_EPOCH.save(deps.storage, &(epoch, forward_fees_as))?;
 
     Ok(Response::new()
         .add_attribute("action", "forward_fees")
-        .add_messages(messages)
-        .set_data(to_binary(&ForwardFeesResponse { epoch })?))
+        .add_submessages(messages))
 }

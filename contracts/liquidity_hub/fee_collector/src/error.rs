@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use cw_utils::ParseReplyError;
 use semver::Version;
 use thiserror::Error;
 
@@ -21,6 +22,15 @@ pub enum ContractError {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("Couldn't read data for new epoch.")]
+    CannotReadEpoch {},
+
+    #[error("{0}")]
+    ParseReplyError(#[from] ParseReplyError),
+
+    #[error("Can't handle the given reply id: {0}")]
+    UnknownReplyId(u64),
 }
 
 impl From<semver::Error> for ContractError {

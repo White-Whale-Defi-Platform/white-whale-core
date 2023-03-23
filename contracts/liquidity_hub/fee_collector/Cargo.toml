@@ -1,6 +1,6 @@
 [package]
 name = "fee_collector"
-version = "1.2.0"
+version = "1.1.0"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
@@ -30,6 +30,7 @@ cosmwasm-std.workspace = true
 cw2.workspace = true
 cw20.workspace = true
 cw-storage-plus.workspace = true
+cw-utils.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true

@@ -19,6 +19,9 @@ pub enum ContractError {
     #[error("The amount of tokens to unbond is greater than the amount of tokens bonded.")]
     InsufficientBond {},
 
+    #[error("The amount of tokens to unbond must be greater than zero.")]
+    InvalidUnbondingAmount {},
+
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),
 

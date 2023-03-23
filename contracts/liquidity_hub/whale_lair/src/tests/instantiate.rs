@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal};
+use cosmwasm_std::{Addr, Decimal, Uint64};
 
 use crate::tests::robot::TestingRobot;
 use white_whale::pool_network::asset::AssetInfo;
@@ -10,7 +10,7 @@ fn test_instantiate_successfully() {
 
     robot
         .instantiate(
-            1_000u64,
+            Uint64::new(1_000u64),
             Decimal::one(),
             vec![
                 AssetInfo::NativeToken {
@@ -24,7 +24,7 @@ fn test_instantiate_successfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unbonding_period: 1_000u64,
+            unbonding_period: Uint64::new(1_000u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -43,7 +43,7 @@ fn test_instantiate_unsuccessfully() {
 
     // over bonding assets limit
     robot.instantiate_err(
-        1_000u64,
+        Uint64::new(1_000u64),
         Decimal::one(),
         vec![
             AssetInfo::NativeToken {
@@ -69,7 +69,7 @@ fn test_instantiate_unsuccessfully() {
 
     // invalid tokens
     robot.instantiate_err(
-        1_000u64,
+        Uint64::new(1_000u64),
         Decimal::one(),
         vec![AssetInfo::Token {
             contract_addr: "contract123".to_string(),

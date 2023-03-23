@@ -63,7 +63,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
             reply_on: ReplyOn::Success,
         })
         .add_attributes(vec![
-            ("action", "create_new_epoch".to_string()),
+            ("action", "new_epoch".to_string()),
             ("new_epoch", new_epoch.id.to_string()),
         ]))
 }
@@ -246,6 +246,7 @@ pub fn update_config(
 
 /// Refills the epoch with the given fees. This is only possible to do iff the fees in the epoch have
 /// not been claimed.
+/// Used when the grace period is reduced, and the fees from the expired epochs need to be forwarded.
 pub fn refill_epoch(
     deps: DepsMut,
     info: MessageInfo,

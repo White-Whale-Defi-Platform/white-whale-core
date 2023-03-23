@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::Config;
@@ -14,7 +14,7 @@ fn test_update_config_successfully() {
         .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unbonding_period: 1_000u64,
+            unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -28,7 +28,7 @@ fn test_update_config_successfully() {
         .update_config(
             owner.clone(),
             None,
-            Some(500u64),
+            Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
                 Uint128::new(1u128),
                 Uint128::new(2u128),
@@ -37,7 +37,7 @@ fn test_update_config_successfully() {
         )
         .assert_config(Config {
             owner: owner.clone(),
-            unbonding_period: 500u64,
+            unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -57,7 +57,7 @@ fn test_update_config_successfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("new_owner"),
-            unbonding_period: 500u64,
+            unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -78,7 +78,7 @@ fn test_update_config_unsuccessfully() {
         .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unbonding_period: 1_000u64,
+            unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -92,7 +92,7 @@ fn test_update_config_unsuccessfully() {
         .update_config(
             Addr::unchecked("unauthorized"),
             None,
-            Some(500u64),
+            Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
                 Uint128::new(1u128),
                 Uint128::new(2u128),
@@ -107,7 +107,7 @@ fn test_update_config_unsuccessfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unbonding_period: 1_000u64,
+            unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
@@ -121,7 +121,7 @@ fn test_update_config_unsuccessfully() {
         .update_config(
             Addr::unchecked("owner"),
             None,
-            Some(500u64),
+            Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
                 Uint128::new(2u128),
                 Uint128::new(1u128),
@@ -136,7 +136,7 @@ fn test_update_config_unsuccessfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
-            unbonding_period: 1_000u64,
+            unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
                 AssetInfo::NativeToken {

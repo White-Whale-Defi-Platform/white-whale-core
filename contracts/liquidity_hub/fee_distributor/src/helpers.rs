@@ -5,7 +5,7 @@ use white_whale::fee_distributor::EpochConfig;
 use white_whale::pool_network::asset::Asset;
 
 const MAX_GRACE_PERIOD: u64 = 10u64;
-pub const DAY_IN_SECONDS: u64 = 86400u64;
+pub const DAY_IN_NANOSECONDS: u64 = 86_400_000_000u64;
 
 /// Validates the grace period.
 pub fn validate_grace_period(grace_period: &Uint64) -> Result<(), ContractError> {
@@ -18,7 +18,7 @@ pub fn validate_grace_period(grace_period: &Uint64) -> Result<(), ContractError>
 
 /// Validates the epoch duration.
 pub fn validate_epoch_config(epoch_config: &EpochConfig) -> Result<(), ContractError> {
-    if epoch_config.duration < Uint64::new(DAY_IN_SECONDS) {
+    if epoch_config.duration < Uint64::new(DAY_IN_NANOSECONDS) {
         return Err(ContractError::InvalidEpochDuration(epoch_config.duration));
     }
 

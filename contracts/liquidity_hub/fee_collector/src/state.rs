@@ -1,10 +1,12 @@
 use cosmwasm_std::{DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
 use white_whale::fee_collector::Config;
+use white_whale::fee_distributor::Epoch;
 use white_whale::pool_network::asset::AssetInfo;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");
+pub const TMP_EPOCH: Item<(Epoch, AssetInfo)> = Item::new("tmp_epoch");
 
 pub fn store_temporal_asset_info(deps: DepsMut, asset_info: AssetInfo) -> StdResult<()> {
     let key = asset_info

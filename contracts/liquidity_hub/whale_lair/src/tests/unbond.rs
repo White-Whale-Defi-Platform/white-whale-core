@@ -374,7 +374,7 @@ fn test_unbond_unsuccessfully() {
             },
         )
         .unbond(
-            sender,
+            sender.clone(),
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -384,6 +384,19 @@ fn test_unbond_unsuccessfully() {
             |res| {
                 println!("{:?}", res.unwrap_err().root_cause());
                 //assert error is InsufficientBond
+            },
+        )
+        .unbond(
+            sender,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(0u128),
+            },
+            |res| {
+                println!("{:?}", res.unwrap_err().root_cause());
+                //assert error is InvalidUnbondingAmount
             },
         );
 }
