@@ -17,7 +17,7 @@ use crate::state::{
 use terraswap::querier::query_balance;
 use terraswap::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    PoolFee as TrioPoolFee,
+    PoolFee as TrioPoolFee, RampAmp,
 };
 
 /// Updates the contract's [Config]
@@ -175,7 +175,7 @@ pub fn update_trio_config(
     fee_collector_addr: Option<String>,
     pool_fees: Option<TrioPoolFee>,
     feature_toggle: Option<TrioFeatureToggle>,
-    amp_factor: Option<u64>,
+    amp_factor: Option<RampAmp>,
 ) -> Result<Response, ContractError> {
     Ok(Response::new()
         .add_message(wasm_execute(

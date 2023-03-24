@@ -11,6 +11,7 @@ use terraswap::trio::{
 use crate::error::ContractError;
 use crate::helpers;
 use crate::helpers::get_protocol_fee_for_asset;
+use crate::stableswap_math::curve::StableSwap;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, TRIO_INFO};
 
 /// Queries the [TrioInfo] of the pool
@@ -61,6 +62,7 @@ pub fn query_simulation(
     deps: Deps,
     offer_asset: Asset,
     ask_asset: Asset,
+    current_block: u64,
 ) -> Result<SimulationResponse, ContractError> {
     let trio_info: TrioInfoRaw = TRIO_INFO.load(deps.storage)?;
 
@@ -127,6 +129,13 @@ pub fn query_simulation(
     }
 
     let config = CONFIG.load(deps.storage)?;
+    let invariant = StableSwap::new(
+        config.initial_amp,
+        config.future_amp,
+        current_block,
+        config.initial_amp_block,
+        config.future_amp_block,
+    );
 
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
@@ -134,7 +143,7 @@ pub fn query_simulation(
         unswapped_pool.amount,
         offer_asset.amount,
         config.pool_fees,
-        config.amp_factor,
+        invariant,
     )?;
 
     Ok(SimulationResponse {
@@ -152,6 +161,7 @@ pub fn query_reverse_simulation(
     deps: Deps,
     ask_asset: Asset,
     offer_asset: Asset,
+    current_block: u64,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let trio_info: TrioInfoRaw = TRIO_INFO.load(deps.storage)?;
 
@@ -218,13 +228,21 @@ pub fn query_reverse_simulation(
     }
 
     let config = CONFIG.load(deps.storage)?;
+    let invariant = StableSwap::new(
+        config.initial_amp,
+        config.future_amp,
+        current_block,
+        config.initial_amp_block,
+        config.future_amp_block,
+    );
+
     let offer_amount_computation = helpers::compute_offer_amount(
         offer_pool.amount,
         ask_pool.amount,
         unswapped_pool.amount,
         ask_asset.amount,
         config.pool_fees,
-        config.amp_factor,
+        invariant,
     )?;
 
     Ok(ReverseSimulationResponse {

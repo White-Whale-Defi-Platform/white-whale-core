@@ -4,9 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
+use crate::contract::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP, MIN_RAMP_BLOCKS};
 use terraswap::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
 use terraswap::querier::query_token_info;
-use terraswap::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
+use terraswap::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -175,7 +176,13 @@ pub fn provide_liquidity(
 
     let liquidity_token = deps.api.addr_humanize(&trio_info.liquidity_token)?;
     let total_share = query_token_info(&deps.querier, liquidity_token)?.total_supply;
-    let invariant = StableSwap::new(config.amp_factor, config.amp_factor, 0, 0, 0);
+    let invariant = StableSwap::new(
+        config.initial_amp,
+        config.future_amp,
+        env.block.height,
+        config.initial_amp_block,
+        config.future_amp_block,
+    );
     let share = if total_share == Uint128::zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the pool
@@ -412,6 +419,13 @@ pub fn swap(
 
     let offer_amount = offer_asset.amount;
     let config = CONFIG.load(deps.storage)?;
+    let invariant = StableSwap::new(
+        config.initial_amp,
+        config.future_amp,
+        env.block.height,
+        config.initial_amp_block,
+        config.future_amp_block,
+    );
 
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
@@ -419,7 +433,7 @@ pub fn swap(
         unswapped_pool.amount,
         offer_amount,
         config.pool_fees,
-        config.amp_factor,
+        invariant,
     )?;
 
     let return_asset = Asset {
@@ -504,14 +518,16 @@ pub fn swap(
 }
 
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
+#[allow(clippy::too_many_arguments)]
 pub fn update_config(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
-    amp_factor: Option<u64>,
+    ramp: Option<RampAmp>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
     if deps.api.addr_validate(info.sender.as_str())? != config.owner {
@@ -533,8 +549,45 @@ pub fn update_config(
         config.feature_toggle = feature_toggle;
     }
 
-    if let Some(amp_factor) = amp_factor {
-        config.amp_factor = amp_factor;
+    if let Some(ramp) = ramp {
+        //get current Amp factor
+        let invariant = StableSwap::new(
+            config.initial_amp,
+            config.future_amp,
+            env.block.height,
+            config.initial_amp_block,
+            config.future_amp_block,
+        );
+        let current_amp = invariant.compute_amp_factor().unwrap();
+        //check new amp value and ramp time are valid
+        if ramp.future_a < MIN_AMP {
+            return Err(ContractError::Std(StdError::generic_err(format!(
+                "New amp must be over {}",
+                MIN_AMP
+            ))));
+        }
+        if ramp.future_a > MAX_AMP {
+            return Err(ContractError::Std(StdError::generic_err(format!(
+                "Initial amp must be under {}",
+                MAX_AMP
+            ))));
+        }
+        if (ramp.future_a > current_amp) && (ramp.future_a > current_amp * MAX_AMP_CHANGE)
+            || (ramp.future_a < current_amp) && (ramp.future_a * MAX_AMP_CHANGE > current_amp)
+        {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Amp change over max",
+            )));
+        }
+        if ramp.future_block < env.block.height + MIN_RAMP_BLOCKS {
+            return Err(ContractError::Std(StdError::generic_err(
+                "Amp change ramp time under minimum",
+            )));
+        }
+        config.initial_amp_block = env.block.height;
+        config.future_amp_block = ramp.future_block;
+        config.initial_amp = current_amp;
+        config.future_amp = ramp.future_a;
     }
 
     if let Some(fee_collector_addr) = fee_collector_addr {

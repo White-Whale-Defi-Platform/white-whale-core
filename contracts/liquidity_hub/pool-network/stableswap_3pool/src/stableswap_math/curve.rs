@@ -36,11 +36,11 @@ pub struct StableSwap {
     /// Target amplification coefficient (A)
     target_amp_factor: u64,
     /// Current unix timestamp
-    current_ts: i64,
+    current_ts: u64,
     /// Ramp A start timestamp
-    start_ramp_ts: i64,
+    start_ramp_ts: u64,
     /// Ramp A stop timestamp
-    stop_ramp_ts: i64,
+    stop_ramp_ts: u64,
 }
 
 impl StableSwap {
@@ -48,9 +48,9 @@ impl StableSwap {
     pub fn new(
         initial_amp_factor: u64,
         target_amp_factor: u64,
-        current_ts: i64,
-        start_ramp_ts: i64,
-        stop_ramp_ts: i64,
+        current_ts: u64,
+        start_ramp_ts: u64,
+        stop_ramp_ts: u64,
     ) -> Self {
         Self {
             initial_amp_factor,
@@ -387,10 +387,10 @@ mod tests {
     use std::cmp;
 
     /// Timestamp at 0
-    pub const ZERO_TS: i64 = 0;
+    pub const ZERO_TS: u64 = 0;
 
     /// Minimum ramp duration, in seconds.
-    pub const MIN_RAMP_DURATION: i64 = 86_400;
+    pub const MIN_RAMP_DURATION: u64 = 86_400;
 
     /// Minimum amplification coefficient.
     pub const MIN_AMP: u64 = 1;
@@ -406,9 +406,9 @@ mod tests {
         amount_a: u128,
         amount_b: u128,
         amount_c: u128,
-        current_ts: i64,
-        start_ramp_ts: i64,
-        stop_ramp_ts: i64,
+        current_ts: u64,
+        start_ramp_ts: u64,
+        stop_ramp_ts: u64,
     ) -> Uint256 {
         let swap = StableSwap {
             initial_amp_factor: model.amp_factor,
@@ -433,9 +433,9 @@ mod tests {
         swap_in: u128,
         no_swap: u128,
         d: Uint256,
-        current_ts: i64,
-        start_ramp_ts: i64,
-        stop_ramp_ts: i64,
+        current_ts: u64,
+        start_ramp_ts: u64,
+        stop_ramp_ts: u64,
     ) {
         let swap = StableSwap {
             initial_amp_factor: model.amp_factor,
@@ -524,9 +524,9 @@ mod tests {
             let amount_a = rng.gen_range(1..=MAX_TOKENS_IN.u128());
             let amount_b = rng.gen_range(1..=MAX_TOKENS_IN.u128());
             let amount_c = rng.gen_range(1..=MAX_TOKENS_IN.u128());
-            let start_ramp_ts: i64 = rng.gen_range(ZERO_TS..=i64::MAX);
-            let stop_ramp_ts: i64 = rng.gen_range(start_ramp_ts..=i64::MAX);
-            let current_ts: i64 = rng.gen_range(start_ramp_ts..=stop_ramp_ts);
+            let start_ramp_ts: u64 = rng.gen_range(ZERO_TS..=u64::MAX);
+            let stop_ramp_ts: u64 = rng.gen_range(start_ramp_ts..=u64::MAX);
+            let current_ts: u64 = rng.gen_range(start_ramp_ts..=stop_ramp_ts);
             println!("testing curve_math_with_random_inputs:");
             println!(
                 "current_ts: {}, start_ramp_ts: {}, stop_ramp_ts: {}",
@@ -763,7 +763,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_virtual_price_does_not_decrease_from_deposit(
-            current_ts in ZERO_TS..i64::MAX,
+            current_ts in ZERO_TS..u64::MAX,
             amp_factor in MIN_AMP..=MAX_AMP,
             deposit_amount_a in 0..MAX_TOKENS_IN.u128() >> 2,
             deposit_amount_b in 0..MAX_TOKENS_IN.u128() >> 2,
@@ -782,7 +782,7 @@ mod tests {
             let pool_token_supply = pool_token_supply;
 
             let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
-            let stop_ramp_ts = cmp::min(i64::MAX, current_ts + MIN_RAMP_DURATION);
+            let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
             let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
             let d0 = invariant.compute_d(Uint128::new(swap_token_a_amount), Uint128::new(swap_token_b_amount), Uint128::new(swap_token_c_amount)).unwrap();
 

@@ -2,6 +2,7 @@ use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::compute_swap;
 use crate::queries::query_fees;
+use crate::stableswap_math::curve::StableSwap;
 use crate::state::{
     ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
 };
@@ -43,7 +44,7 @@ fn test_compute_swap_with_huge_pool_variance() {
             unswapped_pool,
             Uint128::from(1u128),
             pool_fees,
-            1000
+            StableSwap::new(1000, 1000, 0, 0, 0)
         )
         .unwrap()
         .return_amount,

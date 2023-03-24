@@ -16,10 +16,8 @@ pub fn compute_swap(
     unswapped_pool: Uint128,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-    amp_factor: u64,
+    invariant: StableSwap,
 ) -> StdResult<SwapComputation> {
-    let invariant = StableSwap::new(amp_factor, amp_factor, 0, 0, 0);
-
     let result = invariant
         .swap_to(offer_amount, offer_pool, ask_pool, unswapped_pool)
         .unwrap();
@@ -63,15 +61,13 @@ pub fn compute_offer_amount(
     unswapped_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
-    amp_factor: u64,
+    invariant: StableSwap,
 ) -> StdResult<OfferAmountComputation> {
     let fees = pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
     let one_minus_commission = Decimal::one() - fees;
     let inv_one_minus_commission = Decimal::one() / one_minus_commission;
 
     let before_commission_deduction: Uint128 = ask_amount * inv_one_minus_commission;
-
-    let invariant = StableSwap::new(amp_factor, amp_factor, 0, 0, 0);
 
     let offer_amount = invariant
         .reverse_sim(

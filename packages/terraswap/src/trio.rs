@@ -42,10 +42,16 @@ pub enum ExecuteMsg {
         fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
-        amp_factor: Option<u64>,
+        amp_factor: Option<RampAmp>,
     },
     /// Collects the Protocol fees accrued by the pool
     CollectProtocolFees {},
+}
+
+#[cw_serde]
+pub struct RampAmp {
+    pub future_a: u64,
+    pub future_block: u64,
 }
 
 #[cw_serde]
@@ -143,7 +149,10 @@ pub struct Config {
     pub fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
-    pub amp_factor: u64,
+    pub initial_amp: u64,
+    pub future_amp: u64,
+    pub initial_amp_block: u64,
+    pub future_amp_block: u64,
 }
 
 pub type ConfigResponse = Config;

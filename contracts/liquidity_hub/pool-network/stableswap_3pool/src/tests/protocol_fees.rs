@@ -368,17 +368,14 @@ fn test_collect_protocol_fees_successful() {
         sender: "asset0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0001".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
             },
             belief_price: None,
             max_spread: None,
             to: None,
         })
-            .unwrap(),
+        .unwrap(),
     });
     let info = mock_info("asset0000", &[]);
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
@@ -395,8 +392,8 @@ fn test_collect_protocol_fees_successful() {
         COLLECTED_PROTOCOL_FEES,
         Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
     )
-        .unwrap()
-        .fees;
+    .unwrap()
+    .fees;
 
     assert_eq!(
         protocol_fees_for_asset0001.first().unwrap().amount,
@@ -443,7 +440,7 @@ fn test_collect_protocol_fees_successful() {
                 recipient: "collector".to_string(),
                 amount: protocol_fees_for_asset0001.clone().first().unwrap().amount,
             })
-                .unwrap(),
+            .unwrap(),
             funds: vec![],
         }))
     );
@@ -469,8 +466,8 @@ fn test_collect_protocol_fees_successful() {
         COLLECTED_PROTOCOL_FEES,
         Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
     )
-        .unwrap()
-        .fees;
+    .unwrap()
+    .fees;
     assert_eq!(
         protocol_fees_for_token.first().unwrap().amount,
         Uint128::zero()

@@ -32,6 +32,10 @@ const INSTANTIATE_REPLY_ID: u64 = 1;
 pub const MIN_AMP: u64 = 1;
 /// Maximum amplification coefficient.
 pub const MAX_AMP: u64 = 1_000_000;
+/// Minimum number of blocks an amplification coefficient change must take place over.
+pub const MIN_RAMP_BLOCKS: u64 = 10000;
+/// Maximum factor the amplification coefficient can be changed by in a single command.
+pub const MAX_AMP_CHANGE: u64 = 10;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -89,7 +93,10 @@ pub fn instantiate(
             deposits_enabled: true,
             swaps_enabled: true,
         },
-        amp_factor: msg.amp_factor,
+        initial_amp: msg.amp_factor,
+        future_amp: msg.amp_factor,
+        initial_amp_block: env.block.height,
+        future_amp_block: env.block.height,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -198,6 +205,7 @@ pub fn execute(
             amp_factor,
         } => commands::update_config(
             deps,
+            env,
             info,
             owner,
             fee_collector_addr,
@@ -229,7 +237,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Trio {} => Ok(to_binary(&queries::query_trio_info(deps)?)?),
         QueryMsg::Pool {} => Ok(to_binary(&queries::query_pool(deps)?)?),
@@ -240,6 +248,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             deps,
             offer_asset,
             ask_asset,
+            env.block.height,
         )?)?),
         QueryMsg::ReverseSimulation {
             ask_asset,
@@ -248,6 +257,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             deps,
             ask_asset,
             offer_asset,
+            env.block.height,
         )?)?),
         QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
         QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
@@ -269,9 +279,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use crate::migrations;
-
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 

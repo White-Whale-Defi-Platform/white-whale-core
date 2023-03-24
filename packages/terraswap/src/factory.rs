@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 
 use crate::asset::{AssetInfo, PairInfo, TrioInfo};
 use crate::pair::{FeatureToggle, PoolFee};
-use crate::trio::{FeatureToggle as TrioFeatureToggle, PoolFee as TrioPoolFee};
+use crate::trio::{FeatureToggle as TrioFeatureToggle, PoolFee as TrioPoolFee, RampAmp};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -39,7 +39,7 @@ pub enum ExecuteMsg {
         fee_collector_addr: Option<String>,
         pool_fees: Option<TrioPoolFee>,
         feature_toggle: Option<TrioFeatureToggle>,
-        amp_factor: Option<u64>,
+        amp_factor: Option<RampAmp>,
     },
     /// Instantiates pair contract
     CreatePair {
