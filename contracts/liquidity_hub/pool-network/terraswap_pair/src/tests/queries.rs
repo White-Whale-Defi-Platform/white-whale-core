@@ -3,10 +3,10 @@ use crate::error::ContractError;
 use crate::queries::query_pool;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{Coin, Decimal, Reply, SubMsgResponse, SubMsgResult, Uint128};
-use pool_network::asset::{Asset, AssetInfo, PairType};
-use pool_network::mock_querier::mock_dependencies;
-use pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
 
 #[test]
 fn test_simulations_asset_missmatch() {

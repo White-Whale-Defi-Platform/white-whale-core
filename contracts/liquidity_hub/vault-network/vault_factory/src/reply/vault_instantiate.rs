@@ -73,7 +73,7 @@ mod test {
             deps.as_mut(),
             env,
             creator.clone(),
-            vault_network::vault_factory::InstantiateMsg {
+            white_whale::vault_network::vault_factory::InstantiateMsg {
                 owner: creator.sender.into_string(),
                 token_id: 5,
                 vault_id: 6,

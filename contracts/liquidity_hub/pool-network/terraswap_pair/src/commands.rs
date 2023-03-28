@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use pool_network::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
-use pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use pool_network::querier::query_token_info;
-use pool_network::U256;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
+use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::U256;
 
 use crate::error::ContractError;
 use crate::helpers;

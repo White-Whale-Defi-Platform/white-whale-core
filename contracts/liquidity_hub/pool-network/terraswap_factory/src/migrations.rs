@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{CanonicalAddr, DepsMut, Order, StdError, Uint128};
 use cw_storage_plus::{Item, Map};
-use pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`], [`AssetInfoRaw`], [`AssetRaw`], [`TmpPairInfo`]

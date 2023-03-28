@@ -9,9 +9,11 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use pool_network::asset::PairInfoRaw;
-use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
-use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::asset::PairInfoRaw;
+use white_whale::pool_network::pair::{
+    Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -55,7 +57,7 @@ pub fn instantiate(
 
     let asset0_label = asset_info_0.clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_info_1.clone().get_label(&deps.as_ref())?;
-    let lp_token_name = format!("{}-{}-LP", asset0_label, asset1_label);
+    let lp_token_name = format!("{asset0_label}-{asset1_label}-LP");
 
     // check the fees are valid
     msg.pool_fees.is_valid()?;

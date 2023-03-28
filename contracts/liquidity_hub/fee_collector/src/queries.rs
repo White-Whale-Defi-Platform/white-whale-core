@@ -1,16 +1,17 @@
 use cosmwasm_std::{to_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
 
-use pool_network::asset::Asset;
-use pool_network::factory::PairsResponse;
-use pool_network::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
-use vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
-use vault_network::vault_factory::VaultsResponse;
+use white_whale::fee_collector::{Config, ContractType, FactoryType, FeesFor};
+use white_whale::pool_network;
+use white_whale::pool_network::asset::Asset;
+use white_whale::pool_network::factory::PairsResponse;
+use white_whale::pool_network::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
+use white_whale::vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
+use white_whale::vault_network::vault_factory::VaultsResponse;
 
-use crate::msg::{ContractType, FactoryType, FeesFor};
-use crate::state::{ConfigResponse, CONFIG};
+use crate::state::CONFIG;
 
 /// Queries the [Config], which contains the owner address
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps) -> StdResult<Config> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
 }
@@ -74,7 +75,9 @@ fn query_fees_for_vault(deps: &Deps, vault: String, all_time: bool) -> StdResult
         .querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: vault,
-            msg: to_binary(&vault_network::vault::QueryMsg::ProtocolFees { all_time })?,
+            msg: to_binary(&white_whale::vault_network::vault::QueryMsg::ProtocolFees {
+                all_time,
+            })?,
         }))?
         .fees;
 
@@ -111,10 +114,12 @@ fn query_fees_for_factory(
             let response: VaultsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
-                    msg: to_binary(&vault_network::vault_factory::QueryMsg::Vaults {
-                        start_after,
-                        limit,
-                    })?,
+                    msg: to_binary(
+                        &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                            start_after,
+                            limit,
+                        },
+                    )?,
                 }))?;
 
             for vault_info in response.vaults {
