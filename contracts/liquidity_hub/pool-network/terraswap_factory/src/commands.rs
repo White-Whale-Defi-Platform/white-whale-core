@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg, MessageInfo
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    WasmMsg,
 };
 
 use pool_network::asset::{AssetInfo, PairType};
