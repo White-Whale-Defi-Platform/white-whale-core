@@ -2,8 +2,8 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Api, CanonicalAddr, CosmosMsg, Decimal, OwnedDeps, Reply,
-    ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, Api, CanonicalAddr, Coin, CosmosMsg, Decimal, OwnedDeps,
+    Reply, ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
 use pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
@@ -193,7 +193,13 @@ fn create_pair() {
     };
 
     let env = mock_env();
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
         res.attributes,
@@ -232,7 +238,11 @@ fn create_pair() {
                 })
                 .unwrap(),
                 code_id: 321u64,
-                funds: vec![],
+                funds: [Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::new(1u128),
+                }]
+                .to_vec(),
                 label: "uusd-mAAPL pair".to_string(),
                 admin: Some(MOCK_CONTRACT_ADDR.to_string()),
             }
