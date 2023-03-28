@@ -32,7 +32,7 @@ pub enum ContractError {
     ExistingTrio {},
 
     #[error("Trio doesn't exist")]
-    UnExistingTrio {},
+    NonExistantTrio {},
 
     #[error("A balance greater than zero is required by the factory to verify the asset")]
     InvalidVerificationBalance {},
