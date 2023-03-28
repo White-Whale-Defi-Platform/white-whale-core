@@ -1,4 +1,5 @@
 use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::{
     error::ContractError,
@@ -10,14 +11,15 @@ use crate::{
 pub fn create_incentive(
     deps: DepsMut,
     env: Env,
-    lp_address: String,
+    lp_address: AssetInfo,
 ) -> Result<Response, ContractError> {
     // ensure that lp_address doesn't already have an incentive contract
-    let lp_address = deps.api.addr_validate(&lp_address)?;
-
-    if INCENTIVE_MAPPINGS.has(deps.storage, lp_address.clone()) {
+    if INCENTIVE_MAPPINGS.has(
+        deps.storage,
+        lp_address.clone().to_raw(deps.api)?.as_bytes(),
+    ) {
         return Err(ContractError::DuplicateIncentiveContract {
-            incentive_addr: lp_address,
+            incentive: lp_address,
         });
     }
 
@@ -28,11 +30,6 @@ pub fn create_incentive(
     // where `label` is a length of 3-12 characters
     // this means we have a max length of 28 characters for the label
     // this fits within the limits of the 128 MaxLabelSize defined in wasm
-    let lp_name: cw20::TokenInfoResponse = deps.querier.query_wasm_smart(
-        lp_address.clone().into_string(),
-        &cw20::Cw20QueryMsg::TokenInfo {},
-    )?;
-
     return Ok(Response::new().add_submessage(SubMsg {
         id: CREATE_INCENTIVE_REPLY_ID,
         gas_limit: None,
@@ -41,10 +38,10 @@ pub fn create_incentive(
             admin: Some(env.contract.address.into_string()),
             code_id: config.incentive_code_id,
             msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
-                lp_address: lp_address.into_string(),
+                lp_address: lp_address.clone(),
             })?,
             funds: vec![],
-            label: format!("{} incentives", lp_name.name),
+            label: format!("{} incentives", lp_address.get_label(&deps.as_ref())?),
         }
         .into(),
     }));

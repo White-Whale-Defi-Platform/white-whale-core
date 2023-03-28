@@ -1,6 +1,7 @@
-use cosmwasm_std::{Addr, StdError};
+use cosmwasm_std::StdError;
 use semver::Version;
 use thiserror::Error;
+use white_whale::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -19,8 +20,10 @@ pub enum ContractError {
     #[error("max_concurrent_flows cannot be set to zero")]
     UnspecifiedConcurrentFlows,
 
-    #[error("Attempt to create a duplicate incentive contract. Incentive already exists at {incentive_addr}")]
-    DuplicateIncentiveContract { incentive_addr: Addr },
+    #[error(
+        "Attempt to create a duplicate incentive contract. Incentive already exists at {incentive}"
+    )]
+    DuplicateIncentiveContract { incentive: AssetInfo },
 
     #[error("Error callback from incentive contract: {reason}")]
     CreateIncentiveCallback { reason: String },

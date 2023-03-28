@@ -31,7 +31,11 @@ pub fn create_incentive_reply(deps: DepsMut, msg: Reply) -> Result<Response, Con
     let incentive_data: white_whale::pool_network::incentive::InstantiateReplyCallback =
         from_binary(&res.data.into())?;
 
-    INCENTIVE_MAPPINGS.save(deps.storage, incentive_data.lp_address, &incentive_address)?;
+    INCENTIVE_MAPPINGS.save(
+        deps.storage,
+        incentive_data.lp_address.to_raw(deps.api)?.as_bytes(),
+        &incentive_address,
+    )?;
 
     Ok(Response::new().add_attribute("incentive_address", incentive_address))
 }

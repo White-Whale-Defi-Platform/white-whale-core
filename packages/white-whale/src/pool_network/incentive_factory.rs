@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, CanonicalAddr};
 
-use crate::pool_network::asset::Asset;
+use crate::pool_network::asset::{Asset, AssetInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -26,7 +26,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Creates a new incentive contract tied to the `lp_address` specified.
-    CreateIncentive { lp_address: String },
+    CreateIncentive { lp_address: AssetInfo },
     /// Updates the configuration of the contract.
     ///
     /// Unspecified fields will not be updated.
@@ -65,7 +65,7 @@ pub enum QueryMsg {
     #[returns(GetIncentiveResponse)]
     GetIncentive {
         /// The address of the LP token.
-        lp_address: String,
+        lp_address: AssetInfo,
     },
 }
 

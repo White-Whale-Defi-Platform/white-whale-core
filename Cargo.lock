@@ -647,6 +647,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "incentive"
+version = "1.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.15.1",
+ "cw2 0.15.1",
+ "cw20",
+ "protobuf",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+ "white-whale",
+]
+
+[[package]]
 name = "incentive-factory"
 version = "1.0.0"
 dependencies = [

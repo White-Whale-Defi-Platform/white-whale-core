@@ -4,7 +4,9 @@ use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
-use white_whale::pool_network::incentive_factory::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::incentive_factory::{
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use semver::Version;
 
