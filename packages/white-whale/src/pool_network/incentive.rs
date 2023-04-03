@@ -132,7 +132,6 @@ pub struct Config {
 
 /// The type of distribution curve to exist.
 #[cw_serde]
-#[serde(untagged)]
 pub enum Curve {
     /// A linear curve that releases assets as we approach the end of the flow period.
     Linear,
