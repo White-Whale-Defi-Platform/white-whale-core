@@ -18,6 +18,8 @@ use crate::state::{
 };
 
 /// Receives cw20 tokens. Used to swap and withdraw from the pool.
+/// If the Cw20HookMsg is Swap, the user must call IncreaseAllowance on the cw20 token first to allow
+/// the contract to spend the tokens and perform the swap operation.
 pub fn receive_cw20(
     deps: DepsMut,
     env: Env,
@@ -296,7 +298,7 @@ pub fn withdraw_liquidity(
         ]))
 }
 
-/// Swaps tokens. The user must IncreaseAllowance on the token if it is a cw20 token they want to swap
+/// Swaps tokens from the pool. The user provides an offer asset and receives the ask asset in return.
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
