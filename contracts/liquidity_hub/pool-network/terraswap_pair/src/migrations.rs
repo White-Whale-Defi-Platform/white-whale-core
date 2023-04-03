@@ -147,7 +147,9 @@ pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
             asset_infos: config.asset_infos,
             contract_addr: config.contract_addr,
             // all liquidity tokens until this version are cw20 tokens
-            liquidity_token: AssetInfoRaw::Token { contract_addr: config.liquidity_token },
+            liquidity_token: AssetInfoRaw::Token {
+                contract_addr: config.liquidity_token,
+            },
             asset_decimals: config.asset_decimals,
             // all pools until this version are ConstantProduct
             pair_type: PairType::ConstantProduct,
