@@ -1,0 +1,558 @@
+{
+  "contract_name": "incentive-factory",
+  "contract_version": "1.0.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "required": [
+      "create_flow_fee",
+      "fee_collector_addr",
+      "incentive_contract_id",
+      "max_concurrent_flows",
+      "max_flow_start_time_buffer",
+      "max_unbonding_duration",
+      "min_unbonding_duration"
+    ],
+    "properties": {
+      "create_flow_fee": {
+        "description": "The fee that must be paid to create a flow.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Asset"
+          }
+        ]
+      },
+      "fee_collector_addr": {
+        "description": "The address of the fee collector to send flow creation fees to.",
+        "type": "string"
+      },
+      "incentive_contract_id": {
+        "description": "The code ID of the incentive contract.",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "max_concurrent_flows": {
+        "description": "The maximum amount of flows that can exist for a single LP token at a single time.",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "max_flow_start_time_buffer": {
+        "description": "The maximum start time buffer for a new flow (in seconds).\n\nNew flows are allowed to start up to `now + start_time_buffer` into the future.",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "max_unbonding_duration": {
+        "description": "The maximum amount of seconds that a user must bond their tokens for.",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "min_unbonding_duration": {
+        "description": "The minimum amount of seconds that a user must bond their tokens for.",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      }
+    },
+    "additionalProperties": false,
+    "definitions": {
+      "Asset": {
+        "type": "object",
+        "required": [
+          "amount",
+          "info"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "info": {
+            "$ref": "#/definitions/AssetInfo"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Uint128": {
+        "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+        "type": "string"
+      }
+    }
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "description": "Creates a new incentive contract tied to the `lp_address` specified.",
+        "type": "object",
+        "required": [
+          "create_incentive"
+        ],
+        "properties": {
+          "create_incentive": {
+            "type": "object",
+            "required": [
+              "lp_address"
+            ],
+            "properties": {
+              "lp_address": {
+                "$ref": "#/definitions/AssetInfo"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Updates the configuration of the contract.\n\nUnspecified fields will not be updated.",
+        "type": "object",
+        "required": [
+          "update_config"
+        ],
+        "properties": {
+          "update_config": {
+            "type": "object",
+            "properties": {
+              "create_flow_fee": {
+                "description": "The new fee that must be paid to create a flow.\n\nIf unspecified, the flow fee will not change.",
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Asset"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fee_collector_addr": {
+                "description": "The new fee collector address to send flow creation fees to.\n\nIf unspecified, the fee collector address will not change.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "incentive_contract_id": {
+                "description": "The new code ID of the incentive contract.\n\nIf unspecified, the incentive contract id will not change.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "max_concurrent_flows": {
+                "description": "The maximum amount of concurrent flows that can exist for a single LP token at a single time.\n\nIf unspecified, the max concurrent flows will not change.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "max_flow_start_time_buffer": {
+                "description": "The new maximum start time buffer for a new flow (in seconds).\n\nIf unspecified, the flow start buffer will not change.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Asset": {
+        "type": "object",
+        "required": [
+          "amount",
+          "info"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/definitions/Uint128"
+          },
+          "info": {
+            "$ref": "#/definitions/AssetInfo"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Uint128": {
+        "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+        "type": "string"
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "description": "Retrieves the config of the incentive factory.",
+        "type": "object",
+        "required": [
+          "get_config"
+        ],
+        "properties": {
+          "get_config": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Retrieves a specific incentive address.",
+        "type": "object",
+        "required": [
+          "get_incentive"
+        ],
+        "properties": {
+          "get_incentive": {
+            "type": "object",
+            "required": [
+              "lp_address"
+            ],
+            "properties": {
+              "lp_address": {
+                "description": "The address of the LP token.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/AssetInfo"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "AssetInfo": {
+        "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "token"
+            ],
+            "properties": {
+              "token": {
+                "type": "object",
+                "required": [
+                  "contract_addr"
+                ],
+                "properties": {
+                  "contract_addr": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "native_token"
+            ],
+            "properties": {
+              "native_token": {
+                "type": "object",
+                "required": [
+                  "denom"
+                ],
+                "properties": {
+                  "denom": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "migrate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "MigrateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "sudo": null,
+  "responses": {
+    "get_config": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Config",
+      "description": "Stores the configuration of the incentive factory.",
+      "type": "object",
+      "required": [
+        "create_flow_fee",
+        "fee_collector_addr",
+        "incentive_code_id",
+        "max_concurrent_flows",
+        "max_flow_start_time_buffer",
+        "max_unbonding_duration",
+        "min_unbonding_duration",
+        "owner"
+      ],
+      "properties": {
+        "create_flow_fee": {
+          "description": "The fee that must be paid each time a user wants to create a flow.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Asset"
+            }
+          ]
+        },
+        "fee_collector_addr": {
+          "description": "The address to send fees to.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/CanonicalAddr"
+            }
+          ]
+        },
+        "incentive_code_id": {
+          "description": "The code ID of the incentive contract.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "max_concurrent_flows": {
+          "description": "The maximum amount of flows that can exist at any one time.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "max_flow_start_time_buffer": {
+          "description": "The maximum amount of time in the future a new flow is allowed to start in.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "max_unbonding_duration": {
+          "description": "The maximum amount of seconds that a user must bond their tokens for.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "min_unbonding_duration": {
+          "description": "The minimum amount of seconds that a user must bond their tokens for.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "owner": {
+          "$ref": "#/definitions/CanonicalAddr"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Asset": {
+          "type": "object",
+          "required": [
+            "amount",
+            "info"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "info": {
+              "$ref": "#/definitions/AssetInfo"
+            }
+          },
+          "additionalProperties": false
+        },
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Binary": {
+          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
+          "type": "string"
+        },
+        "CanonicalAddr": {
+          "$ref": "#/definitions/Binary"
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "get_incentive": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Nullable_Addr",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Addr"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
