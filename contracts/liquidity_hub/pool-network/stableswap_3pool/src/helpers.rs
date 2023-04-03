@@ -283,3 +283,12 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
     };
     Ok(total_share)
 }
+
+/// Verifies if there's a factory token in the vector of [AssetInfo]s.
+/// todo consolidate this once the pool PRs are merged
+pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
+    assets.iter().any(|asset| match asset {
+        AssetInfo::Token { .. } => false,
+        AssetInfo::NativeToken { denom } => is_factory_token(denom),
+    })
+}
