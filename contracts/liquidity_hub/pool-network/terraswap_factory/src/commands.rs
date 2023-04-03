@@ -8,6 +8,7 @@ use terraswap::asset::AssetInfo;
 use terraswap::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
+use terraswap::{pair, trio};
 
 use crate::error::ContractError;
 use crate::state::{
@@ -17,7 +18,7 @@ use crate::state::{
 use terraswap::querier::query_balance;
 use terraswap::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    PoolFee as TrioPoolFee, RampAmp,
+    MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
 
 /// Updates the contract's [Config]
@@ -374,19 +375,54 @@ pub fn add_native_token_decimals(
     ]))
 }
 
+/// Migrates a pair.
 pub fn execute_migrate_pair(
     deps: DepsMut,
     contract: String,
     code_id: Option<u64>,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let code_id = code_id.unwrap_or(config.pair_code_id);
+    let pair_code_id = code_id.unwrap_or(config.pair_code_id);
+
+    let pool_response: pair::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &pair::QueryMsg::Pool {})?;
+
+    if pool_response.assets.len() != 2 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
 
     Ok(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
-            new_code_id: code_id,
+            new_code_id: pair_code_id,
             msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
+}
+
+/// Migrates a trio.
+pub fn execute_migrate_trio(
+    deps: DepsMut,
+    contract: String,
+    code_id: Option<u64>,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let trio_code_id = code_id.unwrap_or(config.trio_code_id);
+
+    let trio_response: trio::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &trio::QueryMsg::Pool {})?;
+
+    if trio_response.assets.len() != 3 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: contract,
+            new_code_id: trio_code_id,
+            msg: to_binary(&TrioMigrateMsg {})?,
         })),
     )
 }

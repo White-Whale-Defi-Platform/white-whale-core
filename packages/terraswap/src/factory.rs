@@ -61,6 +61,11 @@ pub enum ExecuteMsg {
         contract: String,
         code_id: Option<u64>,
     },
+    /// Migrates a trio contract to a given code_id
+    MigrateTrio {
+        contract: String,
+        code_id: Option<u64>,
+    },
     /// Removes pair contract given asset infos
     RemovePair { asset_infos: [AssetInfo; 2] },
     /// Removes trio contract given asset infos
