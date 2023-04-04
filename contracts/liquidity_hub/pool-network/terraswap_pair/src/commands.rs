@@ -175,9 +175,6 @@ pub fn provide_liquidity(
         pool.amount = pool.amount.checked_sub(protocol_fee)?;
     }
 
-    // assert slippage tolerance
-    helpers::assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
-
     let liquidity_token = match pair_info.liquidity_token {
         AssetInfoRaw::Token { contract_addr } => {
             deps.api.addr_humanize(&contract_addr)?.to_string()
@@ -220,10 +217,22 @@ pub fn provide_liquidity(
         // == deposit_0 * total_share / pool_0
         // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
         // == deposit_1 * total_share / pool_1
-        std::cmp::min(
+        let amount = std::cmp::min(
             deposits[0].multiply_ratio(total_share, pools[0].amount),
             deposits[1].multiply_ratio(total_share, pools[1].amount),
-        )
+        );
+
+        // assert slippage tolerance
+        helpers::assert_slippage_tolerance(
+            &slippage_tolerance,
+            &deposits,
+            &pools,
+            pair_info.pair_type,
+            amount,
+            total_share,
+        )?;
+
+        amount
     };
 
     // mint LP token to sender
