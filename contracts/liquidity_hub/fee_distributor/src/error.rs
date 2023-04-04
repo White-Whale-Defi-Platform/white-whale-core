@@ -26,7 +26,7 @@ pub enum ContractError {
     #[error("The assets sent don't match the assets expected.")]
     AssetMismatch {},
 
-    #[error("There are no claimable fees.")]
+    #[error("There are no claimable rewards.")]
     NothingToClaim {},
 
     #[error("The rewards cannot exceed the available claimable fees.")]
