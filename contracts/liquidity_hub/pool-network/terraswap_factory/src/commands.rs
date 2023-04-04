@@ -341,7 +341,7 @@ pub fn remove_trio(
     let trio = TRIOS.may_load(deps.storage, &trio_key)?;
 
     let Some(trio) = trio else {
-        return Err(ContractError::UnExistingTrio {});
+        return Err(ContractError::NonExistantTrio {});
     };
 
     TRIOS.remove(deps.storage, &trio_key);
