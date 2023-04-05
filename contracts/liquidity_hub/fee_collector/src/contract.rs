@@ -67,27 +67,32 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             }
         };
 
-        let fees = vec![Asset {
-            info: asset_info,
-            amount: token_balance,
-        }];
+        let mut messages = vec![];
 
-        epoch.total = fees.clone();
-        epoch.available = fees.clone();
+        // if not zero, it means there were fees aggregated
+        if !token_balance.is_zero() {
+            let fees = vec![Asset {
+                info: asset_info,
+                amount: token_balance,
+            }];
 
-        // send tokens to fee distributor
-        let config = CONFIG.load(deps.storage)?;
-        let fees_transfer_msg = CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.fee_distributor.to_string(),
-            amount: fees.to_coins()?,
-        });
+            epoch.total = fees.clone();
+            epoch.available = fees.clone();
+
+            // send tokens to fee distributor
+            let config = CONFIG.load(deps.storage)?;
+            messages.push(CosmosMsg::Bank(BankMsg::Send {
+                to_address: config.fee_distributor.to_string(),
+                amount: fees.to_coins()?,
+            }));
+        }
 
         TMP_EPOCH.remove(deps.storage);
 
         Ok(Response::default()
             .add_attribute("action", "reply")
             .add_attribute("new_epoch", epoch.to_string())
-            .add_message(fees_transfer_msg)
+            .add_messages(messages)
             .set_data(to_binary(&ForwardFeesResponse { epoch })?))
     } else {
         Err(ContractError::UnknownReplyId(msg.id))
