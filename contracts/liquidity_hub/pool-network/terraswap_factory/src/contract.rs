@@ -86,6 +86,7 @@ pub fn execute(
         } => commands::create_trio(
             deps,
             env,
+            info,
             asset_infos,
             pool_fees,
             amp_factor,
