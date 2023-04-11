@@ -41,7 +41,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
         GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
             Ok(global_weight.checked_sub(weight_to_remove)?)
         })?;
-        ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
+        ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender, |user_weight| {
             Ok(user_weight
                 .unwrap_or_default()
                 .checked_sub(weight_to_remove)?)

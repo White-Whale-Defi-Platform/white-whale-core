@@ -24,7 +24,7 @@ pub fn calculate_weight(
 
     let final_part = Decimal256::from_ratio(246210981355969u64, 246918738317569u64);
 
-    return Ok(amount
+    Ok(amount
         .checked_mul(
             unbonding_duration_part
                 .checked_add(next_part)?
@@ -32,7 +32,7 @@ pub fn calculate_weight(
         )?
         .atomics()
         .checked_div(10u128.pow(18).into())?
-        .try_into()?);
+        .try_into()?)
 }
 
 #[cfg(test)]

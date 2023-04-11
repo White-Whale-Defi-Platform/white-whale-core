@@ -100,7 +100,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         CREATE_INCENTIVE_REPLY_ID => {
             reply::create_incentive_reply::create_incentive_reply(deps, msg)
         }
-        id @ _ => Err(ContractError::UnknownReplyId { id }),
+        id => Err(ContractError::UnknownReplyId { id }),
     }
 }
 

@@ -14,7 +14,7 @@ pub fn close_position(
     unbonding_duration: u64,
 ) -> Result<Response, ContractError> {
     // claim current position
-    let claim_messages = crate::claim::claim(&mut deps, &env, &info.clone())?;
+    let claim_messages = crate::claim::claim(&mut deps, &env, &info)?;
 
     // remove position
     let mut open_positions = OPEN_POSITIONS
@@ -48,7 +48,7 @@ pub fn close_position(
     )?;
 
     // reduce weight
-    // we reduce the weight to be equivalent to 1*amount, so weight - amount
+    // we reduce the weight to be equivalent to 1*amount, so we subtract by (weight - amount)
     // this should always be a valid operation as calculate_weight will return >= amount
     let weight = calculate_weight(unbonding_duration, to_close_position.amount)?;
     let reduced_weight = weight.checked_sub(to_close_position.amount)?;

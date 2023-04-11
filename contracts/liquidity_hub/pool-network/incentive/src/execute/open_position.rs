@@ -52,8 +52,7 @@ pub fn open_position(
     }
 
     // send the lp deposit to us
-    let mut messages = vec![];
-    messages.push(WasmMsg::Execute {
+    let messages = vec![WasmMsg::Execute {
         contract_addr: lp_token.into_string(),
         msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
             owner: info.sender.clone().into_string(),
@@ -61,7 +60,7 @@ pub fn open_position(
             amount,
         })?,
         funds: vec![],
-    });
+    }];
 
     // ensure an existing position with this unbonding time doesn't exist
     let existing_position = OPEN_POSITIONS

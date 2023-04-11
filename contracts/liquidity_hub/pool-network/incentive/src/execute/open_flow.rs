@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use cosmwasm_std::{
     to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128,
     WasmMsg,
@@ -47,24 +49,29 @@ pub fn open_flow(
                 .ok_or(ContractError::FlowFeeMissing)?
                 .amount;
 
-            if paid_amount < flow_fee.amount {
-                return Err(ContractError::FlowFeeNotPaid {
-                    paid_amount,
-                    required_amount: flow_fee.amount,
-                });
-            } else if paid_amount > flow_fee.amount {
-                // user sent more than required for the flow fee
-                // refund them the difference
-                messages.push(
-                    BankMsg::Send {
-                        to_address: info.sender.clone().into_string(),
-                        amount: vec![Coin {
-                            amount: paid_amount - flow_fee.amount,
-                            denom: denom.clone(),
-                        }],
-                    }
-                    .into(),
-                );
+            match paid_amount.cmp(&flow_fee.amount) {
+                Ordering::Equal => (), // do nothing if user paid correct amount,
+                Ordering::Less => {
+                    // user underpaid
+                    return Err(ContractError::FlowFeeNotPaid {
+                        paid_amount,
+                        required_amount: flow_fee.amount,
+                    });
+                }
+                Ordering::Greater => {
+                    // user sent more than required for the flow fee
+                    // refund them the difference
+                    messages.push(
+                        BankMsg::Send {
+                            to_address: info.sender.clone().into_string(),
+                            amount: vec![Coin {
+                                amount: paid_amount - flow_fee.amount,
+                                denom: denom.clone(),
+                            }],
+                        }
+                        .into(),
+                    );
+                }
             }
 
             // send fee to fee collector
