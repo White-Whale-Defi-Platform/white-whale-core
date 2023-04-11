@@ -40,7 +40,11 @@ pub fn instantiate(
 
     GLOBAL_WEIGHT.save(deps.storage, &Uint128::zero())?;
 
-    Ok(Response::new())
+    Ok(Response::new().set_data(to_binary(
+        &pool_network::incentive::InstantiateReplyCallback {
+            lp_address: msg.lp_address,
+        },
+    )?))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
