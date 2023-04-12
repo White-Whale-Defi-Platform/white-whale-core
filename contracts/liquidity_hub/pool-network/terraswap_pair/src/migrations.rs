@@ -5,10 +5,10 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
-use white_whale::pool_network::pair::{Config, FeatureToggle};
 use white_whale::fee::Fee;
 use white_whale::pool_network;
+use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use white_whale::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};

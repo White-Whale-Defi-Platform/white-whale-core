@@ -8,7 +8,6 @@ use white_whale::pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
-use white_whale::pool_network::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::helpers::{

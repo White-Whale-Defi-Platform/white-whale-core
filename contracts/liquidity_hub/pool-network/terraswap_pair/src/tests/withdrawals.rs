@@ -5,12 +5,12 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
+use white_whale::fee::Fee;
+use white_whale::pool_network;
 use white_whale::pool_network::asset::{AssetInfo, PairType};
 use white_whale::pool_network::denom::MsgBurn;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
-use white_whale::fee::Fee;
-use white_whale::pool_network;
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;

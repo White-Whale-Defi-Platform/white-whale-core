@@ -2948,6 +2948,7 @@ fn collect_and_distribute_fees_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -3319,6 +3320,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -3845,6 +3847,7 @@ fn create_epoch_unsuccessfully() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -4288,6 +4291,7 @@ fn decrease_grace_period_fee_distributor() {
                         },
                     },
                     pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 },
                 &[],
             )

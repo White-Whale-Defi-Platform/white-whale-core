@@ -3,8 +3,6 @@ use white_whale::pool_network::asset;
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use crate::helpers;
-
 #[test]
 fn aggregate_fees() {
     let fees: Vec<Asset> = vec![

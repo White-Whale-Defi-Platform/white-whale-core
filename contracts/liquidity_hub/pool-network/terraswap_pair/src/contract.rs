@@ -11,7 +11,9 @@ use semver::Version;
 
 use white_whale::pool_network::asset::{AssetInfoRaw, PairInfoRaw};
 use white_whale::pool_network::denom::MsgCreateDenom;
-use white_whale::pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::pair::{
+    Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
