@@ -1,7 +1,8 @@
 use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    WasmMsg,
 };
 
 use terraswap::asset::AssetInfo;
@@ -196,6 +197,7 @@ pub fn update_trio_config(
 pub fn create_trio(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 3],
     pool_fees: TrioPoolFee,
     amp_factor: u64,
@@ -281,7 +283,7 @@ pub fn create_trio(
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.trio_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
                 msg: to_binary(&TrioInstantiateMsg {
