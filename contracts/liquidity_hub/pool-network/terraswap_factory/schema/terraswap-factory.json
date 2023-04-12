@@ -143,7 +143,8 @@
             "required": [
               "asset_infos",
               "pair_type",
-              "pool_fees"
+              "pool_fees",
+              "token_factory_lp"
             ],
             "properties": {
               "asset_infos": {
@@ -165,6 +166,10 @@
               },
               "pool_fees": {
                 "$ref": "#/definitions/PoolFee"
+              },
+              "token_factory_lp": {
+                "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -642,7 +647,7 @@
           "type": "string"
         },
         "liquidity_token": {
-          "type": "string"
+          "$ref": "#/definitions/AssetInfo"
         },
         "pair_type": {
           "$ref": "#/definitions/PairType"
@@ -829,7 +834,7 @@
               "type": "string"
             },
             "liquidity_token": {
-              "type": "string"
+              "$ref": "#/definitions/AssetInfo"
             },
             "pair_type": {
               "$ref": "#/definitions/PairType"

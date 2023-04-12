@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    WasmMsg,
 };
 
 use white_whale::pool_network;
@@ -75,9 +76,11 @@ pub fn update_pair_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
     pair_type: PairType,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -144,7 +147,7 @@ pub fn create_pair(
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
                 msg: to_binary(&PairInstantiateMsg {
@@ -154,6 +157,7 @@ pub fn create_pair(
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     pair_type,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,

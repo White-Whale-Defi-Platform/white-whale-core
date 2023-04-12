@@ -100,6 +100,7 @@ fn try_native_to_token() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -443,6 +444,7 @@ fn try_swap_invalid_token() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -545,6 +547,7 @@ fn try_token_to_native() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -891,6 +894,7 @@ fn test_swap_to_third_party() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -1038,6 +1042,7 @@ fn stableswap_reverse_simulation() {
             },
             fee_collector_addr: "collector".to_string(),
             pair_type: PairType::StableSwap { amp: 100 },
+            token_factory_lp: false,
         },
     )
     .unwrap();
@@ -1121,6 +1126,7 @@ fn stableswap_with_different_precisions() {
         },
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::StableSwap { amp: 100 },
+        token_factory_lp: false,
     };
 
     let env = mock_env();

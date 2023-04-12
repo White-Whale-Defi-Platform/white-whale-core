@@ -5,12 +5,12 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::helpers::instantiate_fees;
 use white_whale::fee::Fee;
 use white_whale::pool_network;
 use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 use white_whale::pool_network::pair::{Config, FeatureToggle};
 
+use crate::helpers::instantiate_fees;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
 
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
@@ -132,7 +132,7 @@ pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
     pub struct PairInfoRawV130 {
         pub asset_infos: [AssetInfoRaw; 2],
         pub contract_addr: CanonicalAddr,
-        pub liquidity_token: CanonicalAddr,
+        pub liquidity_token: AssetInfoRaw,
         pub asset_decimals: [u8; 2],
         pub pair_type: PairType,
     }
@@ -146,8 +146,12 @@ pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
         &PairInfoRawV130 {
             asset_infos: config.asset_infos,
             contract_addr: config.contract_addr,
-            liquidity_token: config.liquidity_token,
+            // all liquidity tokens until this version are cw20 tokens
+            liquidity_token: AssetInfoRaw::Token {
+                contract_addr: config.liquidity_token,
+            },
             asset_decimals: config.asset_decimals,
+            // all pools until this version are ConstantProduct
             pair_type: PairType::ConstantProduct,
         },
     )?;

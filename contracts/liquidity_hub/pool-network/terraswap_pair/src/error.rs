@@ -69,6 +69,9 @@ pub enum ContractError {
 
     #[error("An overflow occurred when attempting to construct a decimal")]
     DecimalOverflow {},
+
+    #[error("Burn fee is not allowed when using factory tokens")]
+    TokenFactoryAssetBurnDisabled {},
 }
 
 impl From<semver::Error> for ContractError {

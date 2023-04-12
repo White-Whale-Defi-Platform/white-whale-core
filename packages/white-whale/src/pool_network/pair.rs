@@ -16,6 +16,9 @@ pub struct InstantiateMsg {
     pub fee_collector_addr: String,
     /// The type of pair to create
     pub pair_type: PairType,
+    /// If true, the pair will use the token factory to create the LP token. If false, it will
+    /// use a cw20 token instead.
+    pub token_factory_lp: bool,
 }
 
 #[cw_serde]
@@ -28,6 +31,8 @@ pub enum ExecuteMsg {
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
+    /// Withdraws liquidity from the pool. Used only when the LP is a token factory token.
+    WithdrawLiquidity {},
     /// Swap an offer asset to the other
     Swap {
         offer_asset: Asset,
