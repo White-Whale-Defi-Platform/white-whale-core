@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
+use cosmwasm_std::{Decimal, Decimal256, Deps, StdError, StdResult, Storage, Uint128, Uint256};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{Asset, AssetInfo};
+use terraswap::asset::{is_factory_token, Asset, AssetInfo};
+use terraswap::querier::query_token_info;
 use terraswap::trio::PoolFee;
 
 use crate::error::ContractError;
@@ -266,4 +267,28 @@ pub fn instantiate_fees(
             },
         ],
     )
+}
+
+/// Gets the total supply of the given liquidity token
+pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
+    let total_share = if is_factory_token(liquidity_token.as_str()) {
+        //bank query total
+        deps.querier.query_supply(&liquidity_token)?.amount
+    } else {
+        query_token_info(
+            &deps.querier,
+            deps.api.addr_validate(liquidity_token.as_str())?,
+        )?
+        .total_supply
+    };
+    Ok(total_share)
+}
+
+/// Verifies if there's a factory token in the vector of [AssetInfo]s.
+/// todo consolidate this once the pool PRs are merged
+pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
+    assets.iter().any(|asset| match asset {
+        AssetInfo::Token { .. } => false,
+        AssetInfo::NativeToken { denom } => is_factory_token(denom),
+    })
 }

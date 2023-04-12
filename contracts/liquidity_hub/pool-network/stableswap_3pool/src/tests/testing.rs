@@ -1,11 +1,12 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, CosmosMsg, Decimal, Reply, ReplyOn, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 
 use terraswap::asset::{Asset, AssetInfo, TrioInfo};
+use terraswap::denom::MsgCreateDenom;
 use terraswap::mock_querier::mock_dependencies;
 use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
 use terraswap::trio::ExecuteMsg::UpdateConfig;
@@ -16,9 +17,10 @@ use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
 use crate::queries::query_trio_info;
+use crate::state::LP_SYMBOL;
 
 #[test]
-fn proper_initialization() {
+fn proper_initialization_cw20_lp() {
     let mut deps = mock_dependencies(&[]);
 
     deps.querier.with_token_balances(&[
@@ -59,6 +61,7 @@ fn proper_initialization() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -110,7 +113,7 @@ fn proper_initialization() {
 
     // it worked, let's query the state
     let trio_info: TrioInfo = query_trio_info(deps.as_ref()).unwrap();
-    assert_eq!("liquidity0000", trio_info.liquidity_token.as_str());
+    assert_eq!("liquidity0000", trio_info.liquidity_token.to_string());
     assert_eq!(
         trio_info.asset_infos,
         [
@@ -125,6 +128,200 @@ fn proper_initialization() {
             }
         ]
     );
+}
+
+#[test]
+fn proper_initialization_tokenfactory_lp() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+        ),
+        (
+            &"asset0001".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(456u128))],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    // we can just call .unwrap() to assert this was a success
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    let expected = <MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
+        sender: MOCK_CONTRACT_ADDR.to_string(),
+        subdenom: LP_SYMBOL.to_string(),
+    });
+
+    assert_eq!(res.messages[0].msg, expected);
+
+    // let's query the state
+    let trio_info: TrioInfo = query_trio_info(deps.as_ref()).unwrap();
+    assert_eq!(
+        trio_info.liquidity_token,
+        AssetInfo::NativeToken {
+            denom: format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory")
+        }
+    );
+}
+
+#[test]
+fn intialize_with_burnable_token_factory_asset() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+        ),
+        (
+            &"asset0001".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(456u128))],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    // we can just call .unwrap() to assert this was a success
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    let expected = <MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
+        sender: MOCK_CONTRACT_ADDR.to_string(),
+        subdenom: LP_SYMBOL.to_string(),
+    });
+
+    assert_eq!(res.messages[0].msg, expected);
+
+    // let's try to increase the burn fee. It should fail
+    let update_config_message = UpdateConfig {
+        owner: None,
+        fee_collector_addr: None,
+        pool_fees: Some(PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        }),
+        feature_toggle: None,
+        amp_factor: None,
+    };
+
+    let res = execute(
+        deps.as_mut(),
+        env.clone(),
+        info.clone(),
+        update_config_message,
+    );
+    match res {
+        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
+        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
+        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
+    }
+
+    // now let's try instantiating the contract with burning fees, it should fail
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    let res = instantiate(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
+        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
+        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
+    }
 }
 
 #[test]
@@ -163,6 +360,7 @@ fn test_initialization_invalid_fees() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     // we can just call .unwrap() to assert this was a success
@@ -171,7 +369,7 @@ fn test_initialization_invalid_fees() {
     let res = instantiate(deps.as_mut(), env, info, msg);
     match res {
         Ok(_) => panic!("should return StdError::generic_err(Invalid fee)"),
-        Err(StdError::GenericErr { .. }) => (),
+        Err(ContractError::Std { .. }) => (),
         _ => panic!("should return StdError::generic_err(Invalid fee)"),
     }
 }
@@ -217,6 +415,7 @@ fn can_migrate_contract() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -445,6 +644,7 @@ fn test_update_config_unsuccessful() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -536,6 +736,7 @@ fn test_update_config_successful() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();

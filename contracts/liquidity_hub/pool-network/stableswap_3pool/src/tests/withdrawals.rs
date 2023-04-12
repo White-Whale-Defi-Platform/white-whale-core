@@ -1,19 +1,20 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
+use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES, LP_SYMBOL};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
+    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use terraswap::asset::AssetInfo;
+use terraswap::denom::MsgBurn;
 use terraswap::mock_querier::mock_dependencies;
 use terraswap::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
 
 #[test]
-fn withdraw_liquidity() {
+fn withdraw_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
         amount: Uint128::from(100u128),
@@ -61,6 +62,7 @@ fn withdraw_liquidity() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -203,6 +205,211 @@ fn withdraw_liquidity() {
 }
 
 #[test]
+fn withdraw_liquidity_token_factory_lp() {
+    let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
+
+    let mut deps = mock_dependencies(&[
+        Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: "uusdc".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: "udai".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::from(9000u128),
+        },
+    ]);
+
+    deps.querier.with_balance(&[(
+        &"addr0000".to_string(),
+        vec![Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::from(6000u128 /* user deposit must be pre-applied */),
+        }],
+    )]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uusdc".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "udai".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // withdraw liquidity
+    let msg = ExecuteMsg::WithdrawLiquidity {};
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::from(6000u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    let log_withdrawn_share = res.attributes.get(2).expect("no log");
+    let log_refund_assets = res.attributes.get(3).expect("no log");
+    let msg_refund_0 = res.messages.get(0).expect("no message").clone().msg;
+    let msg_refund_1 = res.messages.get(1).expect("no message").clone().msg;
+    let msg_refund_2 = res.messages.get(2).expect("no message").clone().msg;
+    let msg_burn_liquidity = res.messages.get(3).expect("no message").clone().msg;
+
+    let expected_asset_refund_amount: Uint128 = Uint128::from(1200u128);
+
+    let msg_refund_0_expected = CosmosMsg::Bank(BankMsg::Send {
+        to_address: "addr0000".to_string(),
+        amount: vec![coin(expected_asset_refund_amount.u128(), "uusd")],
+    });
+    let msg_refund_1_expected = CosmosMsg::Bank(BankMsg::Send {
+        to_address: "addr0000".to_string(),
+        amount: vec![coin(expected_asset_refund_amount.u128(), "uusdc")],
+    });
+    let msg_refund_2_expected = CosmosMsg::Bank(BankMsg::Send {
+        to_address: "addr0000".to_string(),
+        amount: vec![coin(expected_asset_refund_amount.u128(), "udai")],
+    });
+    let msg_burn_liquidity_expected = <MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
+        sender: MOCK_CONTRACT_ADDR.to_string(),
+        amount: Some(terraswap::denom::Coin {
+            denom: lp_denom.clone(),
+            amount: "6000".to_string(),
+        }),
+    });
+
+    assert_eq!(msg_refund_0, msg_refund_0_expected);
+    assert_eq!(msg_refund_1, msg_refund_1_expected);
+    assert_eq!(msg_refund_2, msg_refund_2_expected);
+    assert_eq!(msg_burn_liquidity, msg_burn_liquidity_expected);
+
+    assert_eq!(
+        log_withdrawn_share,
+        &attr("withdrawn_share", 6000u128.to_string())
+    );
+    assert_eq!(
+        log_refund_assets,
+        &attr("refund_assets", "1200uusd, 1200uusdc, 1200udai")
+    );
+}
+
+#[test]
+fn withdraw_liquidity_token_factory_lp_wrong_asset() {
+    let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
+
+    let mut deps = mock_dependencies(&[
+        Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: "uusdc".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: "udai".to_string(),
+            amount: Uint128::from(3000u128),
+        },
+        Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::from(9000u128),
+        },
+    ]);
+
+    deps.querier.with_balance(&[(
+        &"addr0000".to_string(),
+        vec![Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::from(6000u128 /* user deposit must be pre-applied */),
+        }],
+    )]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uusdc".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "udai".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // withdraw liquidity
+    let msg = ExecuteMsg::WithdrawLiquidity {};
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "not_lp_denom".to_string(),
+            amount: Uint128::from(6000u128),
+        }],
+    );
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+
+    assert_eq!(err, ContractError::AssetMismatch {});
+}
+
+#[test]
 fn test_withdrawal_unauthorized() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
@@ -251,6 +458,7 @@ fn test_withdrawal_unauthorized() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -323,6 +531,7 @@ fn test_withdrawal_wrong_message() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
