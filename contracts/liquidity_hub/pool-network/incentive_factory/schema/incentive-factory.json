@@ -296,10 +296,10 @@
         "description": "Retrieves the config of the incentive factory.",
         "type": "object",
         "required": [
-          "get_config"
+          "config"
         ],
         "properties": {
-          "get_config": {
+          "config": {
             "type": "object",
             "additionalProperties": false
           }
@@ -310,10 +310,10 @@
         "description": "Retrieves a specific incentive address.",
         "type": "object",
         "required": [
-          "get_incentive"
+          "incentive"
         ],
         "properties": {
-          "get_incentive": {
+          "incentive": {
             "type": "object",
             "required": [
               "lp_address"
@@ -392,7 +392,7 @@
   },
   "sudo": null,
   "responses": {
-    "get_config": {
+    "config": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Config",
       "description": "Stores the configuration of the incentive factory.",
@@ -536,7 +536,7 @@
         }
       }
     },
-    "get_incentive": {
+    "incentive": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Nullable_Addr",
       "anyOf": [

@@ -101,16 +101,16 @@ pub struct ClosedPosition {
 pub enum QueryMsg {
     /// Retrieves the current contract configuration.
     #[returns(GetConfigResponse)]
-    GetConfig {},
+    Config {},
     /// Retrieves a specific flow.
     #[returns(GetFlowResponse)]
-    GetFlow {
+    Flow {
         /// The id of the flow to find.
         flow_id: u64,
     },
     /// Retrieves the current flows.
     #[returns(GetFlowsResponse)]
-    GetFlows {},
+    Flows {},
 }
 
 /// Stores the reply data set in the response when instantiating an incentive contract.

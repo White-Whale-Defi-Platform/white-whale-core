@@ -108,10 +108,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&queries::get_config(deps)?),
-        QueryMsg::GetIncentive { lp_address } => {
-            to_binary(&queries::get_incentive(deps, lp_address)?)
-        }
+        QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
+        QueryMsg::Incentive { lp_address } => to_binary(&queries::get_incentive(deps, lp_address)?),
     }
 }
 

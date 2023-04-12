@@ -22,7 +22,7 @@ pub fn open_position(
     let incentive_factory_config: white_whale::pool_network::incentive_factory::GetConfigResponse =
         deps.querier.query_wasm_smart(
             factory_address,
-            &white_whale::pool_network::incentive_factory::QueryMsg::GetConfig {},
+            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     if unbonding_duration < incentive_factory_config.min_unbonding_duration

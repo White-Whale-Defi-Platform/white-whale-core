@@ -60,10 +60,10 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Retrieves the config of the incentive factory.
     #[returns(GetConfigResponse)]
-    GetConfig {},
+    Config {},
     /// Retrieves a specific incentive address.
     #[returns(GetIncentiveResponse)]
-    GetIncentive {
+    Incentive {
         /// The address of the LP token.
         lp_address: AssetInfo,
     },

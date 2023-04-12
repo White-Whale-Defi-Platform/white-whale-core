@@ -354,10 +354,10 @@
         "description": "Retrieves the current contract configuration.",
         "type": "object",
         "required": [
-          "get_config"
+          "config"
         ],
         "properties": {
-          "get_config": {
+          "config": {
             "type": "object",
             "additionalProperties": false
           }
@@ -368,10 +368,10 @@
         "description": "Retrieves a specific flow.",
         "type": "object",
         "required": [
-          "get_flow"
+          "flow"
         ],
         "properties": {
-          "get_flow": {
+          "flow": {
             "type": "object",
             "required": [
               "flow_id"
@@ -393,10 +393,10 @@
         "description": "Retrieves the current flows.",
         "type": "object",
         "required": [
-          "get_flows"
+          "flows"
         ],
         "properties": {
-          "get_flows": {
+          "flows": {
             "type": "object",
             "additionalProperties": false
           }
@@ -413,7 +413,7 @@
   },
   "sudo": null,
   "responses": {
-    "get_config": {
+    "config": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Config",
       "description": "Represents the configuration of the incentive contract.",
@@ -451,7 +451,7 @@
         }
       }
     },
-    "get_flow": {
+    "flow": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GetFlowResponse",
       "type": "object",
@@ -619,7 +619,7 @@
         }
       }
     },
-    "get_flows": {
+    "flows": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "GetFlowsResponse",
       "type": "object",

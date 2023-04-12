@@ -41,7 +41,7 @@ pub fn instantiate(
     GLOBAL_WEIGHT.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::new().set_data(to_binary(
-        &pool_network::incentive::InstantiateReplyCallback {
+        &white_whale::pool_network::incentive::InstantiateReplyCallback {
             lp_address: msg.lp_address,
         },
     )?))
@@ -90,9 +90,9 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetConfig {} => to_binary(&queries::get_config(deps)?),
-        QueryMsg::GetFlow { flow_id } => to_binary(&queries::get_flow(deps, flow_id)?),
-        QueryMsg::GetFlows {} => to_binary(&queries::get_flows(deps)?),
+        QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
+        QueryMsg::Flow { flow_id } => to_binary(&queries::get_flow(deps, flow_id)?),
+        QueryMsg::Flows {} => to_binary(&queries::get_flows(deps)?),
     }
 }
 

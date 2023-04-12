@@ -30,7 +30,7 @@ pub fn open_flow(
     let incentive_factory_config: white_whale::pool_network::incentive_factory::GetConfigResponse =
         deps.querier.query_wasm_smart(
             incentive_factory_addr.into_string(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::GetConfig {},
+            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
