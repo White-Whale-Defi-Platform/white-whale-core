@@ -53,6 +53,14 @@ pub enum ExecuteMsg {
         /// If unspecified, the flow start buffer will not change.
         max_flow_start_time_buffer: Option<u64>,
     },
+    MigrateIncentive {
+        /// The address of the incentive contract
+        incentive_address: String,
+        /// The new code ID to migrate the incentive contract to.
+        ///
+        /// If unspecified, will default to the incentive factory's configured incentive code ID.
+        code_id: Option<u64>,
+    },
 }
 
 #[cw_serde]

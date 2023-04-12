@@ -90,6 +90,10 @@ pub fn execute(
             incentive_contract_id,
             max_flow_start_time_buffer,
         ),
+        ExecuteMsg::MigrateIncentive {
+            incentive_address,
+            code_id,
+        } => execute::migrate_incentive(deps, info, incentive_address, code_id),
     }
 }
 

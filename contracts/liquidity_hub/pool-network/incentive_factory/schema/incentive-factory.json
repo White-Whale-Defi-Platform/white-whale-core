@@ -216,6 +216,37 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "migrate_incentive"
+        ],
+        "properties": {
+          "migrate_incentive": {
+            "type": "object",
+            "required": [
+              "incentive_address"
+            ],
+            "properties": {
+              "code_id": {
+                "description": "The new code ID to migrate the incentive contract to.\n\nIf unspecified, will default to the incentive factory's configured incentive code ID.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "incentive_address": {
+                "description": "The address of the incentive contract",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
