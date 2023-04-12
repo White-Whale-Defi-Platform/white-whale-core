@@ -3,11 +3,12 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
-use pool_network::asset::{AssetInfo, PairType};
-use pool_network::pair::{
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{AssetInfo, PairType};
+use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use pool_network::querier::query_balance;
+use white_whale::pool_network::querier::query_balance;
 
 use crate::error::ContractError;
 use crate::state::{

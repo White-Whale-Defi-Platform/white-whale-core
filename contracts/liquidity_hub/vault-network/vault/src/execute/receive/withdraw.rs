@@ -3,7 +3,7 @@ use cosmwasm_std::{
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
 
-use pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
@@ -93,8 +93,8 @@ mod tests {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use pool_network::asset::{Asset, AssetInfo};
-    use vault_network::vault::{Config, UpdateConfigParams};
+    use white_whale::pool_network::asset::{Asset, AssetInfo};
+    use white_whale::vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::state::COLLECTED_PROTOCOL_FEES;
     use crate::{
@@ -114,14 +114,17 @@ mod tests {
     fn cannot_send_from_non_liquidity_token() {
         let (res, ..) = mock_execute(
             1,
-            pool_network::asset::AssetInfo::NativeToken {
+            AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            vault_network::vault::ExecuteMsg::Receive(vault_network::vault::Cw20ReceiveMsg {
-                sender: mock_creator().sender.into_string(),
-                amount: Uint128::new(5_000),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
-            }),
+            white_whale::vault_network::vault::ExecuteMsg::Receive(
+                white_whale::vault_network::vault::Cw20ReceiveMsg {
+                    sender: mock_creator().sender.into_string(),
+                    amount: Uint128::new(5_000),
+                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                        .unwrap(),
+                },
+            ),
         );
         assert_eq!(res.unwrap_err(), VaultError::ExternalCallback {})
     }
@@ -133,7 +136,7 @@ mod tests {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: Some(false),
@@ -149,11 +152,14 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("", &[]),
-            vault_network::vault::ExecuteMsg::Receive(vault_network::vault::Cw20ReceiveMsg {
-                amount: Uint128::new(2_000),
-                sender: mock_creator().sender.into_string(),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
-            }),
+            white_whale::vault_network::vault::ExecuteMsg::Receive(
+                white_whale::vault_network::vault::Cw20ReceiveMsg {
+                    amount: Uint128::new(2_000),
+                    sender: mock_creator().sender.into_string(),
+                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                        .unwrap(),
+                },
+            ),
         );
 
         assert_eq!(res.unwrap_err(), VaultError::WithdrawsDisabled {});
@@ -176,14 +182,14 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &vault_network::vault::QueryMsg::Config {},
+                &white_whale::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &coins(10_000, "uluna"),
@@ -197,7 +203,8 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
+                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                    .unwrap(),
             },
             &[],
         )
@@ -263,7 +270,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &vault_network::vault::QueryMsg::Config {},
+                &white_whale::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -284,7 +291,7 @@ mod tests {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &[],
@@ -298,7 +305,8 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
+                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                    .unwrap(),
             },
             &[],
         )
@@ -389,11 +397,14 @@ mod tests {
             deps.as_mut(),
             env,
             mock_info("lp_token", &[]),
-            vault_network::vault::ExecuteMsg::Receive(vault_network::vault::Cw20ReceiveMsg {
-                amount: Uint128::new(5_000),
-                sender: mock_creator().sender.into_string(),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
-            }),
+            white_whale::vault_network::vault::ExecuteMsg::Receive(
+                white_whale::vault_network::vault::Cw20ReceiveMsg {
+                    amount: Uint128::new(5_000),
+                    sender: mock_creator().sender.into_string(),
+                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                        .unwrap(),
+                },
+            ),
         )
         .unwrap();
 
@@ -494,11 +505,14 @@ mod tests {
             deps.as_mut(),
             env,
             mock_info("lp_token", &[]),
-            vault_network::vault::ExecuteMsg::Receive(vault_network::vault::Cw20ReceiveMsg {
-                amount: Uint128::new(5_000),
-                sender: mock_creator().sender.into_string(),
-                msg: to_binary(&vault_network::vault::Cw20HookMsg::Withdraw {}).unwrap(),
-            }),
+            white_whale::vault_network::vault::ExecuteMsg::Receive(
+                white_whale::vault_network::vault::Cw20ReceiveMsg {
+                    amount: Uint128::new(5_000),
+                    sender: mock_creator().sender.into_string(),
+                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                        .unwrap(),
+                },
+            ),
         )
         .unwrap();
 

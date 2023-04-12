@@ -6,10 +6,11 @@ use crate::state::{Config, CONFIG};
 
 use crate::error::ContractError;
 use cw20::Cw20ExecuteMsg;
-use pool_network::asset::{Asset, AssetInfo, PairInfo};
-use pool_network::pair::ExecuteMsg as PairExecuteMsg;
-use pool_network::querier::{query_balance, query_pair_info, query_token_balance};
-use pool_network::router::SwapOperation;
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use white_whale::pool_network::pair::ExecuteMsg as PairExecuteMsg;
+use white_whale::pool_network::querier::{query_balance, query_pair_info, query_token_balance};
+use white_whale::pool_network::router::SwapOperation;
 
 /// Execute swap operation
 /// swap all offer asset to ask asset

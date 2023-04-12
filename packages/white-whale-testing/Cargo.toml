@@ -1,0 +1,26 @@
+[package]
+name = "white-whale-testing"
+version = "1.0.0"
+edition.workspace = true
+authors = ["Kerber0x <kerber0x@protonmail.com>"]
+description = "Common White Whale types and utils for testing"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://whitewhale.money"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true
+cosmwasm-schema.workspace = true
+cw-multi-test.workspace = true
+white-whale.workspace = true
+whale-lair.workspace = true

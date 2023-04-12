@@ -5,9 +5,9 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Decimal256, Deps, StdError, StdResult, Storage, Uint128, Uint256};
 use cw_storage_plus::Item;
 
-use pool_network::asset::{is_factory_token, Asset, AssetInfo, PairType};
-use pool_network::pair::PoolFee;
-use pool_network::querier::query_token_info;
+use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, PairType};
+use white_whale::pool_network::pair::PoolFee;
+use white_whale::pool_network::querier::query_token_info;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;

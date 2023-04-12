@@ -2,7 +2,7 @@ use cosmwasm_std::{
     testing::{MockApi, MockQuerier, MockStorage},
     Env, OwnedDeps, Response,
 };
-use pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::contract::execute;
 use crate::error::VaultError;
@@ -12,7 +12,7 @@ use super::{mock_creator, mock_instantiate::mock_instantiate};
 pub fn mock_execute(
     token_id: u64,
     asset_info: AssetInfo,
-    msg: vault_network::vault::ExecuteMsg,
+    msg: white_whale::vault_network::vault::ExecuteMsg,
 ) -> (
     Result<Response, VaultError>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,

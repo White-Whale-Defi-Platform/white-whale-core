@@ -14,8 +14,8 @@ mod test {
         testing::{mock_dependencies, mock_env},
         Addr,
     };
-    use pool_network::asset::AssetInfo;
-    use vault_network::vault::Config;
+    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale::vault_network::vault::Config;
 
     use crate::{
         contract::query,
@@ -47,7 +47,7 @@ mod test {
             &query(
                 deps.as_ref(),
                 env,
-                vault_network::vault::QueryMsg::Config {},
+                white_whale::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap(),
         )

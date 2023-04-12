@@ -1,14 +1,14 @@
 #![cfg(not(tarpaulin_include))]
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, CanonicalAddr, Decimal, DepsMut, StdError, Uint128};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
-use pool_network::pair::{Config, FeatureToggle};
+use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use white_whale::pool_network::pair::{Config, FeatureToggle};
 use white_whale::fee::Fee;
+use white_whale::pool_network;
 
 use crate::helpers::instantiate_fees;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};

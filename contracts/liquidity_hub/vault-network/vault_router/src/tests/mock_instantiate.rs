@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Addr, Env, OwnedDeps, Uint128,
 };
 use cw_multi_test::{App, Executor};
-use pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::contract::instantiate;
 
@@ -29,7 +29,7 @@ pub fn mock_instantiate<F: Into<String>>(
         deps.as_mut(),
         env.clone(),
         creator.clone(),
-        vault_network::vault_router::InstantiateMsg {
+        white_whale::vault_network::vault_router::InstantiateMsg {
             owner: creator.sender.to_string(),
             vault_factory_addr: vault_factory_addr.into(),
         },
@@ -60,7 +60,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         .instantiate_contract(
             fee_collector_id,
             mock_admin(),
-            &fee_collector::msg::InstantiateMsg {},
+            &white_whale::fee_collector::InstantiateMsg {},
             &[],
             "mock fee collector",
             None,
@@ -71,7 +71,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         .instantiate_contract(
             factory_id,
             mock_admin(),
-            &vault_network::vault_factory::InstantiateMsg {
+            &white_whale::vault_network::vault_factory::InstantiateMsg {
                 owner: mock_admin().into_string(),
                 vault_id,
                 token_id,
@@ -87,7 +87,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
     app.execute_contract(
         mock_admin(),
         factory_addr.clone(),
-        &vault_network::vault_factory::ExecuteMsg::CreateVault {
+        &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
             asset_info: AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
@@ -101,7 +101,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         .wrap()
         .query_wasm_smart(
             factory_addr.clone(),
-            &vault_network::vault_factory::QueryMsg::Vault {
+            &white_whale::vault_network::vault_factory::QueryMsg::Vault {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
@@ -141,7 +141,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
     app.execute_contract(
         mock_admin(),
         factory_addr.clone(),
-        &vault_network::vault_factory::ExecuteMsg::CreateVault {
+        &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
             asset_info: AssetInfo::Token {
                 contract_addr: token_addr.clone().into_string(),
             },
@@ -154,7 +154,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         .wrap()
         .query_wasm_smart(
             factory_addr.clone(),
-            &vault_network::vault_factory::QueryMsg::Vault {
+            &white_whale::vault_network::vault_factory::QueryMsg::Vault {
                 asset_info: AssetInfo::Token {
                     contract_addr: token_addr.clone().into_string(),
                 },
@@ -177,7 +177,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
     app.execute_contract(
         mock_admin(),
         token_vault_addr.clone(),
-        &vault_network::vault::ExecuteMsg::Deposit {
+        &white_whale::vault_network::vault::ExecuteMsg::Deposit {
             amount: Uint128::new(10_000),
         },
         &[],
@@ -188,7 +188,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
         .instantiate_contract(
             router_id,
             creator.clone().sender,
-            &vault_network::vault_router::InstantiateMsg {
+            &white_whale::vault_network::vault_router::InstantiateMsg {
                 owner: creator.sender.into_string(),
                 vault_factory_addr: factory_addr.clone().into_string(),
             },

@@ -21,14 +21,14 @@
 
 ## Getting started
 
-To get started with `migaloo-core`, please go through the [contributing guide](./CONTRIBUTING.md) to see the 
+To get started with `migaloo-core`, please go through the [contributing guide](./docs/CONTRIBUTING.md) to see the 
 different ways to contribute to the project.
 
 ## Resources
 
 1. [Website](https://whitewhale.money/)
 2. [LitePaper](https://whitewhale.money/LitepaperV2.pdf)
-3. [Docs](https://ww0-1.gitbook.io/migaloo-docs/)
+3. [Docs](https://ww0-1.gitbook.io/migaloo-docs/) 
 4. [Discord](https://discord.com/invite/tSxyyCWgYX)
 5. [Twitter](https://twitter.com/WhiteWhaleDefi)
 6. [Telegram](https://t.me/whitewhaleofficial)

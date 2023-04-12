@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, DepsMut, Order, StdError};
 use cw_storage_plus::Map;
 
-use pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::state::{TMP_VAULT_ASSET, VAULTS};
 

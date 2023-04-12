@@ -7,12 +7,15 @@ members = [
 	"contracts/liquidity_hub/pool-network/terraswap_router",
 	"contracts/liquidity_hub/pool-network/terraswap_token",
 	"contracts/liquidity_hub/fee_collector",
+	"contracts/liquidity_hub/fee_distributor",
+	"contracts/liquidity_hub/whale_lair",
 	"contracts/liquidity_hub/vault-network/*",
 ]
 
 [workspace.package]
 edition = "2021"
 homepage = "https://whitewhale.money"
+documentation = "https://docs.whitewhale.money/white-whale"
 license = "MIT"
 repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
 publish = false
@@ -24,18 +27,23 @@ cw2 = "0.15.1"
 cw20 = "0.15.1"
 cw20-base = { version = "0.15.1", features = ["library"] }
 cw-storage-plus = "0.15.1"
+cw-utils = "1.0.1"
 protobuf = { version = "3.1.0", features = ["with-bytes"] }
 schemars = "0.8.3"
 semver = "1.0.12"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 thiserror = "1.0.21"
-uint = "0.9.4"
 osmosis-std-derive = "0.13.2"
 prost = {version = "0.11.0", default-features = false, features = ["prost-derive"]}
 prost-types = {version = "0.11.1", default-features = false}
-pool-network = { path = "./packages/pool-network" }
-vault-network = { path = "./packages/vault-network" }
 white-whale = { path = "./packages/white-whale" }
+white-whale-testing = { path = "./packages/white-whale-testing" }
+cw-multi-test = { version = "0.16.2" }
+uint = "0.9.4"
+integer-sqrt = "0.1.5"
+
+# contracts
+whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

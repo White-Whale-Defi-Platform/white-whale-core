@@ -9,13 +9,12 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use pool_network::asset::{AssetInfoRaw, PairInfoRaw};
-use pool_network::denom::MsgCreateDenom;
-use pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
-use pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::asset::{AssetInfoRaw, PairInfoRaw};
+use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale::pool_network::pair::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
-use crate::error::ContractError::MigrateInvalidVersion;
 use crate::helpers::has_factory_token;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
@@ -282,7 +281,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
     if storage_version >= version {
-        return Err(MigrateInvalidVersion {
+        return Err(ContractError::MigrateInvalidVersion {
             current_version: storage_version,
             new_version: version,
         });

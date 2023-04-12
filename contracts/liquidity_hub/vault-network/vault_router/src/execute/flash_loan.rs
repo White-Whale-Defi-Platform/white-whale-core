@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
 
-use pool_network::asset::Asset;
-use vault_network::vault_router::ExecuteMsg;
+use white_whale::pool_network::asset::Asset;
+use white_whale::vault_network::vault_router::ExecuteMsg;
 
 use crate::{
     err::{StdResult, VaultRouterError},
@@ -30,7 +30,7 @@ pub fn flash_loan(
             // query factory for address
             let address: Option<String> = deps.querier.query_wasm_smart(
                 config.vault_factory.clone(),
-                &vault_network::vault_factory::QueryMsg::Vault {
+                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: asset.info.clone(),
                 },
             )?;
@@ -51,7 +51,7 @@ pub fn flash_loan(
         messages.push(
             WasmMsg::Execute {
                 contract_addr: vault.to_string(),
-                msg: to_binary(&vault_network::vault::ExecuteMsg::FlashLoan {
+                msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                     amount: asset.amount,
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator: info.sender,
@@ -81,8 +81,8 @@ mod tests {
     };
     use cw_multi_test::Executor;
 
-    use pool_network::asset::{Asset, AssetInfo};
-    use vault_network::vault_router::ExecuteMsg;
+    use white_whale::pool_network::asset::{Asset, AssetInfo};
+    use white_whale::vault_network::vault_router::ExecuteMsg;
 
     use crate::{
         err::VaultRouterError,

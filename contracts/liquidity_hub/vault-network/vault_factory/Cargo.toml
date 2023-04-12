@@ -9,14 +9,14 @@ description = "Contract to facilitate the vault network"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
+documentation.workspace = true
 publish.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["pool-network/injective"]
+injective = ["white-whale/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
@@ -28,9 +28,7 @@ protobuf.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
-pool-network.workspace = true
 thiserror.workspace = true
-vault-network.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true
 

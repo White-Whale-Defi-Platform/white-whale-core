@@ -1,7 +1,7 @@
 use cosmwasm_std::Uint128;
-use pool_network::asset::Asset;
 use semver::Version;
 use thiserror::Error;
+use white_whale::pool_network::asset::Asset;
 
 pub type StdResult<T> = Result<T, VaultRouterError>;
 

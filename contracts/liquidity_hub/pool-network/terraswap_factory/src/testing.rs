@@ -6,15 +6,16 @@ use cosmwasm_std::{
     Reply, ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
-use pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
-use pool_network::factory::{
+use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use white_whale::pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
-use pool_network::mock_querier::{mock_dependencies, WasmMockQuerier};
-use pool_network::pair::{
+use white_whale::pool_network::mock_querier::{mock_dependencies, WasmMockQuerier};
+use white_whale::pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 use white_whale::fee::Fee;
+use white_whale::pool_network;
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
