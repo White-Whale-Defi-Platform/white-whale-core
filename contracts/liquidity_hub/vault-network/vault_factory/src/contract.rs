@@ -2,7 +2,9 @@ use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Respons
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use vault_network::vault_factory::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::vault_network::vault_factory::{
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use crate::err::{StdResult, VaultFactoryError};
 use crate::execute::{
@@ -85,7 +87,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Resp
 
 #[cfg(test)]
 mod test {
-    use vault_network::vault_factory::MigrateMsg;
+    use white_whale::vault_network::vault_factory::MigrateMsg;
 
     use crate::err::VaultFactoryError;
     use crate::tests::mock_instantiate::mock_instantiate;

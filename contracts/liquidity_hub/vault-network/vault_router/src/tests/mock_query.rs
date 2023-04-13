@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Env, OwnedDeps,
 };
 use serde::de::DeserializeOwned;
-use vault_network::vault_router::QueryMsg;
+use white_whale::vault_network::vault_router::QueryMsg;
 
 use crate::contract::query;
 

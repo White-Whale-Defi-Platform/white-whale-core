@@ -1,23 +1,25 @@
 use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg,
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    WasmMsg,
 };
 
-use terraswap::asset::AssetInfo;
-use terraswap::pair::{
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{AssetInfo, PairType};
+use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
+};
+use white_whale::pool_network::querier::query_balance;
+use white_whale::pool_network::trio::{
+    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
+    PoolFee as TrioPoolFee, RampAmp,
 };
 
 use crate::error::ContractError;
 use crate::state::{
     add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
     TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
-};
-use terraswap::querier::query_balance;
-use terraswap::trio::{
-    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    PoolFee as TrioPoolFee, RampAmp,
 };
 
 /// Updates the contract's [Config]
@@ -71,7 +73,7 @@ pub fn update_pair_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(pair_addr.as_str())?.to_string(),
-            &terraswap::pair::ExecuteMsg::UpdateConfig {
+            &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
@@ -86,8 +88,11 @@ pub fn update_pair_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
+    pair_type: PairType,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -133,26 +138,28 @@ pub fn create_pair(
             pair_key,
             asset_infos: raw_infos,
             asset_decimals,
+            pair_type: pair_type.clone(),
         },
     )?;
 
     // prepare labels for creating the pair token with a meaningful name
     let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
-    let pair_label = format!("{}-{} pair", asset0_label, asset1_label);
+    let pair_label = format!("{asset0_label}-{asset1_label} pair");
 
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
-            ("pair", &format!("{}-{}", asset0_label, asset1_label)),
+            ("pair", &format!("{asset0_label}-{asset1_label}")),
             ("pair_label", pair_label.as_str()),
+            ("pair_type", pair_type.get_label()),
         ])
         .add_submessage(SubMsg {
             id: CREATE_PAIR_RESPONSE,
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
                 msg: to_binary(&PairInstantiateMsg {
@@ -161,6 +168,8 @@ pub fn create_pair(
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
+                    pair_type,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -180,7 +189,7 @@ pub fn update_trio_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(trio_addr.as_str())?.to_string(),
-            &terraswap::trio::ExecuteMsg::UpdateConfig {
+            &pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,

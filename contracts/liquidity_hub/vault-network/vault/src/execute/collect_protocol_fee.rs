@@ -1,5 +1,5 @@
 use cosmwasm_std::{attr, CosmosMsg, DepsMut, Response, Uint128};
-use terraswap::asset::Asset;
+use white_whale::pool_network::asset::Asset;
 
 use crate::{
     error::VaultError,
@@ -38,8 +38,8 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, VaultError> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{attr, coins, BankMsg, Response, StdError, Uint128};
-    use terraswap::asset::{Asset, AssetInfo};
-    use vault_network::vault::ExecuteMsg;
+    use white_whale::pool_network::asset::{Asset, AssetInfo};
+    use white_whale::vault_network::vault::ExecuteMsg;
 
     use crate::{
         contract::execute,

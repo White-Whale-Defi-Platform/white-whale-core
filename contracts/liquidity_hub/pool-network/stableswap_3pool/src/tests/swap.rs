@@ -12,13 +12,13 @@ use cosmwasm_std::{
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::trio::{
+use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::trio::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, QueryMsg, ReverseSimulationResponse,
     SimulationResponse,
 };
-use white_whale::fee::Fee;
 
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {

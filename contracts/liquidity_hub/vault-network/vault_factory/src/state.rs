@@ -1,8 +1,8 @@
 use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use terraswap::asset::AssetInfo;
+use white_whale::pool_network::asset::AssetInfo;
 
-use vault_network::vault_factory::{Config, VaultInfo};
+use white_whale::vault_network::vault_factory::{Config, VaultInfo};
 
 pub const CONFIG: Item<Config> = Item::new("config");
 

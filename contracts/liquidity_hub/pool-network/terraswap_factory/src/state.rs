@@ -1,7 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use terraswap::asset::{AssetInfoRaw, PairInfo, PairInfoRaw, TrioInfo, TrioInfoRaw};
+use white_whale::pool_network::asset::{
+    AssetInfoRaw, PairInfo, PairInfoRaw, PairType, TrioInfo, TrioInfoRaw,
+};
 
 #[cw_serde]
 pub struct Config {
@@ -19,6 +21,7 @@ pub struct TmpPairInfo {
     pub pair_key: Vec<u8>,
     pub asset_infos: [AssetInfoRaw; 2],
     pub asset_decimals: [u8; 2],
+    pub pair_type: PairType,
 }
 
 pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");
@@ -141,7 +144,7 @@ pub fn add_allow_native_token(
 #[cfg(test)]
 mod allow_native_token {
 
-    use terraswap::mock_querier::mock_dependencies;
+    use white_whale::pool_network::mock_querier::mock_dependencies;
 
     use super::*;
 

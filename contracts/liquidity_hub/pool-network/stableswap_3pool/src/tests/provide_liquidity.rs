@@ -6,10 +6,10 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 #[test]
 fn provide_liquidity() {

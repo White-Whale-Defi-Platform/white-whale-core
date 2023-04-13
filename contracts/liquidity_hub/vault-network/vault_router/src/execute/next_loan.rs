@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use terraswap::asset::{Asset, AssetInfo};
-use vault_network::vault_router::ExecuteMsg;
+use white_whale::vault_network::vault_router::ExecuteMsg;
 
 use crate::err::{StdResult, VaultRouterError};
 use crate::state::CONFIG;
@@ -23,7 +23,7 @@ pub fn next_loan(
 
     let Some(queried_vault) = deps.querier.query_wasm_smart::<Option<String>>(
         config.vault_factory,
-        &vault_network::vault_factory::QueryMsg::Vault {
+        &white_whale::vault_network::vault_factory::QueryMsg::Vault {
             asset_info: source_vault_asset,
         },
     )? else {
@@ -44,7 +44,7 @@ pub fn next_loan(
             vec![WasmMsg::Execute {
                 contract_addr: vault.clone(),
                 funds: vec![],
-                msg: to_binary(&vault_network::vault::ExecuteMsg::FlashLoan {
+                msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                     amount: asset.amount,
                     msg: to_binary(&ExecuteMsg::NextLoan {
                         initiator,
@@ -85,9 +85,9 @@ pub fn next_loan(
 mod tests {
     use cosmwasm_std::{coins, Addr};
     use cw_multi_test::Executor;
+    use white_whale::pool_network::asset::AssetInfo;
 
-    use terraswap::asset::AssetInfo;
-    use vault_network::vault_router::ExecuteMsg;
+    use white_whale::vault_network::vault_router::ExecuteMsg;
 
     use crate::err::VaultRouterError;
     use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
@@ -134,7 +134,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr,
-                &vault_network::vault_factory::QueryMsg::Vault {
+                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },
@@ -146,7 +146,7 @@ mod tests {
         let err = app
             .execute_contract(
                 Addr::unchecked("unauthorized"),
-                router_addr.clone(),
+                router_addr,
                 &ExecuteMsg::NextLoan {
                     initiator: Addr::unchecked("initiator_addr"),
                     source_vault: luna_vault.unwrap(),

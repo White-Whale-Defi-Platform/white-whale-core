@@ -9,9 +9,11 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use terraswap::asset::TrioInfoRaw;
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use terraswap::trio::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::asset::TrioInfoRaw;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::trio::{
+    Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;

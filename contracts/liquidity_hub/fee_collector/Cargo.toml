@@ -2,13 +2,13 @@
 name = "fee_collector"
 version = "1.1.0"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
-edition = "2021"
-homepage = "https://whitewhale.money"
-license = "MIT"
-repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
-publish = false
+edition.workspace = true
 description = "Contract to collect the fees accrued by the pools and vaults in the liquidity hub"
-documentation = "https://whitewhale.money"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish.workspace = true
 
 exclude = [
 	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -22,7 +22,6 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 
@@ -31,13 +30,12 @@ cosmwasm-std.workspace = true
 cw2.workspace = true
 cw20.workspace = true
 cw-storage-plus.workspace = true
+cw-utils.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-white-whale = { path = "../../../packages/white-whale" }
-terraswap = { path = "../../../packages/terraswap" }
-vault-network = { path = "../../../packages/vault-network" }
+white-whale.workspace = true
 cosmwasm-schema.workspace = true
 
 [dev-dependencies]
@@ -47,6 +45,8 @@ terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }
 stableswap-3pool = { path = "../pool-network/stableswap_3pool" }
 terraswap-token = { path = "../pool-network/terraswap_token" }
+fee_distributor = { path = "../fee_distributor" }
+whale-lair = { path = "../whale_lair" }
 vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
 vault = { version = "1.0.0", path = "../vault-network/vault" }
 cw20 = { version = "0.15.1" }

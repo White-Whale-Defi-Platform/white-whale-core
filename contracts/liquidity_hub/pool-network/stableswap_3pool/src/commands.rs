@@ -5,9 +5,9 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::contract::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP, MIN_RAMP_BLOCKS};
-use terraswap::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::querier::query_token_info;
-use terraswap::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
+use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
 
 use crate::error::ContractError;
 use crate::helpers;

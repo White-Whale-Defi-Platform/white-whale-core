@@ -1,9 +1,9 @@
 use cosmwasm_std::{Deps, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{Asset, TrioInfo, TrioInfoRaw};
-use terraswap::querier::query_token_info;
-use terraswap::trio::{
+use white_whale::pool_network::asset::{Asset, TrioInfo, TrioInfoRaw};
+use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::trio::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
