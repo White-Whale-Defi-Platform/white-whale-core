@@ -1,8 +1,11 @@
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal256, DepsMut, Env, MessageInfo, Uint128, Uint256,
-    WasmMsg,
+    to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal256, Deps, DepsMut, Env, MessageInfo,
+    StdError, Uint128, Uint256, WasmMsg,
 };
-use white_whale::pool_network::{asset::AssetInfo, incentive::Curve};
+use white_whale::pool_network::{
+    asset::AssetInfo,
+    incentive::{Curve, Flow},
+};
 
 use crate::{
     error::ContractError,
@@ -25,17 +28,42 @@ pub fn calculate_emission(
     }
 }
 
+pub fn get_user_share(deps: &Deps, address: Addr) -> Result<Decimal256, StdError> {
+    // calculate user share
+    let user_weight = ADDRESS_WEIGHT.load(deps.storage, address)?;
+    let global_weight = GLOBAL_WEIGHT.load(deps.storage)?;
+
+    let user_share = Decimal256::from_ratio(user_weight, global_weight);
+    Ok(user_share)
+}
+
+pub fn calculate_claimable_amount(
+    flow: &Flow,
+    env: &Env,
+    user_last_claimed: Option<u64>,
+    user_share: Decimal256,
+) -> Result<Uint128, StdError> {
+    let emissions = calculate_emission(
+        env.block.time.seconds().max(flow.end_timestamp),
+        user_last_claimed
+            .unwrap_or_default()
+            .max(flow.start_timestamp),
+        flow.end_timestamp,
+        &flow.curve,
+        flow.flow_asset.amount,
+    );
+
+    // convert back into Uint128
+    Ok((user_share * emissions).try_into()?)
+}
+
 /// Performs the claim function, returning all the [`CosmosMsg`]'s to run.
 pub fn claim(
     deps: &mut DepsMut,
     env: &Env,
     info: &MessageInfo,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
-    // calculate user share
-    let user_weight = ADDRESS_WEIGHT.load(deps.storage, info.sender.clone())?;
-    let global_weight = GLOBAL_WEIGHT.load(deps.storage)?;
-
-    let user_share = Decimal256::from_ratio(user_weight, global_weight);
+    let user_share = get_user_share(&deps.as_ref(), info.sender.clone())?;
 
     // calculate flow rewards
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -44,16 +72,7 @@ pub fn claim(
     let user_last_claimed = LAST_CLAIMED_INDEX.may_load(deps.storage, info.sender.clone())?;
 
     for mut flow in flows.iter_mut() {
-        let emissions = calculate_emission(
-            env.block.time.seconds().max(flow.end_timestamp),
-            user_last_claimed
-                .unwrap_or_default()
-                .max(flow.start_timestamp),
-            flow.end_timestamp,
-            &flow.curve,
-            flow.flow_asset.amount,
-        );
-        let user_reward: Uint128 = (user_share * emissions).try_into()?;
+        let user_reward = calculate_claimable_amount(flow, env, user_last_claimed, user_share)?;
 
         if user_reward.is_zero() {
             // we don't want to construct a transfer message for them

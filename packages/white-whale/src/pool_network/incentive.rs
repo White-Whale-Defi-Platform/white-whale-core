@@ -116,6 +116,11 @@ pub enum QueryMsg {
         /// The address to get positions for.
         address: String,
     },
+    #[returns(GetRewardsResponse)]
+    Rewards {
+        /// The address to get all the incentive rewards for.
+        address: String,
+    },
 }
 
 /// Stores the reply data set in the response when instantiating an incentive contract.
@@ -184,4 +189,10 @@ pub struct GetPositionsResponse {
     pub timestamp: u64,
     /// All the positions a user has.
     pub positions: Vec<QueryPosition>,
+}
+
+#[cw_serde]
+pub struct GetRewardsResponse {
+    /// The rewards that is available to a user if they executed the `claim` function at this point.
+    pub rewards: Vec<Asset>,
 }

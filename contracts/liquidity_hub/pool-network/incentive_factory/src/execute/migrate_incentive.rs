@@ -20,6 +20,6 @@ pub fn migrate_incentive(
     Ok(Response::new().add_message(WasmMsg::Migrate {
         contract_addr: incentive_address,
         new_code_id,
-        msg: to_binary(&pool_network::incentive::MigrateMsg {})?,
+        msg: to_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
     }))
 }

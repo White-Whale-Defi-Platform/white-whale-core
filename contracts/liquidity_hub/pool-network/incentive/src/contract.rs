@@ -94,6 +94,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Positions { address } => {
             Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
         }
+        QueryMsg::Rewards { address } => Ok(to_binary(&queries::get_rewards(deps, env, address)?)?),
     }
 }
 

@@ -1,6 +1,6 @@
 use cosmwasm_std::{Deps, Order, StdResult, Storage};
 use cw_storage_plus::Bound;
-use pool_network::{
+use white_whale::pool_network::{
     asset::{AssetInfo, AssetInfoRaw},
     incentive_factory::{GetIncentivesContract, GetIncentivesResponse},
 };
@@ -59,8 +59,8 @@ mod tests {
     use cosmwasm_std::{
         testing::mock_dependencies, to_binary, Binary, DepsMut, Reply, SubMsgResponse, SubMsgResult,
     };
-    use pool_network::{asset::AssetInfo, incentive_factory::GetIncentivesContract};
     use protobuf::{Message, SpecialFields};
+    use white_whale::pool_network::{asset::AssetInfo, incentive_factory::GetIncentivesContract};
 
     use crate::{
         reply::create_incentive_reply::{create_incentive_reply, CREATE_INCENTIVE_REPLY_ID},
@@ -79,9 +79,11 @@ mod tests {
                     data: Some(Binary::from(
                         Message::write_to_bytes(&MsgInstantiateContractResponse {
                             address: format!("incentive{id}"),
-                            data: to_binary(&pool_network::incentive::InstantiateReplyCallback {
-                                lp_address: get_lp_asset(id),
-                            })
+                            data: to_binary(
+                                &white_whale::pool_network::incentive::InstantiateReplyCallback {
+                                    lp_address: get_lp_asset(id),
+                                },
+                            )
                             .unwrap()
                             .as_slice()
                             .to_vec(),
