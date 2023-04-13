@@ -383,6 +383,9 @@ pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
     pools: &[Asset; 2],
+    pair_type: PairType,
+    amount: Uint128,
+    pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
@@ -395,12 +398,31 @@ pub fn assert_slippage_tolerance(
         let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
-        {
-            return Err(ContractError::MaxSlippageAssertion {});
+        match pair_type {
+            PairType::StableSwap { .. } => {
+                let pools_total = pools[0].checked_add(pools[1])?;
+                let deposits_total = deposits[0].checked_add(deposits[1])?;
+
+                let pool_ratio = Decimal256::from_ratio(pools_total, pool_token_supply);
+                let deposit_ratio = Decimal256::from_ratio(deposits_total, amount);
+
+                // the slippage tolerance for the stableswap can't use a simple ratio for calculating
+                // slippage when adding liquidity. Due to the math behind the stableswap, the amp factor
+                // needs to be in as well, much like when swaps are done
+                if pool_ratio * one_minus_slippage_tolerance > deposit_ratio {
+                    return Err(ContractError::MaxSlippageAssertion {});
+                }
+            }
+            PairType::ConstantProduct => {
+                if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
+                    > Decimal256::from_ratio(pools[0], pools[1])
+                    || Decimal256::from_ratio(deposits[1], deposits[0])
+                        * one_minus_slippage_tolerance
+                        > Decimal256::from_ratio(pools[1], pools[0])
+                {
+                    return Err(ContractError::MaxSlippageAssertion {});
+                }
+            }
         }
     }
 
