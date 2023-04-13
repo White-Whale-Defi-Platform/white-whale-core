@@ -111,6 +111,11 @@ pub enum QueryMsg {
     /// Retrieves the current flows.
     #[returns(GetFlowsResponse)]
     Flows {},
+    #[returns(GetPositionsResponse)]
+    Positions {
+        /// The address to get positions for.
+        address: String,
+    },
 }
 
 /// Stores the reply data set in the response when instantiating an incentive contract.
@@ -149,4 +154,34 @@ pub struct GetFlowResponse {
 pub struct GetFlowsResponse {
     /// The current flows.
     pub flows: Vec<Flow>,
+}
+
+#[cw_serde]
+pub enum QueryPosition {
+    /// Represents a position that a user has deposited, but not yet begun to unbond.
+    OpenPosition {
+        /// The amount of LP tokens the user deposited into the position.
+        amount: Uint128,
+        /// The amount of time (in seconds) the user must wait after they begin the unbonding process.
+        unbonding_duration: u64,
+        /// The amount of weight the position has.
+        weight: Uint128,
+    },
+    /// Represents a position that a user has initiated the unbonding process on. The position may or may not be withdrawable.
+    ClosedPosition {
+        /// The amount of LP tokens the user deposited into the position, and will receive after they withdraw.
+        amount: Uint128,
+        /// The timestamp (in seconds) the user unbonded at.
+        unbonding_timestamp: u64,
+        /// The amount of weight the position has.
+        weight: Uint128,
+    },
+}
+
+#[cw_serde]
+pub struct GetPositionsResponse {
+    /// The current time of the blockchain.
+    pub timestamp: u64,
+    /// All the positions a user has.
+    pub positions: Vec<QueryPosition>,
 }

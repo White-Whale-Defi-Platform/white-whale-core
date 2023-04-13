@@ -1,8 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, Uint128};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale::pool_network::incentive::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
@@ -88,11 +86,14 @@ pub fn execute(
 
 /// Handles the queries to the incentive contract.
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
-        QueryMsg::Flow { flow_id } => to_binary(&queries::get_flow(deps, flow_id)?),
-        QueryMsg::Flows {} => to_binary(&queries::get_flows(deps)?),
+        QueryMsg::Config {} => Ok(to_binary(&queries::get_config(deps)?)?),
+        QueryMsg::Flow { flow_id } => Ok(to_binary(&queries::get_flow(deps, flow_id)?)?),
+        QueryMsg::Flows {} => Ok(to_binary(&queries::get_flows(deps)?)?),
+        QueryMsg::Positions { address } => {
+            Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
+        }
     }
 }
 
