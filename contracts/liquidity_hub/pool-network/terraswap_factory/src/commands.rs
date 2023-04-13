@@ -1,3 +1,5 @@
+use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
+
 use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
@@ -9,10 +11,15 @@ use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
 use white_whale::pool_network::querier::query_balance;
+use white_whale::pool_network::trio::{
+    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
+    PoolFee as TrioPoolFee, RampAmp,
+};
 
 use crate::error::ContractError;
 use crate::state::{
-    add_allow_native_token, pair_key, Config, TmpPairInfo, CONFIG, PAIRS, TMP_PAIR_INFO,
+    add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
+    TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
 };
 
 /// Updates the contract's [Config]
@@ -22,6 +29,7 @@ pub fn update_config(
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
+    trio_code_id: Option<u64>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
@@ -38,6 +46,10 @@ pub fn update_config(
 
     if let Some(pair_code_id) = pair_code_id {
         config.pair_code_id = pair_code_id;
+    }
+
+    if let Some(trio_code_id) = trio_code_id {
+        config.trio_code_id = trio_code_id;
     }
 
     if let Some(fee_collector_addr) = fee_collector_addr {
@@ -143,7 +155,7 @@ pub fn create_pair(
             ("pair_type", pair_type.get_label()),
         ])
         .add_submessage(SubMsg {
-            id: 1,
+            id: CREATE_PAIR_RESPONSE,
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
@@ -158,6 +170,135 @@ pub fn create_pair(
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     pair_type,
                     token_factory_lp,
+                })?,
+            }),
+            reply_on: ReplyOn::Success,
+        }))
+}
+
+/// Updates a trio config
+pub fn update_trio_config(
+    deps: DepsMut,
+    trio_addr: String,
+    owner: Option<String>,
+    fee_collector_addr: Option<String>,
+    pool_fees: Option<TrioPoolFee>,
+    feature_toggle: Option<TrioFeatureToggle>,
+    amp_factor: Option<RampAmp>,
+) -> Result<Response, ContractError> {
+    Ok(Response::new()
+        .add_message(wasm_execute(
+            deps.api.addr_validate(trio_addr.as_str())?.to_string(),
+            &pool_network::trio::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+                amp_factor,
+            },
+            vec![],
+        )?)
+        .add_attribute("action", "update_trio_config"))
+}
+
+/// Creates a Trio
+pub fn create_trio(
+    deps: DepsMut,
+    env: Env,
+    asset_infos: [AssetInfo; 3],
+    pool_fees: TrioPoolFee,
+    amp_factor: u64,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    if (asset_infos[0] == asset_infos[1])
+        || (asset_infos[0] == asset_infos[2])
+        || (asset_infos[1] == asset_infos[2])
+    {
+        return Err(ContractError::SameAsset {});
+    }
+
+    let asset_1_decimal =
+        match asset_infos[0].query_decimals(env.contract.address.clone(), &deps.querier) {
+            Ok(decimal) => decimal,
+            Err(_) => {
+                return Err(ContractError::InvalidAsset {
+                    asset: asset_infos[0].to_string(),
+                });
+            }
+        };
+
+    let asset_2_decimal =
+        match asset_infos[1].query_decimals(env.contract.address.clone(), &deps.querier) {
+            Ok(decimal) => decimal,
+            Err(_) => {
+                return Err(ContractError::InvalidAsset {
+                    asset: asset_infos[1].to_string(),
+                });
+            }
+        };
+    let asset_3_decimal =
+        match asset_infos[2].query_decimals(env.contract.address.clone(), &deps.querier) {
+            Ok(decimal) => decimal,
+            Err(_) => {
+                return Err(ContractError::InvalidAsset {
+                    asset: asset_infos[2].to_string(),
+                });
+            }
+        };
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.api)?,
+        asset_infos[1].to_raw(deps.api)?,
+        asset_infos[2].to_raw(deps.api)?,
+    ];
+
+    let asset_decimals = [asset_1_decimal, asset_2_decimal, asset_3_decimal];
+
+    let trio_key = trio_key(&raw_infos);
+    if let Ok(Some(_)) = TRIOS.may_load(deps.storage, &trio_key) {
+        return Err(ContractError::ExistingTrio {});
+    }
+
+    TMP_TRIO_INFO.save(
+        deps.storage,
+        &TmpTrioInfo {
+            trio_key,
+            asset_infos: raw_infos,
+            asset_decimals,
+        },
+    )?;
+
+    // prepare labels for creating the pair token with a meaningful name
+    let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
+    let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
+    let asset2_label = asset_infos[2].clone().get_label(&deps.as_ref())?;
+    let trio_label = format!("{}-{}-{} trio", asset0_label, asset1_label, asset2_label);
+
+    Ok(Response::new()
+        .add_attributes(vec![
+            ("action", "create_trio"),
+            (
+                "trio",
+                &format!("{}-{}-{}", asset0_label, asset1_label, asset2_label),
+            ),
+            ("trio_label", trio_label.as_str()),
+        ])
+        .add_submessage(SubMsg {
+            id: CREATE_TRIO_RESPONSE,
+            gas_limit: None,
+            msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                code_id: config.trio_code_id,
+                funds: vec![],
+                admin: Some(env.contract.address.to_string()),
+                label: trio_label,
+                msg: to_binary(&TrioInstantiateMsg {
+                    asset_infos,
+                    token_code_id: config.token_code_id,
+                    asset_decimals,
+                    pool_fees,
+                    fee_collector_addr: config.fee_collector_addr.to_string(),
+                    amp_factor,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -188,6 +329,35 @@ pub fn remove_pair(
         (
             "pair_contract_addr",
             deps.api.addr_humanize(&pair.contract_addr)?.as_ref(),
+        ),
+    ]))
+}
+
+pub fn remove_trio(
+    deps: DepsMut,
+    _env: Env,
+    asset_infos: [AssetInfo; 3],
+) -> Result<Response, ContractError> {
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.api)?,
+        asset_infos[1].to_raw(deps.api)?,
+        asset_infos[2].to_raw(deps.api)?,
+    ];
+
+    let trio_key = trio_key(&raw_infos);
+    let trio = TRIOS.may_load(deps.storage, &trio_key)?;
+
+    let Some(trio) = trio else {
+        return Err(ContractError::UnExistingTrio {});
+    };
+
+    TRIOS.remove(deps.storage, &trio_key);
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "remove_trio"),
+        (
+            "trio_contract_addr",
+            deps.api.addr_humanize(&trio.contract_addr)?.as_ref(),
         ),
     ]))
 }

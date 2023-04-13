@@ -28,7 +28,7 @@ use crate::tests::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_fee_distributor_code,
     store_pair_code, store_pool_factory_code, store_pool_router_code, store_token_code,
-    store_vault_code, store_vault_factory_code, store_whale_lair_code,
+    store_trio_code, store_vault_code, store_vault_factory_code, store_whale_lair_code,
 };
 use crate::ContractError;
 
@@ -43,6 +43,7 @@ fn collect_all_factories_cw20_fees_successfully() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
 
     let fee_collector_address = app
@@ -62,6 +63,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -507,6 +509,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
     let fee_collector_id = store_fee_collector_code(&mut app);
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
 
     let fee_collector_address = app
@@ -526,6 +529,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -937,6 +941,7 @@ fn collect_pools_native_fees_successfully() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
 
     let fee_collector_address = app
@@ -956,6 +961,7 @@ fn collect_pools_native_fees_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -1493,6 +1499,7 @@ fn collect_fees_with_pagination_successfully() {
     let fee_collector_id = store_fee_collector_code(&mut app);
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
 
     let fee_collector_address = app
@@ -1512,6 +1519,7 @@ fn collect_fees_with_pagination_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -2146,6 +2154,7 @@ fn aggregate_fees_for_vault() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_id = store_vault_code(&mut app);
     let dummy_flash_loan_id = store_dummy_flash_loan_contract(&mut app);
@@ -2194,6 +2203,7 @@ fn aggregate_fees_for_vault() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -2744,6 +2754,7 @@ fn collect_and_distribute_fees_successfully() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let vault_id = store_vault_code(&mut app);
@@ -2765,6 +2776,7 @@ fn collect_and_distribute_fees_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -3116,6 +3128,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let vault_id = store_vault_code(&mut app);
@@ -3137,6 +3150,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -3643,6 +3657,7 @@ fn create_epoch_unsuccessfully() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let vault_id = store_vault_code(&mut app);
@@ -3664,6 +3679,7 @@ fn create_epoch_unsuccessfully() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },
@@ -4087,6 +4103,7 @@ fn decrease_grace_period_fee_distributor() {
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
     let token_id = store_token_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let vault_id = store_vault_code(&mut app);
@@ -4108,6 +4125,7 @@ fn decrease_grace_period_fee_distributor() {
             creator.clone().sender,
             &pool_network::factory::InstantiateMsg {
                 pair_code_id: pair_id,
+                trio_code_id: trio_id,
                 token_code_id: token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
             },

@@ -2,10 +2,7 @@
 
 members = [
 	"packages/*",
-	"contracts/liquidity_hub/pool-network/terraswap_factory",
-	"contracts/liquidity_hub/pool-network/terraswap_pair",
-	"contracts/liquidity_hub/pool-network/terraswap_router",
-	"contracts/liquidity_hub/pool-network/terraswap_token",
+	"contracts/liquidity_hub/pool-network/*",
 	"contracts/liquidity_hub/fee_collector",
 	"contracts/liquidity_hub/fee_distributor",
 	"contracts/liquidity_hub/whale_lair",

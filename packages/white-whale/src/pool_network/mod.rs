@@ -5,6 +5,7 @@ pub mod pair;
 pub mod querier;
 pub mod router;
 pub mod token;
+pub mod trio;
 
 #[cfg(test)]
 mod testing;
