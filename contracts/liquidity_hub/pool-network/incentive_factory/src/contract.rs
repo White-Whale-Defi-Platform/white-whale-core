@@ -114,6 +114,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
         QueryMsg::Incentive { lp_address } => to_binary(&queries::get_incentive(deps, lp_address)?),
+        QueryMsg::Incentives { start_after, limit } => {
+            to_binary(&queries::get_incentives(deps, start_after, limit)?)
+        }
     }
 }
 

@@ -75,6 +75,16 @@ pub enum QueryMsg {
         /// The address of the LP token.
         lp_address: AssetInfo,
     },
+    #[returns(GetIncentivesResponse)]
+    Incentives {
+        /// An optional parameter specifying what incentive contract to start
+        /// searching after.
+        start_after: Option<AssetInfo>,
+        /// The amount of incentive contracts to return.
+        ///
+        /// If unspecified, will default to a value specified by the contract.
+        limit: Option<u32>,
+    },
 }
 
 #[cw_serde]
@@ -102,3 +112,12 @@ pub struct Config {
 
 pub type GetConfigResponse = Config;
 pub type GetIncentiveResponse = Option<Addr>;
+
+#[cw_serde]
+pub struct GetIncentivesContract {
+    /// The address of the incentive contract.
+    pub incentive_address: String,
+    /// A byte-array reference to the LP address.
+    pub lp_reference: Vec<u8>,
+}
+pub type GetIncentivesResponse = Vec<GetIncentivesContract>;
