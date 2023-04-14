@@ -10,3 +10,5 @@ mod weight;
 mod migrations;
 #[cfg(test)]
 mod testing;
+#[cfg(test)]
+mod tests;

@@ -67,3 +67,62 @@ pub fn close_position(
 
     Ok(Response::default().add_messages(claim_messages))
 }
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::Uint128;
+    use cw_multi_test::Executor;
+
+    use crate::tests::{
+        mock_app::mock_app,
+        mock_creator,
+        mock_instantiate::{app_mock_instantiate, AppInstantiateResponse},
+    };
+
+    #[test]
+    fn can_close_position() {
+        let mut app = mock_app();
+
+        let lp_balance = Uint128::new(100);
+
+        let AppInstantiateResponse {
+            incentive_addr,
+            lp_addr,
+        } = app_mock_instantiate(&mut app, lp_balance);
+
+        // create a new position
+        app.execute_contract(
+            mock_creator().sender,
+            lp_addr,
+            &cw20_base::msg::ExecuteMsg::IncreaseAllowance {
+                spender: incentive_addr.to_string(),
+                amount: lp_balance,
+                expires: None,
+            },
+            &[],
+        )
+        .unwrap();
+
+        app.execute_contract(
+            mock_creator().sender,
+            incentive_addr.clone(),
+            &white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+                amount: lp_balance,
+                unbonding_duration: 64,
+            },
+            &[],
+        )
+        .unwrap();
+
+        // now try to close the position
+        app.execute_contract(
+            mock_creator().sender,
+            incentive_addr,
+            &white_whale::pool_network::incentive::ExecuteMsg::ClosePosition {
+                unbonding_duration: 64,
+            },
+            &[],
+        )
+        .unwrap();
+    }
+}

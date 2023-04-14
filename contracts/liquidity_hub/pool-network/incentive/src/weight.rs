@@ -64,4 +64,11 @@ mod tests {
             .u128();
         assert_eq!(weight, 10_000 * 5);
     }
+
+    #[test]
+    #[should_panic]
+    fn does_error_outside_range() {
+        // range starts at 86400
+        calculate_weight(100, Uint128::new(64)).unwrap();
+    }
 }
