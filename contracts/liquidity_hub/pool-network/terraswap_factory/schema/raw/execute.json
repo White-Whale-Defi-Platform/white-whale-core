@@ -230,7 +230,8 @@
           "required": [
             "amp_factor",
             "asset_infos",
-            "pool_fees"
+            "pool_fees",
+            "token_factory_lp"
           ],
           "properties": {
             "amp_factor": {
@@ -249,6 +250,10 @@
             },
             "pool_fees": {
               "$ref": "#/definitions/PoolFee"
+            },
+            "token_factory_lp": {
+              "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+              "type": "boolean"
             }
           },
           "additionalProperties": false
