@@ -93,7 +93,7 @@
           "type": "string"
         },
         "liquidity_token": {
-          "type": "string"
+          "$ref": "#/definitions/AssetInfo"
         }
       },
       "additionalProperties": false

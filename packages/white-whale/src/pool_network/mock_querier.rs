@@ -408,7 +408,9 @@ impl WasmMockTrioQuerier {
                                 ],
                                 asset_decimals: [6u8, 6u8, 10u8],
                                 contract_addr: "trio0000".to_string(),
-                                liquidity_token: "liquidity0000".to_string(),
+                                liquidity_token: AssetInfo::Token {
+                                    contract_addr: "liquidity0000".to_string(),
+                                },
                             })))
                         }
                         Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => SystemResult::Ok(

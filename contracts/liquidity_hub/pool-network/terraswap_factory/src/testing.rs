@@ -18,11 +18,15 @@ use white_whale::pool_network::mock_querier::{
 use white_whale::pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::pool_network::trio::MigrateMsg as TrioMigrateMsg;
+use white_whale::pool_network::trio::{
+    InstantiateMsg as TrioInstantiateMsg, MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee,
+};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
-use crate::state::{pair_key, TmpPairInfo, PAIRS, TMP_PAIR_INFO};
+use crate::state::{
+    pair_key, trio_key, TmpPairInfo, TmpTrioInfo, PAIRS, TMP_PAIR_INFO, TMP_TRIO_INFO,
+};
 
 #[test]
 fn proper_initialization() {
@@ -1643,5 +1647,242 @@ fn update_pair_config() {
                 })
                 .unwrap(),
             })
+    );
+}
+
+#[test]
+fn create_trio_cw20_lp() {
+    let mut deps = mock_dependencies(&[
+        coin(10u128, "uusd".to_string()),
+        coin(10u128, "uusdc".to_string()),
+        coin(10u128, "udai".to_string()),
+    ]);
+    deps = init(deps);
+    deps.querier.with_pool_factory(
+        &[],
+        &[
+            ("uusd".to_string(), 6u8),
+            ("uusdc".to_string(), 8u8),
+            ("udai".to_string(), 10u8),
+        ],
+    );
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uusdc".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "udai".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreateTrio {
+        asset_infos: asset_infos.clone(),
+        pool_fees: TrioPoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        amp_factor: 1000,
+        token_factory_lp: false,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_trio"),
+            attr("trio", "uusd-uusdc-udai"),
+            attr("trio_label", "uusd-uusdc-udai trio"),
+        ]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 2,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&TrioInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                    asset_decimals: [6u8, 8u8, 10u8],
+                    pool_fees: TrioPoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
+                        },
+                    },
+                    fee_collector_addr: "collector".to_string(),
+                    amp_factor: 1000,
+                    token_factory_lp: false,
+                })
+                .unwrap(),
+                code_id: 456u64,
+                funds: vec![],
+                label: "uusd-uusdc-udai trio".to_string(),
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
+            }
+            .into(),
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[2].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_TRIO_INFO.load(&deps.storage).unwrap(),
+        TmpTrioInfo {
+            asset_infos: raw_infos.clone(),
+            trio_key: trio_key(&raw_infos),
+            asset_decimals: [6u8, 8u8, 10u8],
+        }
+    );
+}
+
+#[test]
+fn create_trio_with_native_tokens_token_factory_lp() {
+    let mut deps = mock_dependencies(&[
+        coin(10u128, "uusd".to_string()),
+        coin(
+            10u128,
+            "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+        ),
+        coin(
+            10u128,
+            "factory/migaloo1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqcjfh9y/token"
+                .to_string(),
+        ),
+    ]);
+    deps = init(deps);
+    deps.querier.with_pool_factory(
+        &[],
+        &[
+            ("uusd".to_string(), 6u8),
+            (
+                "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
+                6u8,
+            ),
+            (
+                "factory/migaloo1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqcjfh9y/token"
+                    .to_string(),
+                6u8,
+            ),
+        ],
+    );
+
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2"
+                .to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom:
+                "factory/migaloo1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqcjfh9y/token"
+                    .to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreateTrio {
+        asset_infos: asset_infos.clone(),
+        pool_fees: TrioPoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        amp_factor: 1000,
+        token_factory_lp: true,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_trio"),
+            attr("trio", "uusd-ibc/2739...5EB2-factory/mig...h9y/token"),
+            attr(
+                "trio_label",
+                "uusd-ibc/2739...5EB2-factory/mig...h9y/token trio"
+            ),
+        ]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 2,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&TrioInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                    asset_decimals: [6u8, 6u8, 6u8],
+                    pool_fees: TrioPoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
+                        },
+                    },
+                    fee_collector_addr: "collector".to_string(),
+                    amp_factor: 1000,
+                    token_factory_lp: true,
+                })
+                .unwrap(),
+                code_id: 456u64,
+                funds: vec![],
+                label: "uusd-ibc/2739...5EB2-factory/mig...h9y/token trio".to_string(),
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
+            }
+            .into(),
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[2].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_TRIO_INFO.load(&deps.storage).unwrap(),
+        TmpTrioInfo {
+            asset_infos: raw_infos.clone(),
+            trio_key: trio_key(&raw_infos),
+            asset_decimals: [6u8, 6u8, 6u8],
+        }
     );
 }

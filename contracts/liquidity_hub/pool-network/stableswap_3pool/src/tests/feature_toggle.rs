@@ -54,6 +54,7 @@ fn test_feature_toggle_swap_disabled() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -174,6 +175,7 @@ fn test_feature_toggle_withdrawals_disabled() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -260,6 +262,7 @@ fn test_feature_toggle_deposits_disabled() {
         },
         fee_collector_addr: "collector".to_string(),
         amp_factor: 1000,
+        token_factory_lp: false,
     };
 
     let env = mock_env();

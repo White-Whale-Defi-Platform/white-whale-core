@@ -45,6 +45,9 @@ pub enum ContractError {
 
     #[error("Failed to compute the LP share with the given deposit")]
     LiquidityShareComputation {},
+
+    #[error("Burn fee is not allowed when using factory tokens")]
+    TokenFactoryAssetBurnDisabled {},
 }
 
 impl From<semver::Error> for ContractError {

@@ -60,6 +60,9 @@ pub enum ExecuteMsg {
         asset_infos: [AssetInfo; 3],
         pool_fees: TrioPoolFee,
         amp_factor: u64,
+        /// If true, the pair will use the token factory to create the LP token. If false, it will
+        /// use a cw20 token instead.
+        token_factory_lp: bool,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
     AddNativeTokenDecimals { denom: String, decimals: u8 },

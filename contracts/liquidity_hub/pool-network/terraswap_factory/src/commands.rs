@@ -206,9 +206,11 @@ pub fn update_trio_config(
 pub fn create_trio(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 3],
     pool_fees: TrioPoolFee,
     amp_factor: u64,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -290,7 +292,7 @@ pub fn create_trio(
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.trio_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
                 msg: to_binary(&TrioInstantiateMsg {
@@ -300,6 +302,7 @@ pub fn create_trio(
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     amp_factor,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -349,7 +352,7 @@ pub fn remove_trio(
     let trio = TRIOS.may_load(deps.storage, &trio_key)?;
 
     let Some(trio) = trio else {
-        return Err(ContractError::UnExistingTrio {});
+        return Err(ContractError::NonExistantTrio {});
     };
 
     TRIOS.remove(deps.storage, &trio_key);

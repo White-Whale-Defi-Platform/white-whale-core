@@ -1,8 +1,7 @@
-use cosmwasm_std::{Deps, StdResult, Uint128};
+use cosmwasm_std::{Deps, StdResult};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, TrioInfo, TrioInfoRaw};
-use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::asset::{Asset, AssetInfoRaw, TrioInfo, TrioInfoRaw};
 use white_whale::pool_network::trio::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
@@ -10,7 +9,7 @@ use white_whale::pool_network::trio::{
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::helpers::get_protocol_fee_for_asset;
+use crate::helpers::{get_protocol_fee_for_asset, get_total_share};
 use crate::stableswap_math::curve::StableSwap;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, TRIO_INFO};
 
@@ -43,11 +42,14 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
         })
         .collect();
 
-    let total_share: Uint128 = query_token_info(
-        &deps.querier,
-        deps.api.addr_humanize(&trio_info.liquidity_token)?,
-    )?
-    .total_supply;
+    let liquidity_token = match trio_info.liquidity_token {
+        AssetInfoRaw::Token { contract_addr } => {
+            deps.api.addr_humanize(&contract_addr)?.to_string()
+        }
+        AssetInfoRaw::NativeToken { denom } => denom,
+    };
+
+    let total_share = get_total_share(&deps, liquidity_token)?;
 
     let resp = PoolResponse {
         assets,
