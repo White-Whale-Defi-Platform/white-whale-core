@@ -13,8 +13,8 @@ function display_usage() {
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
   echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
-  echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router)"
-  echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router)"
+  echo -e "  -d \tWhat to deploy (all|pool-network|vault-network|fee-collector|pool-factory|pool-router|vault-factory|vault-router|fee-distributor|whale-lair)"
+  echo -e "  -s \tStore artifacts on chain (all|fee-collector|pool-factory|pool|token|pool-router|vault|vault-factory|vault-router|fee-distributor|whale-lair)"
   echo -e "  -a \tArtifacts folder path (default: $project_root_path/artifacts)"
 }
 
@@ -253,6 +253,9 @@ function store() {
   fee-collector)
     store_artifact_on_chain $artifacts_path/fee_collector.wasm
     ;;
+  fee-distributor)
+    store_artifact_on_chain $artifacts_path/fee_distributor.wasm
+    ;;
   pool-factory)
     store_artifact_on_chain $artifacts_path/terraswap_factory.wasm
     ;;
@@ -273,6 +276,9 @@ function store() {
     ;;
   vault-router)
     store_artifact_on_chain $artifacts_path/vault_router.wasm
+    ;;
+  whale-lair)
+    store_artifact_on_chain $artifacts_path/whale_lair.wasm
     ;;
   *) # store all
     store_artifacts_on_chain

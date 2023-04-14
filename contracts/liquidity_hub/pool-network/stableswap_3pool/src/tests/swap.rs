@@ -2,6 +2,7 @@ use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::compute_swap;
 use crate::queries::query_fees;
+use crate::stableswap_math::curve::StableSwap;
 use crate::state::{
     ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
 };
@@ -11,13 +12,13 @@ use cosmwasm_std::{
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::trio::{
+use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::trio::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, QueryMsg, ReverseSimulationResponse,
     SimulationResponse,
 };
-use white_whale::fee::Fee;
 
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
@@ -43,7 +44,7 @@ fn test_compute_swap_with_huge_pool_variance() {
             unswapped_pool,
             Uint128::from(1u128),
             pool_fees,
-            1000
+            StableSwap::new(1000, 1000, 0, 0, 0)
         )
         .unwrap()
         .return_amount,
@@ -138,11 +139,8 @@ fn try_native_to_token() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -497,11 +495,8 @@ fn try_swap_invalid_token() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -612,11 +607,8 @@ fn try_token_to_native() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -635,11 +627,8 @@ fn try_token_to_native() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
             },
             belief_price: None,
             max_spread: None,
@@ -888,11 +877,8 @@ fn try_token_to_native() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
             },
             belief_price: None,
             max_spread: None,
@@ -995,11 +981,8 @@ fn test_swap_to_third_party() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,

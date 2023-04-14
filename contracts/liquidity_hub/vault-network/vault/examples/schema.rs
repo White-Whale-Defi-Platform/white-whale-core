@@ -1,5 +1,5 @@
 use cosmwasm_schema::write_api;
-use vault_network::vault::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::vault_network::vault::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

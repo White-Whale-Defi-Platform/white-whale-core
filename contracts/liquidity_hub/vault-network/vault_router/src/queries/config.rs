@@ -12,7 +12,7 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Addr;
-    use vault_network::vault_router::{Config, QueryMsg};
+    use white_whale::vault_network::vault_router::{Config, QueryMsg};
 
     use crate::tests::{mock_creator, mock_query};
 

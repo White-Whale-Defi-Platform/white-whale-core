@@ -7,11 +7,11 @@ use cosmwasm_std::{
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::denom::MsgMint;
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::denom::MsgMint;
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 #[test]
 fn provide_liquidity_cw20_lp() {
@@ -349,7 +349,7 @@ fn provide_liquidity_cw20_lp() {
     deps.querier.with_token_balances(&[
         (
             &"liquidity0000".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(500u128))],
         ),
         (
             &"asset0000".to_string(),
@@ -368,7 +368,7 @@ fn provide_liquidity_cw20_lp() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(98u128),
+                amount: Uint128::from(1000u128),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -383,7 +383,7 @@ fn provide_liquidity_cw20_lp() {
                 amount: Uint128::from(98u128),
             },
         ],
-        slippage_tolerance: Some(Decimal::percent(1)),
+        slippage_tolerance: Some(Decimal::from_ratio(1u32, 1000u32)),
         receiver: None,
     };
 
@@ -417,7 +417,7 @@ fn provide_liquidity_cw20_lp() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1000u128),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -432,7 +432,7 @@ fn provide_liquidity_cw20_lp() {
                 amount: Uint128::from(100u128),
             },
         ],
-        slippage_tolerance: Some(Decimal::percent(1)),
+        slippage_tolerance: Some(Decimal::from_ratio(1u32, 1000u32)),
         receiver: None,
     };
 
@@ -655,7 +655,7 @@ fn provide_liquidity_tokenfactory_lp() {
 
     let mint_initial_lp_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(terraswap::denom::Coin {
+        amount: Some(white_whale::pool_network::denom::Coin {
             denom: lp_denom.clone(),
             amount: (MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8)).to_string(),
         }),
@@ -663,7 +663,7 @@ fn provide_liquidity_tokenfactory_lp() {
 
     let mint_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(terraswap::denom::Coin {
+        amount: Some(white_whale::pool_network::denom::Coin {
             denom: lp_denom.clone(),
             amount: "6000".to_string(),
         }),

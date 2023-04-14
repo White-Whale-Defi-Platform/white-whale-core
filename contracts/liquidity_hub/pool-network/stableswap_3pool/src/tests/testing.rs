@@ -5,13 +5,13 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use terraswap::asset::{Asset, AssetInfo, TrioInfo};
-use terraswap::denom::MsgCreateDenom;
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use terraswap::trio::ExecuteMsg::UpdateConfig;
-use terraswap::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
@@ -371,6 +371,62 @@ fn test_initialization_invalid_fees() {
         Ok(_) => panic!("should return StdError::generic_err(Invalid fee)"),
         Err(ContractError::Std { .. }) => (),
         _ => panic!("should return StdError::generic_err(Invalid fee)"),
+    }
+}
+
+#[test]
+fn test_initialization_invalid_amp() {
+    let mut deps = mock_dependencies(&[]);
+
+    deps.querier.with_token_balances(&[
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
+        ),
+        (
+            &"asset0001".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(456u128))],
+        ),
+    ]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
+            },
+            AssetInfo::Token {
+                contract_addr: "asset0001".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8, 10u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        amp_factor: 0,
+        token_factory_lp: false,
+    };
+
+    // we can just call .unwrap() to assert this was a success
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg);
+    match res {
+        Ok(_) => panic!("should return ContractError::Std(Invalid amp)"),
+        Err(ContractError::Std { .. }) => (),
+        _ => panic!("should return ContractError::Std(Invalid amp)"),
     }
 }
 
@@ -806,6 +862,8 @@ fn test_assert_slippage_tolerance_invalid_ratio() {
                 amount: Default::default(),
             },
         ],
+        Default::default(),
+        Default::default(),
     );
 
     match res {

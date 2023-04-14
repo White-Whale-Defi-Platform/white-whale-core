@@ -5,20 +5,22 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
-use terraswap::asset::AssetInfo;
-use terraswap::pair::{
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{AssetInfo, PairType};
+use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
+use white_whale::pool_network::querier::query_balance;
+use white_whale::pool_network::trio::{
+    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
+    MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
+};
+use white_whale::pool_network::{pair, trio};
 
 use crate::error::ContractError;
 use crate::state::{
     add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
     TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
-};
-use terraswap::querier::query_balance;
-use terraswap::trio::{
-    FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    PoolFee as TrioPoolFee,
 };
 
 /// Updates the contract's [Config]
@@ -72,7 +74,7 @@ pub fn update_pair_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(pair_addr.as_str())?.to_string(),
-            &terraswap::pair::ExecuteMsg::UpdateConfig {
+            &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
@@ -87,8 +89,11 @@ pub fn update_pair_config(
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 2],
     pool_fees: PoolFee,
+    pair_type: PairType,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -134,26 +139,28 @@ pub fn create_pair(
             pair_key,
             asset_infos: raw_infos,
             asset_decimals,
+            pair_type: pair_type.clone(),
         },
     )?;
 
     // prepare labels for creating the pair token with a meaningful name
     let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
-    let pair_label = format!("{}-{} pair", asset0_label, asset1_label);
+    let pair_label = format!("{asset0_label}-{asset1_label} pair");
 
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
-            ("pair", &format!("{}-{}", asset0_label, asset1_label)),
+            ("pair", &format!("{asset0_label}-{asset1_label}")),
             ("pair_label", pair_label.as_str()),
+            ("pair_type", pair_type.get_label()),
         ])
         .add_submessage(SubMsg {
             id: CREATE_PAIR_RESPONSE,
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.pair_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
                 msg: to_binary(&PairInstantiateMsg {
@@ -162,6 +169,8 @@ pub fn create_pair(
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
+                    pair_type,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -176,12 +185,12 @@ pub fn update_trio_config(
     fee_collector_addr: Option<String>,
     pool_fees: Option<TrioPoolFee>,
     feature_toggle: Option<TrioFeatureToggle>,
-    amp_factor: Option<u64>,
+    amp_factor: Option<RampAmp>,
 ) -> Result<Response, ContractError> {
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(trio_addr.as_str())?.to_string(),
-            &terraswap::trio::ExecuteMsg::UpdateConfig {
+            &pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
@@ -267,14 +276,14 @@ pub fn create_trio(
     let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
     let asset2_label = asset_infos[2].clone().get_label(&deps.as_ref())?;
-    let trio_label = format!("{}-{}-{} trio", asset0_label, asset1_label, asset2_label);
+    let trio_label = format!("{asset0_label}-{asset1_label}-{asset2_label} trio");
 
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_trio"),
             (
                 "trio",
-                &format!("{}-{}-{}", asset0_label, asset1_label, asset2_label),
+                &format!("{asset0_label}-{asset1_label}-{asset2_label}"),
             ),
             ("trio_label", trio_label.as_str()),
         ])
@@ -378,19 +387,54 @@ pub fn add_native_token_decimals(
     ]))
 }
 
+/// Migrates a pair.
 pub fn execute_migrate_pair(
     deps: DepsMut,
     contract: String,
     code_id: Option<u64>,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let code_id = code_id.unwrap_or(config.pair_code_id);
+    let pair_code_id = code_id.unwrap_or(config.pair_code_id);
+
+    let pool_response: pair::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &pair::QueryMsg::Pool {})?;
+
+    if pool_response.assets.len() != 2 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
 
     Ok(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
-            new_code_id: code_id,
+            new_code_id: pair_code_id,
             msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
+}
+
+/// Migrates a trio.
+pub fn execute_migrate_trio(
+    deps: DepsMut,
+    contract: String,
+    code_id: Option<u64>,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let trio_code_id = code_id.unwrap_or(config.trio_code_id);
+
+    let trio_response: trio::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &trio::QueryMsg::Pool {})?;
+
+    if trio_response.assets.len() != 3 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: contract,
+            new_code_id: trio_code_id,
+            msg: to_binary(&TrioMigrateMsg {})?,
         })),
     )
 }

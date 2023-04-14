@@ -2,19 +2,17 @@
 name = "terraswap-token"
 version = "1.0.2"
 authors = ["Terraform Labs, PTE.", "DELIGHT LABS"]
-edition = "2021"
-homepage = "https://whitewhale.money"
-license = "MIT"
-repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
-publish = false
+edition.workspace = true
 description = "Backward compatible implementation of a CosmWasm-20 compliant token"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 documentation = "https://docs.cosmwasm.com"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all init/handle/query exports
 library = []
@@ -29,7 +27,7 @@ cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-terraswap = { path = "../../../../packages/terraswap" }
+white-whale.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.1.4"

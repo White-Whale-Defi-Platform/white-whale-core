@@ -1,0 +1,563 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExecuteMsg",
+  "oneOf": [
+    {
+      "description": "Updates contract's config, i.e. relevant code_ids, fee_collector address and owner",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
+          "type": "object",
+          "properties": {
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pair_code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "token_code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "trio_code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates a pair config",
+      "type": "object",
+      "required": [
+        "update_pair_config"
+      ],
+      "properties": {
+        "update_pair_config": {
+          "type": "object",
+          "required": [
+            "pair_addr"
+          ],
+          "properties": {
+            "feature_toggle": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/FeatureToggle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pair_addr": {
+              "type": "string"
+            },
+            "pool_fees": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/PoolFee"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates a trio config",
+      "type": "object",
+      "required": [
+        "update_trio_config"
+      ],
+      "properties": {
+        "update_trio_config": {
+          "type": "object",
+          "required": [
+            "trio_addr"
+          ],
+          "properties": {
+            "amp_factor": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/RampAmp"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "feature_toggle": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/FeatureToggle"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "fee_collector_addr": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "owner": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pool_fees": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/PoolFee"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "trio_addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Instantiates pair contract",
+      "type": "object",
+      "required": [
+        "create_pair"
+      ],
+      "properties": {
+        "create_pair": {
+          "type": "object",
+          "required": [
+            "asset_infos",
+            "pair_type",
+            "pool_fees",
+            "token_factory_lp"
+          ],
+          "properties": {
+            "asset_infos": {
+              "description": "Asset infos",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "pair_type": {
+              "description": "The variant of pair to create",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PairType"
+                }
+              ]
+            },
+            "pool_fees": {
+              "$ref": "#/definitions/PoolFee"
+            },
+            "token_factory_lp": {
+              "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Instantiates pair contract",
+      "type": "object",
+      "required": [
+        "create_trio"
+      ],
+      "properties": {
+        "create_trio": {
+          "type": "object",
+          "required": [
+            "amp_factor",
+            "asset_infos",
+            "pool_fees"
+          ],
+          "properties": {
+            "amp_factor": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "asset_infos": {
+              "description": "Asset infos",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "pool_fees": {
+              "$ref": "#/definitions/PoolFee"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
+      "type": "object",
+      "required": [
+        "add_native_token_decimals"
+      ],
+      "properties": {
+        "add_native_token_decimals": {
+          "type": "object",
+          "required": [
+            "decimals",
+            "denom"
+          ],
+          "properties": {
+            "decimals": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0.0
+            },
+            "denom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Migrates a pair contract to a given code_id",
+      "type": "object",
+      "required": [
+        "migrate_pair"
+      ],
+      "properties": {
+        "migrate_pair": {
+          "type": "object",
+          "required": [
+            "contract"
+          ],
+          "properties": {
+            "code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "contract": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Migrates a trio contract to a given code_id",
+      "type": "object",
+      "required": [
+        "migrate_trio"
+      ],
+      "properties": {
+        "migrate_trio": {
+          "type": "object",
+          "required": [
+            "contract"
+          ],
+          "properties": {
+            "code_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "contract": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Removes pair contract given asset infos",
+      "type": "object",
+      "required": [
+        "remove_pair"
+      ],
+      "properties": {
+        "remove_pair": {
+          "type": "object",
+          "required": [
+            "asset_infos"
+          ],
+          "properties": {
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Removes trio contract given asset infos",
+      "type": "object",
+      "required": [
+        "remove_trio"
+      ],
+      "properties": {
+        "remove_trio": {
+          "type": "object",
+          "required": [
+            "asset_infos"
+          ],
+          "properties": {
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "object",
+              "required": [
+                "contract_addr"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "FeatureToggle": {
+      "description": "Pool feature toggle",
+      "type": "object",
+      "required": [
+        "deposits_enabled",
+        "swaps_enabled",
+        "withdrawals_enabled"
+      ],
+      "properties": {
+        "deposits_enabled": {
+          "type": "boolean"
+        },
+        "swaps_enabled": {
+          "type": "boolean"
+        },
+        "withdrawals_enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Fee": {
+      "type": "object",
+      "required": [
+        "share"
+      ],
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/Decimal"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PairType": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "constant_product"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "stable_swap"
+          ],
+          "properties": {
+            "stable_swap": {
+              "type": "object",
+              "required": [
+                "amp"
+              ],
+              "properties": {
+                "amp": {
+                  "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PoolFee": {
+      "description": "Fees used by the pools on the pool network",
+      "type": "object",
+      "required": [
+        "burn_fee",
+        "protocol_fee",
+        "swap_fee"
+      ],
+      "properties": {
+        "burn_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "protocol_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "swap_fee": {
+          "$ref": "#/definitions/Fee"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RampAmp": {
+      "type": "object",
+      "required": [
+        "future_a",
+        "future_block"
+      ],
+      "properties": {
+        "future_a": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "future_block": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -2,26 +2,31 @@ use cosmwasm_std::testing::{
     mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage, MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_std::{
-    attr, coin, from_binary, to_binary, Api, CanonicalAddr, CosmosMsg, Decimal, OwnedDeps, Reply,
-    ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coin, from_binary, to_binary, Api, CanonicalAddr, Coin, CosmosMsg, Decimal, OwnedDeps,
+    Reply, ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
-use terraswap::asset::{AssetInfo, PairInfo, PairInfoRaw};
-use terraswap::factory::{
+use white_whale::fee::Fee;
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use white_whale::pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
-use terraswap::mock_querier::{mock_dependencies, WasmMockQuerier};
-use terraswap::pair::{
+use white_whale::pool_network::mock_querier::{
+    mock_dependencies, mock_dependencies_trio, WasmMockQuerier, WasmMockTrioQuerier,
+};
+use white_whale::pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::fee::Fee;
+use white_whale::pool_network::trio::{
+    InstantiateMsg as TrioInstantiateMsg, MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee,
+};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::state::{
     pair_key, trio_key, TmpPairInfo, TmpTrioInfo, PAIRS, TMP_PAIR_INFO, TMP_TRIO_INFO,
 };
-use terraswap::trio::{InstantiateMsg as TrioInstantiateMsg, PoolFee as TrioPoolFee};
 
 #[test]
 fn proper_initialization() {
@@ -171,12 +176,35 @@ fn init(
     deps
 }
 
+fn init_trio(
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier> {
+    let msg = InstantiateMsg {
+        pair_code_id: 321u64,
+        trio_code_id: 456u64,
+        token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+
+    deps.querier.with_token_balances(&[(
+        &"asset0001".to_string(),
+        &[(&"addr0000".to_string(), &Uint128::zero())],
+    )]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    deps
+}
+
 #[test]
 fn create_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -199,10 +227,18 @@ fn create_pair() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
-    let info = mock_info("addr0000", &[]);
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(
         res.attributes,
@@ -210,6 +246,7 @@ fn create_pair() {
             attr("action", "create_pair"),
             attr("pair", "uusd-mAAPL"),
             attr("pair_label", "uusd-mAAPL pair"),
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -235,6 +272,108 @@ fn create_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
+                })
+                .unwrap(),
+                code_id: 321u64,
+                funds: [Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::new(1u128),
+                }]
+                .to_vec(),
+                label: "uusd-mAAPL pair".to_string(),
+                admin: Some(MOCK_CONTRACT_ADDR.to_string()),
+            }
+            .into(),
+        },]
+    );
+
+    let raw_infos = [
+        asset_infos[0].to_raw(deps.as_ref().api).unwrap(),
+        asset_infos[1].to_raw(deps.as_ref().api).unwrap(),
+    ];
+
+    assert_eq!(
+        TMP_PAIR_INFO.load(&deps.storage).unwrap(),
+        TmpPairInfo {
+            asset_infos: raw_infos.clone(),
+            pair_key: pair_key(&raw_infos),
+            asset_decimals: [6u8, 8u8],
+            pair_type: PairType::ConstantProduct,
+        }
+    );
+}
+
+#[test]
+fn create_stableswap_pair() {
+    let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+    deps = init(deps);
+    deps.querier
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
+    let asset_infos = [
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+    ];
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: asset_infos.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        pair_type: PairType::StableSwap { amp: 100 },
+        token_factory_lp: false,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_pair"),
+            attr("pair", "uusd-mAAPL"),
+            attr("pair_label", "uusd-mAAPL pair"),
+            attr("pair_type", "StableSwap"),
+        ]
+    );
+    assert_eq!(
+        res.messages,
+        vec![SubMsg {
+            id: 1,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos: asset_infos.clone(),
+                    token_code_id: 123u64,
+                    asset_decimals: [6u8, 8u8],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(1u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
+                        },
+                    },
+                    fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::StableSwap { amp: 100 },
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -257,6 +396,7 @@ fn create_pair() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 8u8],
+            pair_type: PairType::StableSwap { amp: 100 },
         }
     );
 }
@@ -271,7 +411,7 @@ fn create_pair_native_token_and_ibc_token() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             ("uusd".to_string(), 6u8),
@@ -305,6 +445,8 @@ fn create_pair_native_token_and_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -316,6 +458,7 @@ fn create_pair_native_token_and_ibc_token() {
             attr("action", "create_pair"),
             attr("pair", "uusd-ibc/2739...5EB2"),
             attr("pair_label", "uusd-ibc/2739...5EB2 pair"),
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -341,6 +484,8 @@ fn create_pair_native_token_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -363,6 +508,7 @@ fn create_pair_native_token_and_ibc_token() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 6u8],
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -380,7 +526,7 @@ fn create_ibc_tokens_pair() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             (
@@ -418,6 +564,8 @@ fn create_ibc_tokens_pair() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -429,6 +577,7 @@ fn create_ibc_tokens_pair() {
             attr("action", "create_pair"),
             attr("pair", "ibc/4CD5...3D04-ibc/2739...5EB2"),
             attr("pair_label", "ibc/4CD5...3D04-ibc/2739...5EB2 pair"),
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -454,6 +603,8 @@ fn create_ibc_tokens_pair() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -476,6 +627,7 @@ fn create_ibc_tokens_pair() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 6u8],
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -494,7 +646,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             (
@@ -531,6 +683,8 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -542,6 +696,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             attr("action", "create_pair"),
             attr("pair", "peggy0x87a...1B5-ibc/2739...5EB2"),
             attr("pair_label", "peggy0x87a...1B5-ibc/2739...5EB2 pair"),
+            attr("pair_type", "ConstantProduct"),
         ]
     );
     assert_eq!(
@@ -567,6 +722,8 @@ fn create_pair_ethereum_asset_and_ibc_token() {
                         },
                     },
                     fee_collector_addr: "collector".to_string(),
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
                 })
                 .unwrap(),
                 code_id: 321u64,
@@ -589,6 +746,7 @@ fn create_pair_ethereum_asset_and_ibc_token() {
             asset_infos: raw_infos.clone(),
             pair_key: pair_key(&raw_infos),
             asset_decimals: [6u8, 6u8],
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -620,6 +778,8 @@ fn fail_to_create_same_pair() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -638,7 +798,7 @@ fn fail_to_create_existing_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -661,6 +821,8 @@ fn fail_to_create_existing_pair() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -678,10 +840,13 @@ fn fail_to_create_existing_pair() {
             &mut deps.storage,
             &pair_key,
             &PairInfoRaw {
-                liquidity_token: deps.api.addr_canonicalize("lp_token").unwrap(),
+                liquidity_token: AssetInfoRaw::Token {
+                    contract_addr: CanonicalAddr::from(vec![]),
+                },
                 contract_addr: deps.api.addr_canonicalize("pair_contract").unwrap(),
                 asset_infos: raw_infos,
                 asset_decimals: [6u8, 6u8],
+                pair_type: PairType::ConstantProduct,
             },
         )
         .unwrap();
@@ -722,6 +887,8 @@ fn fail_to_create_pair_with_inactive_denoms() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -740,7 +907,7 @@ fn fail_to_create_pair_with_invalid_denom() {
     let mut deps = mock_dependencies(&[coin(10u128, "valid".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("valid".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("valid".to_string(), 6u8)]);
 
     let asset_infos = [
         AssetInfo::NativeToken {
@@ -764,6 +931,8 @@ fn fail_to_create_pair_with_invalid_denom() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -798,6 +967,8 @@ fn fail_to_create_pair_with_invalid_denom() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -850,6 +1021,8 @@ fn fail_to_create_pair_with_unknown_token() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -902,6 +1075,8 @@ fn fail_to_create_pair_with_unknown_ibc_token() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -949,6 +1124,7 @@ fn reply_test() {
                 asset_infos: raw_infos,
                 pair_key,
                 asset_decimals: [8u8, 8u8],
+                pair_type: PairType::ConstantProduct,
             },
         )
         .unwrap();
@@ -961,8 +1137,8 @@ fn reply_test() {
         }),
     };
 
-    // register terraswap pair querier
-    deps.querier.with_terraswap_factory(
+    // register pool pair querier
+    deps.querier.with_pool_factory(
         &[(
             &"0000".to_string(),
             &PairInfo {
@@ -975,8 +1151,11 @@ fn reply_test() {
                     },
                 ],
                 contract_addr: "0000".to_string(),
-                liquidity_token: "liquidity0000".to_string(),
+                liquidity_token: AssetInfo::Token {
+                    contract_addr: "liquidity0000".to_string(),
+                },
                 asset_decimals: [8u8, 8u8],
+                pair_type: PairType::ConstantProduct,
             },
         )],
         &[],
@@ -997,10 +1176,13 @@ fn reply_test() {
     assert_eq!(
         pair_res,
         PairInfo {
-            liquidity_token: "liquidity0000".to_string(),
+            liquidity_token: AssetInfo::Token {
+                contract_addr: "liquidity0000".to_string(),
+            },
             contract_addr: "0000".to_string(),
             asset_infos,
             asset_decimals: [8u8, 8u8],
+            pair_type: PairType::ConstantProduct,
         }
     );
 }
@@ -1128,7 +1310,7 @@ fn execute_transactions_unauthorized() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1143,7 +1325,7 @@ fn execute_transactions_unauthorized() {
 
     // Try executing ExecuteMsg::CreatePair
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: asset_infos.clone(),
+        asset_infos,
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),
@@ -1155,6 +1337,8 @@ fn execute_transactions_unauthorized() {
                 share: Decimal::zero(),
             },
         },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg);
 
@@ -1219,6 +1403,28 @@ fn normal_migrate_pair() {
 }
 
 #[test]
+fn normal_migrate_trio() {
+    let mut deps = mock_dependencies_trio(&[coin(1u128, "uluna".to_string())]);
+    deps = init_trio(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
+        code_id: Some(123u64),
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 123u64,
+            msg: to_binary(&TrioMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
 fn normal_migrate_pair_with_none_code_id_will_config_code_id() {
     let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
     deps = init(deps);
@@ -1236,6 +1442,28 @@ fn normal_migrate_pair_with_none_code_id_will_config_code_id() {
             contract_addr: "contract0000".to_string(),
             new_code_id: 321u64,
             msg: to_binary(&PairMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
+fn normal_migrate_trio_with_none_code_id_will_config_code_id() {
+    let mut deps = mock_dependencies_trio(&[coin(1u128, "uluna".to_string())]);
+    deps = init_trio(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 456u64,
+            msg: to_binary(&TrioMigrateMsg {}).unwrap(),
         })),
     );
 }
@@ -1261,11 +1489,31 @@ fn failed_migrate_pair_with_no_admin() {
 }
 
 #[test]
+fn failed_migrate_trio_with_no_admin() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("noadmin", &[]);
+
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
+    match res {
+        Ok(_) => panic!("should return ContractError::Unauthorized"),
+        Err(ContractError::Unauthorized {}) => (),
+        _ => panic!("should return ContractError::Unauthorized"),
+    }
+}
+
+#[test]
 fn delete_pair() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1287,10 +1535,13 @@ fn delete_pair() {
             &mut deps.storage,
             &pair_key_vec,
             &PairInfoRaw {
-                liquidity_token: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                liquidity_token: AssetInfoRaw::Token {
+                    contract_addr: CanonicalAddr(cosmwasm_std::Binary(vec![])),
+                },
                 contract_addr: deps.api.addr_canonicalize("pair0000").unwrap(),
                 asset_infos: raw_infos,
                 asset_decimals: [6, 6],
+                pair_type: PairType::ConstantProduct,
             },
         )
         .unwrap();
@@ -1308,7 +1559,7 @@ fn delete_pair() {
         res.attributes,
         vec![
             attr("action", "remove_pair"),
-            attr("pair_contract_addr", "pair0000",),
+            attr("pair_contract_addr", "pair0000"),
         ]
     );
 
@@ -1322,7 +1573,7 @@ fn delete_pair_failed_if_not_found() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
     deps.querier
-        .with_terraswap_factory(&[], &[("uusd".to_string(), 6u8)]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
     let asset_infos = [
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
@@ -1374,11 +1625,11 @@ fn update_pair_config() {
     assert_eq!(
         res,
         Response::new()
-            .add_attributes(vec![attr("action", "update_pair_config"),])
+            .add_attributes(vec![attr("action", "update_pair_config")])
             .add_message(WasmMsg::Execute {
                 contract_addr: "pair_addr".to_string(),
                 funds: vec![],
-                msg: to_binary(&terraswap::pair::ExecuteMsg::UpdateConfig {
+                msg: to_binary(&pool_network::pair::ExecuteMsg::UpdateConfig {
                     owner: Some("new_owner".to_string()),
                     fee_collector_addr: None,
                     pool_fees: Some(PoolFee {
@@ -1394,7 +1645,7 @@ fn update_pair_config() {
                     }),
                     feature_toggle: None,
                 })
-                .unwrap()
+                .unwrap(),
             })
     );
 }
@@ -1407,7 +1658,7 @@ fn create_trio_cw20_lp() {
         coin(10u128, "udai".to_string()),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             ("uusd".to_string(), 6u8),
@@ -1522,7 +1773,7 @@ fn create_trio_with_native_tokens_token_factory_lp() {
         ),
     ]);
     deps = init(deps);
-    deps.querier.with_terraswap_factory(
+    deps.querier.with_pool_factory(
         &[],
         &[
             ("uusd".to_string(), 6u8),

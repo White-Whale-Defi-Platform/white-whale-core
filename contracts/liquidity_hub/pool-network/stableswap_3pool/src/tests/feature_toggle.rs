@@ -3,11 +3,13 @@ use crate::error::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{to_binary, Coin, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::trio::ExecuteMsg::UpdateConfig;
-use terraswap::trio::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale::pool_network::trio::{
+    Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee,
+};
 
 #[test]
 fn test_feature_toggle_swap_disabled() {
@@ -83,11 +85,8 @@ fn test_feature_toggle_swap_disabled() {
             },
             amount: offer_amount,
         },
-        ask_asset: Asset {
-            info: AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            amount: Default::default(),
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
         belief_price: None,
         max_spread: None,
@@ -113,11 +112,8 @@ fn test_feature_toggle_swap_disabled() {
         sender: "addr0000".to_string(),
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
-            ask_asset: Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: Default::default(),
+            ask_asset: AssetInfo::Token {
+                contract_addr: "asset0000".to_string(),
             },
             belief_price: None,
             max_spread: None,

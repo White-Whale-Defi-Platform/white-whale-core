@@ -85,6 +85,14 @@
                 ],
                 "format": "uint64",
                 "minimum": 0.0
+              },
+              "trio_code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
@@ -139,6 +147,70 @@
                     "type": "null"
                   }
                 ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Updates a trio config",
+        "type": "object",
+        "required": [
+          "update_trio_config"
+        ],
+        "properties": {
+          "update_trio_config": {
+            "type": "object",
+            "required": [
+              "trio_addr"
+            ],
+            "properties": {
+              "amp_factor": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/RampAmp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "feature_toggle": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FeatureToggle"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fee_collector_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pool_fees": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PoolFee"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "trio_addr": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -219,7 +291,9 @@
             "type": "object",
             "required": [
               "asset_infos",
-              "pool_fees"
+              "pair_type",
+              "pool_fees",
+              "token_factory_lp"
             ],
             "properties": {
               "asset_infos": {
@@ -230,6 +304,56 @@
                 },
                 "maxItems": 2,
                 "minItems": 2
+              },
+              "pair_type": {
+                "description": "The variant of pair to create",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/PairType"
+                  }
+                ]
+              },
+              "pool_fees": {
+                "$ref": "#/definitions/PoolFee"
+              },
+              "token_factory_lp": {
+                "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Instantiates pair contract",
+        "type": "object",
+        "required": [
+          "create_trio"
+        ],
+        "properties": {
+          "create_trio": {
+            "type": "object",
+            "required": [
+              "amp_factor",
+              "asset_infos",
+              "pool_fees"
+            ],
+            "properties": {
+              "amp_factor": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "asset_infos": {
+                "description": "Asset infos",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 3,
+                "minItems": 3
               },
               "pool_fees": {
                 "$ref": "#/definitions/PoolFee"
@@ -319,6 +443,36 @@
         ],
         "properties": {
           "migrate_pair": {
+            "type": "object",
+            "required": [
+              "contract"
+            ],
+            "properties": {
+              "code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "contract": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Migrates a trio contract to a given code_id",
+        "type": "object",
+        "required": [
+          "migrate_trio"
+        ],
+        "properties": {
+          "migrate_trio": {
             "type": "object",
             "required": [
               "contract"
@@ -481,6 +635,40 @@
         },
         "additionalProperties": false
       },
+      "PairType": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "constant_product"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "stable_swap"
+            ],
+            "properties": {
+              "stable_swap": {
+                "type": "object",
+                "required": [
+                  "amp"
+                ],
+                "properties": {
+                  "amp": {
+                    "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "PoolFee": {
         "description": "Fees used by the pools on the pool network",
         "type": "object",
@@ -498,6 +686,26 @@
           },
           "swap_fee": {
             "$ref": "#/definitions/Fee"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RampAmp": {
+        "type": "object",
+        "required": [
+          "future_a",
+          "future_block"
+        ],
+        "properties": {
+          "future_a": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "future_block": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
           }
         },
         "additionalProperties": false
@@ -788,7 +996,8 @@
         "asset_decimals",
         "asset_infos",
         "contract_addr",
-        "liquidity_token"
+        "liquidity_token",
+        "pair_type"
       ],
       "properties": {
         "asset_decimals": {
@@ -813,7 +1022,10 @@
           "type": "string"
         },
         "liquidity_token": {
-          "type": "string"
+          "$ref": "#/definitions/AssetInfo"
+        },
+        "pair_type": {
+          "$ref": "#/definitions/PairType"
         }
       },
       "additionalProperties": false,
@@ -856,6 +1068,40 @@
                   "properties": {
                     "denom": {
                       "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "PairType": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "constant_product"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "stable_swap"
+              ],
+              "properties": {
+                "stable_swap": {
+                  "type": "object",
+                  "required": [
+                    "amp"
+                  ],
+                  "properties": {
+                    "amp": {
+                      "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
                     }
                   },
                   "additionalProperties": false
@@ -937,7 +1183,8 @@
             "asset_decimals",
             "asset_infos",
             "contract_addr",
-            "liquidity_token"
+            "liquidity_token",
+            "pair_type"
           ],
           "properties": {
             "asset_decimals": {
@@ -957,6 +1204,232 @@
               },
               "maxItems": 2,
               "minItems": 2
+            },
+            "contract_addr": {
+              "type": "string"
+            },
+            "liquidity_token": {
+              "$ref": "#/definitions/AssetInfo"
+            },
+            "pair_type": {
+              "$ref": "#/definitions/PairType"
+            }
+          },
+          "additionalProperties": false
+        },
+        "PairType": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "constant_product"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "stable_swap"
+              ],
+              "properties": {
+                "stable_swap": {
+                  "type": "object",
+                  "required": [
+                    "amp"
+                  ],
+                  "properties": {
+                    "amp": {
+                      "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    },
+    "trio": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TrioInfo",
+      "type": "object",
+      "required": [
+        "asset_decimals",
+        "asset_infos",
+        "contract_addr",
+        "liquidity_token"
+      ],
+      "properties": {
+        "asset_decimals": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        "asset_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetInfo"
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        "contract_addr": {
+          "type": "string"
+        },
+        "liquidity_token": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    },
+    "trios": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TriosResponse",
+      "type": "object",
+      "required": [
+        "trios"
+      ],
+      "properties": {
+        "trios": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TrioInfo"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "TrioInfo": {
+          "type": "object",
+          "required": [
+            "asset_decimals",
+            "asset_infos",
+            "contract_addr",
+            "liquidity_token"
+          ],
+          "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
             },
             "contract_addr": {
               "type": "string"

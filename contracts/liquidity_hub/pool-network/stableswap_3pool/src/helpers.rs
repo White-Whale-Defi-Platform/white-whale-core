@@ -4,9 +4,9 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Decimal256, Deps, StdError, StdResult, Storage, Uint128, Uint256};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{is_factory_token, Asset, AssetInfo};
-use terraswap::querier::query_token_info;
-use terraswap::trio::PoolFee;
+use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo};
+use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::trio::PoolFee;
 
 use crate::error::ContractError;
 use crate::stableswap_math::curve::StableSwap;
@@ -17,10 +17,8 @@ pub fn compute_swap(
     unswapped_pool: Uint128,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-    amp_factor: u64,
+    invariant: StableSwap,
 ) -> StdResult<SwapComputation> {
-    let invariant = StableSwap::new(amp_factor, amp_factor, 0, 0, 0);
-
     let result = invariant
         .swap_to(offer_amount, offer_pool, ask_pool, unswapped_pool)
         .unwrap();
@@ -64,15 +62,13 @@ pub fn compute_offer_amount(
     unswapped_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
-    amp_factor: u64,
+    invariant: StableSwap,
 ) -> StdResult<OfferAmountComputation> {
     let fees = pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
     let one_minus_commission = Decimal::one() - fees;
     let inv_one_minus_commission = Decimal::one() / one_minus_commission;
 
     let before_commission_deduction: Uint128 = ask_amount * inv_one_minus_commission;
-
-    let invariant = StableSwap::new(amp_factor, amp_factor, 0, 0, 0);
 
     let offer_amount = invariant
         .reverse_sim(
@@ -168,6 +164,9 @@ pub fn assert_max_spread(
     if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
         let belief_price: Decimal256 = belief_price.into();
         let max_spread: Decimal256 = max_spread.into();
+        if max_spread > Decimal256::one() {
+            return Err(StdError::generic_err("max spread cannot bigger than 1").into());
+        }
 
         let expected_return = offer_amount * (Decimal256::one() / belief_price);
         let spread_amount = if expected_return > return_amount {
@@ -195,13 +194,14 @@ pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 3],
     pools: &[Asset; 3],
+    amount: Uint128,
+    pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
         if slippage_tolerance > Decimal256::one() {
             return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
         }
-
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
         let deposits: [Uint256; 3] = [deposits[0].into(), deposits[1].into(), deposits[2].into()];
         let pools: [Uint256; 3] = [
@@ -210,13 +210,15 @@ pub fn assert_slippage_tolerance(
             pools[2].amount.into(),
         ];
 
-        // Ensure each prices are not dropped as much as slippage tolerance rate
-        //TODO three way slippage tolerance?
-        if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
-            > Decimal256::from_ratio(pools[0], pools[1])
-            || Decimal256::from_ratio(deposits[1], deposits[0]) * one_minus_slippage_tolerance
-                > Decimal256::from_ratio(pools[1], pools[0])
-        {
+        let pools_total = pools[0].checked_add(pools[1])?.checked_add(pools[2])?;
+        let deposits_total = deposits[0]
+            .checked_add(deposits[1])?
+            .checked_add(deposits[2])?;
+
+        let pool_ratio = Decimal256::from_ratio(pools_total, pool_token_supply);
+        let deposit_ratio = Decimal256::from_ratio(deposits_total, amount);
+
+        if pool_ratio * one_minus_slippage_tolerance > deposit_ratio {
             return Err(ContractError::MaxSlippageAssertion {});
         }
     }
