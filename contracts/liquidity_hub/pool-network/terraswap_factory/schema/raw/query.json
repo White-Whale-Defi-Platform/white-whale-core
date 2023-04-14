@@ -1,0 +1,215 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Retrieves the configuration of the factory.",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the info for the pair with the given asset_infos.",
+      "type": "object",
+      "required": [
+        "pair"
+      ],
+      "properties": {
+        "pair": {
+          "type": "object",
+          "required": [
+            "asset_infos"
+          ],
+          "properties": {
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the pairs created by the factory. This query has pagination enabled, querying ten items by default if not specified otherwise. The max amount of items that can be queried at once is 30. `start_after` is the last asset_info of a page.",
+      "type": "object",
+      "required": [
+        "pairs"
+      ],
+      "properties": {
+        "pairs": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the info for the trio with the given asset_infos.",
+      "type": "object",
+      "required": [
+        "trio"
+      ],
+      "properties": {
+        "trio": {
+          "type": "object",
+          "required": [
+            "asset_infos"
+          ],
+          "properties": {
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the trios created by the factory. This query has pagination enabled, querying ten items by default if not specified otherwise. The max amount of items that can be queried at once is 30. `start_after` is the last asset_info of a page.",
+      "type": "object",
+      "required": [
+        "trios"
+      ],
+      "properties": {
+        "trios": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "start_after": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the decimals for the given native or ibc denom.",
+      "type": "object",
+      "required": [
+        "native_token_decimals"
+      ],
+      "properties": {
+        "native_token_decimals": {
+          "type": "object",
+          "required": [
+            "denom"
+          ],
+          "properties": {
+            "denom": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "object",
+              "required": [
+                "contract_addr"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

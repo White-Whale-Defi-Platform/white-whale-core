@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InstantiateMsg",
+  "type": "object",
+  "required": [
+    "asset_info",
+    "fee_collector_addr",
+    "owner",
+    "token_id",
+    "vault_fees"
+  ],
+  "properties": {
+    "asset_info": {
+      "description": "The asset info the vault should manage.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/AssetInfo"
+        }
+      ]
+    },
+    "fee_collector_addr": {
+      "description": "The address of the fee collector",
+      "type": "string"
+    },
+    "owner": {
+      "description": "The owner of the contract.",
+      "type": "string"
+    },
+    "token_id": {
+      "description": "The code ID of the liquidity token to instantiate",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "vault_fees": {
+      "description": "The fees used for the vault",
+      "allOf": [
+        {
+          "$ref": "#/definitions/VaultFee"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "AssetInfo": {
+      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "token"
+          ],
+          "properties": {
+            "token": {
+              "type": "object",
+              "required": [
+                "contract_addr"
+              ],
+              "properties": {
+                "contract_addr": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "native_token"
+          ],
+          "properties": {
+            "native_token": {
+              "type": "object",
+              "required": [
+                "denom"
+              ],
+              "properties": {
+                "denom": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Decimal": {
+      "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+      "type": "string"
+    },
+    "Fee": {
+      "type": "object",
+      "required": [
+        "share"
+      ],
+      "properties": {
+        "share": {
+          "$ref": "#/definitions/Decimal"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VaultFee": {
+      "description": "Fees used by the flashloan vaults on the liquidity hub",
+      "type": "object",
+      "required": [
+        "burn_fee",
+        "flash_loan_fee",
+        "protocol_fee"
+      ],
+      "properties": {
+        "burn_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "flash_loan_fee": {
+          "$ref": "#/definitions/Fee"
+        },
+        "protocol_fee": {
+          "$ref": "#/definitions/Fee"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

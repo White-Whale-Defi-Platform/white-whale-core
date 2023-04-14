@@ -39,6 +39,9 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Attempt to migrate a pool to a different type. Make sure you are using the write Migrate message, e.g. MigratePair or MigrateTrio for pairs and trios respectively.")]
+    MigratingWrongPool {},
 }
 
 impl From<semver::Error> for ContractError {

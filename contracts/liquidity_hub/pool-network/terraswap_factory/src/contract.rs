@@ -101,6 +101,9 @@ pub fn execute(
         ExecuteMsg::MigratePair { contract, code_id } => {
             commands::execute_migrate_pair(deps, contract, code_id)
         }
+        ExecuteMsg::MigrateTrio { contract, code_id } => {
+            commands::execute_migrate_trio(deps, contract, code_id)
+        }
         ExecuteMsg::UpdatePairConfig {
             pair_addr,
             owner,

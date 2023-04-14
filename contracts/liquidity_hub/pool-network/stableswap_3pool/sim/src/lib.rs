@@ -1,4 +1,5 @@
 //! Simulations of the StableSwap invariant compared to Curve's reference implementation.
+#![allow(deprecated)]
 
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;

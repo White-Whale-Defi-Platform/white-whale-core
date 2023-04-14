@@ -9,7 +9,8 @@
     "required": [
       "fee_collector_addr",
       "pair_code_id",
-      "token_code_id"
+      "token_code_id",
+      "trio_code_id"
     ],
     "properties": {
       "fee_collector_addr": {
@@ -22,6 +23,12 @@
         "minimum": 0.0
       },
       "token_code_id": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
+      "trio_code_id": {
+        "description": "trio code id used for 3 pool stable swap",
         "type": "integer",
         "format": "uint64",
         "minimum": 0.0
@@ -64,6 +71,14 @@
                 "minimum": 0.0
               },
               "token_code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "trio_code_id": {
                 "type": [
                   "integer",
                   "null"
@@ -132,6 +147,70 @@
         "additionalProperties": false
       },
       {
+        "description": "Updates a trio config",
+        "type": "object",
+        "required": [
+          "update_trio_config"
+        ],
+        "properties": {
+          "update_trio_config": {
+            "type": "object",
+            "required": [
+              "trio_addr"
+            ],
+            "properties": {
+              "amp_factor": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/RampAmp"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "feature_toggle": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FeatureToggle"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fee_collector_addr": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pool_fees": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PoolFee"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "trio_addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Instantiates pair contract",
         "type": "object",
         "required": [
@@ -170,6 +249,44 @@
               "token_factory_lp": {
                 "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
                 "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Instantiates pair contract",
+        "type": "object",
+        "required": [
+          "create_trio"
+        ],
+        "properties": {
+          "create_trio": {
+            "type": "object",
+            "required": [
+              "amp_factor",
+              "asset_infos",
+              "pool_fees"
+            ],
+            "properties": {
+              "amp_factor": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "asset_infos": {
+                "description": "Asset infos",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 3,
+                "minItems": 3
+              },
+              "pool_fees": {
+                "$ref": "#/definitions/PoolFee"
               }
             },
             "additionalProperties": false
@@ -236,6 +353,36 @@
         "additionalProperties": false
       },
       {
+        "description": "Migrates a trio contract to a given code_id",
+        "type": "object",
+        "required": [
+          "migrate_trio"
+        ],
+        "properties": {
+          "migrate_trio": {
+            "type": "object",
+            "required": [
+              "contract"
+            ],
+            "properties": {
+              "code_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "contract": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Removes pair contract given asset infos",
         "type": "object",
         "required": [
@@ -255,6 +402,33 @@
                 },
                 "maxItems": 2,
                 "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Removes trio contract given asset infos",
+        "type": "object",
+        "required": [
+          "remove_trio"
+        ],
+        "properties": {
+          "remove_trio": {
+            "type": "object",
+            "required": [
+              "asset_infos"
+            ],
+            "properties": {
+              "asset_infos": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 3,
+                "minItems": 3
               }
             },
             "additionalProperties": false
@@ -402,6 +576,26 @@
           }
         },
         "additionalProperties": false
+      },
+      "RampAmp": {
+        "type": "object",
+        "required": [
+          "future_a",
+          "future_block"
+        ],
+        "properties": {
+          "future_a": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "future_block": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        },
+        "additionalProperties": false
       }
     }
   },
@@ -478,6 +672,68 @@
                 },
                 "maxItems": 2,
                 "minItems": 2
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Retrieves the info for the trio with the given asset_infos.",
+        "type": "object",
+        "required": [
+          "trio"
+        ],
+        "properties": {
+          "trio": {
+            "type": "object",
+            "required": [
+              "asset_infos"
+            ],
+            "properties": {
+              "asset_infos": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 3,
+                "minItems": 3
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Retrieves the trios created by the factory. This query has pagination enabled, querying ten items by default if not specified otherwise. The max amount of items that can be queried at once is 30. `start_after` is the last asset_info of a page.",
+        "type": "object",
+        "required": [
+          "trios"
+        ],
+        "properties": {
+          "trios": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
+              "start_after": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/definitions/AssetInfo"
+                },
+                "maxItems": 3,
+                "minItems": 3
               }
             },
             "additionalProperties": false
@@ -575,7 +831,8 @@
         "fee_collector_addr",
         "owner",
         "pair_code_id",
-        "token_code_id"
+        "token_code_id",
+        "trio_code_id"
       ],
       "properties": {
         "fee_collector_addr": {
@@ -590,6 +847,11 @@
           "minimum": 0.0
         },
         "token_code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "trio_code_id": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
@@ -875,6 +1137,195 @@
               "additionalProperties": false
             }
           ]
+        }
+      }
+    },
+    "trio": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TrioInfo",
+      "type": "object",
+      "required": [
+        "asset_decimals",
+        "asset_infos",
+        "contract_addr",
+        "liquidity_token"
+      ],
+      "properties": {
+        "asset_decimals": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        "asset_infos": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetInfo"
+          },
+          "maxItems": 3,
+          "minItems": 3
+        },
+        "contract_addr": {
+          "type": "string"
+        },
+        "liquidity_token": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
+    },
+    "trios": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TriosResponse",
+      "type": "object",
+      "required": [
+        "trios"
+      ],
+      "properties": {
+        "trios": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TrioInfo"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "TrioInfo": {
+          "type": "object",
+          "required": [
+            "asset_decimals",
+            "asset_infos",
+            "contract_addr",
+            "liquidity_token"
+          ],
+          "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              },
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "asset_infos": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AssetInfo"
+              },
+              "maxItems": 3,
+              "minItems": 3
+            },
+            "contract_addr": {
+              "type": "string"
+            },
+            "liquidity_token": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       }
     }

@@ -12,10 +12,13 @@ use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairIn
 use white_whale::pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
-use white_whale::pool_network::mock_querier::{mock_dependencies, WasmMockQuerier};
+use white_whale::pool_network::mock_querier::{
+    mock_dependencies, mock_dependencies_trio, WasmMockQuerier, WasmMockTrioQuerier,
+};
 use white_whale::pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
+use white_whale::pool_network::trio::MigrateMsg as TrioMigrateMsg;
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
@@ -149,6 +152,29 @@ fn update_config() {
 fn init(
     mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
 ) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+    let msg = InstantiateMsg {
+        pair_code_id: 321u64,
+        trio_code_id: 456u64,
+        token_code_id: 123u64,
+        fee_collector_addr: "collector".to_string(),
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+
+    deps.querier.with_token_balances(&[(
+        &"asset0001".to_string(),
+        &[(&"addr0000".to_string(), &Uint128::zero())],
+    )]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    deps
+}
+
+fn init_trio(
+    mut deps: OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier>,
+) -> OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier> {
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
@@ -1373,6 +1399,28 @@ fn normal_migrate_pair() {
 }
 
 #[test]
+fn normal_migrate_trio() {
+    let mut deps = mock_dependencies_trio(&[coin(1u128, "uluna".to_string())]);
+    deps = init_trio(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
+        code_id: Some(123u64),
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 123u64,
+            msg: to_binary(&TrioMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
 fn normal_migrate_pair_with_none_code_id_will_config_code_id() {
     let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
     deps = init(deps);
@@ -1395,11 +1443,53 @@ fn normal_migrate_pair_with_none_code_id_will_config_code_id() {
 }
 
 #[test]
+fn normal_migrate_trio_with_none_code_id_will_config_code_id() {
+    let mut deps = mock_dependencies_trio(&[coin(1u128, "uluna".to_string())]);
+    deps = init_trio(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+
+    assert_eq!(
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap(),
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: "contract0000".to_string(),
+            new_code_id: 456u64,
+            msg: to_binary(&TrioMigrateMsg {}).unwrap(),
+        })),
+    );
+}
+
+#[test]
 fn failed_migrate_pair_with_no_admin() {
     let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
     deps = init(deps);
 
     let msg = ExecuteMsg::MigratePair {
+        code_id: None,
+        contract: "contract0000".to_string(),
+    };
+
+    let info = mock_info("noadmin", &[]);
+
+    let res = execute(deps.as_mut(), mock_env(), info, msg);
+    match res {
+        Ok(_) => panic!("should return ContractError::Unauthorized"),
+        Err(ContractError::Unauthorized {}) => (),
+        _ => panic!("should return ContractError::Unauthorized"),
+    }
+}
+
+#[test]
+fn failed_migrate_trio_with_no_admin() {
+    let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
+    deps = init(deps);
+
+    let msg = ExecuteMsg::MigrateTrio {
         code_id: None,
         contract: "contract0000".to_string(),
     };

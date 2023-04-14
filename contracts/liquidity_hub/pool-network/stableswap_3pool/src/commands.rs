@@ -562,14 +562,12 @@ pub fn update_config(
         //check new amp value and ramp time are valid
         if ramp.future_a < MIN_AMP {
             return Err(ContractError::Std(StdError::generic_err(format!(
-                "New amp must be over {}",
-                MIN_AMP
+                "New amp must be over {MIN_AMP}"
             ))));
         }
         if ramp.future_a > MAX_AMP {
             return Err(ContractError::Std(StdError::generic_err(format!(
-                "Initial amp must be under {}",
-                MAX_AMP
+                "Initial amp must be under {MAX_AMP}"
             ))));
         }
         if (ramp.future_a > current_amp) && (ramp.future_a > current_amp * MAX_AMP_CHANGE)
