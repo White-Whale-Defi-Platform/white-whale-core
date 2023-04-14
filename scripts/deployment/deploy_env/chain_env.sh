@@ -69,6 +69,18 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/stargaze.env)
     ;;
 
+  migaloo)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/migaloo.env)
+    ;;
+
+  migaloo-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/migaloo.env)
+    ;;
+
+  orai)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/orai.env)
+    ;;
+
   *)
     echo "Network $chain not defined"
     exit 1

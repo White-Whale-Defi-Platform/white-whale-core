@@ -142,7 +142,9 @@
             "type": "object",
             "required": [
               "asset_infos",
-              "pool_fees"
+              "pair_type",
+              "pool_fees",
+              "token_factory_lp"
             ],
             "properties": {
               "asset_infos": {
@@ -154,8 +156,20 @@
                 "maxItems": 2,
                 "minItems": 2
               },
+              "pair_type": {
+                "description": "The variant of pair to create",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/PairType"
+                  }
+                ]
+              },
               "pool_fees": {
                 "$ref": "#/definitions/PoolFee"
+              },
+              "token_factory_lp": {
+                "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -333,6 +347,40 @@
           }
         },
         "additionalProperties": false
+      },
+      "PairType": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "constant_product"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "stable_swap"
+            ],
+            "properties": {
+              "stable_swap": {
+                "type": "object",
+                "required": [
+                  "amp"
+                ],
+                "properties": {
+                  "amp": {
+                    "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       },
       "PoolFee": {
         "description": "Fees used by the pools on the pool network",
@@ -573,7 +621,8 @@
         "asset_decimals",
         "asset_infos",
         "contract_addr",
-        "liquidity_token"
+        "liquidity_token",
+        "pair_type"
       ],
       "properties": {
         "asset_decimals": {
@@ -598,7 +647,10 @@
           "type": "string"
         },
         "liquidity_token": {
-          "type": "string"
+          "$ref": "#/definitions/AssetInfo"
+        },
+        "pair_type": {
+          "$ref": "#/definitions/PairType"
         }
       },
       "additionalProperties": false,
@@ -641,6 +693,40 @@
                   "properties": {
                     "denom": {
                       "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "PairType": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "constant_product"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "stable_swap"
+              ],
+              "properties": {
+                "stable_swap": {
+                  "type": "object",
+                  "required": [
+                    "amp"
+                  ],
+                  "properties": {
+                    "amp": {
+                      "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
                     }
                   },
                   "additionalProperties": false
@@ -722,7 +808,8 @@
             "asset_decimals",
             "asset_infos",
             "contract_addr",
-            "liquidity_token"
+            "liquidity_token",
+            "pair_type"
           ],
           "properties": {
             "asset_decimals": {
@@ -747,10 +834,47 @@
               "type": "string"
             },
             "liquidity_token": {
-              "type": "string"
+              "$ref": "#/definitions/AssetInfo"
+            },
+            "pair_type": {
+              "$ref": "#/definitions/PairType"
             }
           },
           "additionalProperties": false
+        },
+        "PairType": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "constant_product"
+              ]
+            },
+            {
+              "type": "object",
+              "required": [
+                "stable_swap"
+              ],
+              "properties": {
+                "stable_swap": {
+                  "type": "object",
+                  "required": [
+                    "amp"
+                  ],
+                  "properties": {
+                    "amp": {
+                      "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       }
     }

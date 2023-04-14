@@ -9,9 +9,11 @@ use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
-use terraswap::asset::TrioInfoRaw;
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use terraswap::trio::{Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::asset::TrioInfoRaw;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::trio::{
+    Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -73,14 +75,12 @@ pub fn instantiate(
     //check initial amp is in range
     if msg.amp_factor < MIN_AMP {
         return Err(StdError::generic_err(format!(
-            "Initial amp must be over {}",
-            MIN_AMP
+            "Initial amp must be over {MIN_AMP}"
         )));
     }
     if msg.amp_factor > MAX_AMP {
         return Err(StdError::generic_err(format!(
-            "Initial amp must be under {}",
-            MAX_AMP
+            "Initial amp must be under {MAX_AMP}",
         )));
     }
     // Set owner and initial pool fees

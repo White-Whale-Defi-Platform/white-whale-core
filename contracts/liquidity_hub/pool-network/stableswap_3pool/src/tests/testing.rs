@@ -5,12 +5,12 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use terraswap::asset::{Asset, AssetInfo, TrioInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::token::InstantiateMsg as TokenInstantiateMsg;
-use terraswap::trio::ExecuteMsg::UpdateConfig;
-use terraswap::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;

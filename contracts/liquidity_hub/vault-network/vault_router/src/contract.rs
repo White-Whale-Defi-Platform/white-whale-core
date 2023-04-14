@@ -1,7 +1,9 @@
 use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
-use vault_network::vault_router::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::vault_network::vault_router::{
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use crate::err::{StdResult, VaultRouterError};
 use crate::execute::{complete_loan, flash_loan, next_loan, update_config};

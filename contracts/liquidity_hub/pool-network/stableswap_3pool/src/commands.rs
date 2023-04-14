@@ -5,9 +5,9 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::contract::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP, MIN_RAMP_BLOCKS};
-use terraswap::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::querier::query_token_info;
-use terraswap::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
+use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -562,14 +562,12 @@ pub fn update_config(
         //check new amp value and ramp time are valid
         if ramp.future_a < MIN_AMP {
             return Err(ContractError::Std(StdError::generic_err(format!(
-                "New amp must be over {}",
-                MIN_AMP
+                "New amp must be over {MIN_AMP}"
             ))));
         }
         if ramp.future_a > MAX_AMP {
             return Err(ContractError::Std(StdError::generic_err(format!(
-                "Initial amp must be under {}",
-                MAX_AMP
+                "Initial amp must be under {MAX_AMP}"
             ))));
         }
         if (ramp.future_a > current_amp) && (ramp.future_a > current_amp * MAX_AMP_CHANGE)

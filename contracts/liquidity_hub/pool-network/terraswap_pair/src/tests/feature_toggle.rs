@@ -3,11 +3,13 @@ use crate::error::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{to_binary, Coin, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
-use terraswap::asset::{Asset, AssetInfo};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::ExecuteMsg::UpdateConfig;
-use terraswap::pair::{Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee};
 use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
+use white_whale::pool_network::pair::{
+    Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee,
+};
 
 #[test]
 fn test_feature_toggle_swap_disabled() {
@@ -47,6 +49,8 @@ fn test_feature_toggle_swap_disabled() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -155,6 +159,8 @@ fn test_feature_toggle_withdrawals_disabled() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -172,13 +178,7 @@ fn test_feature_toggle_withdrawals_disabled() {
             swaps_enabled: true,
         }),
     };
-    execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    )
-    .unwrap();
+    execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -235,6 +235,8 @@ fn test_feature_toggle_deposits_disabled() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -252,13 +254,7 @@ fn test_feature_toggle_deposits_disabled() {
             swaps_enabled: true,
         }),
     };
-    execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    )
-    .unwrap();
+    execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     // provide liquidity should fail
     let msg = ExecuteMsg::ProvideLiquidity {

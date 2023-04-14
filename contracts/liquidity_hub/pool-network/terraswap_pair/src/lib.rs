@@ -6,6 +6,7 @@ pub mod state;
 
 mod error;
 mod helpers;
+mod math;
 mod queries;
 mod response;
 

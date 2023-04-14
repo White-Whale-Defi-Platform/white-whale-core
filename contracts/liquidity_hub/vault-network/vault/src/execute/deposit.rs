@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 
-use terraswap::{asset::AssetInfo, querier::query_token_info};
+use white_whale::pool_network::{asset::AssetInfo, querier::query_token_info};
 
 use crate::{
     error::VaultError,
@@ -127,8 +127,8 @@ mod test {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use terraswap::asset::AssetInfo;
-    use vault_network::vault::Config;
+    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale::vault_network::vault::Config;
 
     use crate::tests::mock_app::mock_app_with_balance;
     use crate::tests::mock_instantiate::app_mock_instantiate;
@@ -178,7 +178,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_info("creator", &coins(5_000, "uluna")),
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -241,7 +241,7 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_creator(),
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -281,7 +281,7 @@ mod test {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -326,7 +326,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -368,7 +368,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -406,7 +406,7 @@ mod test {
             deps.as_mut(),
             mock_env(),
             mock_creator(),
-            vault_network::vault::ExecuteMsg::Deposit {
+            white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -440,7 +440,7 @@ mod test {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &coins(10_000, "uluna"),
@@ -452,7 +452,7 @@ mod test {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &vault_network::vault::QueryMsg::Config {},
+                &white_whale::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -482,7 +482,7 @@ mod test {
         app.execute_contract(
             second_depositor.clone(),
             vault_addr.clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
             &coins(5_000, "uluna"),
@@ -505,8 +505,8 @@ mod test {
         // third depositor deposits 8,000 uluna
         app.execute_contract(
             third_depositor.clone(),
-            vault_addr.clone(),
-            &vault_network::vault::ExecuteMsg::Deposit {
+            vault_addr,
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(8_000),
             },
             &coins(8_000, "uluna"),

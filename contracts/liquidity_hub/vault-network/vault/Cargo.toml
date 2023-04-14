@@ -2,19 +2,19 @@
 name = "vault"
 version = "1.2.1"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
-edition = "2021"
-homepage = "https://whitewhale.money"
-license = "MIT"
-repository = "https://github.com/White-Whale-Defi-Platform/migaloo-core"
-publish = false
+edition.workspace = true
 description = "Contract to handle a single vault that controls an asset"
-documentation = "https://whitewhale.money"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["terraswap/injective"]
+injective = ["white-whale/injective"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
@@ -28,10 +28,8 @@ protobuf.workspace = true
 schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
-terraswap = { path = "../../../../packages/terraswap" }
 thiserror.workspace = true
-vault-network = { path = "../../../../packages/vault-network" }
-white-whale = { path = "../../../../packages/white-whale" }
+white-whale.workspace = true
 
 [dev-dependencies]
 cosmwasm-schema = "1.1.4"

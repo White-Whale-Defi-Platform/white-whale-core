@@ -1,8 +1,8 @@
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
 
-use terraswap::asset::{Asset, TrioInfoRaw};
-use terraswap::trio::Config;
+use white_whale::pool_network::asset::{Asset, TrioInfoRaw};
+use white_whale::pool_network::trio::Config;
 
 pub const TRIO_INFO: Item<TrioInfoRaw> = Item::new("trio_info");
 pub const CONFIG: Item<Config> = Item::new("config");

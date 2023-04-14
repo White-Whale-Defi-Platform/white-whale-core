@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use terraswap::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 fn main() {
     write_api! {

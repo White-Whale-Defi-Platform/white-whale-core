@@ -6,10 +6,11 @@ use crate::state::{Config, CONFIG};
 
 use crate::error::ContractError;
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::{Asset, AssetInfo, PairInfo};
-use terraswap::pair::ExecuteMsg as PairExecuteMsg;
-use terraswap::querier::{query_balance, query_pair_info, query_token_balance};
-use terraswap::router::SwapOperation;
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use white_whale::pool_network::pair::ExecuteMsg as PairExecuteMsg;
+use white_whale::pool_network::querier::{query_balance, query_pair_info, query_token_balance};
+use white_whale::pool_network::router::SwapOperation;
 
 /// Execute swap operation
 /// swap all offer asset to ask asset
@@ -92,7 +93,7 @@ pub fn asset_into_swap_msg(
             msg: to_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: to_binary(&terraswap::pair::Cw20HookMsg::Swap {
+                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread,
                     to,

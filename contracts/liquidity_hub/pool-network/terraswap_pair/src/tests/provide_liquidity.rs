@@ -1,18 +1,23 @@
-use crate::contract::{execute, instantiate, reply};
-use crate::error::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg,
+    coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use terraswap::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
-use terraswap::mock_querier::mock_dependencies;
-use terraswap::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
+
 use white_whale::fee::Fee;
+use white_whale::pool_network;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::denom::MsgMint;
+use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
+
+use crate::contract::{execute, instantiate, reply};
+use crate::error::ContractError;
+use crate::state::LP_SYMBOL;
 
 #[test]
-fn provide_liquidity() {
+fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
         amount: Uint128::from(2_000u128),
@@ -49,6 +54,8 @@ fn provide_liquidity() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -517,6 +524,8 @@ fn provide_liquidity_zero_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -615,6 +624,8 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
             },
         },
         fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
     };
 
     let env = mock_env();
@@ -645,7 +656,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
+                amount: (MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -673,4 +684,128 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         Err(ContractError::InvalidInitialLiquidityAmount { .. }) => {}
         _ => panic!("should return ContractError::InvalidInitialLiquidityAmount"),
     }
+}
+
+#[test]
+fn provide_liquidity_tokenfactory_lp() {
+    let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
+
+    let mut deps = mock_dependencies(&[
+        Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::from(2_000u128),
+        },
+        Coin {
+            denom: "uwhale".to_string(),
+            amount: Uint128::from(2_000u128),
+        },
+        Coin {
+            denom: lp_denom.clone(),
+            amount: Uint128::zero(),
+        },
+    ]);
+
+    deps.querier
+        .with_token_balances(&[(&"asset0000".to_string(), &[])]);
+
+    let msg = InstantiateMsg {
+        asset_infos: [
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+        ],
+        token_code_id: 10u64,
+        asset_decimals: [6u8, 8u8],
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        fee_collector_addr: "collector".to_string(),
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: true,
+    };
+
+    let env = mock_env();
+    let info = mock_info("addr0000", &[]);
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+    // successfully provide liquidity for the exist pool
+    let msg = ExecuteMsg::ProvideLiquidity {
+        assets: [
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::from(2_000u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                amount: Uint128::from(2_000u128),
+            },
+        ],
+        slippage_tolerance: None,
+        receiver: None,
+    };
+
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[
+            Coin {
+                denom: "uusd".to_string(),
+                amount: Uint128::from(2_000u128),
+            },
+            Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::from(2_000u128),
+            },
+        ],
+    );
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    assert_eq!(res.messages.len(), 3usize);
+
+    let mint_initial_lp_msg = res.messages.get(0).expect("no message").clone().msg;
+    let mint_msg = res.messages.get(1).expect("no message").clone().msg;
+    let bank_send_msg = res.messages.get(2).expect("no message").clone().msg;
+
+    let mint_initial_lp_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
+        sender: MOCK_CONTRACT_ADDR.to_string(),
+        amount: Some(pool_network::denom::Coin {
+            denom: lp_denom.clone(),
+            amount: MINIMUM_LIQUIDITY_AMOUNT.to_string(),
+        }),
+    });
+
+    let mint_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
+        sender: MOCK_CONTRACT_ADDR.to_string(),
+        amount: Some(pool_network::denom::Coin {
+            denom: lp_denom.clone(),
+            amount: "1000".to_string(),
+        }),
+    });
+
+    let bank_send_msg_expected = CosmosMsg::Bank(BankMsg::Send {
+        to_address: "addr0000".to_string(),
+        amount: vec![coin(1000u128, lp_denom.clone())],
+    });
+
+    assert_eq!(mint_initial_lp_msg, mint_initial_lp_msg_expected);
+
+    assert_eq!(mint_msg, mint_msg_expected);
+
+    assert_eq!(bank_send_msg, bank_send_msg_expected);
 }
