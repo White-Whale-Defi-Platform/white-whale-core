@@ -558,7 +558,7 @@ pub fn deduct_assets(assets: Vec<Asset>, to_deduct: Vec<Asset>) -> StdResult<Vec
 pub struct TrioInfo {
     pub asset_infos: [AssetInfo; 3],
     pub contract_addr: String,
-    pub liquidity_token: String,
+    pub liquidity_token: AssetInfo,
     pub asset_decimals: [u8; 3],
 }
 
@@ -566,14 +566,14 @@ pub struct TrioInfo {
 pub struct TrioInfoRaw {
     pub asset_infos: [AssetInfoRaw; 3],
     pub contract_addr: CanonicalAddr,
-    pub liquidity_token: CanonicalAddr,
+    pub liquidity_token: AssetInfoRaw,
     pub asset_decimals: [u8; 3],
 }
 
 impl TrioInfoRaw {
     pub fn to_normal(&self, api: &dyn Api) -> StdResult<TrioInfo> {
         Ok(TrioInfo {
-            liquidity_token: api.addr_humanize(&self.liquidity_token)?.to_string(),
+            liquidity_token: self.liquidity_token.to_normal(api)?,
             contract_addr: api.addr_humanize(&self.contract_addr)?.to_string(),
             asset_infos: [
                 self.asset_infos[0].to_normal(api)?,

@@ -13,8 +13,9 @@ use white_whale::pool_network::pair::{
 use white_whale::pool_network::querier::query_balance;
 use white_whale::pool_network::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
-    PoolFee as TrioPoolFee, RampAmp,
+    MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
+use white_whale::pool_network::{pair, trio};
 
 use crate::error::ContractError;
 use crate::state::{
@@ -205,9 +206,11 @@ pub fn update_trio_config(
 pub fn create_trio(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_infos: [AssetInfo; 3],
     pool_fees: TrioPoolFee,
     amp_factor: u64,
+    token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
@@ -273,14 +276,14 @@ pub fn create_trio(
     let asset0_label = asset_infos[0].clone().get_label(&deps.as_ref())?;
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
     let asset2_label = asset_infos[2].clone().get_label(&deps.as_ref())?;
-    let trio_label = format!("{}-{}-{} trio", asset0_label, asset1_label, asset2_label);
+    let trio_label = format!("{asset0_label}-{asset1_label}-{asset2_label} trio");
 
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_trio"),
             (
                 "trio",
-                &format!("{}-{}-{}", asset0_label, asset1_label, asset2_label),
+                &format!("{asset0_label}-{asset1_label}-{asset2_label}"),
             ),
             ("trio_label", trio_label.as_str()),
         ])
@@ -289,7 +292,7 @@ pub fn create_trio(
             gas_limit: None,
             msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
                 code_id: config.trio_code_id,
-                funds: vec![],
+                funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
                 msg: to_binary(&TrioInstantiateMsg {
@@ -299,6 +302,7 @@ pub fn create_trio(
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
                     amp_factor,
+                    token_factory_lp,
                 })?,
             }),
             reply_on: ReplyOn::Success,
@@ -348,7 +352,7 @@ pub fn remove_trio(
     let trio = TRIOS.may_load(deps.storage, &trio_key)?;
 
     let Some(trio) = trio else {
-        return Err(ContractError::UnExistingTrio {});
+        return Err(ContractError::NonExistantTrio {});
     };
 
     TRIOS.remove(deps.storage, &trio_key);
@@ -383,19 +387,54 @@ pub fn add_native_token_decimals(
     ]))
 }
 
+/// Migrates a pair.
 pub fn execute_migrate_pair(
     deps: DepsMut,
     contract: String,
     code_id: Option<u64>,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
-    let code_id = code_id.unwrap_or(config.pair_code_id);
+    let pair_code_id = code_id.unwrap_or(config.pair_code_id);
+
+    let pool_response: pair::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &pair::QueryMsg::Pool {})?;
+
+    if pool_response.assets.len() != 2 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
 
     Ok(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
-            new_code_id: code_id,
+            new_code_id: pair_code_id,
             msg: to_binary(&PairMigrateMsg {})?,
+        })),
+    )
+}
+
+/// Migrates a trio.
+pub fn execute_migrate_trio(
+    deps: DepsMut,
+    contract: String,
+    code_id: Option<u64>,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+    let trio_code_id = code_id.unwrap_or(config.trio_code_id);
+
+    let trio_response: trio::PoolResponse = deps
+        .querier
+        .query_wasm_smart(contract.as_str(), &trio::QueryMsg::Pool {})?;
+
+    if trio_response.assets.len() != 3 {
+        return Err(ContractError::MigratingWrongPool {});
+    }
+
+    Ok(
+        Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
+            contract_addr: contract,
+            new_code_id: trio_code_id,
+            msg: to_binary(&TrioMigrateMsg {})?,
         })),
     )
 }

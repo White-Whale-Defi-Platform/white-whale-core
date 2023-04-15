@@ -15,13 +15,18 @@ for component in "$projectRootPath"/contracts/liquidity_hub/*/; do
   echo "Generating schemas for $(basename $component)..."
   if [[ -f "$component/Cargo.toml" ]]; then
     # it was a single contract (such as fee_collector)
+    echo "generating for $component"
     cd $component && cargo schema --locked
   else
+    echo "folder $component"
+
     # it was a directory (such as pool_network), do it for all files inside the directory
     for contract in "$component"*/; do
+      echo "generating for $contract"
+
       cd $contract && cargo schema --locked
 
-      # Optionally fail on any unaccounted changes in json schema files 
+      # Optionally fail on any unaccounted changes in json schema files
       if [[ "$fail_diff_flag" == true ]]; then
         git diff  --exit-code -- '*.json'
       fi
