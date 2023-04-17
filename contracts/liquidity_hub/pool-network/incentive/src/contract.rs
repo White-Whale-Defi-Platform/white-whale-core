@@ -71,7 +71,8 @@ pub fn execute(
         ExecuteMsg::OpenPosition {
             amount,
             unbonding_duration,
-        } => execute::open_position(deps, env, info, amount, unbonding_duration),
+            receiver,
+        } => execute::open_position(deps, env, info, amount, unbonding_duration, receiver),
         ExecuteMsg::ExpandPosition {
             amount,
             unbonding_duration,

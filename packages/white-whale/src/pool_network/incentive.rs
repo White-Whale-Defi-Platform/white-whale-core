@@ -37,6 +37,10 @@ pub enum ExecuteMsg {
         amount: Uint128,
         /// The amount of time (in seconds) before the LP tokens can be redeemed.
         unbonding_duration: u64,
+        /// The receiver of the new position.
+        ///
+        /// This is mostly used for the frontend helper contract.
+        receiver: Option<String>,
     },
     ExpandPosition {
         /// The amount to add to the existing position.

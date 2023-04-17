@@ -13,6 +13,7 @@ pub fn open_position(
     info: MessageInfo,
     amount: Uint128,
     unbonding_duration: u64,
+    receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let lp_token = deps.api.addr_humanize(&config.lp_address)?;
@@ -35,11 +36,16 @@ pub fn open_position(
         });
     }
 
+    // if receiver was not specified, default to the sender of the message.
+    let receiver = receiver
+        .map(|r| deps.api.addr_validate(&r))
+        .unwrap_or_else(|| Ok(info.sender))?;
+
     // ensure that user gave us an allowance for the token amount
     let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
         lp_token.clone(),
         &cw20::Cw20QueryMsg::Allowance {
-            owner: info.sender.clone().into_string(),
+            owner: receiver.clone().into_string(),
             spender: env.contract.address.clone().into_string(),
         },
     )?;
@@ -55,7 +61,7 @@ pub fn open_position(
     let messages = vec![WasmMsg::Execute {
         contract_addr: lp_token.into_string(),
         msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
-            owner: info.sender.clone().into_string(),
+            owner: receiver.clone().into_string(),
             recipient: env.contract.address.into_string(),
             amount,
         })?,
@@ -64,7 +70,7 @@ pub fn open_position(
 
     // ensure an existing position with this unbonding time doesn't exist
     let existing_position = OPEN_POSITIONS
-        .may_load(deps.storage, info.sender.clone())?
+        .may_load(deps.storage, receiver.clone())?
         .unwrap_or_default()
         .into_iter()
         .find(|position| position.unbonding_duration == unbonding_duration);
@@ -75,7 +81,7 @@ pub fn open_position(
     // todo: claim??
 
     // create the new position
-    OPEN_POSITIONS.update::<_, StdError>(deps.storage, info.sender.clone(), |positions| {
+    OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.clone(), |positions| {
         let mut positions = positions.unwrap_or_default();
 
         positions.push(OpenPosition {
@@ -91,7 +97,7 @@ pub fn open_position(
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_add(weight)?)
     })?;
-    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender, |user_weight| {
+    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver, |user_weight| {
         Ok(user_weight.unwrap_or_default().checked_add(weight)?)
     })?;
 

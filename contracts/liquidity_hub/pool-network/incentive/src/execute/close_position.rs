@@ -109,6 +109,7 @@ mod tests {
             &white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
                 amount: lp_balance,
                 unbonding_duration: 64,
+                receiver: None,
             },
             &[],
         )

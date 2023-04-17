@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Array_of_GetIncentivesContract",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/GetIncentivesContract"
+  },
+  "definitions": {
+    "GetIncentivesContract": {
+      "type": "object",
+      "required": [
+        "incentive_address",
+        "lp_reference"
+      ],
+      "properties": {
+        "incentive_address": {
+          "description": "The address of the incentive contract.",
+          "type": "string"
+        },
+        "lp_reference": {
+          "description": "A byte-array reference to the LP address.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
