@@ -60,7 +60,7 @@ fn instantiate_unsuccessfully() {
         distribution_asset.clone(),
     );
 
-    let invalid_grace_period = Uint64::new(11);
+    let invalid_grace_period = Uint64::new(31);
     robot.instantiate_err(
         mock_info("owner", &[]),
         "bonding_contract_addr".to_string(),
@@ -128,7 +128,7 @@ fn test_update_config() {
         .update_config(
             mock_info("owner", &[]),
             Config {
-                grace_period: Uint64::new(11),
+                grace_period: Uint64::new(31),
                 ..new_config.clone()
             },
             |res| match res {
