@@ -15,7 +15,7 @@ use crate::ContractError;
 
 pub struct TestingRobot {
     owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
-    env: Env,
+    pub env: Env,
 }
 
 impl TestingRobot {
@@ -133,6 +133,23 @@ impl TestingRobot {
             grace_period: Some(config.grace_period),
             distribution_asset: Some(config.distribution_asset),
         };
+
+        response(execute(
+            self.owned_deps.as_mut(),
+            self.env.clone(),
+            info,
+            msg,
+        ));
+
+        self
+    }
+
+    pub(crate) fn create_new_epoch(
+        &mut self,
+        info: MessageInfo,
+        response: impl Fn(Result<Response, ContractError>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::NewEpoch {};
 
         response(execute(
             self.owned_deps.as_mut(),

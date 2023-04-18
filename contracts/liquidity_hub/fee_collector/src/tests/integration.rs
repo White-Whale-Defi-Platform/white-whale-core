@@ -3075,6 +3075,11 @@ fn collect_and_distribute_fees_successfully() {
     // it means no epoch has been created yet
     assert_eq!(fee_distributor_current_epoch_query.epoch, Epoch::default());
 
+    app.set_block(BlockInfo {
+        time: Timestamp::from_nanos(1678802400_000000000u64),
+        ..app.block_info()
+    });
+
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
         creator.sender.clone(),
@@ -3451,6 +3456,14 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
         }],
     )
     .unwrap();
+
+    // advance the time to one day after the first epoch was created
+    app.set_block(BlockInfo {
+        height: 123456789u64,
+        time: Timestamp::from_nanos(1678888800_000000000u64),
+        chain_id: "".to_string(),
+    });
+
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
         creator.sender.clone(),
@@ -4389,6 +4402,14 @@ fn decrease_grace_period_fee_distributor() {
         }],
     )
     .unwrap();
+
+    // advance the time to one day after the first epoch was created
+    app.set_block(BlockInfo {
+        height: 123456789u64,
+        time: Timestamp::from_nanos(1678888800_000000000u64),
+        chain_id: "".to_string(),
+    });
+
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
         creator.sender.clone(),

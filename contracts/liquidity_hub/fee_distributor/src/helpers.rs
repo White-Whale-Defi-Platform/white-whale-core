@@ -3,7 +3,7 @@ use cosmwasm_std::Uint64;
 use crate::ContractError;
 use white_whale::fee_distributor::EpochConfig;
 
-const MAX_GRACE_PERIOD: u64 = 10u64;
+const MAX_GRACE_PERIOD: u64 = 30u64;
 pub const DAY_IN_NANOSECONDS: u64 = 86_400_000_000_000u64;
 
 /// Validates the grace period.

@@ -31,7 +31,14 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
     let start_time =
         if current_epoch.id == Uint64::zero() && current_epoch.start_time == Timestamp::default() {
             // if it's the very first epoch, set the start time to the genesis epoch
-            Timestamp::from_nanos(config.epoch_config.genesis_epoch.u64())
+            let genesis_epoch_timestamp =
+                Timestamp::from_nanos(config.epoch_config.genesis_epoch.u64());
+
+            if env.block.time.nanos() < genesis_epoch_timestamp.nanos() {
+                return Err(ContractError::GenesisEpochNotStarted {});
+            }
+
+            genesis_epoch_timestamp
         } else {
             current_epoch
                 .start_time
@@ -66,6 +73,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         ]))
 }
 
+/// Claims pending rewards for the sender.
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
     let config = CONFIG.load(deps.storage)?;
