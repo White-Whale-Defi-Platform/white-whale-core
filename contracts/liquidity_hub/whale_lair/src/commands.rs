@@ -10,7 +10,7 @@ use white_whale::whale_lair::Bond;
 use crate::helpers::validate_growth_rate;
 use crate::queries::MAX_PAGE_LIMIT;
 use crate::state::{update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND};
-use crate::ContractError;
+use crate::{helpers, ContractError};
 
 /// Bonds the provided asset.
 pub(crate) fn bond(
@@ -20,41 +20,23 @@ pub(crate) fn bond(
     asset: Asset,
 ) -> Result<Response, ContractError> {
     // validate the denom sent is the whitelisted one for bonding
-    let bonding_assets = CONFIG.load(deps.storage)?.bonding_assets;
-
     let denom = match asset.info.clone() {
         AssetInfo::NativeToken { denom } => denom,
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
     };
 
-    if info.funds.len() != 1
-        || info.funds[0].amount != asset.amount
-        || info.funds[0].denom != denom
-        || !bonding_assets.iter().any(|asset_info| {
-            let d = match asset_info {
-                AssetInfo::NativeToken { denom } => denom.clone(),
-                AssetInfo::Token { .. } => String::new(), //shouldn't reach this point
-            };
-            d == denom
-        })
-    {
-        return Err(ContractError::AssetMismatch {});
-    }
+    helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
 
     let mut bond = BOND
         .key((&info.sender, &denom))
         .may_load(deps.storage)?
-        .unwrap_or_default();
-
-    if bond == Bond::default() {
-        bond = Bond {
+        .unwrap_or(Bond {
             asset: Asset {
                 amount: Uint128::zero(),
                 ..asset.clone()
             },
-            ..bond
-        };
-    }
+            ..Bond::default()
+        });
 
     // update local values
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
