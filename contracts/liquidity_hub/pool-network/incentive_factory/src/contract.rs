@@ -34,7 +34,7 @@ pub fn instantiate(
         return Err(ContractError::UnspecifiedConcurrentFlows);
     }
 
-    if msg.max_flow_start_time_buffer <= msg.min_unbonding_duration {
+    if msg.max_unbonding_duration < msg.min_unbonding_duration {
         return Err(ContractError::InvalidUnbondingRange {
             min: msg.min_unbonding_duration,
             max: msg.max_unbonding_duration,
