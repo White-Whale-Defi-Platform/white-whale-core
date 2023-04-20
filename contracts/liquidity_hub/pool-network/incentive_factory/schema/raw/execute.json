@@ -78,6 +78,24 @@
               ],
               "format": "uint64",
               "minimum": 0.0
+            },
+            "max_unbonding_duration": {
+              "description": "The maximum amount of seconds that a user must bond their tokens for.\n\nIf unspecified, the `max_unbonding_duration` will not change.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "min_unbonding_duration": {
+              "description": "The minimum amount of seconds that a user must bond their tokens for.\n\nIf unspecified, the `min_unbonding_duration` will not change.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
             }
           },
           "additionalProperties": false

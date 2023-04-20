@@ -3,6 +3,7 @@ use white_whale::pool_network::asset::Asset;
 
 use crate::{error::ContractError, state::CONFIG};
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_config(
     deps: DepsMut,
     fee_collector_addr: Option<String>,
@@ -10,6 +11,8 @@ pub fn update_config(
     max_concurrent_flows: Option<u64>,
     incentive_contract_id: Option<u64>,
     max_flow_start_time_buffer: Option<u64>,
+    min_unbonding_duration: Option<u64>,
+    max_unbonding_duration: Option<u64>,
 ) -> Result<Response, ContractError> {
     CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
         if let Some(fee_collector_addr) = fee_collector_addr {
@@ -36,6 +39,27 @@ pub fn update_config(
             config.max_flow_start_time_buffer = max_flow_start_time_buffer;
         }
 
+        if let Some(max_unbonding_duration) = max_unbonding_duration {
+            if max_unbonding_duration < config.min_unbonding_duration {
+                return Err(ContractError::InvalidUnbondingRange {
+                    min: config.min_unbonding_duration,
+                    max: max_unbonding_duration,
+                });
+            }
+
+            config.max_unbonding_duration = max_unbonding_duration;
+        }
+
+        if let Some(min_unbonding_duration) = min_unbonding_duration {
+            if config.max_unbonding_duration < min_unbonding_duration {
+                return Err(ContractError::InvalidUnbondingRange {
+                    min: min_unbonding_duration,
+                    max: config.max_unbonding_duration,
+                });
+            }
+
+            config.min_unbonding_duration = min_unbonding_duration;
+        }
         Ok(config)
     })?;
 

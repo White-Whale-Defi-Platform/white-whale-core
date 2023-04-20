@@ -52,6 +52,14 @@ pub enum ExecuteMsg {
         ///
         /// If unspecified, the flow start buffer will not change.
         max_flow_start_time_buffer: Option<u64>,
+        /// The minimum amount of seconds that a user must bond their tokens for.
+        ///
+        /// If unspecified, the `min_unbonding_duration` will not change.
+        min_unbonding_duration: Option<u64>,
+        /// The maximum amount of seconds that a user must bond their tokens for.
+        ///
+        /// If unspecified, the `max_unbonding_duration` will not change.
+        max_unbonding_duration: Option<u64>,
     },
     MigrateIncentive {
         /// The address of the incentive contract

@@ -82,6 +82,8 @@ pub fn execute(
             max_concurrent_flows,
             incentive_contract_id,
             max_flow_start_time_buffer,
+            min_unbonding_duration,
+            max_unbonding_duration,
         } => execute::update_config(
             deps,
             fee_collector_addr,
@@ -89,6 +91,8 @@ pub fn execute(
             max_concurrent_flows,
             incentive_contract_id,
             max_flow_start_time_buffer,
+            min_unbonding_duration,
+            max_unbonding_duration,
         ),
         ExecuteMsg::MigrateIncentive {
             incentive_address,
