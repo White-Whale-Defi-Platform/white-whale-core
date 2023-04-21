@@ -77,6 +77,11 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
         claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
     };
 
+    // filter out epochs that have no available fees. This would only happen in case the grace period
+    // gets increased after epochs have expired, which would lead to make them available for claiming
+    // again without any available rewards, as those were forwarded to newer epochs.
+    claimable_epochs.retain(|epoch| !epoch.available.is_empty());
+
     Ok(ClaimableEpochsResponse {
         epochs: claimable_epochs,
     })

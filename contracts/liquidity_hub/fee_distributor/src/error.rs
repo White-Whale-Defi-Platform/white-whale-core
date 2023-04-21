@@ -35,6 +35,9 @@ pub enum ContractError {
     #[error("The current epoch epoch has not expired yet.")]
     CurrentEpochNotExpired {},
 
+    #[error("The genesis epoch is set to start in the future, query the config for more details.")]
+    GenesisEpochNotStarted {},
+
     #[error("Couldn't read data for new epoch.")]
     CannotReadEpoch {},
 
