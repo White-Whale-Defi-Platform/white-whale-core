@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
-use white_whale::pool_network::asset::AssetInfo;
 
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::{Bond, Config, GlobalIndex};
 
 use crate::ContractError;
@@ -74,12 +74,16 @@ pub fn get_weight(
     growth_rate: Decimal,
     timestamp: Timestamp,
 ) -> StdResult<Uint128> {
-    let time_factor = Uint128::from(
-        current_timestamp
-            .seconds()
-            .checked_sub(timestamp.seconds())
-            .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
-    );
+    let time_factor = if timestamp == Timestamp::default() {
+        Uint128::zero()
+    } else {
+        Uint128::from(
+            current_timestamp
+                .seconds()
+                .checked_sub(timestamp.seconds())
+                .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
+        )
+    };
 
     Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
 }
