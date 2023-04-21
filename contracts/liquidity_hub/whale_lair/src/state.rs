@@ -75,13 +75,10 @@ pub fn get_weight(
     timestamp: Timestamp,
 ) -> StdResult<Uint128> {
     let time_factor = Uint128::from(
-        Timestamp::from_nanos(
-            current_timestamp
-                .seconds()
-                .checked_sub(timestamp.seconds())
-                .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
-        )
-        .nanos(),
+        current_timestamp
+            .seconds()
+            .checked_sub(timestamp.seconds())
+            .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
     );
 
     Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
