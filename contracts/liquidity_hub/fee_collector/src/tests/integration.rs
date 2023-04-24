@@ -4469,6 +4469,7 @@ fn decrease_grace_period_fee_distributor() {
                 fee_collector_addr: None,
                 grace_period: Some(Uint64::one()),
                 distribution_asset: None,
+                epoch_config: None,
             },
             &[],
         )

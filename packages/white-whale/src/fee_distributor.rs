@@ -89,6 +89,7 @@ pub enum ExecuteMsg {
         fee_collector_addr: Option<String>,
         grace_period: Option<Uint64>,
         distribution_asset: Option<AssetInfo>,
+        epoch_config: Option<EpochConfig>,
     },
 }
 
