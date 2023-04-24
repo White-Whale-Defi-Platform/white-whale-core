@@ -55,6 +55,7 @@ pub fn execute(
                 &TempState {
                     unbonding_duration,
                     receiver: deps.api.addr_canonicalize(&info.sender.into_string())?,
+                    pair_addr: deps.api.addr_canonicalize(&pair_address)?,
                 },
             )?;
 

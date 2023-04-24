@@ -39,4 +39,6 @@ pub struct TempState {
     pub unbonding_duration: u64,
     /// The person who is creating the position after depositing.
     pub receiver: CanonicalAddr,
+    /// The address that is being deposited to.
+    pub pair_addr: CanonicalAddr,
 }

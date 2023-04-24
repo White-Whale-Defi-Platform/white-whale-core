@@ -1,37 +1,31 @@
 use cosmwasm_std::{to_binary, DepsMut, Env, Reply, Response, WasmMsg};
-use protobuf::Message;
 use white_whale::pool_network::{asset::AssetInfo, frontend_helper::TempState};
 
 use crate::{
     error::ContractError,
-    response::MsgInstantiateContractResponse,
     state::{CONFIG, TEMP_STATE},
 };
 
 /// The reply ID for submessages after depositing to the pair contract.
 pub const DEPOSIT_PAIR_REPLY_ID: u64 = 1;
 
-/// Triggered after a new incentive contract is created.
+/// Triggered after a new deposit is made to a pair.
 ///
 /// Triggered to allow us to register the new contract in state.
 pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let res: MsgInstantiateContractResponse = Message::parse_from_bytes(
-        msg.result
-            .into_result()
-            .map_err(|e| ContractError::DepositCallback { reason: e })?
-            .data
-            .ok_or_else(|| ContractError::DepositCallback {
-                reason: String::from("Reply data was empty"),
-            })?
-            .as_slice(),
-    )
-    .map_err(|e| ContractError::DepositCallback {
-        reason: e.to_string(),
-    })?;
+    msg.result
+        .into_result()
+        .map_err(|e| ContractError::DepositCallback { reason: e })?;
 
-    let pair_address = deps.api.addr_validate(&res.address)?;
+    let TempState {
+        unbonding_duration,
+        receiver,
+        pair_addr,
+    } = TEMP_STATE.load(deps.storage)?;
+    let receiver = deps.api.addr_humanize(&receiver)?;
+    let pair_address = deps.api.addr_humanize(&pair_addr)?;
 
-    // now perform the incentive creation
+    // now perform the incentive position creation
     let config = CONFIG.load(deps.storage)?;
     let incentive_factory_address = deps.api.addr_humanize(&config.incentive_factory_addr)?;
 
@@ -93,12 +87,6 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
             balance.balance
         }
     };
-
-    let TempState {
-        unbonding_duration,
-        receiver,
-    } = TEMP_STATE.load(deps.storage)?;
-    let receiver = deps.api.addr_humanize(&receiver)?;
 
     Ok(Response::new()
         .add_messages(messages)

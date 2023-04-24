@@ -4,6 +4,8 @@ pub mod state;
 
 mod reply;
 
-mod response;
-
 mod migrations;
+mod testing;
+
+#[cfg(test)]
+mod tests;

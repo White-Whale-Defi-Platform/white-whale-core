@@ -588,13 +588,17 @@ version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test 0.16.4",
  "cw-storage-plus 0.15.1",
  "cw2 0.15.1",
  "cw20",
- "protobuf",
+ "cw20-base",
+ "incentive",
+ "incentive-factory",
  "schemars",
  "semver",
  "serde",
+ "terraswap-pair",
  "thiserror",
  "white-whale",
 ]

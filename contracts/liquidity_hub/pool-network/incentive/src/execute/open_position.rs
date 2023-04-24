@@ -39,13 +39,13 @@ pub fn open_position(
     // if receiver was not specified, default to the sender of the message.
     let receiver = receiver
         .map(|r| deps.api.addr_validate(&r))
-        .unwrap_or_else(|| Ok(info.sender))?;
+        .unwrap_or_else(|| Ok(info.sender.clone()))?;
 
     // ensure that user gave us an allowance for the token amount
     let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
         lp_token.clone(),
         &cw20::Cw20QueryMsg::Allowance {
-            owner: receiver.clone().into_string(),
+            owner: info.sender.clone().into_string(),
             spender: env.contract.address.clone().into_string(),
         },
     )?;
@@ -61,7 +61,7 @@ pub fn open_position(
     let messages = vec![WasmMsg::Execute {
         contract_addr: lp_token.into_string(),
         msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
-            owner: receiver.clone().into_string(),
+            owner: info.sender.into_string(),
             recipient: env.contract.address.into_string(),
             amount,
         })?,
