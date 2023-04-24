@@ -41,8 +41,8 @@ fn test_bond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(10_000u128),
-                global_weight: Uint128::new(10_000u128),
+                weight: Uint128::new(11_000u128),
+                global_weight: Uint128::new(11_000u128),
                 share: Decimal::one(),
                 timestamp: Timestamp::from_nanos(1571797429879305533u64),
             },
@@ -84,8 +84,8 @@ fn test_bond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(60_000u128),
-                global_weight: Uint128::new(60_000u128),
+                weight: Uint128::new(64_000u128),
+                global_weight: Uint128::new(64_000u128),
                 share: Decimal::one(),
                 timestamp: Timestamp::from_nanos(1571797449879305533u64),
             },
@@ -106,9 +106,9 @@ fn test_bond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(100_000u128),
-                global_weight: Uint128::new(150_000u128),
-                share: Decimal::from_ratio(100_000u128, 150_000u128),
+                weight: Uint128::new(104_000u128),
+                global_weight: Uint128::new(159_000u128),
+                share: Decimal::from_ratio(104_000u128, 159_000u128),
                 timestamp: Timestamp::from_nanos(1571797459879305533u64),
             },
         )
@@ -116,9 +116,9 @@ fn test_bond_successfully() {
             another_sender.to_string(),
             BondingWeightResponse {
                 address: another_sender.to_string(),
-                weight: Uint128::new(50_000u128),
-                global_weight: Uint128::new(150_000u128),
-                share: Decimal::from_ratio(50_000u128, 150_000u128),
+                weight: Uint128::new(55_000u128),
+                global_weight: Uint128::new(159_000u128),
+                share: Decimal::from_ratio(55_000u128, 159_000u128),
                 timestamp: Timestamp::from_nanos(1571797459879305533u64),
             },
         )

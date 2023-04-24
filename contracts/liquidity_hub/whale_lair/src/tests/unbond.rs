@@ -30,8 +30,8 @@ fn test_unbond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(10_000u128),
-                global_weight: Uint128::new(10_000u128),
+                weight: Uint128::new(11_000u128),
+                global_weight: Uint128::new(11_000u128),
                 share: Decimal::one(),
                 timestamp: Timestamp::from_nanos(1571797429879305533u64),
             },
@@ -88,8 +88,8 @@ fn test_unbond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(17_000u128),
-                global_weight: Uint128::new(17_000u128),
+                weight: Uint128::new(17_700u128),
+                global_weight: Uint128::new(17_700u128),
                 share: Decimal::one(),
                 timestamp: Timestamp::from_nanos(1571797439879305533u64),
             },
