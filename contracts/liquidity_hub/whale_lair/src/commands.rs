@@ -41,11 +41,16 @@ pub(crate) fn bond(
     // update local values
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
+
+    // include time term in the weight
+    bond.weight = bond.weight.checked_add(asset.amount)?;
     BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     global_index = update_global_weight(&mut deps, timestamp, global_index)?;
+    // include time term in the weight
+    global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
         asset::aggregate_assets(global_index.bonded_assets, vec![asset.clone()])?;
@@ -86,13 +91,18 @@ pub(crate) fn unbond(
             .weight
             .checked_mul(asset.amount.checked_div(unbond.asset.amount)?)?;
         unbond.asset.amount = unbond.asset.amount.checked_sub(asset.amount)?;
-        unbond.weight = unbond.weight.checked_sub(weight_slash)?;
+        // include time term in the weight
+        unbond.weight = unbond
+            .weight
+            .checked_sub(weight_slash)?
+            .checked_sub(asset.amount)?;
+
         BOND.save(deps.storage, (&info.sender, &denom), &unbond)?;
 
         // record the unbonding
         UNBOND.save(
             deps.storage,
-            (&info.sender, &denom, timestamp.seconds()),
+            (&info.sender, &denom, timestamp.nanos()),
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),
@@ -106,7 +116,11 @@ pub(crate) fn unbond(
         global_index.bonded_amount = global_index.bonded_amount.checked_sub(asset.amount)?;
         global_index.bonded_assets =
             asset::deduct_assets(global_index.bonded_assets, vec![asset.clone()])?;
-        global_index.weight = global_index.weight.checked_sub(weight_slash)?;
+        // include time term in the weight
+        global_index.weight = global_index
+            .weight
+            .checked_sub(weight_slash)?
+            .checked_sub(asset.amount)?;
         GLOBAL.save(deps.storage, &global_index)?;
 
         Ok(Response::default().add_attributes(vec![

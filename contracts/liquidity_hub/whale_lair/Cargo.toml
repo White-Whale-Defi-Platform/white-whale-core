@@ -1,6 +1,6 @@
 [package]
 name = "whale-lair"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "The Whale Lair is a bonding contract used to bond WHALE LSDs."
