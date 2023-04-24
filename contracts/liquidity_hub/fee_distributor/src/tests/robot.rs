@@ -132,6 +132,7 @@ impl TestingRobot {
             fee_collector_addr: Some(config.fee_collector_addr.to_string()),
             grace_period: Some(config.grace_period),
             distribution_asset: Some(config.distribution_asset),
+            epoch_config: Some(config.epoch_config),
         };
 
         response(execute(

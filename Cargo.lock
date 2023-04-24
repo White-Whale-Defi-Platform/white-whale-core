@@ -518,7 +518,7 @@ dependencies = [
 
 [[package]]
 name = "fee_distributor"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

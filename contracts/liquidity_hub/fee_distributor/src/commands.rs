@@ -3,13 +3,13 @@ use cosmwasm_std::{
     SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
 
-use white_whale::fee_distributor::Epoch;
+use white_whale::fee_distributor::{Epoch, EpochConfig};
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
-use crate::helpers::validate_grace_period;
+use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_current_epoch, query_claimable, CONFIG, EPOCHS, LAST_CLAIMED_EPOCH};
 use crate::ContractError;
 
@@ -167,6 +167,7 @@ pub fn update_config(
     fee_collector_addr: Option<String>,
     grace_period: Option<Uint64>,
     distribution_asset: Option<AssetInfo>,
+    epoch_config: Option<EpochConfig>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -188,6 +189,11 @@ pub fn update_config(
 
     if let Some(distribution_asset) = distribution_asset {
         config.distribution_asset = distribution_asset;
+    }
+
+    if let Some(epoch_config) = epoch_config {
+        validate_epoch_config(&epoch_config)?;
+        config.epoch_config = epoch_config;
     }
 
     if let Some(grace_period) = grace_period {
@@ -212,5 +218,6 @@ pub fn update_config(
         ("fee_collector_addr", config.fee_collector_addr.to_string()),
         ("grace_period", config.grace_period.to_string()),
         ("distribution_asset", config.distribution_asset.to_string()),
+        ("epoch_config", config.epoch_config.to_string()),
     ]))
 }
