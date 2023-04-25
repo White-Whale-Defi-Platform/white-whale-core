@@ -124,6 +124,7 @@ pub fn execute(
             fee_collector_addr,
             grace_period,
             distribution_asset,
+            epoch_config,
         } => commands::update_config(
             deps,
             info,
@@ -132,6 +133,7 @@ pub fn execute(
             fee_collector_addr,
             grace_period,
             distribution_asset,
+            epoch_config,
         ),
     }
 }
