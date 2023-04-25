@@ -88,8 +88,8 @@ fn test_unbond_successfully() {
             sender.to_string(),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(17_700u128),
-                global_weight: Uint128::new(17_700u128),
+                weight: Uint128::new(14_700u128),
+                global_weight: Uint128::new(14_700u128),
                 share: Decimal::one(),
                 timestamp: Timestamp::from_nanos(1571797439879305533u64),
             },
@@ -168,6 +168,49 @@ fn test_unbond_successfully() {
                 }
             )
         });
+}
+
+#[test]
+fn test_unbond_all_successfully() {
+    let mut robot = TestingRobot::default();
+    let sender = robot.sender.clone();
+
+    robot
+        .instantiate_default()
+        .bond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            &coins(1_000u128, "ampWHALE"),
+            |_res| {},
+        )
+        .fast_forward(10u64)
+        .assert_bonding_weight_response(
+            sender.to_string(),
+            BondingWeightResponse {
+                address: sender.to_string(),
+                weight: Uint128::new(11_000u128),
+                global_weight: Uint128::new(11_000u128),
+                share: Decimal::one(),
+                timestamp: Timestamp::from_nanos(1571797429879305533u64),
+            },
+        )
+        .unbond(
+            sender.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(1000u128),
+            },
+            |res| {
+                res.unwrap();
+            },
+        );
 }
 
 #[test]
