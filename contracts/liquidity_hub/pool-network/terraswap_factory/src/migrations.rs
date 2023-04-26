@@ -1,5 +1,6 @@
+use crate::state::Config;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{CanonicalAddr, DepsMut, Order, StdError, Uint128};
+use cosmwasm_std::{Addr, CanonicalAddr, DepsMut, Order, StdError, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -121,15 +122,33 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
         )?;
     }
 
-    // perform migration for PairInfo and PairInfoRaw
+    // migrate config
     #[cw_serde]
-    pub struct PairInfo {
-        pub asset_infos: [AssetInfo; 2],
-        pub contract_addr: String,
-        pub liquidity_token: String,
-        pub asset_decimals: [u8; 2],
+    pub struct OldConfig {
+        pub owner: CanonicalAddr,
+        pub fee_collector_addr: Addr,
+        pub pair_code_id: u64,
+        pub token_code_id: u64,
     }
 
+    const OLD_CONFIG: Item<OldConfig> = Item::new("config");
+    const NEW_CONFIG: Item<Config> = Item::new("config");
+
+    let old_config = OLD_CONFIG.may_load(deps.storage)?;
+    if let Some(old_config) = old_config {
+        NEW_CONFIG.save(
+            deps.storage,
+            &Config {
+                owner: old_config.owner,
+                fee_collector_addr: old_config.fee_collector_addr,
+                pair_code_id: old_config.pair_code_id,
+                trio_code_id: 0, //to be updated after migration
+                token_code_id: old_config.token_code_id,
+            },
+        )?;
+    }
+
+    // perform migration for PairInfoRaw
     #[cw_serde]
     pub struct OldPairInfoRaw {
         pub asset_infos: [AssetInfoRaw; 2],
@@ -137,11 +156,12 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
         pub liquidity_token: CanonicalAddr,
         pub asset_decimals: [u8; 2],
     }
+
     #[cw_serde]
     pub struct NewPairInfoRaw {
         pub asset_infos: [AssetInfoRaw; 2],
         pub contract_addr: CanonicalAddr,
-        pub liquidity_token: CanonicalAddr,
+        pub liquidity_token: AssetInfoRaw,
         pub asset_decimals: [u8; 2],
         pub pair_type: PairType,
     }
@@ -162,7 +182,9 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
                 &NewPairInfoRaw {
                     asset_infos: pair.asset_infos,
                     contract_addr: pair.contract_addr,
-                    liquidity_token: pair.liquidity_token,
+                    liquidity_token: AssetInfoRaw::Token {
+                        contract_addr: pair.liquidity_token,
+                    },
                     asset_decimals: pair.asset_decimals,
                     pair_type: PairType::ConstantProduct,
                 },
