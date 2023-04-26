@@ -1409,7 +1409,7 @@ checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
 
 [[package]]
 name = "vault"
-version = "1.2.1"
+version = "1.2.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1429,7 +1429,7 @@ dependencies = [
 
 [[package]]
 name = "vault_factory"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1450,7 +1450,7 @@ dependencies = [
 
 [[package]]
 name = "vault_router"
-version = "1.1.4"
+version = "1.1.5"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
