@@ -5,4 +5,4 @@ native, ibc or cw20 tokens. Once a pool is created it's stored in state, meaning
 which can be queried for reference. Note that the pool factory is permissioned, meaning the messages can only be executed
 by the owner of the contract.
 
-To find out more about the factory contract, refer to the [Migaloo docs](https://ww0-1.gitbook.io/migaloo-docs/liquidity-hub/overview-1/terraswap-factory).
+To find out more about the factory contract, refer to the [Migaloo docs](https://docs.migaloo.zone/).
