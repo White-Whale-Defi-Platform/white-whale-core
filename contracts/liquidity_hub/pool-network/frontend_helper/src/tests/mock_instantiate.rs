@@ -1,4 +1,5 @@
 use cosmwasm_std::{to_binary, Addr, Decimal, Uint128, WasmMsg};
+use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
 use white_whale::{
     fee::Fee,
@@ -6,6 +7,7 @@ use white_whale::{
 };
 
 use super::{
+    mock_creator,
     mock_info::mock_admin,
     store_code::{
         store_cw20_token_code, store_factory_code, store_frontend_helper, store_incentive,
@@ -16,14 +18,52 @@ use super::{
 pub struct AppInstantiateResponse {
     pub frontend_helper: Addr,
     pub pair_address: Addr,
+    /// The returned pool assets.
+    pub pool_assets: [AssetInfo; 2],
 }
 
-pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
+pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppInstantiateResponse {
     let factory_id = store_factory_code(app);
     let token_id = store_cw20_token_code(app);
     let incentive_id = store_incentive(app);
     let frontend_helper_id = store_frontend_helper(app);
     let pair_id = store_pair(app);
+
+    // if the pair needs a token, create it and give the token to the user
+    let pool_assets: [AssetInfo; 2] = pool_assets
+        .into_iter()
+        .map(|asset| match asset {
+            AssetInfo::Token { contract_addr } => {
+                let token_addr = app
+                    .instantiate_contract(
+                        token_id,
+                        mock_admin().sender,
+                        &cw20_base::msg::InstantiateMsg {
+                            decimals: 6,
+                            initial_balances: vec![Cw20Coin {
+                                address: mock_creator().sender.into_string(),
+                                amount: Uint128::new(10_000),
+                            }],
+                            name: contract_addr.clone(),
+                            symbol: "mockToken".to_string(),
+                            marketing: None,
+                            mint: None,
+                        },
+                        &[],
+                        contract_addr,
+                        None,
+                    )
+                    .unwrap();
+
+                AssetInfo::Token {
+                    contract_addr: token_addr.into_string(),
+                }
+            }
+            v => v,
+        })
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
 
     // create the pair
     let pair = app
@@ -47,14 +87,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
                 pair_type: PairType::ConstantProduct,
                 fee_collector_addr: "fee_collector_addr".to_string(),
                 asset_decimals: [6, 6],
-                asset_infos: [
-                    AssetInfo::NativeToken {
-                        denom: "token_a".to_string(),
-                    },
-                    AssetInfo::NativeToken {
-                        denom: "token_b".to_string(),
-                    },
-                ],
+                asset_infos: pool_assets.clone(),
             },
             &[],
             "mock pair",
@@ -80,7 +113,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
                 create_flow_fee: Asset {
                     amount: Uint128::zero(),
                     info: AssetInfo::NativeToken {
-                        denom: "ust".to_string(),
+                        denom: "uusd".to_string(),
                     },
                 },
                 fee_collector_addr: "fee_collector".to_string(),
@@ -128,5 +161,6 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
     AppInstantiateResponse {
         frontend_helper,
         pair_address: pair,
+        pool_assets,
     }
 }

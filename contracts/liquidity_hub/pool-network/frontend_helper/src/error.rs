@@ -1,6 +1,7 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
+use white_whale::pool_network::asset::Asset;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -24,6 +25,14 @@ pub enum ContractError {
 
     #[error("Unknown reply id {id}")]
     UnknownReplyId { id: u64 },
+
+    #[error(
+        "Token {asset} did not have allowance set to high enough, only had {current_allowance} provided"
+    )]
+    MissingToken {
+        asset: Asset,
+        current_allowance: Uint128,
+    },
 }
 
 impl From<semver::Error> for ContractError {

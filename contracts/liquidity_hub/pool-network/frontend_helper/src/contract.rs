@@ -2,6 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::frontend_helper::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, TempState,
 };
@@ -39,7 +40,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -54,29 +55,85 @@ pub fn execute(
                 deps.storage,
                 &TempState {
                     unbonding_duration,
-                    receiver: deps.api.addr_canonicalize(&info.sender.into_string())?,
+                    receiver: deps
+                        .api
+                        .addr_canonicalize(&info.sender.clone().into_string())?,
                     pair_addr: deps.api.addr_canonicalize(&pair_address)?,
                 },
             )?;
 
-            // send request to deposit
-            Ok(Response::new().add_submessage(SubMsg {
-                id: DEPOSIT_PAIR_REPLY_ID,
-                reply_on: cosmwasm_std::ReplyOn::Always,
-                gas_limit: None,
-                msg: WasmMsg::Execute {
-                    contract_addr: pair_address,
-                    msg: to_binary(
-                        &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
-                            assets,
-                            slippage_tolerance,
-                            receiver: None,
+            let transfer_token_msgs = assets
+                .iter()
+                .filter_map(|asset| match asset.info.clone() {
+                    AssetInfo::NativeToken { .. } => None,
+                    AssetInfo::Token { contract_addr } => Some((asset.amount, contract_addr)),
+                })
+                .map(|(token_amount, token_contract_addr)| {
+                    // ensure that we have this token amount
+                    let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
+                        token_contract_addr.clone(),
+                        &cw20::Cw20QueryMsg::Allowance {
+                            owner: info.sender.clone().into_string(),
+                            spender: env.contract.address.clone().into_string(),
                         },
-                    )?,
-                    funds: info.funds,
-                }
-                .into(),
-            }))
+                    )?;
+
+                    if allowance.allowance != token_amount {
+                        return Err(ContractError::MissingToken {
+                            asset: Asset {
+                                info: AssetInfo::Token {
+                                    contract_addr: token_contract_addr,
+                                },
+                                amount: token_amount,
+                            },
+                            current_allowance: allowance.allowance,
+                        });
+                    }
+
+                    Ok::<_, ContractError>(vec![
+                        WasmMsg::Execute {
+                            contract_addr: token_contract_addr.clone(),
+                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                owner: info.sender.clone().into_string(),
+                                recipient: env.contract.address.clone().into_string(),
+                                amount: token_amount,
+                            })?,
+                            funds: vec![],
+                        },
+                        WasmMsg::Execute {
+                            contract_addr: token_contract_addr,
+                            msg: to_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                                spender: pair_address.clone(),
+                                amount: token_amount,
+                                expires: None,
+                            })?,
+                            funds: vec![],
+                        },
+                    ])
+                })
+                .collect::<Result<Vec<_>, _>>()?
+                .concat();
+
+            // send request to deposit
+            Ok(Response::new()
+                .add_messages(transfer_token_msgs)
+                .add_submessage(SubMsg {
+                    id: DEPOSIT_PAIR_REPLY_ID,
+                    reply_on: cosmwasm_std::ReplyOn::Always,
+                    gas_limit: None,
+                    msg: WasmMsg::Execute {
+                        contract_addr: pair_address,
+                        msg: to_binary(
+                            &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                                assets,
+                                slippage_tolerance,
+                                receiver: None,
+                            },
+                        )?,
+                        funds: info.funds,
+                    }
+                    .into(),
+                }))
         }
     }
 }
