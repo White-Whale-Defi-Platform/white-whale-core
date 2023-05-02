@@ -102,7 +102,7 @@ mod tests {
                 creator.clone(),
                 &vec![OpenPosition {
                     amount,
-                    unbonding_duration: 100,
+                    unbonding_duration: 86_400,
                 }],
             )
             .unwrap();
@@ -112,8 +112,8 @@ mod tests {
             positions.positions,
             vec![QueryPosition::OpenPosition {
                 amount,
-                unbonding_duration: 100,
-                weight: calculate_weight(100, amount).unwrap()
+                unbonding_duration: 86_400,
+                weight: calculate_weight(86_400, amount).unwrap()
             }]
         );
     }

@@ -7,6 +7,13 @@ pub fn calculate_weight(
     unbonding_duration: u64,
     amount: Uint128,
 ) -> Result<Uint128, ContractError> {
+    if unbonding_duration < 86400 || unbonding_duration > 31556926 {
+        return Err(ContractError::InvalidWeight { unbonding_duration });
+    }
+
+    // store in Uint128 form for later
+    let amount_uint = amount;
+
     // interpolate between [(86400, 1), (15778463, 5), (31556926, 16)]
     // first we need to convert into decimals
     let unbonding_duration = Decimal256::from_atomics(unbonding_duration, 0).unwrap();
@@ -24,7 +31,7 @@ pub fn calculate_weight(
 
     let final_part = Decimal256::from_ratio(246210981355969u64, 246918738317569u64);
 
-    Ok(amount
+    let weight: Uint128 = amount
         .checked_mul(
             unbonding_duration_part
                 .checked_add(next_part)?
@@ -32,7 +39,12 @@ pub fn calculate_weight(
         )?
         .atomics()
         .checked_div(10u128.pow(18).into())?
-        .try_into()?)
+        .try_into()?;
+
+    // we must clamp it to max(computed_value, amount) as
+    // otherwise we might get a multiplier of 0.999999999999999998 when
+    // computing the final_part decimal value, which is over 200 digits.
+    Ok(weight.max(amount_uint))
 }
 
 #[cfg(test)]
@@ -54,7 +66,7 @@ mod tests {
         let weight = calculate_weight(31556926, Uint128::new(10_000))
             .unwrap()
             .u128();
-        assert_eq!(weight, 10_000 * 16);
+        assert_eq!(weight, 159_999);
     }
 
     #[test]
@@ -62,7 +74,15 @@ mod tests {
         let weight = calculate_weight(15778463, Uint128::new(10_000))
             .unwrap()
             .u128();
-        assert_eq!(weight, 10_000 * 5);
+        assert_eq!(weight, 49_999);
+    }
+
+    #[test]
+    fn precision_for_million() {
+        let weight = calculate_weight(86400, Uint128::new(1_000_000))
+            .unwrap()
+            .u128();
+        assert_eq!(weight, 1_000_000);
     }
 
     #[test]

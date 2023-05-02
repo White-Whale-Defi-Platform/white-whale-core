@@ -83,7 +83,7 @@ mod tests {
     fn can_close_position() {
         let mut app = mock_app();
 
-        let lp_balance = Uint128::new(100);
+        let lp_balance = Uint128::new(1000000);
 
         let AppInstantiateResponse {
             incentive_addr,
@@ -108,7 +108,7 @@ mod tests {
             incentive_addr.clone(),
             &white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
                 amount: lp_balance,
-                unbonding_duration: 64,
+                unbonding_duration: 86400,
                 receiver: None,
             },
             &[],
@@ -120,7 +120,7 @@ mod tests {
             mock_creator().sender,
             incentive_addr,
             &white_whale::pool_network::incentive::ExecuteMsg::ClosePosition {
-                unbonding_duration: 64,
+                unbonding_duration: 86400,
             },
             &[],
         )

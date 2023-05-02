@@ -102,6 +102,9 @@ pub enum ContractError {
 
     #[error("Attempt to expand position which has already completed its unbonding")]
     ExpiredPosition,
+
+    #[error("Attempt to compute the weight of a duration of {unbonding_duration} which is outside the allowed bounds")]
+    InvalidWeight { unbonding_duration: u64 },
 }
 
 impl From<semver::Error> for ContractError {
