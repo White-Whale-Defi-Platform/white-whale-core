@@ -20,14 +20,16 @@ function display_usage() {
 #{
 #  "protocol_fee": "0.001",
 #  "swap_fee": "0.002",
-#  "burn_fee": "0.002",
+#  "burn_fee": "0",
+#  "pair_type": "constant_product",
+#  "token_factory_lp": false,
 #  "assets": [
 #    {
-#      "asset": "uluna",
+#      "asset": "uwhale",
 #      "is_native": true
 #    },
 #    {
-#      "asset": "terra1rzvdn9cc7efpqsgl4ha7q5egqlpnyfdkgu0at6fkzmmj9dr7aspsy4a5js",
+#      "asset": "migaloo1j08452mqwadp8xu25kn9rleyl2gufgfjnv0sn8dvynynakkjukcq5u780c",
 #      "is_native": false
 #    }
 #  ]
@@ -45,6 +47,7 @@ function read_pool_config() {
   swap_fee=$(jq -r '.swap_fee' $pool)
   burn_fee=$(jq -r '.burn_fee' $pool)
   pair_type=$(jq -r '.pair_type' $pool)
+  token_factory_lp=$(jq -r '.token_factory_lp' $pool)
 }
 
 function check_decimals() {
@@ -115,7 +118,7 @@ function create_pool() {
     asset_infos+=($asset_info)
   done
 
-  create_pool_msg='{"create_pair":{"pair_type": "'$pair_type'", "asset_infos":['${asset_infos[0]}','${asset_infos[1]}'],"pool_fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"swap_fee":{"share":"'$swap_fee'"}}}}'
+  create_pool_msg='{"create_pair":{"token_factory_lp": '$token_factory_lp', "pair_type": "'$pair_type'", "asset_infos":['${asset_infos[0]}','${asset_infos[1]}'],"pool_fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"swap_fee":{"share":"'$swap_fee'"}}}}'
 
   echo "Creating pool with the following configuration:"
   echo "Asset 0: ${asset_infos[0]}"
