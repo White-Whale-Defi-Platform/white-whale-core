@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult,
+    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
+    StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
@@ -18,7 +18,8 @@ use crate::error::ContractError::MigrateInvalidVersion;
 use crate::helpers::has_factory_token;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, TRIO_INFO,
+    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
+    TRIO_INFO,
 };
 use crate::{commands, helpers, queries};
 

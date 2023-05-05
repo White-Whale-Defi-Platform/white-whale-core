@@ -1,20 +1,20 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg,
+    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
+    Uint128, WasmMsg,
 };
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::{coin, BankMsg};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::AssetInfo;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgBurn;
-#[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
-#[cfg(feature = "token_factory")]
-use cosmwasm_std::{coin, BankMsg};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 

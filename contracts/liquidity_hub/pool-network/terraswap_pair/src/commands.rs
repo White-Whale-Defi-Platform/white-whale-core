@@ -1,16 +1,16 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo,
-    OverflowError, Response, StdError, StdResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
+    Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-use white_whale::pool_network::asset::{
-    Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
-};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::coins;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::asset::is_factory_token;
+use white_whale::pool_network::asset::{
+    Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
+};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
@@ -302,7 +302,8 @@ pub fn withdraw_liquidity(
 
     let refund_assets = refund_assets?;
 
-    let burn_lp_token_msg = burn_lp_token_msg(liquidity_token, env.contract.address.to_string(), amount)?;
+    let burn_lp_token_msg =
+        burn_lp_token_msg(liquidity_token, env.contract.address.to_string(), amount)?;
 
     // update pool info
     Ok(Response::new()
@@ -604,7 +605,6 @@ fn mint_lp_token_msg(
         funds: vec![],
     })])
 }
-
 
 /// Creates the Burn LP message
 #[allow(unused_variables)]
