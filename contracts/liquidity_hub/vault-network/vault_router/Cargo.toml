@@ -16,6 +16,8 @@ publish.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
+injective = ["white-whale/injective"]
+token_factory = ["white-whale/token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]

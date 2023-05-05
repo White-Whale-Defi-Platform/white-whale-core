@@ -1,18 +1,18 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
-#[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
+use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;

@@ -2,15 +2,15 @@ use std::cmp::Ordering;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError,
-    StdResult, Storage, SubMsg, Uint128, Uint256, WasmMsg,
+    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
+    Storage, SubMsg, Uint128, Uint256, WasmMsg,
 };
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
+use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::querier::query_token_info;

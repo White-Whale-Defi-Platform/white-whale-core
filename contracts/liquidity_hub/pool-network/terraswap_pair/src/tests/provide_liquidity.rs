@@ -1,18 +1,18 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    to_binary,Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::{coin, BankMsg};
 use white_whale::fee::Fee;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network;
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgMint;
-#[cfg(feature = "token_factory")]
-use cosmwasm_std::{coin, BankMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 
