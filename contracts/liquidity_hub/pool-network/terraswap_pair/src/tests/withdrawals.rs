@@ -8,6 +8,7 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale::fee::Fee;
 use white_whale::pool_network;
 use white_whale::pool_network::asset::{AssetInfo, PairType};
+#[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgBurn;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
@@ -460,6 +461,7 @@ fn test_withdrawal_wrong_message() {
     }
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
 fn withdraw_xyk_liquidity_token_factory_lp() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
@@ -570,6 +572,8 @@ fn withdraw_xyk_liquidity_token_factory_lp() {
         &attr("refund_assets", "1000uusd, 1000uwhale")
     );
 }
+
+#[cfg(feature = "token_factory")]
 #[test]
 fn withdraw_xyk_liquidity_token_factory_lp_wrong_asset() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");

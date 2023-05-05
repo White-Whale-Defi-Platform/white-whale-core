@@ -7,6 +7,7 @@ use cw20::MinterResponse;
 
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+#[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
@@ -121,8 +122,9 @@ fn proper_initialization_cw20_lp() {
     );
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
-fn proper_initialization_tokenfactory_lp() {
+fn proper_initialization_token_factory_lp() {
     let mut deps = mock_dependencies(&[]);
 
     deps.querier.with_token_balances(&[(
@@ -179,6 +181,7 @@ fn proper_initialization_tokenfactory_lp() {
     );
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
 fn intialize_with_burnable_token_factory_asset() {
     let mut deps = mock_dependencies(&[]);
