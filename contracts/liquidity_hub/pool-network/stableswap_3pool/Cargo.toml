@@ -1,6 +1,6 @@
 [package]
 name = "stableswap-3pool"
-version = "1.2.0"
+version = "1.2.1"
 authors = [
 	"Adam J. Weigold <adam@irulast.com>",
 ]
@@ -24,6 +24,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 injective = ["white-whale/injective"]
+token_factory = ["white-whale/token_factory"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]

@@ -1,4 +1,5 @@
 pub mod asset;
+#[cfg(feature = "token_factory")]
 pub mod denom;
 pub mod factory;
 pub mod pair;

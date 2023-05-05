@@ -1,14 +1,18 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg,
+    to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::{coin, BankMsg};
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgMint;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
@@ -543,8 +547,9 @@ fn provide_liquidity_cw20_lp() {
     let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
-fn provide_liquidity_tokenfactory_lp() {
+fn provide_liquidity_token_factory_lp() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
 
     let mut deps = mock_dependencies(&[

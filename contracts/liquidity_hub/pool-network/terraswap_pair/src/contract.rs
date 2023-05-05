@@ -1,27 +1,23 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn,
-    Response, StdError, StdResult, SubMsg, WasmMsg,
+    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
-use cw20::MinterResponse;
 use protobuf::Message;
 use semver::Version;
 
 use white_whale::pool_network::asset::{AssetInfoRaw, PairInfoRaw};
-use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::pair::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::helpers::has_factory_token;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
-    LP_SYMBOL, PAIR_INFO,
+    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO,
 };
 use crate::{commands, helpers, queries};
 
@@ -29,7 +25,7 @@ use crate::{commands, helpers, queries};
 const CONTRACT_NAME: &str = "white_whale-pool";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const INSTANTIATE_REPLY_ID: u64 = 1;
+pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -73,7 +69,7 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
-        pool_fees: msg.pool_fees,
+        pool_fees: msg.pool_fees.clone(),
         feature_toggle: FeatureToggle {
             withdrawals_enabled: true,
             deposits_enabled: true,
@@ -102,48 +98,7 @@ pub fn instantiate(
         ALL_TIME_BURNED_FEES,
     )?;
 
-    if msg.token_factory_lp {
-        // create native LP token
-        PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
-            let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
-            pair_info.liquidity_token = AssetInfoRaw::NativeToken { denom };
-
-            Ok(pair_info)
-        })?;
-
-        Ok(
-            Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
-                MsgCreateDenom {
-                    sender: env.contract.address.to_string(),
-                    subdenom: LP_SYMBOL.to_string(),
-                },
-            )),
-        )
-    } else {
-        Ok(Response::new().add_submessage(SubMsg {
-            // Create LP token
-            msg: WasmMsg::Instantiate {
-                admin: None,
-                code_id: msg.token_code_id,
-                msg: to_binary(&TokenInstantiateMsg {
-                    name: lp_token_name.clone(),
-                    symbol: LP_SYMBOL.to_string(),
-                    decimals: 6,
-                    initial_balances: vec![],
-                    mint: Some(MinterResponse {
-                        minter: env.contract.address.to_string(),
-                        cap: None,
-                    }),
-                })?,
-                funds: vec![],
-                label: lp_token_name,
-            }
-            .into(),
-            gas_limit: None,
-            id: INSTANTIATE_REPLY_ID,
-            reply_on: ReplyOn::Success,
-        }))
-    }
+    helpers::create_lp_token(deps, &env, &msg, &lp_token_name)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

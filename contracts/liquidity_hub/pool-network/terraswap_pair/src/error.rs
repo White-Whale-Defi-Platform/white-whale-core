@@ -72,6 +72,9 @@ pub enum ContractError {
 
     #[error("Burn fee is not allowed when using factory tokens")]
     TokenFactoryAssetBurnDisabled {},
+
+    #[error("The token factory feature is not enabled")]
+    TokenFactoryNotEnabled {},
 }
 
 impl From<semver::Error> for ContractError {
