@@ -15,6 +15,9 @@ pub fn calculate_weight(
     let amount_uint = amount;
 
     // interpolate between [(86400, 1), (15778463, 5), (31556926, 16)]
+    // note that 31556926 is not exactly one 365-day year, but rather one Earth rotation year
+    // similarly, 15778463 is not 1/2 a 365-day year, but rather 1/2 a one Earth rotation year
+
     // first we need to convert into decimals
     let unbonding_duration = Decimal256::from_atomics(unbonding_duration, 0).unwrap();
     let amount = Decimal256::from_atomics(amount, 0).unwrap();
