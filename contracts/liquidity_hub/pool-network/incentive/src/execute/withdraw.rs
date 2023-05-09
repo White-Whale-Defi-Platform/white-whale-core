@@ -41,7 +41,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
         GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
             Ok(global_weight.checked_sub(weight_to_remove)?)
         })?;
-        ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender, |user_weight| {
+        ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
             Ok(user_weight
                 .unwrap_or_default()
                 .checked_sub(weight_to_remove)?)
@@ -53,7 +53,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
         return Ok(Response::new().add_message(WasmMsg::Execute {
             contract_addr: deps.api.addr_humanize(&config.lp_address)?.into_string(),
             msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                recipient: env.contract.address.into_string(),
+                recipient: info.sender.into_string(),
                 amount: return_token_count,
             })?,
             funds: vec![],
