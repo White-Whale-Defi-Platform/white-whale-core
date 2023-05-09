@@ -161,12 +161,14 @@ impl TestingRobot {
         owner: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
+        fee_distributor_addr: Option<String>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
             owner,
             unbonding_period,
             growth_rate,
+            fee_distributor_addr,
         };
 
         response(

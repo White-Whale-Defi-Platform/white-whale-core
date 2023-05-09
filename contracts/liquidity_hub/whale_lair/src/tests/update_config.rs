@@ -24,6 +24,7 @@ fn test_update_config_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked(""),
         })
         .update_config(
             owner.clone(),
@@ -33,6 +34,7 @@ fn test_update_config_successfully() {
                 Uint128::new(1u128),
                 Uint128::new(2u128),
             )),
+            Some("fee_distributor".to_string()),
             |_res| {},
         )
         .assert_config(Config {
@@ -47,12 +49,14 @@ fn test_update_config_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked("fee_distributor"),
         })
         .update_config(
             owner,
             Some("new_owner".to_string()),
             None,
             Some(Decimal::one()),
+            None,
             |_res| {},
         )
         .assert_config(Config {
@@ -67,6 +71,7 @@ fn test_update_config_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked("fee_distributor"),
         });
 }
 
@@ -88,6 +93,7 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked(""),
         })
         .update_config(
             Addr::unchecked("unauthorized"),
@@ -97,6 +103,7 @@ fn test_update_config_unsuccessfully() {
                 Uint128::new(1u128),
                 Uint128::new(2u128),
             )),
+            None,
             |_res| {
                 //println!("{:?}", res.unwrap_err().root_cause());
                 // assert_eq!(
@@ -117,6 +124,7 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked(""),
         })
         .update_config(
             Addr::unchecked("owner"),
@@ -126,6 +134,7 @@ fn test_update_config_unsuccessfully() {
                 Uint128::new(2u128),
                 Uint128::new(1u128),
             )),
+            None,
             |_res| {
                 //println!("{:?}", res.unwrap_err().root_cause());
                 // assert_eq!(
@@ -146,5 +155,6 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked(""),
         });
 }

@@ -221,3 +221,18 @@ pub fn update_config(
         ("epoch_config", config.epoch_config.to_string()),
     ]))
 }
+
+/// Sets the last claimed epoch for the user.
+pub fn set_last_claimed_epoch(
+    deps: DepsMut,
+    address: String,
+    epoch_id: Uint64,
+) -> Result<Response, ContractError> {
+    LAST_CLAIMED_EPOCH.save(deps.storage, &deps.api.addr_validate(&address)?, &epoch_id)?;
+
+    Ok(Response::new().add_attributes(vec![
+        ("action", "set_last_claimed_epoch".to_string()),
+        ("address", address.to_string()),
+        ("epoch_id", epoch_id.to_string()),
+    ]))
+}

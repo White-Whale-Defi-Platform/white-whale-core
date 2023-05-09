@@ -1,12 +1,12 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{Timestamp, Uint64};
+use cosmwasm_std::{Addr, Timestamp, Uint64};
 
-use crate::ContractError;
 use white_whale::fee_distributor::{Epoch, EpochConfig};
 use white_whale::pool_network::asset::AssetInfo;
 
 use crate::tests::robot::TestingRobot;
 use crate::tests::test_helpers;
+use crate::ContractError;
 
 #[test]
 fn test_current_epoch_no_epochs() {
@@ -68,4 +68,30 @@ fn test_create_genesis_epoch() {
         // all good now
         res.unwrap();
     });
+}
+
+#[test]
+fn test_set_last_claimed_epoch() {
+    let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
+
+    robot
+        .instantiate_default()
+        .query_last_claimed_epoch(Addr::unchecked("bob".to_string()), |res| {
+            let (_, res) = res.unwrap();
+            // bob has claimed anything
+            assert_eq!(res.last_claimed_epoch_id, Uint64::zero());
+        })
+        .set_last_claimed_epoch(
+            mock_info("bob", &[]),
+            Addr::unchecked("bob".to_string()),
+            Uint64::new(5u64),
+            |res| {
+                res.unwrap();
+            },
+        )
+        .query_last_claimed_epoch(Addr::unchecked("bob".to_string()), |res| {
+            let (_, res) = res.unwrap();
+            // bob has claimed anything
+            assert_eq!(res.last_claimed_epoch_id, Uint64::new(5u64));
+        });
 }

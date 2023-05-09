@@ -1,14 +1,17 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
-    Timestamp, Uint128, Uint64,
+    to_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, QueryRequest,
+    Response, StdResult, Timestamp, Uint128, Uint64, WasmMsg, WasmQuery,
+};
+
+use white_whale::fee_distributor::{
+    Epoch, EpochResponse, ExecuteMsg, LastClaimedEpochResponse, QueryMsg,
 };
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-
-use white_whale::whale_lair::Bond;
+use white_whale::whale_lair::{Bond, BondedResponse};
 
 use crate::helpers::validate_growth_rate;
-use crate::queries::MAX_PAGE_LIMIT;
+use crate::queries::{query_bonded, MAX_PAGE_LIMIT};
 use crate::state::{update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND};
 use crate::{helpers, ContractError};
 
@@ -38,6 +41,34 @@ pub(crate) fn bond(
             ..Bond::default()
         });
 
+    // if it's the first time the user is bonding, set the LAST_CLAIMED_EPOCH on the fee distributor
+    // to the current epoch, so the user can't claim rewards from past epochs
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let bonded_query_response: BondedResponse =
+        query_bonded(deps.as_ref(), info.sender.to_string())?;
+    if bonded_query_response.bonded_assets.is_empty() {
+        let config = CONFIG.load(deps.storage)?;
+        if config.fee_distributor_addr != Addr::unchecked("") {
+            let epoch_response: EpochResponse =
+                deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                    contract_addr: config.fee_distributor_addr.to_string(),
+                    msg: to_binary(&QueryMsg::CurrentEpoch {})?,
+                }))?;
+
+            // set last claimed epoch to current epoch for the sender
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: config.fee_distributor_addr.to_string(),
+                msg: to_binary(&ExecuteMsg::SetLastClaimedEpoch {
+                    address: info.sender.to_string(),
+                    epoch_id: epoch_response.epoch.id,
+                })?,
+                funds: vec![],
+            }));
+        } else {
+            return Err(ContractError::FeeDistributorNotSet {});
+        }
+    }
+
     // update local values
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
@@ -56,11 +87,13 @@ pub(crate) fn bond(
         asset::aggregate_assets(global_index.bonded_assets, vec![asset.clone()])?;
     GLOBAL.save(deps.storage, &global_index)?;
 
-    Ok(Response::default().add_attributes(vec![
-        ("action", "bond".to_string()),
-        ("address", info.sender.to_string()),
-        ("asset", asset.to_string()),
-    ]))
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_attributes(vec![
+            ("action", "bond".to_string()),
+            ("address", info.sender.to_string()),
+            ("asset", asset.to_string()),
+        ]))
 }
 
 /// Unbonds the provided amount of tokens
@@ -186,6 +219,7 @@ pub(crate) fn update_config(
     owner: Option<String>,
     unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
+    fee_distributor_addr: Option<String>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
     let mut config = CONFIG.load(deps.storage)?;
@@ -206,6 +240,10 @@ pub(crate) fn update_config(
         config.growth_rate = growth_rate;
     }
 
+    if let Some(fee_distributor_addr) = fee_distributor_addr {
+        config.fee_distributor_addr = deps.api.addr_validate(&fee_distributor_addr)?;
+    }
+
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -213,5 +251,9 @@ pub(crate) fn update_config(
         ("owner", config.owner.to_string()),
         ("unbonding_period", config.unbonding_period.to_string()),
         ("growth_rate", config.growth_rate.to_string()),
+        (
+            "fee_distributor_addr",
+            config.fee_distributor_addr.to_string(),
+        ),
     ]))
 }

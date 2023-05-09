@@ -5,7 +5,7 @@ use cosmwasm_std::{
 
 use white_whale::fee_distributor::{
     ClaimableEpochsResponse, Config, Epoch, EpochConfig, EpochResponse, ExecuteMsg, InstantiateMsg,
-    QueryMsg,
+    LastClaimedEpochResponse, QueryMsg,
 };
 use white_whale::pool_network::asset::AssetInfo;
 
@@ -161,6 +161,28 @@ impl TestingRobot {
 
         self
     }
+
+    pub(crate) fn set_last_claimed_epoch(
+        &mut self,
+        info: MessageInfo,
+        address: Addr,
+        epoch_id: Uint64,
+        response: impl Fn(Result<Response, ContractError>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::SetLastClaimedEpoch {
+            address: address.to_string(),
+            epoch_id,
+        };
+
+        response(execute(
+            self.owned_deps.as_mut(),
+            self.env.clone(),
+            info,
+            msg,
+        ));
+
+        self
+    }
 }
 
 /// Queries
@@ -240,6 +262,26 @@ impl TestingRobot {
         let config: Config = from_binary(&query_res).unwrap();
 
         response(Ok((self, config)));
+
+        self
+    }
+
+    pub(crate) fn query_last_claimed_epoch(
+        &mut self,
+        address: Addr,
+        response: impl Fn(StdResult<(&mut Self, LastClaimedEpochResponse)>),
+    ) -> &mut Self {
+        let query_res = query(
+            self.owned_deps.as_ref(),
+            self.env.clone(),
+            QueryMsg::LastClaimedEpoch {
+                address: address.to_string(),
+            },
+        )
+        .unwrap();
+        let res: LastClaimedEpochResponse = from_binary(&query_res).unwrap();
+
+        response(Ok((self, res)));
 
         self
     }

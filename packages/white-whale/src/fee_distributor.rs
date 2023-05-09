@@ -91,6 +91,11 @@ pub enum ExecuteMsg {
         distribution_asset: Option<AssetInfo>,
         epoch_config: Option<EpochConfig>,
     },
+
+    /// Sets the last claimed epoch for the given address. This is only used the very first time
+    /// a user bonds tokens in the whale lair, to ensure the user cannot claim rewards from
+    /// past epochs
+    SetLastClaimedEpoch { address: String, epoch_id: Uint64 },
 }
 
 #[cw_serde]
@@ -115,6 +120,10 @@ pub enum QueryMsg {
     /// Returns the [Epoch]s that can be claimed by an address.
     #[returns(ClaimableEpochsResponse)]
     Claimable { address: String },
+
+    /// Returns the [Epoch]s that can be claimed by an address.
+    #[returns(EpochResponse)]
+    LastClaimedEpoch { address: String },
 }
 
 #[cw_serde]
@@ -125,6 +134,12 @@ pub struct EpochResponse {
 #[cw_serde]
 pub struct ClaimableEpochsResponse {
     pub epochs: Vec<Epoch>,
+}
+
+#[cw_serde]
+pub struct LastClaimedEpochResponse {
+    pub address: Addr,
+    pub last_claimed_epoch_id: Uint64,
 }
 
 #[cw_serde]

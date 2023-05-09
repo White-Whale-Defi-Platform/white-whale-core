@@ -45,6 +45,9 @@ pub enum ContractError {
     #[error("Nothing to withdraw.")]
     NothingToWithdraw {},
 
+    #[error("Fee Distributor contract not set.")]
+    FeeDistributorNotSet {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,

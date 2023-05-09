@@ -13,6 +13,8 @@ pub struct Config {
     pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
     pub bonding_assets: Vec<AssetInfo>,
+    /// Fee disitributor contract address
+    pub fee_distributor_addr: Addr,
 }
 
 #[cw_serde]
@@ -76,6 +78,7 @@ pub enum ExecuteMsg {
         owner: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
+        fee_distributor_addr: Option<String>,
     },
 }
 

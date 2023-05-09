@@ -15,17 +15,20 @@ use white_whale::fee_collector::{
     Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg,
 };
 use white_whale::fee_distributor::ExecuteMsg::NewEpoch;
-use white_whale::fee_distributor::{Epoch, EpochConfig, EpochResponse};
+use white_whale::fee_distributor::{
+    ClaimableEpochsResponse, Epoch, EpochConfig, EpochResponse, LastClaimedEpochResponse,
+};
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
 use white_whale::pool_network::factory::PairsResponse;
 use white_whale::pool_network::pair::{PoolFee, PoolResponse, ProtocolFeesResponse};
 use white_whale::pool_network::router::{SwapOperation, SwapRoute};
 use white_whale::vault_network::vault_factory::ExecuteMsg;
+use white_whale::whale_lair::ExecuteMsg::Bond;
 use white_whale::{pool_network, vault_network};
 
 use crate::tests::common_integration::{
-    increase_allowance, mock_app, mock_app_with_balance, mock_creator,
+    increase_allowance, mock_app, mock_app_with_balance, mock_bob, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_fee_distributor_code,
     store_pair_code, store_pool_factory_code, store_pool_router_code, store_token_code,
     store_trio_code, store_vault_code, store_vault_factory_code, store_whale_lair_code,
@@ -3099,6 +3102,656 @@ fn collect_and_distribute_fees_successfully() {
         .unwrap();
     assert_eq!(fee_distributor_current_epoch_query.epoch.id, Uint64::one());
     assert!(!fee_distributor_current_epoch_query.epoch.total.is_empty());
+}
+
+#[test]
+fn test_late_bond_cannot_claim_past_epochs() {
+    let creator = mock_creator();
+    let bob = mock_bob();
+    let balances = vec![
+        (
+            creator.clone().sender,
+            vec![
+                coin(1_000_000_000, "usdc"),
+                coin(1_000_000_000, "uwhale"),
+                coin(1_000_000_000, "ampWHALE"),
+                coin(1_000_000_000, "bWHALE"),
+            ],
+        ),
+        (
+            bob.clone().sender,
+            vec![
+                coin(1_000_000_000, "usdc"),
+                coin(1_000_000_000, "uwhale"),
+                coin(1_000_000_000, "ampWHALE"),
+                coin(1_000_000_000, "bWHALE"),
+            ],
+        ),
+    ];
+
+    let mut app = mock_app_with_balance(balances);
+
+    let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
+    let whale_lair_id = store_whale_lair_code(&mut app);
+    let pool_factory_id = store_pool_factory_code(&mut app);
+    let pool_router_id = store_pool_router_code(&mut app);
+    let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
+    let token_id = store_token_code(&mut app);
+    let vault_factory_id = store_vault_factory_code(&mut app);
+    let vault_id = store_vault_code(&mut app);
+
+    let fee_collector_address = app
+        .instantiate_contract(
+            fee_collector_id,
+            creator.clone().sender,
+            &InstantiateMsg {},
+            &[],
+            "fee_collector",
+            None,
+        )
+        .unwrap();
+
+    let pool_factory_address = app
+        .instantiate_contract(
+            pool_factory_id,
+            creator.clone().sender,
+            &pool_network::factory::InstantiateMsg {
+                pair_code_id: pair_id,
+                trio_code_id: trio_id,
+                token_code_id: token_id,
+                fee_collector_addr: fee_collector_address.to_string(),
+            },
+            &[],
+            "fee_collector",
+            None,
+        )
+        .unwrap();
+
+    let pool_router_address = app
+        .instantiate_contract(
+            pool_router_id,
+            creator.clone().sender,
+            &pool_network::router::InstantiateMsg {
+                terraswap_factory: pool_factory_address.to_string(),
+            },
+            &[],
+            "pool_router",
+            None,
+        )
+        .unwrap();
+
+    let vault_factory_address = app
+        .instantiate_contract(
+            vault_factory_id,
+            creator.clone().sender,
+            &vault_network::vault_factory::InstantiateMsg {
+                owner: creator.clone().sender.to_string(),
+                vault_id,
+                token_id,
+                fee_collector_addr: fee_collector_address.to_string(),
+            },
+            &[],
+            "pool_router",
+            None,
+        )
+        .unwrap();
+
+    let whale_lair_address = app
+        .instantiate_contract(
+            whale_lair_id,
+            creator.clone().sender,
+            &white_whale::whale_lair::InstantiateMsg {
+                unbonding_period: Uint64::new(1_000_000_000_000u64),
+                growth_rate: Decimal::one(),
+                bonding_assets: vec![
+                    AssetInfo::NativeToken {
+                        denom: "ampWHALE".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "bWHALE".to_string(),
+                    },
+                ],
+            },
+            &[],
+            "whale_lair",
+            None,
+        )
+        .unwrap();
+
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: whale_lair_address.clone().to_string(),
+                fee_collector_addr: fee_collector_address.clone().to_string(),
+                grace_period: Uint64::new(21),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86_400_000_000_000u64), // a day
+                    genesis_epoch: Uint64::new(1683644400_000000000u64), // May 9, 2023 3:00:00 PM
+                },
+                distribution_asset: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    // add fee distributor address to whale lair to be able to bond
+    app.execute_contract(
+        creator.sender.clone(),
+        whale_lair_address.clone(),
+        &white_whale::whale_lair::ExecuteMsg::UpdateConfig {
+            owner: None,
+            unbonding_period: None,
+            growth_rate: None,
+            fee_distributor_addr: Some(fee_distributor_address.to_string()),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // add pool router address to the fee collector to be able to aggregate fees
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &UpdateConfig {
+            owner: None,
+            pool_router: Some(pool_router_address.to_string()),
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: Some(pool_factory_address.to_string()),
+            vault_factory: Some(vault_factory_address.to_string()),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // add native tokens to the factory
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "uwhale".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "uwhale".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "usdc".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "usdc".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "ampWHALE".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "ampWHALE".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "bWHALE".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "bWHALE".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    // Create few pools
+    let native_tokens: Vec<&str> = vec!["usdc", "ampWHALE", "bWHALE"];
+    let mut pair_tokens: Vec<Addr> = Vec::new();
+    for native_token in native_tokens.clone() {
+        let res = app
+            .execute_contract(
+                creator.sender.clone(),
+                pool_factory_address.clone(),
+                &CreatePair {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: native_token.clone().to_string(),
+                        },
+                    ],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(5u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(7u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
+                        },
+                    },
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
+                },
+                &[],
+            )
+            .unwrap();
+
+        let pair_address = Addr::unchecked(
+            res.events
+                .last()
+                .unwrap()
+                .attributes
+                .clone()
+                .get(1)
+                .unwrap()
+                .clone()
+                .value,
+        );
+        pair_tokens.push(pair_address);
+    }
+
+    // Provide liquidity into pools
+    for (i, native_token) in native_tokens.clone().iter().enumerate() {
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                assets: [
+                    Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(500_000u128),
+                    },
+                    Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: native_token.clone().to_string(),
+                        },
+                        amount: Uint128::new(500_000u128),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            },
+            &[
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(500_000u128),
+                },
+                Coin {
+                    denom: native_token.clone().to_string(),
+                    amount: Uint128::new(500_000u128),
+                },
+            ],
+        )
+        .unwrap();
+    }
+
+    println!("performing swaps");
+    // Perform some swaps
+    for (i, native_token) in native_tokens.clone().iter().enumerate() {
+        // whale -> native
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+
+        // native -> whale
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: native_token.clone().to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: native_token.clone().to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+    }
+
+    // query current epoch from fee distributor, assert that is equal to the default epoch
+    let fee_distributor_current_epoch_query: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    // it means no epoch has been created yet
+    assert_eq!(fee_distributor_current_epoch_query.epoch, Epoch::default());
+
+    println!("bob bonds");
+    // bond some tokens to whale lair with bob
+    // bob should have as last claimed epoch the default one, which is 0. He should be able to claim
+    // rewards from the first epoch, as he started bonding before the epoch was created.
+    app.execute_contract(
+        bob.sender.clone(),
+        whale_lair_address.clone(),
+        &Bond {
+            asset: Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+        },
+        &[Coin {
+            denom: "ampWHALE".to_string(),
+            amount: Uint128::new(1_000u128),
+        }],
+    )
+    .unwrap();
+
+    // let's move the time so the genesis epoch can be created
+    app.set_block(BlockInfo {
+        time: Timestamp::from_nanos(1683644400_000000000u64),
+        ..app.block_info()
+    });
+
+    println!("first epoch is created");
+    // Create new epoch, which triggers fee collection, aggregation and distribution
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_distributor_address.clone(),
+        &NewEpoch {},
+        &[],
+    )
+    .unwrap();
+
+    // check that a new epoch was created
+    let fee_distributor_current_epoch_query: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    assert_eq!(fee_distributor_current_epoch_query.epoch.id, Uint64::one());
+    assert!(!fee_distributor_current_epoch_query.epoch.total.is_empty());
+
+    // create a second epoch
+
+    // let's move the time by a day so the genesis epoch can be created
+    app.set_block(BlockInfo {
+        time: Timestamp::from_nanos(1683730800_000000000u64),
+        ..app.block_info()
+    });
+    println!("second epoch is created");
+    // Create new epoch, which triggers fee collection, aggregation and distribution
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_distributor_address.clone(),
+        &NewEpoch {},
+        &[],
+    )
+    .unwrap();
+
+    // check that a new epoch was created
+    let fee_distributor_current_epoch_query: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    assert_eq!(
+        fee_distributor_current_epoch_query.epoch.id,
+        Uint64::new(2u64)
+    );
+
+    println!("check claimable epochs");
+    let fee_distributor_current_epoch_query: ClaimableEpochsResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::ClaimableEpochs {},
+        )
+        .unwrap();
+    println!("{:?}", fee_distributor_current_epoch_query.epochs);
+    assert_eq!(fee_distributor_current_epoch_query.epochs.len(), 2usize);
+
+    println!("creator is being queried for claimable epochs, should be none as he has not bonded anything");
+    // let's query the creator now, she shouldn't be able to claim anything
+    let claimed_epochs_creator_query: ClaimableEpochsResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::Claimable {
+                address: creator.sender.clone().to_string(),
+            },
+        )
+        .unwrap();
+    println!("{:?}", claimed_epochs_creator_query.epochs);
+    assert!(claimed_epochs_creator_query.epochs.is_empty());
+
+    println!("creator bonds");
+    // the creator bonds now after 2 epochs have been created
+    app.execute_contract(
+        creator.sender.clone(),
+        whale_lair_address.clone(),
+        &Bond {
+            asset: Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+                amount: Uint128::new(3_000u128),
+            },
+        },
+        &[Coin {
+            denom: "bWHALE".to_string(),
+            amount: Uint128::new(3_000u128),
+        }],
+    )
+    .unwrap();
+
+    // query current epoch
+    let current_epoch_query: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    println!("current epoch -> {:?}", current_epoch_query.epoch);
+    assert_eq!(current_epoch_query.epoch.id, Uint64::new(2u64));
+
+    // now check that creator can't claim from previous epoch
+    let last_claimed_epoch_creator_query: LastClaimedEpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::LastClaimedEpoch {
+                address: creator.sender.clone().to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        last_claimed_epoch_creator_query.last_claimed_epoch_id,
+        Uint64::new(2u64)
+    );
+
+    println!("perform additional swaps");
+    // Perform some swaps
+    for (i, native_token) in native_tokens.clone().iter().enumerate() {
+        // whale -> native
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+
+        // native -> whale
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: native_token.clone().to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: native_token.clone().to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+    }
+    // create a third epoch
+
+    // let's move the time by a day
+    app.set_block(BlockInfo {
+        time: Timestamp::from_nanos(1683817200_000000000u64),
+        ..app.block_info()
+    });
+
+    println!("third epoch is created");
+    // Create new epoch, which triggers fee collection, aggregation and distribution
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_distributor_address.clone(),
+        &NewEpoch {},
+        &[],
+    )
+    .unwrap();
+    let fee_distributor_current_epoch_query: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    assert_eq!(
+        fee_distributor_current_epoch_query.epoch.id,
+        Uint64::new(3u64)
+    );
+
+    println!("check what bob can claim");
+    // now let's verify what bob can claim
+    let last_claimed_epoch_bob_query: LastClaimedEpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::LastClaimedEpoch {
+                address: bob.sender.clone().to_string(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        last_claimed_epoch_bob_query.last_claimed_epoch_id,
+        Uint64::zero()
+    );
+    // query claimable epochs by bob
+    let claimable_epochs_bob_query: ClaimableEpochsResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::Claimable {
+                address: bob.sender.clone().to_string(),
+            },
+        )
+        .unwrap();
+    println!("{:?}", claimable_epochs_bob_query);
+    assert_eq!(claimable_epochs_bob_query.epochs.len(), 2usize);
+    assert_eq!(
+        claimable_epochs_bob_query.epochs.first().unwrap().id,
+        Uint64::new(3u64)
+    );
+    assert_eq!(
+        claimable_epochs_bob_query.epochs.last().unwrap().id,
+        Uint64::new(2u64)
+    );
+
+    println!("check what creator can claim");
+    // query claimable epochs by creator. He should only be able to claim epoch 3
+    let claimable_epochs_creator_query: ClaimableEpochsResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::Claimable {
+                address: creator.sender.clone().to_string(),
+            },
+        )
+        .unwrap();
+    println!("{:?}", claimable_epochs_creator_query);
+    assert_eq!(claimable_epochs_creator_query.epochs.len(), 1usize);
+    assert_eq!(
+        claimable_epochs_creator_query.epochs.first().unwrap().id,
+        Uint64::new(3u64)
+    );
 }
 
 #[test]

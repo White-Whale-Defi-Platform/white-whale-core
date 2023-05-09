@@ -135,6 +135,9 @@ pub fn execute(
             distribution_asset,
             epoch_config,
         ),
+        ExecuteMsg::SetLastClaimedEpoch { address, epoch_id } => {
+            commands::set_last_claimed_epoch(deps, address, epoch_id)
+        }
     }
 }
 
@@ -145,6 +148,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Epoch { id } => Ok(to_binary(&state::get_epoch(deps, id)?)?),
         QueryMsg::ClaimableEpochs {} => Ok(to_binary(&state::get_claimable_epochs(deps)?)?),
         QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
+        QueryMsg::LastClaimedEpoch { address } => Ok(to_binary(&state::get_last_claimed_epoch(
+            deps,
+            &deps.api.addr_validate(&address)?,
+        )?)?),
         QueryMsg::Claimable { address } => Ok(to_binary(&state::query_claimable(
             deps,
             &deps.api.addr_validate(&address)?,

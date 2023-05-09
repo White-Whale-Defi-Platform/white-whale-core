@@ -29,6 +29,14 @@ pub fn mock_creator() -> MessageInfo {
     mock_info("creator", &[])
 }
 
+pub fn mock_bob() -> MessageInfo {
+    mock_info("bob", &[])
+}
+
+pub fn mock_alice() -> MessageInfo {
+    mock_info("alice", &[])
+}
+
 /// Stores the pool factory contract to the app
 pub fn store_pool_factory_code(app: &mut App) -> u64 {
     let contract = Box::new(

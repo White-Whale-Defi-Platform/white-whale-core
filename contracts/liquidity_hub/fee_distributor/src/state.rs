@@ -1,7 +1,9 @@
 use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint64};
 use cw_storage_plus::{Item, Map};
 
-use white_whale::fee_distributor::{ClaimableEpochsResponse, Config, Epoch, EpochResponse};
+use white_whale::fee_distributor::{
+    ClaimableEpochsResponse, Config, Epoch, EpochResponse, LastClaimedEpochResponse,
+};
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch");
@@ -75,6 +77,10 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
     // filter out epochs that have already been claimed by the user
     if let Some(last_claimed_epoch) = last_claimed_epoch {
         claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
+    } else {
+        // if there is no last claimed epoch, the user has not even bonded, as that is set when the user bonds
+        // for the first time
+        return Ok(ClaimableEpochsResponse { epochs: vec![] });
     };
 
     // filter out epochs that have no available fees. This would only happen in case the grace period
@@ -84,5 +90,23 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
 
     Ok(ClaimableEpochsResponse {
         epochs: claimable_epochs,
+    })
+}
+
+/// Returns the last epoch that was claimed by the given address. Returns the default epoch if
+/// the address has not claimed any epoch yet.
+pub fn get_last_claimed_epoch(deps: Deps, address: &Addr) -> StdResult<LastClaimedEpochResponse> {
+    let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, address)?;
+
+    if let Some(last_claimed_epoch) = last_claimed_epoch {
+        return Ok(LastClaimedEpochResponse {
+            address: address.clone(),
+            last_claimed_epoch_id: last_claimed_epoch,
+        });
+    };
+
+    Ok(LastClaimedEpochResponse {
+        address: address.clone(),
+        last_claimed_epoch_id: Uint64::zero(),
     })
 }
