@@ -20,7 +20,7 @@ pub fn open_position(
     let factory_address = deps.api.addr_humanize(&config.factory_address)?;
 
     // validate unbonding duration
-    let incentive_factory_config: white_whale::pool_network::incentive_factory::GetConfigResponse =
+    let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             factory_address,
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},

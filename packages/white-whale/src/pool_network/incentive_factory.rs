@@ -75,15 +75,15 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Retrieves the config of the incentive factory.
-    #[returns(GetConfigResponse)]
+    #[returns(ConfigResponse)]
     Config {},
     /// Retrieves a specific incentive address.
-    #[returns(GetIncentiveResponse)]
+    #[returns(IncentiveResponse)]
     Incentive {
         /// The address of the LP token.
         lp_address: AssetInfo,
     },
-    #[returns(GetIncentivesResponse)]
+    #[returns(IncentivesResponse)]
     Incentives {
         /// An optional parameter specifying what incentive contract to start
         /// searching after.
@@ -118,14 +118,14 @@ pub struct Config {
     pub max_unbonding_duration: u64,
 }
 
-pub type GetConfigResponse = Config;
-pub type GetIncentiveResponse = Option<Addr>;
+pub type ConfigResponse = Config;
+pub type IncentiveResponse = Option<Addr>;
 
 #[cw_serde]
-pub struct GetIncentivesContract {
+pub struct IncentivesContract {
     /// The address of the incentive contract.
     pub incentive_address: String,
     /// A byte-array reference to the LP address.
     pub lp_reference: Vec<u8>,
 }
-pub type GetIncentivesResponse = Vec<GetIncentivesContract>;
+pub type IncentivesResponse = Vec<IncentivesContract>;

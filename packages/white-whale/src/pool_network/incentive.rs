@@ -112,23 +112,23 @@ pub struct ClosedPosition {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Retrieves the current contract configuration.
-    #[returns(GetConfigResponse)]
+    #[returns(ConfigResponse)]
     Config {},
     /// Retrieves a specific flow.
-    #[returns(GetFlowResponse)]
+    #[returns(FlowResponse)]
     Flow {
         /// The id of the flow to find.
         flow_id: u64,
     },
     /// Retrieves the current flows.
-    #[returns(GetFlowsResponse)]
+    #[returns(FlowsResponse)]
     Flows {},
-    #[returns(GetPositionsResponse)]
+    #[returns(PositionsResponse)]
     Positions {
         /// The address to get positions for.
         address: String,
     },
-    #[returns(GetRewardsResponse)]
+    #[returns(RewardsResponse)]
     Rewards {
         /// The address to get all the incentive rewards for.
         address: String,
@@ -159,16 +159,16 @@ pub enum Curve {
     Linear,
 }
 
-pub type GetConfigResponse = Config;
+pub type ConfigResponse = Config;
 
 #[cw_serde]
-pub struct GetFlowResponse {
+pub struct FlowResponse {
     /// The flow that was searched for.
     pub flow: Option<Flow>,
 }
 
 #[cw_serde]
-pub struct GetFlowsResponse {
+pub struct FlowsResponse {
     /// The current flows.
     pub flows: Vec<Flow>,
 }
@@ -196,7 +196,7 @@ pub enum QueryPosition {
 }
 
 #[cw_serde]
-pub struct GetPositionsResponse {
+pub struct PositionsResponse {
     /// The current time of the blockchain.
     pub timestamp: u64,
     /// All the positions a user has.
@@ -204,7 +204,7 @@ pub struct GetPositionsResponse {
 }
 
 #[cw_serde]
-pub struct GetRewardsResponse {
+pub struct RewardsResponse {
     /// The rewards that is available to a user if they executed the `claim` function at this point.
     pub rewards: Vec<Asset>,
 }

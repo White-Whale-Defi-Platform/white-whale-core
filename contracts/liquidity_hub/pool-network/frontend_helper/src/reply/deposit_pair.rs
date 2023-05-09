@@ -36,7 +36,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         &white_whale::pool_network::pair::QueryMsg::Pair {},
     )?;
 
-    let incentive_address: white_whale::pool_network::incentive_factory::GetIncentiveResponse =
+    let incentive_address: white_whale::pool_network::incentive_factory::IncentiveResponse =
         deps.querier.query_wasm_smart(
             incentive_factory_address,
             &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
@@ -91,7 +91,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
     };
 
     // find out if the user has an open position with that unbonding_duration
-    let positions: white_whale::pool_network::incentive::GetPositionsResponse =
+    let positions: white_whale::pool_network::incentive::PositionsResponse =
         deps.querier.query_wasm_smart(
             incentive_address.clone(),
             &white_whale::pool_network::incentive::QueryMsg::Positions {

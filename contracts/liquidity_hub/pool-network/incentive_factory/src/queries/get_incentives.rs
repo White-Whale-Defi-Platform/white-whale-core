@@ -2,7 +2,7 @@ use cosmwasm_std::{Deps, Order, StdResult, Storage};
 use cw_storage_plus::Bound;
 use white_whale::pool_network::{
     asset::{AssetInfo, AssetInfoRaw},
-    incentive_factory::{GetIncentivesContract, GetIncentivesResponse},
+    incentive_factory::{IncentivesContract, IncentivesResponse},
 };
 
 use crate::state::INCENTIVE_MAPPINGS;
@@ -12,7 +12,7 @@ pub fn get_incentives(
     deps: Deps,
     start_after: Option<AssetInfo>,
     limit: Option<u32>,
-) -> StdResult<GetIncentivesResponse> {
+) -> StdResult<IncentivesResponse> {
     let start_after = start_after
         .map(|asset| asset.to_raw(deps.api))
         .transpose()?;
@@ -27,7 +27,7 @@ pub fn read_incentives(
     storage: &dyn Storage,
     start_after: Option<AssetInfoRaw>,
     limit: Option<u32>,
-) -> StdResult<GetIncentivesResponse> {
+) -> StdResult<IncentivesResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
@@ -37,7 +37,7 @@ pub fn read_incentives(
         .map(|item| {
             let (lp_reference, incentive_address) = item?;
 
-            Ok(GetIncentivesContract {
+            Ok(IncentivesContract {
                 incentive_address: incentive_address.to_string(),
                 lp_reference,
             })
@@ -60,7 +60,7 @@ mod tests {
         testing::mock_dependencies, to_binary, Binary, DepsMut, Reply, SubMsgResponse, SubMsgResult,
     };
     use protobuf::{Message, SpecialFields};
-    use white_whale::pool_network::{asset::AssetInfo, incentive_factory::GetIncentivesContract};
+    use white_whale::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
 
     use crate::{
         reply::create_incentive_reply::{create_incentive_reply, CREATE_INCENTIVE_REPLY_ID},
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(
             incentives,
             vec![
-                GetIncentivesContract {
+                IncentivesContract {
                     incentive_address: "incentive1".to_string(),
                     lp_reference: get_lp_asset(1)
                         .to_raw(&deps.api)
@@ -139,7 +139,7 @@ mod tests {
                         .as_bytes()
                         .to_vec()
                 },
-                GetIncentivesContract {
+                IncentivesContract {
                     incentive_address: "incentive2".to_string(),
                     lp_reference: get_lp_asset(2)
                         .to_raw(&deps.api)
@@ -162,7 +162,7 @@ mod tests {
         let incentives = get_incentives(deps.as_ref(), None, Some(1)).unwrap();
         assert_eq!(
             incentives,
-            vec![GetIncentivesContract {
+            vec![IncentivesContract {
                 incentive_address: "incentive1".to_string(),
                 lp_reference: get_lp_asset(1)
                     .to_raw(&deps.api)
@@ -176,7 +176,7 @@ mod tests {
         let incentives = get_incentives(deps.as_ref(), Some(get_lp_asset(1)), None).unwrap();
         assert_eq!(
             incentives,
-            vec![GetIncentivesContract {
+            vec![IncentivesContract {
                 incentive_address: "incentive2".to_string(),
                 lp_reference: get_lp_asset(2)
                     .to_raw(&deps.api)
@@ -202,7 +202,7 @@ mod tests {
         let incentives = get_incentives(deps.as_ref(), Some(get_lp_asset(1)), None).unwrap();
         assert_eq!(
             incentives,
-            vec![GetIncentivesContract {
+            vec![IncentivesContract {
                 incentive_address: "incentive2".to_string(),
                 lp_reference: get_lp_asset(2)
                     .to_raw(&deps.api)

@@ -1,12 +1,12 @@
 use cosmwasm_std::{Deps, Env, StdResult};
-use white_whale::pool_network::{asset::Asset, incentive::GetRewardsResponse};
+use white_whale::pool_network::{asset::Asset, incentive::RewardsResponse};
 
 use crate::{
     claim::{calculate_claimable_amount, get_user_share},
     state::{FLOWS, LAST_CLAIMED_INDEX},
 };
 
-pub fn get_rewards(deps: Deps, env: Env, address: String) -> StdResult<GetRewardsResponse> {
+pub fn get_rewards(deps: Deps, env: Env, address: String) -> StdResult<RewardsResponse> {
     let address = deps.api.addr_validate(&address)?;
 
     let user_share = get_user_share(&deps, address.clone())?;
@@ -27,5 +27,5 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> StdResult<GetReward
         })
         .collect::<StdResult<Vec<_>>>()?;
 
-    Ok(GetRewardsResponse { rewards })
+    Ok(RewardsResponse { rewards })
 }

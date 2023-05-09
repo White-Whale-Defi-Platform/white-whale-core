@@ -15,7 +15,7 @@ pub fn close_flow(
 ) -> Result<Response, ContractError> {
     // validate that user is allowed to close the flow
     let config = CONFIG.load(deps.storage)?;
-    let factory_config: white_whale::pool_network::incentive_factory::GetConfigResponse =
+    let factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             deps.api.addr_humanize(&config.factory_address)?,
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},

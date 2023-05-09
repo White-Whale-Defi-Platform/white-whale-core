@@ -1,5 +1,5 @@
 use cosmwasm_std::{Deps, Env};
-use white_whale::pool_network::incentive::{GetPositionsResponse, QueryPosition};
+use white_whale::pool_network::incentive::{PositionsResponse, QueryPosition};
 
 use crate::{
     error::ContractError,
@@ -11,7 +11,7 @@ pub fn get_positions(
     deps: Deps,
     env: Env,
     address: String,
-) -> Result<GetPositionsResponse, ContractError> {
+) -> Result<PositionsResponse, ContractError> {
     let address = deps.api.addr_validate(&address)?;
 
     let open_positions = OPEN_POSITIONS
@@ -37,7 +37,7 @@ pub fn get_positions(
             weight: position.amount,
         });
 
-    Ok(GetPositionsResponse {
+    Ok(PositionsResponse {
         timestamp: env.block.time.seconds(),
         positions: open_positions.into_iter().chain(closed_positions).collect(),
     })

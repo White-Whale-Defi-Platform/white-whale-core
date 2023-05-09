@@ -113,7 +113,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
     )
     .unwrap();
 
-    let incentive_addr: white_whale::pool_network::incentive_factory::GetIncentiveResponse = app
+    let incentive_addr: white_whale::pool_network::incentive_factory::IncentiveResponse = app
         .wrap()
         .query_wasm_smart(
             incentive_factory,
