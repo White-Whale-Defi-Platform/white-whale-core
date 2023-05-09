@@ -76,7 +76,8 @@ pub fn execute(
         ExecuteMsg::ExpandPosition {
             amount,
             unbonding_duration,
-        } => execute::expand_position(deps, env, info, amount, unbonding_duration),
+            receiver,
+        } => execute::expand_position(deps, env, info, amount, unbonding_duration, receiver),
         ExecuteMsg::ClosePosition { unbonding_duration } => {
             execute::close_position(deps, env, info, unbonding_duration)
         }

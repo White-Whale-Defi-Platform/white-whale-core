@@ -1,5 +1,7 @@
 use cosmwasm_std::{to_binary, DepsMut, Env, Reply, Response, WasmMsg};
-use white_whale::pool_network::{asset::AssetInfo, frontend_helper::TempState};
+use white_whale::pool_network::{
+    asset::AssetInfo, frontend_helper::TempState, incentive::QueryPosition,
+};
 
 use crate::{
     error::ContractError,
@@ -88,17 +90,38 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         }
     };
 
+    // find out if the user has an open position with that unbonding_duration
+    let positions: white_whale::pool_network::incentive::GetPositionsResponse =
+        deps.querier.query_wasm_smart(
+            incentive_address.clone(),
+            &white_whale::pool_network::incentive::QueryMsg::Positions {
+                address: receiver.clone().into_string(),
+            },
+        )?;
+    let has_existing_position = positions.positions.into_iter().any(|position| {
+        let QueryPosition::OpenPosition { unbonding_duration: position_unbonding_duration, .. } = position else {
+			return false;
+		};
+
+		return unbonding_duration == position_unbonding_duration;
+    });
+
     Ok(Response::new()
         .add_messages(messages)
         .add_message(WasmMsg::Execute {
             contract_addr: incentive_address.into_string(),
-            msg: to_binary(
-                &white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+            msg: to_binary(&match has_existing_position {
+                true => white_whale::pool_network::incentive::ExecuteMsg::ExpandPosition {
                     amount: lp_amount,
                     unbonding_duration,
                     receiver: Some(receiver.into_string()),
                 },
-            )?,
+                false => white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+                    amount: lp_amount,
+                    unbonding_duration,
+                    receiver: Some(receiver.into_string()),
+                },
+            })?,
             funds,
         }))
 }

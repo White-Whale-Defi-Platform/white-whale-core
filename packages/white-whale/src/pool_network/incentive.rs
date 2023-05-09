@@ -40,6 +40,8 @@ pub enum ExecuteMsg {
         /// The receiver of the new position.
         ///
         /// This is mostly used for the frontend helper contract.
+        ///
+        /// If left empty, defaults to the message sender.
         receiver: Option<String>,
     },
     ExpandPosition {
@@ -47,6 +49,12 @@ pub enum ExecuteMsg {
         amount: Uint128,
         /// The unbond completion timestamp to identify the position to add to.
         unbonding_duration: u64,
+        /// The receiver of the expanded position.
+        ///
+        /// This is mostly used for the frontend helper contract.
+        ///
+        /// If left empty, defaults to the message sender.
+        receiver: Option<String>,
     },
     ClosePosition {
         /// The unbonding duration of the position to close.
