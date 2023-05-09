@@ -1,8 +1,9 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
+use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use crate::{
     error::ContractError,
-    state::{ADDRESS_WEIGHT, GLOBAL_WEIGHT, OPEN_POSITIONS},
+    funds_validation::validate_funds_sent,
+    state::{ADDRESS_WEIGHT, CONFIG, GLOBAL_WEIGHT, OPEN_POSITIONS},
     weight::calculate_weight,
 };
 
@@ -14,6 +15,17 @@ pub fn expand_position(
     unbonding_duration: u64,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
+    // first ensure that the relevant tokens were transferred to us
+    let config = CONFIG.load(deps.storage)?;
+    let lp_token = deps.api.addr_humanize(&config.lp_address)?;
+    let mut messages: Vec<CosmosMsg> = vec![];
+
+    {
+        let claim_token_msg =
+            validate_funds_sent(&deps.as_ref(), env.clone(), lp_token, info.clone(), amount)?;
+        messages.push(claim_token_msg.into());
+    }
+
     // if a receiver was specified, use them with the funds sent by the message sender
     // if not, default to the message sender
     // this has the intentional side-effect of moving `info` so it cannot be used later.
@@ -27,7 +39,10 @@ pub fn expand_position(
         .unwrap_or(info);
 
     // claim current position rewards for the receiver
-    let claim_messages = crate::claim::claim(&mut deps, &env, &receiver)?;
+    {
+        let mut claim_messages = crate::claim::claim(&mut deps, &env, &receiver)?;
+        messages.append(&mut claim_messages);
+    }
 
     // increase position
     OPEN_POSITIONS.update::<_, ContractError>(
@@ -57,5 +72,5 @@ pub fn expand_position(
         Ok(user_weight.unwrap_or_default().checked_add(weight)?)
     })?;
 
-    Ok(Response::new().add_messages(claim_messages))
+    Ok(Response::new().add_messages(messages))
 }

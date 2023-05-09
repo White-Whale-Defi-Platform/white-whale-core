@@ -4,6 +4,7 @@ pub mod state;
 
 mod claim;
 mod execute;
+mod funds_validation;
 mod queries;
 mod weight;
 
