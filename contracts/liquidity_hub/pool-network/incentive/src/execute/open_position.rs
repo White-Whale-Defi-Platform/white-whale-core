@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128, WasmMsg};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 use white_whale::pool_network::incentive::OpenPosition;
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub fn open_position(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     amount: Uint128,
@@ -37,17 +37,24 @@ pub fn open_position(
         });
     }
 
+    // ensure that user gave us an allowance for the token amount
+    // we check this on the message sender rather than the receiver
+    let transfer_token_msg =
+        validate_funds_sent(&deps.as_ref(), env.clone(), lp_token, info.clone(), amount)?;
+
     // if receiver was not specified, default to the sender of the message.
     let receiver = receiver
         .map(|r| deps.api.addr_validate(&r))
-        .unwrap_or_else(|| Ok(info.sender.clone()))?;
-
-    // ensure that user gave us an allowance for the token amount
-    let transfer_token_msg = validate_funds_sent(&deps.as_ref(), env, lp_token, info, amount)?;
+        .transpose()?
+        .map(|receiver| MessageInfo {
+            funds: info.funds.clone(),
+            sender: receiver,
+        })
+        .unwrap_or(info);
 
     // ensure an existing position with this unbonding time doesn't exist
     let existing_position = OPEN_POSITIONS
-        .may_load(deps.storage, receiver.clone())?
+        .may_load(deps.storage, receiver.sender.clone())?
         .unwrap_or_default()
         .into_iter()
         .find(|position| position.unbonding_duration == unbonding_duration);
@@ -55,10 +62,12 @@ pub fn open_position(
         return Err(ContractError::DuplicatePosition);
     }
 
-    // todo: claim??
+    // claim to ensure that the user gets reward for current weight rather than
+    // future weight after opening the position
+    let claim_msgs = crate::claim::claim(&mut deps, &env, &receiver)?;
 
     // create the new position
-    OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.clone(), |positions| {
+    OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.sender.clone(), |positions| {
         let mut positions = positions.unwrap_or_default();
 
         positions.push(OpenPosition {
@@ -74,9 +83,11 @@ pub fn open_position(
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_add(weight)?)
     })?;
-    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver, |user_weight| {
+    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender, |user_weight| {
         Ok(user_weight.unwrap_or_default().checked_add(weight)?)
     })?;
 
-    Ok(Response::new().add_message(transfer_token_msg))
+    Ok(Response::new()
+        .add_message(transfer_token_msg)
+        .add_messages(claim_msgs))
 }
