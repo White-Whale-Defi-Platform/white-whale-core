@@ -174,7 +174,7 @@
                 ]
               },
               "receiver": {
-                "description": "The receiver of the new position.\n\nThis is mostly used for the frontend helper contract.",
+                "description": "The receiver of the new position.\n\nThis is mostly used for the frontend helper contract.\n\nIf left empty, defaults to the message sender.",
                 "type": [
                   "string",
                   "null"
@@ -211,6 +211,13 @@
                   {
                     "$ref": "#/definitions/Uint128"
                   }
+                ]
+              },
+              "receiver": {
+                "description": "The receiver of the expanded position.\n\nThis is mostly used for the frontend helper contract.\n\nIf left empty, defaults to the message sender.",
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "unbonding_duration": {
@@ -514,7 +521,7 @@
     },
     "flow": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GetFlowResponse",
+      "title": "FlowResponse",
       "type": "object",
       "properties": {
         "flow": {
@@ -692,7 +699,7 @@
     },
     "flows": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GetFlowsResponse",
+      "title": "FlowsResponse",
       "type": "object",
       "required": [
         "flows"
@@ -869,7 +876,7 @@
     },
     "positions": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GetPositionsResponse",
+      "title": "PositionsResponse",
       "type": "object",
       "required": [
         "positions",
@@ -990,7 +997,7 @@
     },
     "rewards": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GetRewardsResponse",
+      "title": "RewardsResponse",
       "type": "object",
       "required": [
         "rewards"

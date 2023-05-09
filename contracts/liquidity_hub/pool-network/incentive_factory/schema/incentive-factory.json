@@ -645,13 +645,13 @@
     },
     "incentives": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_GetIncentivesContract",
+      "title": "Array_of_IncentivesContract",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/GetIncentivesContract"
+        "$ref": "#/definitions/IncentivesContract"
       },
       "definitions": {
-        "GetIncentivesContract": {
+        "IncentivesContract": {
           "type": "object",
           "required": [
             "incentive_address",
