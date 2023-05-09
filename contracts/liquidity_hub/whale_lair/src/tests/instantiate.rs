@@ -1,8 +1,9 @@
 use cosmwasm_std::{Addr, Decimal, Uint64};
 
-use crate::tests::robot::TestingRobot;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::Config;
+
+use crate::tests::robot::TestingRobot;
 
 #[test]
 fn test_instantiate_successfully() {
@@ -35,6 +36,21 @@ fn test_instantiate_successfully() {
                 },
             ],
             fee_distributor_addr: Addr::unchecked(""),
+        })
+        .set_fee_distributor_address()
+        .assert_config(Config {
+            owner: Addr::unchecked("owner"),
+            unbonding_period: Uint64::new(1_000u64),
+            growth_rate: Decimal::one(),
+            bonding_assets: vec![
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+            ],
+            fee_distributor_addr: Addr::unchecked("contract1"),
         });
 }
 

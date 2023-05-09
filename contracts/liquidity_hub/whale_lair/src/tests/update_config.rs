@@ -24,7 +24,7 @@ fn test_update_config_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            fee_distributor_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked("contract1"),
         })
         .update_config(
             owner.clone(),
@@ -93,7 +93,7 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            fee_distributor_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked("contract1"),
         })
         .update_config(
             Addr::unchecked("unauthorized"),
@@ -124,7 +124,7 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            fee_distributor_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked("contract1"),
         })
         .update_config(
             Addr::unchecked("owner"),
@@ -155,6 +155,6 @@ fn test_update_config_unsuccessfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            fee_distributor_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked("contract1"),
         });
 }

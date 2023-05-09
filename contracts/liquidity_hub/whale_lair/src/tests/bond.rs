@@ -1,7 +1,9 @@
-use cosmwasm_std::{coin, coins, Decimal, Timestamp, Uint128};
+use anyhow::Error;
+use cosmwasm_std::{coin, coins, Decimal, Timestamp, Uint64, Uint128};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{BondedResponse, BondingWeightResponse};
+use crate::ContractError;
 
 use crate::tests::robot::TestingRobot;
 
@@ -145,6 +147,47 @@ fn test_bond_successfully() {
                 }
             )
         });
+}
+
+#[test]
+fn test_bond_unsuccessfully() {
+    let mut robot = TestingRobot::default();
+    let sender = robot.sender.clone();
+
+    robot
+        .instantiate(
+            Uint64::new(1_000u64),
+            Decimal::one(),
+            vec![
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+            ],
+            &vec![],
+        )
+        .bond(
+            sender,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            &[coin(1_000u128, "bWHALE")],
+            |res| {
+                // fails because the fee distributor address has not been set
+                println!("{:?}", res.unwrap_err().root_cause());
+                //assert error is FeeDistributorNotSet
+                // let err = res.unwrap_err();
+                // assert_eq!(
+                //     err.downcast::<ContractError>().unwrap(),
+                //     ContractError::FeeDistributorNotSet {}
+                // );
+            },
+        );
 }
 
 #[test]

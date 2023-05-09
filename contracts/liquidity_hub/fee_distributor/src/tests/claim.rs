@@ -40,8 +40,10 @@ fn test_claimable_epochs_for_user() {
         .add_epochs_to_state(epochs)
         .query_claimable_epochs(Some(Addr::unchecked("owner")), |res| {
             let (_, epochs) = res.unwrap();
-            assert_eq!(epochs.len(), 2usize);
+            // the user has not bonded yet
+            assert_eq!(epochs.len(), 0usize);
         })
+        // simulate that he bonded at epoch 2
         .add_last_claimed_epoch_to_state(Addr::unchecked("owner"), Uint64::new(2))
         .query_claimable_epochs(Some(Addr::unchecked("owner")), |res| {
             let (_, epochs) = res.unwrap();

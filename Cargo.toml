@@ -41,6 +41,7 @@ integer-sqrt = "0.1.5"
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
+fee_distributor = { path = "./contracts/liquidity_hub/fee_distributor" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

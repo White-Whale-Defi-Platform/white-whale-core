@@ -11,3 +11,15 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
 
     Box::new(contract)
 }
+
+pub fn fee_distributor_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        fee_distributor::contract::execute,
+        fee_distributor::contract::instantiate,
+        fee_distributor::contract::query,
+    )
+        .with_reply(fee_distributor::contract::reply)
+        .with_migrate(fee_distributor::contract::migrate);
+
+    Box::new(contract)
+}

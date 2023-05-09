@@ -72,6 +72,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 
         // forward fees from the expiring epoch to the new one.
         let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
+        println!("expiring_epoch: {:?}", expiring_epoch);
 
         if let Some(expiring_epoch) = expiring_epoch.as_mut() {
             let unclaimed_fees = expiring_epoch.available.clone();

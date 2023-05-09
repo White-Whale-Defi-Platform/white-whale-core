@@ -3522,6 +3522,54 @@ fn test_late_bond_cannot_claim_past_epochs() {
     assert_eq!(fee_distributor_current_epoch_query.epoch.id, Uint64::one());
     assert!(!fee_distributor_current_epoch_query.epoch.total.is_empty());
 
+    println!("perform additional swaps");
+    // Perform some swaps
+    for (i, native_token) in native_tokens.clone().iter().enumerate() {
+        // whale -> native
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+
+        // native -> whale
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::Swap {
+                offer_asset: Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: native_token.clone().to_string(),
+                    },
+                    amount: Uint128::new(200_000_000u128),
+                },
+                belief_price: None,
+                max_spread: None,
+                to: None,
+            },
+            &[Coin {
+                denom: native_token.clone().to_string(),
+                amount: Uint128::new(200_000_000u128),
+            }],
+        )
+        .unwrap();
+    }
+
     // create a second epoch
 
     // let's move the time by a day so the genesis epoch can be created
@@ -3725,14 +3773,14 @@ fn test_late_bond_cannot_claim_past_epochs() {
         )
         .unwrap();
     println!("{:?}", claimable_epochs_bob_query);
-    assert_eq!(claimable_epochs_bob_query.epochs.len(), 2usize);
+    assert_eq!(claimable_epochs_bob_query.epochs.len(), 3usize);
     assert_eq!(
         claimable_epochs_bob_query.epochs.first().unwrap().id,
         Uint64::new(3u64)
     );
     assert_eq!(
         claimable_epochs_bob_query.epochs.last().unwrap().id,
-        Uint64::new(2u64)
+        Uint64::new(1u64)
     );
 
     println!("check what creator can claim");
@@ -3890,6 +3938,20 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
             None,
         )
         .unwrap();
+
+    // add fee distributor address to whale lair to be able to bond
+    app.execute_contract(
+        creator.sender.clone(),
+        whale_lair_address.clone(),
+        &white_whale::whale_lair::ExecuteMsg::UpdateConfig {
+            owner: None,
+            unbonding_period: None,
+            growth_rate: None,
+            fee_distributor_addr: Some(fee_distributor_address.to_string()),
+        },
+        &[],
+    )
+    .unwrap();
 
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
@@ -4193,6 +4255,16 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     assert_eq!(new_epoch_res.epoch.available, new_epoch_res.epoch.total);
     assert!(new_epoch_res.epoch.claimed.is_empty());
 
+    let claimable: ClaimableEpochsResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale::fee_distributor::QueryMsg::ClaimableEpochs {},
+        )
+        .unwrap();
+
+    println!("claimable {:?}", claimable);
+
     // check that the available assets for the expired epoch are zero/empty
     let expired_epoch_res: EpochResponse = app
         .wrap()
@@ -4201,6 +4273,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
             &white_whale::fee_distributor::QueryMsg::Epoch { id: Uint64::one() },
         )
         .unwrap();
+    println!("{:?}", expired_epoch_res.epoch.available);
     assert!(expired_epoch_res.epoch.available.is_empty());
 
     // since the fees collected for the second epoch were the same for the first, the available

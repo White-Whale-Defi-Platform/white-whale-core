@@ -3,9 +3,7 @@ use cosmwasm_std::{
     Response, StdResult, Timestamp, Uint128, Uint64, WasmMsg, WasmQuery,
 };
 
-use white_whale::fee_distributor::{
-    Epoch, EpochResponse, ExecuteMsg, LastClaimedEpochResponse, QueryMsg,
-};
+use white_whale::fee_distributor::{EpochResponse, ExecuteMsg, QueryMsg};
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{Bond, BondedResponse};
@@ -47,8 +45,10 @@ pub(crate) fn bond(
     let bonded_query_response: BondedResponse =
         query_bonded(deps.as_ref(), info.sender.to_string())?;
     if bonded_query_response.bonded_assets.is_empty() {
+        println!("first time bonding");
         let config = CONFIG.load(deps.storage)?;
         if config.fee_distributor_addr != Addr::unchecked("") {
+            println!("setting last claimed epoch");
             let epoch_response: EpochResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: config.fee_distributor_addr.to_string(),
@@ -65,9 +65,12 @@ pub(crate) fn bond(
                 funds: vec![],
             }));
         } else {
+            println!("fee distributor not set");
             return Err(ContractError::FeeDistributorNotSet {});
         }
     }
+
+    println!("bonding");
 
     // update local values
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;

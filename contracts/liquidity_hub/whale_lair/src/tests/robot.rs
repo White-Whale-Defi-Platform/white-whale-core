@@ -1,12 +1,13 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
+use white_whale::fee_distributor::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_testing::integration::contracts::whale_lair_contract;
+use white_whale_testing::integration::contracts::{fee_distributor_contract, whale_lair_contract};
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
 pub struct TestingRobot {
@@ -72,7 +73,9 @@ impl TestingRobot {
                 },
             ],
             &vec![],
-        )
+        );
+
+        self.set_fee_distributor_address()
     }
 
     pub(crate) fn instantiate(
@@ -82,9 +85,14 @@ impl TestingRobot {
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
-        let whale_lair_addr =
-            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
-                .unwrap();
+        let whale_lair_addr = instantiate_whale_lair_contract(
+            self,
+            unbonding_period,
+            growth_rate,
+            bonding_assets,
+            funds,
+        )
+        .unwrap();
         self.whale_lair_addr = whale_lair_addr;
 
         self
@@ -99,11 +107,43 @@ impl TestingRobot {
         error: impl Fn(anyhow::Error),
     ) -> &mut Self {
         error(
-            instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
-                .unwrap_err(),
+            instantiate_whale_lair_contract(
+                self,
+                unbonding_period,
+                growth_rate,
+                bonding_assets,
+                funds,
+            )
+            .unwrap_err(),
         );
 
         self
+    }
+
+    pub(crate) fn set_fee_distributor_address(&mut self) -> &mut Self {
+        let fee_distributor_addr = instantiate_fee_distributor_contract(
+            self,
+            self.whale_lair_addr.clone().into_string(),
+            "fee_collector_addr".to_string(),
+            Uint64::new(2u64),
+            EpochConfig {
+                duration: Uint64::new(86_400_000_000_000u64),
+                genesis_epoch: Uint64::new(1683715440_000000000u64),
+            },
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+        )
+        .unwrap();
+
+        self.update_config(
+            self.sender.clone(),
+            None,
+            None,
+            None,
+            Some(fee_distributor_addr.into_string()),
+            |res| assert!(res.is_ok()),
+        )
     }
 
     pub(crate) fn bond(
@@ -180,7 +220,7 @@ impl TestingRobot {
     }
 }
 
-fn instantiate_contract(
+fn instantiate_whale_lair_contract(
     robot: &mut TestingRobot,
     unbonding_period: Uint64,
     growth_rate: Decimal,
@@ -200,6 +240,33 @@ fn instantiate_contract(
         &msg,
         funds,
         "White Whale Lair".to_string(),
+        Some(robot.sender.clone().to_string()),
+    )
+}
+
+fn instantiate_fee_distributor_contract(
+    robot: &mut TestingRobot,
+    bonding_contract_addr: String,
+    fee_collector_addr: String,
+    grace_period: Uint64,
+    epoch_config: EpochConfig,
+    distribution_asset: AssetInfo,
+) -> anyhow::Result<Addr> {
+    let msg = white_whale::fee_distributor::InstantiateMsg {
+        bonding_contract_addr,
+        fee_collector_addr,
+        grace_period,
+        epoch_config,
+        distribution_asset,
+    };
+
+    let fee_distributor_id = robot.app.store_code(fee_distributor_contract());
+    robot.app.instantiate_contract(
+        fee_distributor_id,
+        robot.sender.clone(),
+        &msg,
+        &vec![],
+        "White Whale Fee Distributor".to_string(),
         Some(robot.sender.clone().to_string()),
     )
 }

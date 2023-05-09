@@ -24,3 +24,4 @@ cosmwasm-schema.workspace = true
 cw-multi-test.workspace = true
 white-whale.workspace = true
 whale-lair.workspace = true
+fee_distributor.workspace = true

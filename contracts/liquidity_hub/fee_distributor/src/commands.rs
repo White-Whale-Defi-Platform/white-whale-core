@@ -232,7 +232,7 @@ pub fn set_last_claimed_epoch(
 
     Ok(Response::new().add_attributes(vec![
         ("action", "set_last_claimed_epoch".to_string()),
-        ("address", address.to_string()),
+        ("address", address),
         ("epoch_id", epoch_id.to_string()),
     ]))
 }
