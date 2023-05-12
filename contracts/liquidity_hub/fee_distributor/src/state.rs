@@ -38,16 +38,24 @@ pub fn get_epoch(deps: Deps, id: Uint64) -> StdResult<EpochResponse> {
 pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
     let grace_period = CONFIG.load(deps.storage)?.grace_period;
 
-    let option = EPOCHS
+    // last epochs within the grace period
+    let epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
         .take(grace_period.u64() as usize)
-        .last();
+        .map(|item| {
+            let (_, epoch) = item?;
+            Ok(epoch)
+        })
+        .collect::<StdResult<Vec<Epoch>>>()?;
 
-    let epoch = option
-        .and_then(|result| result.ok())
-        .map(|(_, epoch)| epoch);
-
-    Ok(epoch)
+    // if the epochs vector's length is the same as the grace period it means there is one epoch that
+    // is expiring once the new one is created i.e. the last epoch in the vector
+    if epochs.len() == grace_period.u64() as usize {
+        Ok(Some(epochs.last().cloned().unwrap_or_default()))
+    } else {
+        // nothing is expiring yet
+        Ok(None)
+    }
 }
 
 /// Returns the epochs that are within the grace period, i.e. the ones which fees can still be claimed.
