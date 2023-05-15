@@ -4,11 +4,11 @@ use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
+use semver::Version;
+
 use white_whale::pool_network::incentive_factory::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-
-use semver::Version;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -56,7 +56,29 @@ pub fn instantiate(
 
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new())
+    Ok(Response::default().add_attributes(vec![
+        ("action", "instantiate".to_string()),
+        ("owner", config.owner.to_string()),
+        ("fee_collector_addr", config.fee_collector_addr.to_string()),
+        ("create_flow_fee", config.create_flow_fee.to_string()),
+        (
+            "max_concurrent_flows",
+            config.max_concurrent_flows.to_string(),
+        ),
+        ("incentive_code_id", config.incentive_code_id.to_string()),
+        (
+            "max_flow_start_time_buffer",
+            config.max_flow_start_time_buffer.to_string(),
+        ),
+        (
+            "min_unbonding_duration",
+            config.min_unbonding_duration.to_string(),
+        ),
+        (
+            "max_unbonding_duration",
+            config.max_unbonding_duration.to_string(),
+        ),
+    ]))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -77,6 +99,7 @@ pub fn execute(
             execute::create_incentive(deps, env, lp_address)
         }
         ExecuteMsg::UpdateConfig {
+            owner,
             fee_collector_addr,
             create_flow_fee,
             max_concurrent_flows,
@@ -86,6 +109,7 @@ pub fn execute(
             max_unbonding_duration,
         } => execute::update_config(
             deps,
+            owner,
             fee_collector_addr,
             create_flow_fee,
             max_concurrent_flows,
@@ -138,5 +162,5 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    Ok(Response::default())
+    Ok(Response::default().add_attributes(vec![("action", "migrate".to_string())]))
 }

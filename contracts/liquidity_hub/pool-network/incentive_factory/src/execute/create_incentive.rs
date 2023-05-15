@@ -27,19 +27,24 @@ pub fn create_incentive(
     // where `label` is a length of 3-12 characters
     // this means we have a max length of 28 characters for the label
     // this fits within the limits of the 128 MaxLabelSize defined in wasm
-    Ok(Response::new().add_submessage(SubMsg {
-        id: CREATE_INCENTIVE_REPLY_ID,
-        gas_limit: None,
-        reply_on: ReplyOn::Always,
-        msg: WasmMsg::Instantiate {
-            admin: Some(env.contract.address.into_string()),
-            code_id: config.incentive_code_id,
-            msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
-                lp_address: lp_address.clone(),
-            })?,
-            funds: vec![],
-            label: format!("{} incentives", lp_address.get_label(&deps.as_ref())?),
-        }
-        .into(),
-    }))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "create_incentive".to_string()),
+            ("lp_address", lp_address.to_string()),
+        ])
+        .add_submessage(SubMsg {
+            id: CREATE_INCENTIVE_REPLY_ID,
+            gas_limit: None,
+            reply_on: ReplyOn::Always,
+            msg: WasmMsg::Instantiate {
+                admin: Some(env.contract.address.into_string()),
+                code_id: config.incentive_code_id,
+                msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
+                    lp_address: lp_address.clone(),
+                })?,
+                funds: vec![],
+                label: format!("{} incentives", lp_address.get_label(&deps.as_ref())?),
+            }
+            .into(),
+        }))
 }

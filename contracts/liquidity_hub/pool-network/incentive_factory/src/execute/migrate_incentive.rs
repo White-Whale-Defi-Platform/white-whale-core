@@ -17,9 +17,15 @@ pub fn migrate_incentive(
     // if `code_id` was unspecified, we default to the config incentive code id
     let new_code_id = code_id.unwrap_or(config.incentive_code_id);
 
-    Ok(Response::new().add_message(WasmMsg::Migrate {
-        contract_addr: incentive_address,
-        new_code_id,
-        msg: to_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
-    }))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "migrate_incentive".to_string()),
+            ("incentive_address", incentive_address.clone()),
+            ("new_code_id", new_code_id.to_string()),
+        ])
+        .add_message(WasmMsg::Migrate {
+            contract_addr: incentive_address,
+            new_code_id,
+            msg: to_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
+        }))
 }

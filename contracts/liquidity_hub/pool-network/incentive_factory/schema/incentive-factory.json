@@ -228,6 +228,13 @@
                 ],
                 "format": "uint64",
                 "minimum": 0.0
+              },
+              "owner": {
+                "description": "The owner of the contract.\n\nIf unspecified, the owner address will not change.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false

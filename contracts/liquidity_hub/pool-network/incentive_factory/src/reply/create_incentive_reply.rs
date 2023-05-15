@@ -37,5 +37,9 @@ pub fn create_incentive_reply(deps: DepsMut, msg: Reply) -> Result<Response, Con
         &incentive_address,
     )?;
 
-    Ok(Response::new().add_attribute("incentive_address", incentive_address))
+    Ok(Response::default().add_attributes(vec![
+        ("action", "create_incentive_reply".to_string()),
+        ("incentive_address", incentive_address.to_string()),
+        ("lp_address", incentive_data.lp_address.to_string()),
+    ]))
 }

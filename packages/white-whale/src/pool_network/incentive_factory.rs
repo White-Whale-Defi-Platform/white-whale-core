@@ -31,6 +31,10 @@ pub enum ExecuteMsg {
     ///
     /// Unspecified fields will not be updated.
     UpdateConfig {
+        /// The owner of the contract.
+        ///
+        /// If unspecified, the owner address will not change.
+        owner: Option<String>,
         /// The new fee collector address to send flow creation fees to.
         ///
         /// If unspecified, the fee collector address will not change.
