@@ -10,7 +10,7 @@ pub fn migrate_incentive(
 ) -> Result<Response, ContractError> {
     // check that sender has permissions to perform migration
     let config = CONFIG.load(deps.storage)?;
-    if info.sender != deps.api.addr_humanize(&config.owner)? {
+    if info.sender != config.owner {
         return Err(ContractError::Unauthorized);
     }
 

@@ -9,7 +9,7 @@
     "required": [
       "create_flow_fee",
       "fee_collector_addr",
-      "incentive_contract_id",
+      "incentive_code_id",
       "max_concurrent_flows",
       "max_flow_start_time_buffer",
       "max_unbonding_duration",
@@ -28,7 +28,7 @@
         "description": "The address of the fee collector to send flow creation fees to.",
         "type": "string"
       },
-      "incentive_contract_id": {
+      "incentive_code_id": {
         "description": "The code ID of the incentive contract.",
         "type": "integer",
         "format": "uint64",
@@ -184,7 +184,7 @@
                   "null"
                 ]
               },
-              "incentive_contract_id": {
+              "incentive_code_id": {
                 "description": "The new code ID of the incentive contract.\n\nIf unspecified, the incentive contract id will not change.",
                 "type": [
                   "integer",
@@ -511,7 +511,7 @@
           "description": "The address to send fees to.",
           "allOf": [
             {
-              "$ref": "#/definitions/CanonicalAddr"
+              "$ref": "#/definitions/Addr"
             }
           ]
         },
@@ -546,11 +546,15 @@
           "minimum": 0.0
         },
         "owner": {
-          "$ref": "#/definitions/CanonicalAddr"
+          "$ref": "#/definitions/Addr"
         }
       },
       "additionalProperties": false,
       "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
         "Asset": {
           "type": "object",
           "required": [
@@ -611,18 +615,6 @@
                 }
               },
               "additionalProperties": false
-            }
-          ]
-        },
-        "Binary": {
-          "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
-          "type": "string"
-        },
-        "CanonicalAddr": {
-          "description": "A blockchain address in its binary form.\n\nThe specific implementation is up to the underlying chain and CosmWasm as well as contracts should not make assumptions on that data. In Ethereum for example, an `Addr` would contain a user visible address like 0x14d3cc818735723ab86eaf9502376e847a64ddad and the corresponding `CanonicalAddr` would store the 20 bytes 0x14, 0xD3, ..., 0xAD. In Cosmos, the bech32 format is used for `Addr`s and the `CanonicalAddr` holds the encoded bech32 data without the checksum. Typical sizes are 20 bytes for externally owned addresses and 32 bytes for module addresses (such as x/wasm contract addresses). That being said, a chain might decide to use any size other than 20 or 32 bytes.\n\nThe safe way to obtain a valid `CanonicalAddr` is using `Api::addr_canonicalize`. In addition to that there are many unsafe ways to convert any binary data into an instance. So the type shoud be treated as a marker to express the intended data type, not as a validity guarantee of any sort.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Binary"
             }
           ]
         },

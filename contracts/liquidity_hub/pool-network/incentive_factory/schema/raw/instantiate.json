@@ -5,7 +5,7 @@
   "required": [
     "create_flow_fee",
     "fee_collector_addr",
-    "incentive_contract_id",
+    "incentive_code_id",
     "max_concurrent_flows",
     "max_flow_start_time_buffer",
     "max_unbonding_duration",
@@ -24,7 +24,7 @@
       "description": "The address of the fee collector to send flow creation fees to.",
       "type": "string"
     },
-    "incentive_contract_id": {
+    "incentive_code_id": {
       "description": "The code ID of the incentive contract.",
       "type": "integer",
       "format": "uint64",

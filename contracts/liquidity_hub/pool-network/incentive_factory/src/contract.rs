@@ -42,13 +42,11 @@ pub fn instantiate(
     }
 
     let config = Config {
-        owner: deps.api.addr_canonicalize(info.sender.as_str())?,
-        fee_collector_addr: deps
-            .api
-            .addr_canonicalize(msg.fee_collector_addr.as_str())?,
+        owner: deps.api.addr_validate(info.sender.as_str())?,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
         create_flow_fee: msg.create_flow_fee,
         max_concurrent_flows: msg.max_concurrent_flows,
-        incentive_code_id: msg.incentive_contract_id,
+        incentive_code_id: msg.incentive_code_id,
         max_flow_start_time_buffer: msg.max_flow_start_time_buffer,
         min_unbonding_duration: msg.min_unbonding_duration,
         max_unbonding_duration: msg.max_unbonding_duration,
@@ -90,7 +88,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     // Only the owner can execute messages on the factory
     let config: Config = CONFIG.load(deps.storage)?;
-    if deps.api.addr_canonicalize(info.sender.as_str())? != config.owner {
+    if deps.api.addr_validate(info.sender.as_str())? != config.owner {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -103,7 +101,7 @@ pub fn execute(
             fee_collector_addr,
             create_flow_fee,
             max_concurrent_flows,
-            incentive_contract_id,
+            incentive_code_id: incentive_contract_id,
             max_flow_start_time_buffer,
             min_unbonding_duration,
             max_unbonding_duration,

@@ -117,7 +117,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
                     },
                 },
                 fee_collector_addr: "fee_collector".to_string(),
-                incentive_contract_id: incentive_id,
+                incentive_code_id: incentive_id,
                 max_concurrent_flows: 7,
                 max_flow_start_time_buffer: 100,
                 max_unbonding_duration: 100000,

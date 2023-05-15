@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, CanonicalAddr};
+use cosmwasm_std::Addr;
 
 use crate::pool_network::asset::{Asset, AssetInfo};
 
@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
     /// The maximum amount of flows that can exist for a single LP token at a single time.
     pub max_concurrent_flows: u64,
     /// The code ID of the incentive contract.
-    pub incentive_contract_id: u64,
+    pub incentive_code_id: u64,
     /// The maximum start time buffer for a new flow (in seconds).
     ///
     /// New flows are allowed to start up to `now + start_time_buffer` into the future.
@@ -50,7 +50,7 @@ pub enum ExecuteMsg {
         /// The new code ID of the incentive contract.
         ///
         /// If unspecified, the incentive contract id will not change.
-        incentive_contract_id: Option<u64>,
+        incentive_code_id: Option<u64>,
 
         /// The new maximum start time buffer for a new flow (in seconds).
         ///
@@ -105,9 +105,9 @@ pub struct MigrateMsg {}
 /// Stores the configuration of the incentive factory.
 #[cw_serde]
 pub struct Config {
-    pub owner: CanonicalAddr,
+    pub owner: Addr,
     /// The address to send fees to.
-    pub fee_collector_addr: CanonicalAddr,
+    pub fee_collector_addr: Addr,
     /// The fee that must be paid each time a user wants to create a flow.
     pub create_flow_fee: Asset,
     /// The maximum amount of flows that can exist at any one time.
