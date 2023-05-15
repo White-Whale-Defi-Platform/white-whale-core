@@ -27,8 +27,8 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        factory_address: deps.api.addr_canonicalize(&info.sender.into_string())?,
-        lp_address: deps.api.addr_canonicalize(&msg.lp_address.to_string())?,
+        factory_address: deps.api.addr_validate(&info.sender.into_string())?,
+        lp_address: deps.api.addr_validate(&msg.lp_address.to_string())?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -38,11 +38,17 @@ pub fn instantiate(
 
     GLOBAL_WEIGHT.save(deps.storage, &Uint128::zero())?;
 
-    Ok(Response::new().set_data(to_binary(
-        &white_whale::pool_network::incentive::InstantiateReplyCallback {
-            lp_address: msg.lp_address,
-        },
-    )?))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "instantiate".to_string()),
+            ("lp_address", config.factory_address.to_string()),
+            ("lp_address", config.lp_address.to_string()),
+        ])
+        .set_data(to_binary(
+            &white_whale::pool_network::incentive::InstantiateReplyCallback {
+                lp_address: msg.lp_address,
+            },
+        )?))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

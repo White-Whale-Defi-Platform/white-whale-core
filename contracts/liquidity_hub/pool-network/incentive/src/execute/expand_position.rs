@@ -17,12 +17,16 @@ pub fn expand_position(
 ) -> Result<Response, ContractError> {
     // first ensure that the relevant tokens were transferred to us
     let config = CONFIG.load(deps.storage)?;
-    let lp_token = deps.api.addr_humanize(&config.lp_address)?;
     let mut messages: Vec<CosmosMsg> = vec![];
 
     {
-        let claim_token_msg =
-            validate_funds_sent(&deps.as_ref(), env.clone(), lp_token, info.clone(), amount)?;
+        let claim_token_msg = validate_funds_sent(
+            &deps.as_ref(),
+            env.clone(),
+            config.lp_address,
+            info.clone(),
+            amount,
+        )?;
         messages.push(claim_token_msg.into());
     }
 

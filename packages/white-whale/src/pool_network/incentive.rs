@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{CanonicalAddr, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 
 use crate::pool_network::asset::{Asset, AssetInfo};
 
@@ -73,7 +73,7 @@ pub struct Flow {
     /// A unique identifier of the flow.
     pub flow_id: u64,
     /// The account which opened the flow and can manage it.
-    pub flow_creator: CanonicalAddr,
+    pub flow_creator: Addr,
     /// The asset the flow was created to distribute.
     pub flow_asset: Asset,
     /// The amount of the `flow_asset` that has been claimed so far.
@@ -146,10 +146,10 @@ pub struct InstantiateReplyCallback {
 #[cw_serde]
 pub struct Config {
     /// The address of the incentive factory.
-    pub factory_address: CanonicalAddr,
+    pub factory_address: Addr,
 
     /// The address of the LP token tied to the incentive contract.
-    pub lp_address: CanonicalAddr,
+    pub lp_address: Addr,
 }
 
 /// The type of distribution curve to exist.

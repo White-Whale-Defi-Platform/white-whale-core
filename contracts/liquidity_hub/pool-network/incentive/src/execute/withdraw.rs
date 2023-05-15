@@ -51,7 +51,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
     if !return_token_count.is_zero() {
         let config = CONFIG.load(deps.storage)?;
         return Ok(Response::new().add_message(WasmMsg::Execute {
-            contract_addr: deps.api.addr_humanize(&config.lp_address)?.into_string(),
+            contract_addr: config.lp_address.into_string(),
             msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.into_string(),
                 amount: return_token_count,

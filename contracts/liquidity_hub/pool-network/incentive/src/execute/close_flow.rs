@@ -17,7 +17,7 @@ pub fn close_flow(
     let config = CONFIG.load(deps.storage)?;
     let factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
-            deps.api.addr_humanize(&config.factory_address)?,
+            config.factory_address.into_string(),
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
@@ -33,24 +33,21 @@ pub fn close_flow(
             })?
     };
 
-    let flow_creator = deps.api.addr_humanize(&flow.flow_creator)?;
-    if !(flow_creator == info.sender
-        || info.sender == deps.api.addr_humanize(&factory_config.owner)?)
-    {
+    if !(flow.flow_creator == info.sender || info.sender == factory_config.owner) {
         return Err(ContractError::UnauthorizedFlowClose { flow_id });
     }
 
     // return the flow assets available
     let messages: Vec<CosmosMsg> = vec![match flow.flow_asset.info {
         AssetInfo::NativeToken { denom } => BankMsg::Send {
-            to_address: flow_creator.into_string(),
+            to_address: flow.flow_creator.clone().into_string(),
             amount: coins(flow.flow_asset.amount.u128(), denom),
         }
         .into(),
         AssetInfo::Token { contract_addr } => WasmMsg::Execute {
             contract_addr,
             msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                recipient: flow_creator.into_string(),
+                recipient: flow.flow_creator.clone().into_string(),
                 amount: flow.flow_asset.amount,
             })?,
             funds: vec![],

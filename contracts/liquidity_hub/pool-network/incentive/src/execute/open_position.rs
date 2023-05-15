@@ -17,13 +17,11 @@ pub fn open_position(
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let lp_token = deps.api.addr_humanize(&config.lp_address)?;
-    let factory_address = deps.api.addr_humanize(&config.factory_address)?;
 
     // validate unbonding duration
     let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
-            factory_address,
+            config.factory_address.into_string(),
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
@@ -39,8 +37,13 @@ pub fn open_position(
 
     // ensure that user gave us an allowance for the token amount
     // we check this on the message sender rather than the receiver
-    let transfer_token_msg =
-        validate_funds_sent(&deps.as_ref(), env.clone(), lp_token, info.clone(), amount)?;
+    let transfer_token_msg = validate_funds_sent(
+        &deps.as_ref(),
+        env.clone(),
+        config.lp_address,
+        info.clone(),
+        amount,
+    )?;
 
     // if receiver was not specified, default to the sender of the message.
     let receiver = receiver

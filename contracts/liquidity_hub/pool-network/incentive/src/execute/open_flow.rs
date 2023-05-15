@@ -25,20 +25,15 @@ pub fn open_flow(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    let incentive_factory_addr = deps.api.addr_humanize(&config.factory_address)?;
-
     let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
-            incentive_factory_addr.into_string(),
+            config.factory_address.into_string(),
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
     let flow_fee = incentive_factory_config.create_flow_fee;
-    let fee_collector_addr = deps
-        .api
-        .addr_humanize(&incentive_factory_config.fee_collector_addr)?;
     match flow_fee.info.clone() {
         AssetInfo::NativeToken { denom } => {
             // fee should be included inside message info
@@ -77,7 +72,10 @@ pub fn open_flow(
             // send fee to fee collector
             messages.push(
                 BankMsg::Send {
-                    to_address: fee_collector_addr.into_string(),
+                    to_address: incentive_factory_config
+                        .fee_collector_addr
+                        .clone()
+                        .into_string(),
                     amount: vec![Coin {
                         amount: flow_fee.amount,
                         denom,
@@ -108,7 +106,7 @@ pub fn open_flow(
                 WasmMsg::Execute {
                     contract_addr,
                     msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                        recipient: fee_collector_addr.into_string(),
+                        recipient: incentive_factory_config.fee_collector_addr.into_string(),
                         amount: flow_fee.amount,
                     })?,
                     funds: vec![],
@@ -183,7 +181,7 @@ pub fn open_flow(
         FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1))?;
     FLOWS.update::<_, StdError>(deps.storage, |mut flows| {
         flows.push(white_whale::pool_network::incentive::Flow {
-            flow_creator: deps.api.addr_canonicalize(&info.sender.into_string())?,
+            flow_creator: info.sender,
             flow_id,
             curve,
             flow_asset,
