@@ -11,7 +11,9 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> StdResult<RewardsRe
 
     let user_share = get_user_share(&deps, address.clone())?;
 
-    let last_claim_time = LAST_CLAIMED_INDEX.may_load(deps.storage, address)?;
+    let last_claim_time = LAST_CLAIMED_INDEX
+        .may_load(deps.storage, address)?
+        .unwrap_or(env.block.time.seconds());
 
     let rewards = FLOWS
         .may_load(deps.storage)?

@@ -12,18 +12,12 @@ use crate::{
     state::{ADDRESS_WEIGHT, FLOWS, GLOBAL_WEIGHT, LAST_CLAIMED_INDEX},
 };
 
-pub fn calculate_emission(
-    current_time: u64,
-    start: u64,
-    end: u64,
-    curve: &Curve,
-    total: Uint128,
-) -> Uint256 {
-    let total = Uint256::from_uint128(total);
+pub fn calculate_emission(current_time: u64, start: u64, end: u64, flow: &Flow) -> Uint256 {
+    let total = Uint256::from_uint128(flow.claimed_amount);
 
     let percentage = Decimal256::from_ratio(current_time - start, end - start);
 
-    match curve {
+    match &flow.curve {
         &Curve::Linear => percentage * total,
     }
 }
@@ -40,17 +34,14 @@ pub fn get_user_share(deps: &Deps, address: Addr) -> Result<Decimal256, StdError
 pub fn calculate_claimable_amount(
     flow: &Flow,
     env: &Env,
-    user_last_claimed: Option<u64>,
+    user_last_claimed: u64,
     user_share: Decimal256,
 ) -> Result<Uint128, StdError> {
     let emissions = calculate_emission(
-        env.block.time.seconds().max(flow.end_timestamp),
-        user_last_claimed
-            .unwrap_or_default()
-            .max(flow.start_timestamp),
+        env.block.time.seconds().min(flow.end_timestamp),
+        user_last_claimed,
         flow.end_timestamp,
-        &flow.curve,
-        flow.flow_asset.amount,
+        &flow,
     );
 
     // convert back into Uint128
@@ -69,7 +60,9 @@ pub fn claim(
     let mut messages: Vec<CosmosMsg> = vec![];
     let mut flows = FLOWS.load(deps.storage)?;
 
-    let user_last_claimed = LAST_CLAIMED_INDEX.may_load(deps.storage, info.sender.clone())?;
+    let user_last_claimed = LAST_CLAIMED_INDEX
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or(env.block.time.seconds());
 
     for mut flow in flows.iter_mut() {
         let user_reward = calculate_claimable_amount(flow, env, user_last_claimed, user_share)?;
