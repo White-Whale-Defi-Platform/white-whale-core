@@ -63,5 +63,10 @@ pub fn close_flow(
             .collect())
     })?;
 
-    Ok(Response::new().add_messages(messages))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "close_flow".to_string()),
+            ("flow_id", flow_id.to_string()),
+        ])
+        .add_messages(messages))
 }

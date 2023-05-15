@@ -72,9 +72,16 @@ pub fn expand_position(
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_add(weight)?)
     })?;
-    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender, |user_weight| {
+    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender.clone(), |user_weight| {
         Ok(user_weight.unwrap_or_default().checked_add(weight)?)
     })?;
 
-    Ok(Response::new().add_messages(messages))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "expand_position".to_string()),
+            ("receiver", receiver.sender.to_string()),
+            ("amount", amount.to_string()),
+            ("unbonding_duration", unbonding_duration.to_string()),
+        ])
+        .add_messages(messages))
 }

@@ -1,5 +1,5 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError};
-use white_whale::pool_network::incentive::ClosedPosition;
+use white_whale::pool_network::incentive::{ClosedPosition, OpenPosition};
 
 use crate::{
     error::ContractError,
@@ -62,10 +62,17 @@ pub fn close_position(
             .checked_sub(reduced_weight)?)
     })?;
 
+    let closing_position: OpenPosition = open_positions[to_close_index].clone();
+
     open_positions.remove(to_close_index);
     OPEN_POSITIONS.save(deps.storage, info.sender, &open_positions)?;
 
-    Ok(Response::default().add_messages(claim_messages))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "close_position".to_string()),
+            ("closing_position", closing_position.to_string()),
+        ])
+        .add_messages(claim_messages))
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+use std::fmt;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 
@@ -97,6 +98,16 @@ pub struct OpenPosition {
     pub unbonding_duration: u64,
 }
 
+impl fmt::Display for OpenPosition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "OpenPosition(amount: {}, unbonding_duration: {})",
+            self.amount, self.unbonding_duration
+        )
+    }
+}
+
 /// Represents a position that has moved from the [`OpenPosition`] state.
 ///
 /// This position is no longer accumulating rewards, and the underlying tokens are claimable after `unbonding_duration`.
@@ -157,6 +168,14 @@ pub struct Config {
 pub enum Curve {
     /// A linear curve that releases assets as we approach the end of the flow period.
     Linear,
+}
+
+impl std::fmt::Display for Curve {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Curve::Linear => write!(f, "Linear"),
+        }
+    }
 }
 
 pub type ConfigResponse = Config;

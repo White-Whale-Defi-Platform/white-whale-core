@@ -41,7 +41,7 @@ pub fn instantiate(
     Ok(Response::default()
         .add_attributes(vec![
             ("action", "instantiate".to_string()),
-            ("lp_address", config.factory_address.to_string()),
+            ("factory_address", config.factory_address.to_string()),
             ("lp_address", config.lp_address.to_string()),
         ])
         .set_data(to_binary(

@@ -181,17 +181,28 @@ pub fn open_flow(
         FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1))?;
     FLOWS.update::<_, StdError>(deps.storage, |mut flows| {
         flows.push(white_whale::pool_network::incentive::Flow {
-            flow_creator: info.sender,
-            flow_id,
-            curve,
-            flow_asset,
+            flow_creator: info.sender.clone(),
+            flow_id: flow_id.clone(),
+            curve: curve.clone(),
+            flow_asset: flow_asset.clone(),
             claimed_amount: Uint128::zero(),
-            start_timestamp,
-            end_timestamp,
+            start_timestamp: start_timestamp.clone(),
+            end_timestamp: end_timestamp.clone(),
         });
 
         Ok(flows)
     })?;
 
-    Ok(Response::new().add_messages(messages))
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "open_flow".to_string()),
+            ("flow_id", flow_id.to_string()),
+            ("flow_creator", info.sender.into_string()),
+            ("flow_asset", flow_asset.info.to_string()),
+            ("flow_asset_amount", flow_asset.amount.to_string()),
+            ("start_timestamp", start_timestamp.to_string()),
+            ("end_timestamp", end_timestamp.to_string()),
+            ("curve", curve.to_string()),
+        ])
+        .add_messages(messages))
 }
