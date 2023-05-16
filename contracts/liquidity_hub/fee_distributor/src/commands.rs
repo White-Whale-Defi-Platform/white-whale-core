@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
-    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
+    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery, Uint128, Decimal,
 };
 
 use white_whale::fee_distributor::{Epoch, EpochConfig};
@@ -97,10 +97,11 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 contract_addr: config.bonding_contract_addr.to_string(),
                 msg: to_binary(&QueryMsg::Weight {
                     address: info.sender.to_string(),
+                    timestamp: Some(epoch.start_time.nanos()),
                 })?,
             }))?;
-
-        let fee_share = bonding_weight_response.share / epoch.weight;
+        // TODO: Fee share here is too big, why??
+        let fee_share = Decimal::from_ratio(bonding_weight_response.weight, epoch.weight);
         for fee in epoch.total.iter() {
             let reward = fee.amount * fee_share;
 

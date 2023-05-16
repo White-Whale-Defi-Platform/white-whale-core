@@ -144,6 +144,13 @@ pub(crate) fn query_weight(
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
 
+    // // Loop through unbonds and get the ones that are past the unbonding period
+    // let unbonding: StdResult<Vec<_>> = UNBOND
+    //     .prefix(&address)
+    //     .range(deps.storage, None, None, Order::Ascending)
+    //     .take(MAX_PAGE_LIMIT as usize)
+    //     .collect();
+
     let mut global_index = GLOBAL
         .may_load(deps.storage)
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
