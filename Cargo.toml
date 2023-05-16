@@ -38,9 +38,13 @@ white-whale-testing = { path = "./packages/white-whale-testing" }
 cw-multi-test = { version = "0.16.2" }
 uint = "0.9.4"
 integer-sqrt = "0.1.5"
+anyhow = { version = "1.0.68"}
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
+fee_collector = { path = "./contracts/liquidity_hub/fee_collector" }
+incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
+terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

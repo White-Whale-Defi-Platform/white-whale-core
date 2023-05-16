@@ -671,15 +671,21 @@ dependencies = [
 name = "incentive"
 version = "1.0.0"
 dependencies = [
+ "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-multi-test 0.16.4",
  "cw-storage-plus 0.15.1",
  "cw2 0.15.1",
  "cw20",
+ "cw20-base",
+ "fee_collector",
+ "incentive-factory",
  "protobuf",
  "schemars",
  "semver",
  "serde",
+ "terraswap-token",
  "thiserror",
  "white-whale",
 ]
