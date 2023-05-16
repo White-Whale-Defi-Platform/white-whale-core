@@ -79,6 +79,7 @@ pub fn close_position(
 mod tests {
     use cosmwasm_std::Uint128;
     use cw_multi_test::Executor;
+    use white_whale::pool_network::incentive::{PositionsResponse, QueryMsg};
 
     use crate::tests::{
         mock_app::mock_app,
@@ -90,7 +91,7 @@ mod tests {
     fn can_close_position() {
         let mut app = mock_app();
 
-        let lp_balance = Uint128::new(1000000);
+        let lp_balance = Uint128::new(1_000_000u128);
 
         let AppInstantiateResponse {
             incentive_addr,
@@ -110,6 +111,18 @@ mod tests {
         )
         .unwrap();
 
+        let positions_response: PositionsResponse = app
+            .wrap()
+            .query_wasm_smart(
+                incentive_addr.clone(),
+                &QueryMsg::Positions {
+                    address: "creator".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert!(positions_response.positions.is_empty());
+
         app.execute_contract(
             mock_creator().sender,
             incentive_addr.clone(),
@@ -121,6 +134,18 @@ mod tests {
             &[],
         )
         .unwrap();
+
+        let positions_response: PositionsResponse = app
+            .wrap()
+            .query_wasm_smart(
+                incentive_addr.clone(),
+                &QueryMsg::Positions {
+                    address: "creator".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(positions_response.positions.len(), 1);
 
         // now try to close the position
         app.execute_contract(

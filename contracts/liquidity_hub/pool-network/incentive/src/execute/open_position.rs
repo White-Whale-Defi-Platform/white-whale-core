@@ -1,4 +1,5 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
+use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
+
 use white_whale::pool_network::incentive::OpenPosition;
 
 use crate::{
@@ -65,9 +66,17 @@ pub fn open_position(
         return Err(ContractError::DuplicatePosition);
     }
 
-    // claim to ensure that the user gets reward for current weight rather than
-    // future weight after opening the position
-    let claim_msgs = crate::claim::claim(&mut deps, &env, &receiver)?;
+    // claim if the user has open positions to ensure that the user gets reward for current weight
+    // rather than future weight after opening the position
+
+    let mut claim_msgs: Vec<CosmosMsg> = vec![];
+    if !OPEN_POSITIONS
+        .may_load(deps.storage, receiver.sender.clone())?
+        .unwrap_or_default()
+        .is_empty()
+    {
+        claim_msgs = crate::claim::claim(&mut deps, &env, &receiver)?;
+    }
 
     // create the new position
     OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.sender.clone(), |positions| {
