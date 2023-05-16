@@ -6,6 +6,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 pub(crate) fn get_epochs() -> Vec<Epoch> {
     vec![
         Epoch {
+            weight: Uint128::from(1_000_000u128),
             id: Uint64::new(1u64),
             start_time: Timestamp::from_seconds(1678726800),
             total: vec![
@@ -52,6 +53,7 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
             ],
         },
         Epoch {
+            weight: Uint128::from(1_000_000u128),
             id: Uint64::new(2u64),
             start_time: Timestamp::from_seconds(1678813200),
             total: vec![Asset {
@@ -69,6 +71,7 @@ pub(crate) fn get_epochs() -> Vec<Epoch> {
             claimed: vec![],
         },
         Epoch {
+            weight: Uint128::from(1_000_000u128),
             id: Uint64::new(3u64),
             start_time: Timestamp::from_seconds(1678899600),
             total: vec![

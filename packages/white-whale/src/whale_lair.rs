@@ -112,6 +112,11 @@ pub enum QueryMsg {
     /// Returns the total amount of assets that have been bonded to the contract.
     #[returns(BondedResponse)]
     TotalBonded {},
+
+    /// Returns the global index of the contract.
+    #[returns(GlobalIndex)]
+    GlobalIndex {},
+    
 }
 
 #[cw_serde]

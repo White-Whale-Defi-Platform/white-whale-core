@@ -176,3 +176,9 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
         bonded_assets: global_index.bonded_assets,
     })
 }
+
+/// Queries the global index 
+pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
+    let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    Ok(global_index)
+}
