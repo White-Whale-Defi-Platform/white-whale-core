@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{CanonicalAddr, Decimal};
+use cosmwasm_std::{Addr, Decimal};
 
 use super::asset::Asset;
 
@@ -30,7 +30,7 @@ pub struct MigrateMsg {}
 #[cw_serde]
 pub struct Config {
     /// The address of the incentive factory.
-    pub incentive_factory_addr: CanonicalAddr,
+    pub incentive_factory_addr: Addr,
 }
 
 #[cw_serde]
@@ -38,7 +38,7 @@ pub struct TempState {
     /// The amount of time in seconds to unbond tokens for when incentivizing.
     pub unbonding_duration: u64,
     /// The person who is creating the position after depositing.
-    pub receiver: CanonicalAddr,
+    pub receiver: Addr,
     /// The address that is being deposited to.
-    pub pair_addr: CanonicalAddr,
+    pub pair_addr: Addr,
 }

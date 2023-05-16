@@ -24,21 +24,18 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         receiver,
         pair_addr,
     } = TEMP_STATE.load(deps.storage)?;
-    let receiver = deps.api.addr_humanize(&receiver)?;
-    let pair_address = deps.api.addr_humanize(&pair_addr)?;
 
     // now perform the incentive position creation
     let config = CONFIG.load(deps.storage)?;
-    let incentive_factory_address = deps.api.addr_humanize(&config.incentive_factory_addr)?;
 
     let pair_info: white_whale::pool_network::asset::PairInfo = deps.querier.query_wasm_smart(
-        pair_address.clone(),
+        pair_addr.clone(),
         &white_whale::pool_network::pair::QueryMsg::Pair {},
     )?;
 
     let incentive_address: white_whale::pool_network::incentive_factory::IncentiveResponse =
         deps.querier.query_wasm_smart(
-            incentive_factory_address,
+            config.incentive_factory_addr,
             &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
                 lp_address: pair_info.liquidity_token.clone(),
             },
@@ -47,7 +44,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
     let incentive_address = incentive_address.map_or_else(
         || {
             Err(ContractError::MissingIncentive {
-                pair_address: pair_address.to_string(),
+                pair_address: pair_addr.to_string(),
             })
         },
         Ok,
@@ -106,7 +103,14 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
 		return unbonding_duration == position_unbonding_duration;
     });
 
-    Ok(Response::new()
+    Ok(Response::default()
+        .add_attributes(vec![
+            ("action", "deposit_pair_reply"),
+            ("pair_address", pair_addr.to_string().as_str()),
+            ("lp_amount", &lp_amount.to_string()),
+            ("unbonding_duration", &unbonding_duration.to_string()),
+            ("receiver", &receiver.to_string()),
+        ])
         .add_messages(messages)
         .add_message(WasmMsg::Execute {
             contract_addr: incentive_address.into_string(),

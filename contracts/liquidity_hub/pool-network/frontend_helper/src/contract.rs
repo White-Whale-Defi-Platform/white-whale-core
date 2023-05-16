@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{
+    to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::frontend_helper::{
@@ -8,6 +10,7 @@ use white_whale::pool_network::frontend_helper::{
 };
 
 use semver::Version;
+use white_whale::traits::OptionDecimal;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -29,7 +32,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        incentive_factory_addr: deps.api.addr_canonicalize(&msg.incentive_factory)?,
+        incentive_factory_addr: deps.api.addr_validate(&msg.incentive_factory)?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -55,10 +58,8 @@ pub fn execute(
                 deps.storage,
                 &TempState {
                     unbonding_duration,
-                    receiver: deps
-                        .api
-                        .addr_canonicalize(&info.sender.clone().into_string())?,
-                    pair_addr: deps.api.addr_canonicalize(&pair_address)?,
+                    receiver: info.sender.clone(),
+                    pair_addr: deps.api.addr_validate(&pair_address)?,
                 },
             )?;
 
@@ -115,7 +116,13 @@ pub fn execute(
                 .concat();
 
             // send request to deposit
-            Ok(Response::new()
+            Ok(Response::default()
+                .add_attributes(vec![
+                    ("action", "deposit".to_string()),
+                    ("pair_address", pair_address.clone()),
+                    ("unbonding_duration", unbonding_duration.to_string()),
+                    ("slippage_tolerance", slippage_tolerance.to_string()),
+                ])
                 .add_messages(transfer_token_msgs)
                 .add_submessage(SubMsg {
                     id: DEPOSIT_PAIR_REPLY_ID,
