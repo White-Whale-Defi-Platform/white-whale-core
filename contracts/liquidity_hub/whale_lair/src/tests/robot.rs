@@ -222,12 +222,13 @@ impl TestingRobot {
     pub(crate) fn query_weight(
         &mut self,
         address: String,
+
         response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
     ) -> &mut Self {
         let bonding_weight_response: BondingWeightResponse = self
             .app
             .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Weight { address })
+            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Weight { address, timestamp:Some(self.app.block_info().time.nanos()) })
             .unwrap();
 
         response(Ok((self, bonding_weight_response)));

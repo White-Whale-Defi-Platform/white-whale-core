@@ -1,12 +1,12 @@
 use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
-    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
+    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery, Uint128, Decimal,
 };
 
 use white_whale::fee_distributor::{Epoch, EpochConfig};
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
+use white_whale::whale_lair::{BondingWeightResponse, QueryMsg, GlobalIndex};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
@@ -17,7 +17,6 @@ use crate::ContractError;
 pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = get_current_epoch(deps.as_ref())?.epoch;
-
     if env
         .block
         .time
@@ -44,13 +43,20 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 .start_time
                 .plus_nanos(config.epoch_config.duration.u64())
         };
-
+    
+    // Query the current global index
+    let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: config.bonding_contract_addr.to_string(),
+        msg: to_binary(&QueryMsg::GlobalIndex {})?,
+    }))?;
+    
     let new_epoch = Epoch {
         id: current_epoch.id.checked_add(Uint64::new(1u64))?,
         start_time,
         total: vec![],
         available: vec![],
         claimed: vec![],
+        weight: global_index.weight,
     };
 
     Ok(Response::new()
@@ -77,15 +83,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
     let config = CONFIG.load(deps.storage)?;
-    let bonding_weight_response: BondingWeightResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: config.bonding_contract_addr.to_string(),
-            msg: to_binary(&QueryMsg::Weight {
-                address: info.sender.to_string(),
-            })?,
-        }))?;
-
-    let fee_share = bonding_weight_response.share;
+    
 
     let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
     if claimable_epochs.is_empty() {
@@ -94,6 +92,16 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
+        let bonding_weight_response: BondingWeightResponse =
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: config.bonding_contract_addr.to_string(),
+                msg: to_binary(&QueryMsg::Weight {
+                    address: info.sender.to_string(),
+                    timestamp: Some(epoch.start_time.nanos()),
+                })?,
+            }))?;
+        // TODO: Fee share here is too big, why??
+        let fee_share = Decimal::from_ratio(bonding_weight_response.weight, epoch.weight);
         for fee in epoch.total.iter() {
             let reward = fee.amount * fee_share;
 

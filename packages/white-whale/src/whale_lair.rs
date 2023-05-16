@@ -107,11 +107,16 @@ pub enum QueryMsg {
 
     /// Returns the weight of the address.
     #[returns(BondingWeightResponse)]
-    Weight { address: String },
+    Weight { address: String, timestamp: Option<u64> },
 
     /// Returns the total amount of assets that have been bonded to the contract.
     #[returns(BondedResponse)]
     TotalBonded {},
+
+    /// Returns the global index of the contract.
+    #[returns(GlobalIndex)]
+    GlobalIndex {},
+
 }
 
 #[cw_serde]
