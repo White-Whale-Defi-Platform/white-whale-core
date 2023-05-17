@@ -107,7 +107,7 @@ pub enum QueryMsg {
 
     /// Returns the weight of the address.
     #[returns(BondingWeightResponse)]
-    Weight { address: String, timestamp: Option<u64> },
+    Weight { address: String, timestamp: Option<Timestamp>, global_weight: Option<Uint128> },
 
     /// Returns the total amount of assets that have been bonded to the contract.
     #[returns(BondedResponse)]

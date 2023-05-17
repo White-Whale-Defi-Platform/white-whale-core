@@ -71,6 +71,15 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         let forward_fees_response: ForwardFeesResponse = from_binary(&data)?;
         let mut new_epoch = forward_fees_response.epoch;
 
+        // Query bonding contract for GlobalIndex weight 
+        let config = queries::query_config(deps.as_ref())?;
+        // Query the current global index
+        let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: config.bonding_contract_addr.to_string(),
+            msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+        }))?;
+        new_epoch.weight = global_index.weight;
+
         // forward fees from the expiring epoch to the new one.
         let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
 
@@ -84,14 +93,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 available: fees,
                 ..new_epoch
             };
-            // Query bonding contract for GlobalIndex weight 
-           let config = queries::query_config(deps.as_ref())?;
-            // Query the current global index
-            let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: config.bonding_contract_addr.to_string(),
-                msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
-            }))?;
-            new_epoch.weight = global_index.weight;
+            
             // update the expiring epoch's available fees
             expiring_epoch.available = vec![];
             EPOCHS.save(
