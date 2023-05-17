@@ -3488,7 +3488,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     );
     assert!(expiring_epoch_res.epoch.claimed.is_empty());
 
-    // When creating the second epoch, the first one will be expiring since the grace_period was set to 1/.
+    // When creating the second epoch, the first one will be expiring since the grace_period was set to 1.
     // Make sure the available tokens on the expiring epoch are transferred to the second one.
     app.execute_contract(
         creator.sender.clone(),
@@ -3558,13 +3558,13 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     for asset in new_epoch_res.epoch.available {
         total_amount_new_epoch += asset.amount;
     }
-
+    println!("total_amount_new_epoch: {}", total_amount_new_epoch);
     let mut total_amount_expired = Uint128::zero();
     //checking against total since total and available where the same, but available is empty now
     for asset in expired_epoch_res.epoch.total {
         total_amount_expired += asset.amount;
     }
-
+    println!("total_amount_expired: {}", total_amount_expired);
     assert!(total_amount_new_epoch - total_amount_expired > Uint128::zero());
 
     // claim some rewards
@@ -3638,7 +3638,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
             &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
         )
         .unwrap();
-
+    println!("{:?}", current_epoch_res);
     // all should be claimed by now since both stakers claimed their share
     assert!(current_epoch_res.epoch.available[0].amount <= Uint128::one());
     assert!(

@@ -117,6 +117,7 @@ pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
     address: String,
+    global_weight: Option<Uint128>,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
 
@@ -138,11 +139,12 @@ pub(crate) fn query_weight(
             config.growth_rate,
             bond.timestamp,
         )?;
-
+        println!("bond weight: {}", bond.weight);
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
+    println!("total bond weight: {}", total_bond_weight);
 
     // // Loop through unbonds and get the ones that are past the unbonding period
     // let unbonding: StdResult<Vec<_>> = UNBOND
@@ -155,15 +157,15 @@ pub(crate) fn query_weight(
         .may_load(deps.storage)
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
         .ok_or_else(|| StdError::generic_err("Global index not found"))?;
-
+    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight 
     global_index.weight = get_weight(
         timestamp,
-        global_index.weight,
+        global_weight.unwrap_or_else(||global_index.weight),
         global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
     )?;
-
+    // Represents the share of the global weight that the address has
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
 
     Ok(BondingWeightResponse {
@@ -187,5 +189,6 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
 /// Queries the global index 
 pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    println!("global_index: {:?}", global_index);
     Ok(global_index)
 }

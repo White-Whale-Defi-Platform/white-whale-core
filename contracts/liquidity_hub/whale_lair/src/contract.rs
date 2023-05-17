@@ -111,13 +111,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             address,
             denom,
         )?),
-        QueryMsg::Weight { address , timestamp} => {
+        QueryMsg::Weight { address , timestamp, global_weight} => {
             // If timestamp is not provided, use current block time
-            let timestamp = timestamp.unwrap_or_else(|| env.block.time.nanos());
+            let timestamp = timestamp.unwrap_or_else(|| env.block.time);
 
 
             // TODO: Make better timestamp handling
-            to_binary(&queries::query_weight(deps, Timestamp::from_nanos(timestamp), address)?)
+            to_binary(&queries::query_weight(deps, timestamp, address, global_weight)?)
         }
         QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),
         QueryMsg::GlobalIndex {  } => to_binary(&queries::query_global_index(deps)?),
