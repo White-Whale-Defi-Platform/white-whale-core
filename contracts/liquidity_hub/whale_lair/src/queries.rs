@@ -145,8 +145,9 @@ pub(crate) fn query_weight(
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
     println!("total bond weight: {}", total_bond_weight);
-
-    // // Loop through unbonds and get the ones that are past the unbonding period
+    // Search bonds for unique bond.asset.denoms 
+    // let mut denoms: Vec<String> = bonds?.iter().map(|bond| bond.1.asset.denom.clone()).collect();
+    // // // Loop through unbonds and get the ones that are past the unbonding period
     // let unbonding: StdResult<Vec<_>> = UNBOND
     //     .prefix(&address)
     //     .range(deps.storage, None, None, Order::Ascending)
