@@ -45,10 +45,10 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         };
     
     // Query the current global index
-    let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: config.bonding_contract_addr.to_string(),
-        msg: to_binary(&QueryMsg::GlobalIndex {})?,
-    }))?;
+    // let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+    //     contract_addr: config.bonding_contract_addr.to_string(),
+    //     msg: to_binary(&QueryMsg::GlobalIndex {})?,
+    // }))?;
     
     let new_epoch = Epoch {
         id: current_epoch.id.checked_add(Uint64::new(1u64))?,
@@ -56,7 +56,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         total: vec![],
         available: vec![],
         claimed: vec![],
-        weight: global_index.weight,
+        weight: Uint128::zero(),
     };
 
     Ok(Response::new()
@@ -97,13 +97,18 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 contract_addr: config.bonding_contract_addr.to_string(),
                 msg: to_binary(&QueryMsg::Weight {
                     address: info.sender.to_string(),
-                    timestamp: Some(epoch.start_time.nanos()),
+                    timestamp: Some(epoch.start_time),
+                    global_weight: Some(epoch.weight),
                 })?,
             }))?;
-        // TODO: Fee share here is too big, why??
-        let fee_share = Decimal::from_ratio(bonding_weight_response.weight, epoch.weight);
+    
+        println!("bonding_weight_response.weight: {}", bonding_weight_response.weight);
+        println!("bonding: {:?}", bonding_weight_response);
+        println!("epoch.weight: {}", epoch.weight);
+        println!("epoch: {:?}", epoch);
+
         for fee in epoch.total.iter() {
-            let reward = fee.amount * fee_share;
+            let reward = fee.amount * bonding_weight_response.share;
 
             // make sure the reward is sound
             let _ = epoch

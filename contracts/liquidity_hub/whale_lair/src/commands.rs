@@ -147,7 +147,7 @@ pub(crate) fn withdraw(
     if unbondings.is_empty() {
         return Err(ContractError::NothingToWithdraw {});
     }
-
+    // TODO: Relevant for adding weight to get_weight
     for unbonding in unbondings {
         let (ts, bond) = unbonding;
         if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
