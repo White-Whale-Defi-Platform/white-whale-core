@@ -45,6 +45,26 @@ impl TestingSuite {
     pub(crate) fn get_time(&mut self) -> Timestamp {
         self.app.block_info().time
     }
+
+    pub(crate) fn increase_allowance(
+        &mut self,
+        sender: Addr,
+        cw20contract: Addr,
+        allowance: Uint128,
+        spender: Addr,
+    ) -> &mut Self {
+        let msg = cw20_base::msg::ExecuteMsg::IncreaseAllowance {
+            spender: spender.to_string(),
+            amount: allowance,
+            expires: None,
+        };
+
+        self.app
+            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .unwrap();
+
+        self
+    }
 }
 
 /// instantiate / execute messages
@@ -92,7 +112,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn instantiate_default(&mut self) -> &mut Self {
+    pub(crate) fn instantiate_default_native_fee(&mut self) -> &mut Self {
         let incentive_id = self.app.store_code(incentive_contract());
         let fee_collector_addr =
             instantiate_contract(self, InstatiateContract::FeeCollector {}).unwrap();
@@ -136,6 +156,62 @@ impl TestingSuite {
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            7u64,
+            incentive_id,
+            100u64,
+            86400,
+            259200,
+        )
+    }
+
+    #[track_caller]
+    pub(crate) fn instantiate_default_cw20_fee(&mut self) -> &mut Self {
+        let incentive_id = self.app.store_code(incentive_contract());
+        let fee_collector_addr =
+            instantiate_contract(self, InstatiateContract::FeeCollector {}).unwrap();
+
+        let cw20_token = instantiate_contract(
+            self,
+            InstatiateContract::CW20 {
+                name: "uLP".to_string(),
+                symbol: "uLP".to_string(),
+                decimals: 6,
+                initial_balances: vec![
+                    Cw20Coin {
+                        address: self.senders[0].to_string(),
+                        amount: Uint128::new(1_000_000_000_000u128),
+                    },
+                    Cw20Coin {
+                        address: self.senders[1].to_string(),
+                        amount: Uint128::new(1_000_000_000_000u128),
+                    },
+                    Cw20Coin {
+                        address: self.senders[2].to_string(),
+                        amount: Uint128::new(1_000_000_000_000u128),
+                    },
+                ],
+                mint: Some(MinterResponse {
+                    minter: self.senders[0].to_string(),
+                    cap: None,
+                }),
+            },
+        )
+        .unwrap();
+
+        self.cw20_tokens = vec![cw20_token.clone()];
+
+        // 17 May 2023 17:00:00 UTC
+        let timestamp = Timestamp::from_seconds(1684342800u64);
+        self.set_time(timestamp);
+
+        self.instantiate(
+            fee_collector_addr.to_string(),
+            Asset {
+                info: AssetInfo::Token {
+                    contract_addr: cw20_token.to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -399,7 +475,7 @@ impl TestingSuite {
 
     pub(crate) fn query_funds(
         &mut self,
-        contract: Addr,
+        address: Addr,
         asset: AssetInfo,
         result: impl Fn(Uint128),
     ) -> &mut Self {
@@ -409,15 +485,14 @@ impl TestingSuite {
                     self.app.wrap().query_wasm_smart(
                         contract_addr,
                         &cw20_base::msg::QueryMsg::Balance {
-                            address: contract.to_string(),
+                            address: address.to_string(),
                         },
                     );
 
                 balance_response.unwrap().balance
             }
             AssetInfo::NativeToken { denom } => {
-                let coin: StdResult<Coin> = self.app.wrap().query_balance(contract, denom);
-
+                let coin: StdResult<Coin> = self.app.wrap().query_balance(address, denom);
                 coin.unwrap().amount
             }
         };

@@ -37,8 +37,11 @@ pub enum ContractError {
         maximum: u64,
     },
 
-    #[error("You can't create an empty flow")]
-    EmptyFlow,
+    #[error("You can't create a flow with less than the minimum required: {min}")]
+    EmptyFlow { min: Uint128 },
+
+    #[error("The flow you are intending to create doesn't meet the minimum required of {min} after taking the fee")]
+    EmptyFlowAfterFee { min: Uint128 },
 
     #[error("Specified flow asset was not transferred to incentive contract")]
     FlowAssetNotSent,

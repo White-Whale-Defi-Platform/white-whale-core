@@ -15,6 +15,8 @@ use crate::{
     state::{CONFIG, FLOWS, FLOW_COUNTER},
 };
 
+const MIN_FLOW_AMOUNT: Uint128 = Uint128::new(1_000u128);
+
 pub fn open_flow(
     deps: DepsMut,
     env: Env,
@@ -24,8 +26,11 @@ pub fn open_flow(
     curve: Curve,
     mut flow_asset: Asset,
 ) -> Result<Response, ContractError> {
-    if flow_asset.amount == Uint128::zero() {
-        return Err(ContractError::EmptyFlow {});
+    // check the user is not trying to create an empty flow
+    if flow_asset.amount < MIN_FLOW_AMOUNT {
+        return Err(ContractError::EmptyFlow {
+            min: MIN_FLOW_AMOUNT,
+        });
     }
 
     let config = CONFIG.load(deps.storage)?;
@@ -38,29 +43,42 @@ pub fn open_flow(
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    println!("info.funds: {:?}", info.funds);
     let flow_fee = incentive_factory_config.create_flow_fee;
-    println!("flow_fee: {:?}", flow_fee);
+    // check the fee to create a flow is being paid
     match flow_fee.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            println!("the fee is paid in native token with denom: {}", denom);
+        AssetInfo::NativeToken {
+            denom: flow_fee_denom,
+        } => {
             // fee should be included inside message info
             let paid_amount = info
                 .funds
                 .iter()
-                .find(|token| token.denom == denom)
+                .find(|token| token.denom == flow_fee_denom)
                 .ok_or(ContractError::FlowFeeMissing)?
                 .amount;
 
-            println!("paid_amount: {:?}", paid_amount);
+            // check if the user intends to open a flow with the same asset used to pay for the flow_fee
+            match flow_asset.info.clone() {
+                AssetInfo::Token { .. } => {}
+                AssetInfo::NativeToken {
+                    denom: flow_asset_denom,
+                } => {
+                    // if so, subtract the flow_fee from the flow_asset amount
+                    if flow_fee_denom == flow_asset_denom {
+                        flow_asset.amount = flow_asset.amount.saturating_sub(flow_fee.amount);
+
+                        if flow_asset.amount < MIN_FLOW_AMOUNT {
+                            return Err(ContractError::EmptyFlowAfterFee {
+                                min: MIN_FLOW_AMOUNT,
+                            });
+                        }
+                    }
+                }
+            }
 
             match paid_amount.cmp(&flow_fee.amount) {
-                Ordering::Equal => {
-                    println!("equal");
-                    ()
-                } // do nothing if user paid correct amount,
+                Ordering::Equal => (), // do nothing if user paid correct amount,
                 Ordering::Less => {
-                    println!("less");
                     // user underpaid
                     return Err(ContractError::FlowFeeNotPaid {
                         paid_amount,
@@ -68,40 +86,27 @@ pub fn open_flow(
                     });
                 }
                 Ordering::Greater => {
-                    println!("greater");
-
-                    // check if user is intending to open a flow with the same asset paying for the flow fee
-                    // if so let it be, if not return the excess amount
-
+                    // if the user is paying more than the flow_fee and is not trying to open a
+                    // flow with the same asset as the flow_fee, refund the difference
                     match flow_asset.info.clone() {
                         AssetInfo::Token { .. } => {}
                         AssetInfo::NativeToken {
                             denom: flow_asset_denom,
                         } => {
-                            if denom == flow_asset_denom {
-                                // if so, subtract the flow_fee from the flow_asset amount
-                                flow_asset.amount =
-                                    flow_asset.amount.saturating_sub(flow_fee.amount);
-
-                                if flow_asset.amount.is_zero() {
-                                    return Err(ContractError::EmptyFlow {});
-                                }
+                            if flow_fee_denom != flow_asset_denom {
+                                messages.push(
+                                    BankMsg::Send {
+                                        to_address: info.sender.clone().into_string(),
+                                        amount: vec![Coin {
+                                            amount: paid_amount - flow_fee.amount,
+                                            denom: flow_fee_denom.clone(),
+                                        }],
+                                    }
+                                    .into(),
+                                );
                             }
                         }
                     }
-
-                    // user sent more than required for the flow fee
-                    // refund them the difference
-                    messages.push(
-                        BankMsg::Send {
-                            to_address: info.sender.clone().into_string(),
-                            amount: vec![Coin {
-                                amount: paid_amount - flow_fee.amount,
-                                denom: denom.clone(),
-                            }],
-                        }
-                        .into(),
-                    );
                 }
             }
 
@@ -114,34 +119,61 @@ pub fn open_flow(
                         .into_string(),
                     amount: vec![Coin {
                         amount: flow_fee.amount,
-                        denom,
+                        denom: flow_fee_denom,
                     }],
                 }
                 .into(),
             );
         }
-        AssetInfo::Token { contract_addr } => {
+        AssetInfo::Token {
+            contract_addr: flow_fee_contract_addr,
+        } => {
             // we should have been given permissions through allowances
-            let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
-                contract_addr.clone(),
+            let flow_fee_allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
+                flow_fee_contract_addr.clone(),
                 &cw20::Cw20QueryMsg::Allowance {
                     owner: info.sender.clone().into_string(),
                     spender: env.contract.address.clone().into_string(),
                 },
             )?;
 
-            if allowance.allowance < flow_fee.amount {
-                return Err(ContractError::FlowFeeNotPaid {
-                    paid_amount: allowance.allowance,
-                    required_amount: flow_fee.amount,
-                });
+            match flow_asset.info.clone() {
+                AssetInfo::Token {
+                    contract_addr: flow_asset_contract_addr,
+                } => {
+                    if flow_asset_contract_addr == flow_fee_contract_addr {
+                        if flow_fee_allowance.allowance
+                            < flow_fee.amount.checked_add(MIN_FLOW_AMOUNT)?
+                        {
+                            return Err(ContractError::EmptyFlowAfterFee {
+                                min: MIN_FLOW_AMOUNT,
+                            });
+                        }
+                    } else {
+                        if flow_fee_allowance.allowance < flow_fee.amount {
+                            return Err(ContractError::FlowFeeNotPaid {
+                                paid_amount: flow_fee_allowance.allowance,
+                                required_amount: flow_fee.amount,
+                            });
+                        }
+                    }
+                }
+                AssetInfo::NativeToken { .. } => {
+                    if flow_fee_allowance.allowance < flow_fee.amount {
+                        return Err(ContractError::FlowFeeNotPaid {
+                            paid_amount: flow_fee_allowance.allowance,
+                            required_amount: flow_fee.amount,
+                        });
+                    }
+                }
             }
 
             // send fee to fee collector
             messages.push(
                 WasmMsg::Execute {
-                    contract_addr,
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                    contract_addr: flow_fee_contract_addr,
+                    msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.clone().into_string(),
                         recipient: incentive_factory_config.fee_collector_addr.into_string(),
                         amount: flow_fee.amount,
                     })?,
@@ -164,58 +196,117 @@ pub fn open_flow(
     // transfer the `flow_asset` over to us if it was a cw20 token
     // otherwise, verify the user sent the claimed amount in `info.funds`
     match flow_asset.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            info.funds
-                .iter()
-                .find(|sent| sent.denom == denom && sent.amount == flow_asset.amount)
-                .ok_or(ContractError::FlowAssetNotSent)?;
-
-            // let flow_asset_coin = info.funds
-            //     .iter()
-            //     .find(|sent| sent.denom == denom && sent.amount == flow_asset.amount)
-            //     .ok_or(ContractError::FlowAssetNotSent)?;
-            //
-            // // check if the flow_asset_coin is the same type of flow_fee
-            // match flow_fee.info {
-            //     AssetInfo::Token { .. } => {}
-            //     AssetInfo::NativeToken { denom } => {
-            //         if flow_asset_coin.denom == denom {
-            //             // if so, subtract the flow_fee from the flow_asset amount
-            //             flow_asset.amount = flow_asset.amount.saturating_sub(flow_fee.amount);
-            //
-            //             if flow_asset.amount.is_zero() {
-            //                 return Err(ContractError::EmptyFlow {});
-            //             }
-            //         }
-            //     }
-            // }
+        AssetInfo::NativeToken {
+            denom: flow_asset_denom,
+        } => {
+            match flow_fee.info.clone() {
+                AssetInfo::Token { .. } => {
+                    info.funds
+                        .iter()
+                        .find(|sent| {
+                            sent.denom == flow_asset_denom && sent.amount == flow_asset.amount
+                        })
+                        .ok_or(ContractError::FlowAssetNotSent)?;
+                }
+                AssetInfo::NativeToken {
+                    denom: flow_fee_denom,
+                } => {
+                    if flow_fee_denom != flow_asset_denom {
+                        info.funds
+                            .iter()
+                            .find(|sent| {
+                                sent.denom == flow_asset_denom && sent.amount == flow_asset.amount
+                            })
+                            .ok_or(ContractError::FlowAssetNotSent)?;
+                    }
+                    // no need to verify the case where flow_fee_denom == flow_asset_denom since
+                    // it is done before when we check the fee_flow denom is the same as the flow_asset_denom
+                }
+            }
         }
-        AssetInfo::Token { contract_addr } => {
+        AssetInfo::Token {
+            contract_addr: flow_asset_contract_addr,
+        } => {
             let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
-                contract_addr.clone(),
+                flow_asset_contract_addr.clone(),
                 &cw20::Cw20QueryMsg::Allowance {
                     owner: info.sender.clone().into_string(),
                     spender: env.contract.address.clone().into_string(),
                 },
             )?;
 
-            if allowance.allowance < flow_asset.amount {
-                return Err(ContractError::FlowAssetNotSent);
-            }
+            match flow_fee.info.clone() {
+                AssetInfo::Token {
+                    contract_addr: flow_fee_contract_addr,
+                } => {
+                    if flow_fee_contract_addr != flow_asset_contract_addr {
+                        if allowance.allowance < flow_fee.amount {
+                            return Err(ContractError::FlowAssetNotSent);
+                        }
 
-            // create the transfer message to us
-            messages.push(
-                WasmMsg::Execute {
-                    contract_addr,
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
-                        owner: info.sender.clone().into_string(),
-                        recipient: env.contract.address.into_string(),
-                        amount: flow_asset.amount,
-                    })?,
-                    funds: vec![],
+                        // create the transfer message to us
+                        messages.push(
+                            WasmMsg::Execute {
+                                contract_addr: flow_asset_contract_addr.clone(),
+                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                    owner: info.sender.clone().into_string(),
+                                    recipient: env.contract.address.into_string(),
+                                    amount: flow_asset.amount,
+                                })?,
+                                funds: vec![],
+                            }
+                            .into(),
+                        );
+                    } else {
+                        // if the flow_fee contract is the same as the flow_asset contract,
+                        // then we need to check the allowance is enough for both the flow_fee and MIN_FLOW_AMOUNT
+                        if allowance.allowance < flow_fee.amount.checked_add(MIN_FLOW_AMOUNT)? {
+                            return Err(ContractError::EmptyFlowAfterFee {
+                                min: MIN_FLOW_AMOUNT,
+                            });
+                        }
+                        // no need to verify the allowance can cover for both the flow_fee and MIN_FLOW_AMOUNT
+                        // since it was already done above
+
+                        // subtract the flow_fee from the flow_asset amount
+                        flow_asset.amount = flow_asset.amount.saturating_sub(flow_fee.amount);
+
+                        // if the allowance covers both for the flow_fee and MIN_FLOW_AMOUNT,
+                        // send the rest to us, i.e. the flow_asset.amount - the fee_flow.amount
+                        // the fee_flow.amount is being sent to the fee_collector_addr above
+                        messages.push(
+                            WasmMsg::Execute {
+                                contract_addr: flow_asset_contract_addr.clone(),
+                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                    owner: info.sender.clone().into_string(),
+                                    recipient: env.contract.address.into_string(),
+                                    amount: flow_asset.amount,
+                                })?,
+                                funds: vec![],
+                            }
+                            .into(),
+                        );
+                    }
                 }
-                .into(),
-            );
+                AssetInfo::NativeToken { .. } => {
+                    if allowance.allowance < flow_asset.amount {
+                        return Err(ContractError::FlowAssetNotSent);
+                    }
+
+                    messages.push(
+                        WasmMsg::Execute {
+                            contract_addr: flow_asset_contract_addr.clone(),
+                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                owner: info.sender.clone().into_string(),
+                                recipient: env.contract.address.into_string(),
+                                amount: flow_asset.amount,
+                            })?,
+                            funds: vec![],
+                        }
+                        .into(),
+                    );
+                }
+            }
         }
     }
 
