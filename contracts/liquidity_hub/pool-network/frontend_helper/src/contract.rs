@@ -1,8 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg,
-};
+use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::frontend_helper::{

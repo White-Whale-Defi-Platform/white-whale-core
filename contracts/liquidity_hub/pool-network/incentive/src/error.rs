@@ -37,6 +37,9 @@ pub enum ContractError {
         maximum: u64,
     },
 
+    #[error("You can't create an empty flow")]
+    EmptyFlow,
+
     #[error("Specified flow asset was not transferred to incentive contract")]
     FlowAssetNotSent,
 

@@ -1,13 +1,14 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Uint128};
-use cw20::{Cw20Coin, MinterResponse};
+use cosmwasm_std::{Addr, Coin, StdResult, Timestamp, Uint128};
+use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive::Curve;
+use white_whale::pool_network::incentive::{Curve, Flow, FlowResponse};
 use white_whale::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
 };
 
+use crate::error::ContractError;
 use crate::tests::suite_contracts::{
     cw20_token_contract, fee_collector_contract, incentive_contract, incentive_factory_contract,
 };
@@ -19,9 +20,30 @@ pub struct TestingSuite {
     pub cw20_tokens: Vec<Addr>,
 }
 
+/// helpers
 impl TestingSuite {
     pub(crate) fn creator(&mut self) -> Addr {
         self.senders.first().unwrap().clone()
+    }
+
+    pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_nanos(seconds * 1_000_000_000);
+        self.app.set_block(block_info);
+
+        self
+    }
+
+    pub(crate) fn set_time(&mut self, timestamp: Timestamp) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = timestamp;
+        self.app.set_block(block_info);
+
+        self
+    }
+
+    pub(crate) fn get_time(&mut self) -> Timestamp {
+        self.app.block_info().time
     }
 }
 
@@ -104,6 +126,10 @@ impl TestingSuite {
         .unwrap();
 
         self.cw20_tokens = vec![cw20_token.clone()];
+
+        // 17 May 2023 17:00:00 UTC
+        let timestamp = Timestamp::from_seconds(1684342800u64);
+        self.set_time(timestamp);
 
         self.instantiate(
             fee_collector_addr.to_string(),
@@ -322,6 +348,81 @@ impl TestingSuite {
 
         result(incentive_response);
 
+        self
+    }
+
+    pub(crate) fn query_flow(
+        &mut self,
+        incentive_addr: Addr,
+        flow_id: u64,
+        result: impl Fn(StdResult<Option<FlowResponse>>),
+    ) -> &mut Self {
+        let flow_response: StdResult<Option<FlowResponse>> = self.app.wrap().query_wasm_smart(
+            incentive_addr,
+            &white_whale::pool_network::incentive::QueryMsg::Flow { flow_id },
+        );
+
+        result(flow_response);
+
+        self
+    }
+
+    pub(crate) fn query_flows(
+        &mut self,
+        incentive_addr: Addr,
+        result: impl Fn(StdResult<Vec<Flow>>),
+    ) -> &mut Self {
+        let flows_response: StdResult<Vec<Flow>> = self.app.wrap().query_wasm_smart(
+            incentive_addr,
+            &white_whale::pool_network::incentive::QueryMsg::Flows {},
+        );
+
+        result(flows_response);
+
+        self
+    }
+
+    pub(crate) fn query_incentive_factory_config(
+        &mut self,
+        result: impl Fn(StdResult<white_whale::pool_network::incentive_factory::ConfigResponse>),
+    ) -> &mut Self {
+        let config_response: StdResult<
+            white_whale::pool_network::incentive_factory::ConfigResponse,
+        > = self.app.wrap().query_wasm_smart(
+            self.incentive_factory_addr.clone(),
+            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+        );
+
+        result(config_response);
+        self
+    }
+
+    pub(crate) fn query_funds(
+        &mut self,
+        contract: Addr,
+        asset: AssetInfo,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let funds = match asset {
+            AssetInfo::Token { contract_addr } => {
+                let balance_response: StdResult<BalanceResponse> =
+                    self.app.wrap().query_wasm_smart(
+                        contract_addr,
+                        &cw20_base::msg::QueryMsg::Balance {
+                            address: contract.to_string(),
+                        },
+                    );
+
+                balance_response.unwrap().balance
+            }
+            AssetInfo::NativeToken { denom } => {
+                let coin: StdResult<Coin> = self.app.wrap().query_balance(contract, denom);
+
+                coin.unwrap().amount
+            }
+        };
+
+        result(funds);
         self
     }
 }

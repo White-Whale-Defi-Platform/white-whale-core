@@ -1,6 +1,6 @@
-use std::fmt;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
+use std::fmt;
 
 use crate::pool_network::asset::{Asset, AssetInfo};
 
@@ -182,6 +182,7 @@ pub type ConfigResponse = Config;
 
 #[cw_serde]
 pub struct FlowResponse {
+    //TODO why is this returning a Option<Flow>? why not a flow directly?
     /// The flow that was searched for.
     pub flow: Option<Flow>,
 }
