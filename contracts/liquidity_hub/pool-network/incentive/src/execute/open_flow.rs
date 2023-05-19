@@ -315,8 +315,14 @@ pub fn open_flow(
         return Err(ContractError::FlowExpirationInPast);
     }
 
-    // ensure that start date is set within buffer
     let start_timestamp = start_timestamp.unwrap_or(env.block.time.seconds());
+
+    // ensure that start date is before end date
+    if start_timestamp > end_timestamp {
+        return Err(ContractError::FlowStartTimeAfterEndTime);
+    }
+
+    // ensure that start date is set within buffer
     if start_timestamp
         > env.block.time.seconds() + incentive_factory_config.max_flow_start_time_buffer
     {

@@ -226,7 +226,137 @@ fn try_open_more_flows_than_allowed() {
 
 #[test]
 fn try_open_flows_with_wrong_timestamps() {
-    todo!();
+    let mut suite =
+        TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
+    let alice = suite.creator();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let lp_address_1 = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let mut max_flow_start_time_buffer = RefCell::new(0u64);
+
+    suite
+        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(lp_address_1.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    // open incentive flow
+    let app_time = suite.get_time();
+    let future_time = app_time.clone().plus_seconds(86400u64);
+    let future_future_time = future_time.clone().plus_seconds(86400u64);
+    let past_time = app_time.clone().minus_seconds(86400u64);
+
+    suite
+        .query_incentive_factory_config(|result| {
+            let config = result.unwrap();
+            *max_flow_start_time_buffer.borrow_mut() = config.max_flow_start_time_buffer;
+        })
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            past_time.clone().seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::FlowExpirationInPast {} => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::FlowExpirationInPast"
+                    ),
+                }
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            Some(future_future_time.clone().seconds()),
+            future_time.clone().seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::FlowStartTimeAfterEndTime {} => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::FlowStartTimeAfterEndTime"
+                    ),
+                }
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            Some(
+                app_time
+                    .clone()
+                    .plus_seconds(max_flow_start_time_buffer.clone().into_inner() + 1)
+                    .seconds(),
+            ),
+            future_time.clone().seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::FlowStartTooFar {} => {}
+                    _ => panic!("Wrong error type, should return ContractError::FlowStartTooFar"),
+                }
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            Some(
+                app_time
+                    .clone()
+                    .plus_seconds(max_flow_start_time_buffer.into_inner())
+                    .seconds(),
+            ),
+            future_time.clone().seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        );
 }
 
 #[test]

@@ -52,6 +52,9 @@ pub enum ContractError {
     #[error("Flow start timestamp is too far into the future")]
     FlowStartTooFar,
 
+    #[error("Flow start timestamp is after the end timestamp")]
+    FlowStartTimeAfterEndTime,
+
     #[error("Flow identifier ({invalid_id}) does not point to any flow")]
     NonExistentFlow { invalid_id: u64 },
 
