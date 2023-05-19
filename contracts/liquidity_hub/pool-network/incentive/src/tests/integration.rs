@@ -225,6 +225,11 @@ fn try_open_more_flows_than_allowed() {
 }
 
 #[test]
+fn try_open_flows_with_wrong_timestamps() {
+    todo!();
+}
+
+#[test]
 fn open_flow_with_fee_native_token_and_flow_same_native_token() {
     let mut suite =
         TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
@@ -1475,5 +1480,560 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             // this should not work as there is no flow with id 5
             let flow_response = result.unwrap();
             assert_eq!(flow_response, None);
+        });
+}
+
+#[test]
+fn close_native_token_flows() {
+    let mut suite =
+        TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
+    let alice = suite.creator();
+    let bob = suite.senders[1].clone();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let mut alice_funds = RefCell::new(Uint128::zero());
+    let mut carol_funds = RefCell::new(Uint128::zero());
+
+    let lp_address_1 = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    suite
+        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(lp_address_1.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    // open incentive flow
+    let app_time = suite.get_time();
+
+    suite
+        .open_incentive_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(11_000u128),
+            },
+            &vec![coin(11_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 2usize);
+            assert_eq!(
+                flows.first().unwrap(),
+                &Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(1_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 2,
+                    flow_creator: alice.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(10_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+        })
+        .close_incentive_flow(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            |result| {
+                // this should error because bob didn't open the flow, nor he is the owner of the incentive
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::UnauthorizedFlowClose { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::UnauthorizedFlowClose"
+                    ),
+                }
+            },
+        )
+        .close_incentive_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            2u64,
+            |result| {
+                // this should error because carol didn't open the flow, nor he is the owner of the incentive
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::UnauthorizedFlowClose { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::UnauthorizedFlowClose"
+                    ),
+                }
+            },
+        )
+        .query_funds(
+            alice.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            |funds| {
+                *alice_funds.borrow_mut() = funds;
+            },
+        )
+        // alice closes her flow
+        .close_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            2u64,
+            |result| {
+                // this should be fine because carol opened the flow
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 1usize);
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(1_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+        })
+        .query_funds(
+            alice.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            |funds| {
+                // since nothing from the flow was claimed, it means 10_000u128uwhale was returned to alice
+                assert_eq!(
+                    funds - alice_funds.clone().into_inner(),
+                    Uint128::new(10_000u128)
+                );
+                *alice_funds.borrow_mut() = funds;
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            |funds| {
+                *carol_funds.borrow_mut() = funds;
+            },
+        )
+        // alice closes carols flow. She can do it since she is the owner of the flow
+        .close_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            |funds| {
+                // since nothing from the flow was claimed, it means 1_000u128uwhale was returned to carol
+                assert_eq!(
+                    funds - carol_funds.clone().into_inner(),
+                    Uint128::new(1_000u128)
+                );
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+            assert!(flows.is_empty());
+        })
+        // try closing a flow that doesn't exist
+        .close_incentive_flow(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            3u64,
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::NonExistentFlow { invalid_id } => {
+                        assert_eq!(invalid_id, 3u64)
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::NonExistentFlow"),
+                }
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(5_000u128),
+            },
+            &vec![coin(5_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 1usize);
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 3,
+                    flow_creator: alice.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(4_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+        });
+}
+
+#[test]
+fn close_cw20_token_flows() {
+    let mut suite =
+        TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
+    let alice = suite.creator();
+    let bob = suite.senders[1].clone();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let mut alice_funds = RefCell::new(Uint128::zero());
+    let mut carol_funds = RefCell::new(Uint128::zero());
+
+    let lp_address_1 = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let cw20_asset = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.last().unwrap().to_string(),
+    };
+    let cw20_asset_addr = suite.cw20_tokens.last().unwrap().clone();
+
+    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    suite
+        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(lp_address_1.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    // open incentive flow
+    let app_time = suite.get_time();
+
+    suite
+        .increase_allowance(
+            carol.clone(),
+            cw20_asset_addr.clone(),
+            Uint128::new(1_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .open_incentive_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: cw20_asset.clone(),
+                amount: Uint128::new(1_000u128),
+            },
+            &vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .increase_allowance(
+            alice.clone(),
+            cw20_asset_addr.clone(),
+            Uint128::new(10_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: cw20_asset.clone(),
+                amount: Uint128::new(10_000u128),
+            },
+            &vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 2usize);
+            assert_eq!(
+                flows.first().unwrap(),
+                &Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: cw20_asset.clone(),
+                        amount: Uint128::new(1_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 2,
+                    flow_creator: alice.clone(),
+                    flow_asset: Asset {
+                        info: cw20_asset.clone(),
+                        amount: Uint128::new(10_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+        })
+        .close_incentive_flow(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            |result| {
+                // this should error because bob didn't open the flow, nor he is the owner of the incentive
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::UnauthorizedFlowClose { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::UnauthorizedFlowClose"
+                    ),
+                }
+            },
+        )
+        .close_incentive_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            2u64,
+            |result| {
+                // this should error because carol didn't open the flow, nor he is the owner of the incentive
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::UnauthorizedFlowClose { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::UnauthorizedFlowClose"
+                    ),
+                }
+            },
+        )
+        .query_funds(alice.clone(), cw20_asset.clone(), |funds| {
+            *alice_funds.borrow_mut() = funds;
+        })
+        // alice closes her flow
+        .close_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            2u64,
+            |result| {
+                // this should be fine because carol opened the flow
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 1usize);
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: cw20_asset.clone(),
+                        amount: Uint128::new(1_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
+        })
+        .query_funds(alice.clone(), cw20_asset.clone(), |funds| {
+            // since nothing from the flow was claimed, it means 10_000u128 cw20_asset was returned to alice
+            assert_eq!(
+                funds - alice_funds.clone().into_inner(),
+                Uint128::new(10_000u128)
+            );
+            *alice_funds.borrow_mut() = funds;
+        })
+        .query_funds(carol.clone(), cw20_asset.clone(), |funds| {
+            *carol_funds.borrow_mut() = funds;
+        })
+        // alice closes carols flow. She can do it since she is the owner of the flow
+        .close_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(carol.clone(), cw20_asset.clone(), |funds| {
+            // since nothing from the flow was claimed, it means 1_000u128 cw20_asset was returned to carol
+            assert_eq!(
+                funds - carol_funds.clone().into_inner(),
+                Uint128::new(1_000u128)
+            );
+        })
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+            assert!(flows.is_empty());
+        })
+        // try closing a flow that doesn't exist
+        .close_incentive_flow(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            3u64,
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::NonExistentFlow { invalid_id } => {
+                        assert_eq!(invalid_id, 3u64)
+                    }
+                    _ => panic!("Wrong error type, should return ContractError::NonExistentFlow"),
+                }
+            },
+        )
+        .increase_allowance(
+            alice.clone(),
+            cw20_asset_addr.clone(),
+            Uint128::new(5_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            app_time.clone().plus_seconds(86400u64).seconds(),
+            Curve::Linear,
+            Asset {
+                info: cw20_asset.clone(),
+                amount: Uint128::new(5_000u128),
+            },
+            &vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+
+            assert_eq!(flows.len(), 1usize);
+            assert_eq!(
+                flows.last().unwrap(),
+                &Flow {
+                    flow_id: 3,
+                    flow_creator: alice.clone(),
+                    flow_asset: Asset {
+                        info: cw20_asset.clone(),
+                        amount: Uint128::new(5_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_timestamp: app_time.clone().seconds(),
+                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                }
+            );
         });
 }
