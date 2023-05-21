@@ -1,12 +1,12 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
-    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery, Uint128, Decimal,
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response,
+    StdError, SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
 
 use white_whale::fee_distributor::{Epoch, EpochConfig};
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::{BondingWeightResponse, QueryMsg, GlobalIndex};
+use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
@@ -43,13 +43,13 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 .start_time
                 .plus_nanos(config.epoch_config.duration.u64())
         };
-    
+
     // Query the current global index
     // let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
     //     contract_addr: config.bonding_contract_addr.to_string(),
     //     msg: to_binary(&QueryMsg::GlobalIndex {})?,
     // }))?;
-    
+
     let new_epoch = Epoch {
         id: current_epoch.id.checked_add(Uint64::new(1u64))?,
         start_time,
@@ -83,7 +83,6 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
     let config = CONFIG.load(deps.storage)?;
-    
 
     let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
     if claimable_epochs.is_empty() {
@@ -101,8 +100,11 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                     global_weight: Some(epoch.weight),
                 })?,
             }))?;
-    
-        println!("bonding_weight_response.weight: {}", bonding_weight_response.weight);
+
+        println!(
+            "bonding_weight_response.weight: {}",
+            bonding_weight_response.weight
+        );
         println!("bonding: {:?}", bonding_weight_response);
         println!("epoch.weight: {}", epoch.weight);
         println!("epoch: {:?}", epoch);

@@ -113,8 +113,8 @@ pub(crate) fn query_withdrawable(
 }
 
 /// Queries the current weight of the given address.
-/// Fable: From the moment a user deposited tokens until now 
-/// 
+/// Fable: From the moment a user deposited tokens until now
+///
 pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
@@ -147,7 +147,7 @@ pub(crate) fn query_weight(
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
     println!("total bond weight: {}", total_bond_weight);
-    // Search bonds for unique bond.asset.denoms 
+    // Search bonds for unique bond.asset.denoms
     // let mut denoms: Vec<String> = bonds?.iter().map(|bond| bond.1.asset.denom.clone()).collect();
     // // // Loop through unbonds and get the ones that are past the unbonding period
     // let unbonding: StdResult<Vec<_>> = UNBOND
@@ -160,10 +160,10 @@ pub(crate) fn query_weight(
         .may_load(deps.storage)
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
         .ok_or_else(|| StdError::generic_err("Global index not found"))?;
-    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight 
+    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
         timestamp,
-        global_weight.unwrap_or_else(||global_index.weight),
+        global_weight.unwrap_or(global_index.weight),
         global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
@@ -189,7 +189,7 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
     })
 }
 
-/// Queries the global index 
+/// Queries the global index
 pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     println!("global_index: {:?}", global_index);

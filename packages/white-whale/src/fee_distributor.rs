@@ -1,6 +1,6 @@
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Timestamp, Uint64, Uint128};
+use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
 use std::fmt;
 use std::fmt::Display;
 
