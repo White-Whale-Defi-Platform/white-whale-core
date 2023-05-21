@@ -56,7 +56,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         total: vec![],
         available: vec![],
         claimed: vec![],
-        weight: Uint128::zero(),
+        weight: env.block.time.nanos().into(),
     };
 
     Ok(Response::new()

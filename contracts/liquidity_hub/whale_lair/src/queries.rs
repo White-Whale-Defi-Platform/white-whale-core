@@ -113,6 +113,8 @@ pub(crate) fn query_withdrawable(
 }
 
 /// Queries the current weight of the given address.
+/// Fable: From the moment a user deposited tokens until now 
+/// 
 pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
