@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 
@@ -18,7 +18,6 @@ use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
 use crate::queries::query_pair_info;
-use crate::state::LP_SYMBOL;
 
 #[test]
 fn proper_initialization_cw20_lp() {

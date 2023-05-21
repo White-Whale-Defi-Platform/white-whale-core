@@ -18,7 +18,6 @@ use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-use crate::state::LP_SYMBOL;
 
 #[test]
 fn provide_liquidity_cw20_lp() {

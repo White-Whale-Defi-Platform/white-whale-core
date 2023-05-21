@@ -5,8 +5,8 @@ use crate::state::LP_SYMBOL;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse, SubMsgResult,
-    Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
