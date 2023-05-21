@@ -9,7 +9,7 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 #[cfg(feature = "token_factory")]
-use cosmwasm_std::{coin, BankMsg};
+use cosmwasm_std::{coin};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::AssetInfo;
