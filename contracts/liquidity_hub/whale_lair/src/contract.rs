@@ -1,6 +1,4 @@
-use std::time;
-
-use cosmwasm_std::{entry_point, Timestamp};
+use cosmwasm_std::{entry_point};
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -111,16 +109,24 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             address,
             denom,
         )?),
-        QueryMsg::Weight { address , timestamp, global_weight} => {
+        QueryMsg::Weight {
+            address,
+            timestamp,
+            global_weight,
+        } => {
             // If timestamp is not provided, use current block time
-            let timestamp = timestamp.unwrap_or_else(|| env.block.time);
-
+            let timestamp = timestamp.unwrap_or(env.block.time);
 
             // TODO: Make better timestamp handling
-            to_binary(&queries::query_weight(deps, timestamp, address, global_weight)?)
+            to_binary(&queries::query_weight(
+                deps,
+                timestamp,
+                address,
+                global_weight,
+            )?)
         }
         QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),
-        QueryMsg::GlobalIndex {  } => to_binary(&queries::query_global_index(deps)?),
+        QueryMsg::GlobalIndex {} => to_binary(&queries::query_global_index(deps)?),
     }
 }
 

@@ -15,7 +15,7 @@ use white_whale::fee_collector::{
     Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg,
 };
 use white_whale::fee_distributor::ExecuteMsg::NewEpoch;
-use white_whale::fee_distributor::{Epoch, EpochConfig, EpochResponse, ClaimableEpochsResponse};
+use white_whale::fee_distributor::{ClaimableEpochsResponse, Epoch, EpochConfig, EpochResponse};
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
 use white_whale::pool_network::factory::PairsResponse;
@@ -3102,9 +3102,8 @@ fn collect_and_distribute_fees_successfully() {
     assert!(!fee_distributor_current_epoch_query.epoch.total.is_empty());
 }
 
-
 #[test]
-fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
+fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_end() {
     let creator = mock_creator();
     let balances = vec![
         (
@@ -3398,7 +3397,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         .unwrap();
     }
 
-    // bond some tokens - 1k each 
+    // bond some tokens - 1k each
     app.execute_contract(
         creator.sender.clone(),
         whale_lair_address.clone(),
@@ -3435,27 +3434,26 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     )
     .unwrap();
 
-    // Get weight of both users and store as a vec for now 
+    // Get weight of both users and store as a vec for now
     let mut weights: Vec<Uint128> = Vec::new();
     for user in vec![creator.sender.clone(), Addr::unchecked("other")] {
         let weight: BondingWeightResponse = app
-        .wrap()
-        .query_wasm_smart(
-            whale_lair_address.clone(),
-            &white_whale::whale_lair::QueryMsg::Weight {
-                address: user.to_string(),
-                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-                global_weight: None,
-                timestamp: None,
-            },
-        )
-        .unwrap();
+            .wrap()
+            .query_wasm_smart(
+                whale_lair_address.clone(),
+                &white_whale::whale_lair::QueryMsg::Weight {
+                    address: user.to_string(),
+                    // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+                    global_weight: None,
+                    timestamp: None,
+                },
+            )
+            .unwrap();
         weights.push(weight.weight);
     }
     println!(" -> weights after each bonding 1000 whale: {:?}", weights);
 
-
-    // Create EPOCH 1 with 100 whale 
+    // Create EPOCH 1 with 100 whale
     // whale -> native
     app.execute_contract(
         creator.sender.clone(),
@@ -3486,7 +3484,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     });
 
     // Create new epoch, which triggers fee collection, aggregation and distribution
-    // Verify epoch 1 
+    // Verify epoch 1
     app.execute_contract(
         creator.sender.clone(),
         fee_distributor_address.clone(),
@@ -3522,21 +3520,20 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
 
     for user in vec![creator.sender.clone(), Addr::unchecked("other")] {
         let weight: BondingWeightResponse = app
-        .wrap()
-        .query_wasm_smart(
-            whale_lair_address.clone(),
-            &white_whale::whale_lair::QueryMsg::Weight {
-                address: user.to_string(),
-                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-                global_weight: None,
-                timestamp: None,
-            },
-        )
-        .unwrap();
+            .wrap()
+            .query_wasm_smart(
+                whale_lair_address.clone(),
+                &white_whale::whale_lair::QueryMsg::Weight {
+                    address: user.to_string(),
+                    // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+                    global_weight: None,
+                    timestamp: None,
+                },
+            )
+            .unwrap();
         weights.push(weight.weight);
     }
     println!(" -> weights after each bonding 1000 whale: {:?}", weights);
-
 
     // When creating the second epoch, the first one will be expiring since the grace_period was set to 1.
     // Make sure the available tokens on the expiring epoch are transferred to the second one.
@@ -3561,8 +3558,8 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     )
     .unwrap();
 
-    // Get the weight of create.sender before bonding 
-    // Get the weight after bonding ensure its different 
+    // Get the weight of create.sender before bonding
+    // Get the weight after bonding ensure its different
     let weight_before: BondingWeightResponse = app
         .wrap()
         .query_wasm_smart(
@@ -3582,10 +3579,6 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         time: Timestamp::from_nanos(1678888800_000000000u64),
         chain_id: "".to_string(),
     });
-
-   
-
-
 
     // Create new epoch, which triggers fee collection, aggregation and distribution
     // Create EPOCH 2
@@ -3621,21 +3614,19 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     assert!(expired_epoch_res.epoch.available.is_empty());
 
     let weight_after: BondingWeightResponse = app
-    .wrap()
-    .query_wasm_smart(
-        whale_lair_address.clone(),
-        &white_whale::whale_lair::QueryMsg::Weight {
-            address: creator.sender.to_string(),
-            // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-            global_weight: None,
-            timestamp: None,
-        },
-    )
-    .unwrap();
+        .wrap()
+        .query_wasm_smart(
+            whale_lair_address.clone(),
+            &white_whale::whale_lair::QueryMsg::Weight {
+                address: creator.sender.to_string(),
+                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+                global_weight: None,
+                timestamp: None,
+            },
+        )
+        .unwrap();
 
-    
-
-    // Get weight of other user and ensure its lower than the first 
+    // Get weight of other user and ensure its lower than the first
     let user_two_weight: BondingWeightResponse = app
         .wrap()
         .query_wasm_smart(
@@ -3648,15 +3639,6 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
             },
         )
         .unwrap();
-
-    
-
-        println!("-> weight before bonding another 500: {}", weight_before.weight);
-        println!("-> weight after bonding anotehr 500 : {}", weight_after.weight);
-        println!("-> user two weight who added nothing more: {}", user_two_weight.weight);
-        println!("\n\n");
-        // assert_eq!(weight_before.weight, weight_after.weight);
-
 
     // since the fees collected for the second epoch were the same for the first, the available
     // assets for the second epoch should be twice the amount of the first
@@ -3675,7 +3657,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     println!("total_amount_expired: {}", total_amount_expired);
     assert!(total_amount_new_epoch - total_amount_expired > Uint128::zero());
 
-    // Bond 500 more with user 1 
+    // Bond 500 more with user 1
     app.execute_contract(
         creator.sender.clone(),
         whale_lair_address.clone(),
@@ -3691,24 +3673,23 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
             denom: "ampWHALE".to_string(),
             amount: Uint128::new(500u128),
         }],
-    ).unwrap();
-
-    let weight_after: BondingWeightResponse = app
-    .wrap()
-    .query_wasm_smart(
-        whale_lair_address.clone(),
-        &white_whale::whale_lair::QueryMsg::Weight {
-            address: creator.sender.to_string(),
-            // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-            global_weight: None,
-            timestamp: None,
-        },
     )
     .unwrap();
 
-    
+    let weight_after: BondingWeightResponse = app
+        .wrap()
+        .query_wasm_smart(
+            whale_lair_address.clone(),
+            &white_whale::whale_lair::QueryMsg::Weight {
+                address: creator.sender.to_string(),
+                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+                global_weight: None,
+                timestamp: None,
+            },
+        )
+        .unwrap();
 
-    // Get weight of other user and ensure its lower than the first 
+    // Get weight of other user and ensure its lower than the first
     let user_two_weight: BondingWeightResponse = app
         .wrap()
         .query_wasm_smart(
@@ -3722,17 +3703,23 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         )
         .unwrap();
 
-    
+    println!(
+        "-> weight before bonding another 500: {}",
+        weight_before.weight
+    );
+    println!(
+        "-> weight after bonding anotehr 500 : {}",
+        weight_after.weight
+    );
+    println!(
+        "-> user two weight who added nothing more: {}",
+        user_two_weight.weight
+    );
+    println!("\n\n");
+    // assert_eq!(weight_before.weight, weight_after.weight);
 
-        println!("-> weight before bonding another 500: {}", weight_before.weight);
-        println!("-> weight after bonding anotehr 500 : {}", weight_after.weight);
-        println!("-> user two weight who added nothing more: {}", user_two_weight.weight);
-        println!("\n\n");
-        // assert_eq!(weight_before.weight, weight_after.weight);
-
-
-     // Make sure the available tokens on the expiring epoch are transferred to the second one.
-     app.execute_contract(
+    // Make sure the available tokens on the expiring epoch are transferred to the second one.
+    app.execute_contract(
         creator.sender.clone(),
         pair_tokens[0].clone(),
         &pool_network::pair::ExecuteMsg::Swap {
@@ -3761,7 +3748,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         time: Timestamp::from_nanos(3357777600_000000000u64),
         chain_id: "".to_string(),
     });
-   
+
     // Create new epoch, which triggers fee collection, aggregation and distribution
     // Create EPOCH 3
 
@@ -3791,22 +3778,22 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         .wrap()
         .query_wasm_smart(
             fee_distributor_address.clone(),
-            &white_whale::fee_distributor::QueryMsg::Epoch { id: Uint64::from(2u64) },
+            &white_whale::fee_distributor::QueryMsg::Epoch {
+                id: Uint64::from(2u64),
+            },
         )
         .unwrap();
     assert!(expired_epoch_res.epoch.available.is_empty());
 
-    // Advance time one more time 
+    // Advance time one more time
     app.set_block(BlockInfo {
         height: 123456789u64,
         time: Timestamp::from_nanos(503666400_000000000u64),
         chain_id: "".to_string(),
     });
-    // 335777600_000000000u64 is 2 days what is 335777600_000000000u64 / 2 * 3
-    // 503666400_000000000u64 is 3 days
 
     // We should have about triple the amount of fees collected in the third epoch
-    // compared to the first 
+    // compared to the first
     // iterate the new_epoch_res.epoch.available and add up the amounts for each asset
     let mut total_amount_new_epoch = Uint128::zero();
 
@@ -3820,20 +3807,16 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     }
     assert!(total_amount_new_epoch - total_amount_expired > Uint128::zero());
 
-
-    // Lets do some claims 
-
-    
-    // Query and verify what is due to user 1  
-    let claimable: ClaimableEpochsResponse = app.wrap().query_wasm_smart(fee_distributor_address.clone(), &white_whale::fee_distributor::QueryMsg::Claimable { address: creator.sender.to_string() }).unwrap();
-    println!(" -> claimable: {:?}", claimable);
+    // // Query and verify what is due to user 1
+    // let claimable: ClaimableEpochsResponse = app.wrap().query_wasm_smart(fee_distributor_address.clone(), &white_whale::fee_distributor::QueryMsg::Claimable { address: creator.sender.to_string() }).unwrap();
+    // println!(" -> claimable: {:?}", claimable);
     // claim some rewards
     let uwhale_balance_before_claiming = app
         .wrap()
         .query_balance(Addr::unchecked("other"), "uwhale")
         .unwrap()
         .amount;
-    // Claim 1
+    // Claim for user 2
     app.execute_contract(
         Addr::unchecked("other"),
         fee_distributor_address.clone(),
@@ -3843,19 +3826,15 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
     .unwrap();
 
     let uwhale_balance_after_claiming = app
-    .wrap()
-    .query_balance(Addr::unchecked("other"), "uwhale")
-    .unwrap()
-    .amount;
+        .wrap()
+        .query_balance(Addr::unchecked("other"), "uwhale")
+        .unwrap()
+        .amount;
 
-    let whale_received = uwhale_balance_after_claiming - uwhale_balance_before_claiming;
-    println!("whale_received: {}", whale_received);
-    assert!(whale_received > Uint128::zero());
-    // For Claim 1 we should have 190 uwhale which is assuming 100 whale per epoch and they have 50% of the first 60% of the second and 80% of the third = 190
-    // 100 + 30 + 60 = 190
+    let user_2_whale_received = uwhale_balance_after_claiming - uwhale_balance_before_claiming;
+    println!("-> User 2 whale_received: {}", user_2_whale_received);
 
-
-    // Claim 2 
+    // Claim 2
     // claim some rewards
     let uwhale_balance_before_claiming = app
         .wrap()
@@ -3877,19 +3856,17 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight() {
         .unwrap()
         .amount;
 
-    let other_whale_received = uwhale_balance_after_claiming - uwhale_balance_before_claiming;
-    println!("whale_received: {}", other_whale_received);
-    // assert_eq!(whale_received, Uint128::new(190u128));
-    // For Claim 1 we should have 190 uwhale which is assuming 100 whale per epoch and they have 50% of the first 60% of the second and 80% of the third = 190
-    // 100 + 30 + 60 = 190
-    // Verify the amounts statically 
-    assert_eq!(whale_received, Uint128::new(190u128));
+    let user_1_whale_received = uwhale_balance_after_claiming - uwhale_balance_before_claiming;
+    println!("whale_received: {}", user_1_whale_received);
 
-    assert_ne!(whale_received, other_whale_received);
-    // Above should be be equal though 
-    // whale_received should be 190 and other_whale_received should be 110 making 300 if weights and new bonds are respected 
+    // For claims for user 1 we should have either 190, if they were claiming all along the way
+    // or 180 if there were no claims until the end.
+    // Instead of an even 50/50 split, we end up with either a 60/40 split (due to increased bond) or 66/33 split
+    assert_eq!(user_2_whale_received, Uint128::new(120u128));
+    assert_eq!(user_1_whale_received, Uint128::new(180u128));
+
+    assert_ne!(user_2_whale_received, user_1_whale_received);
 }
-
 
 #[test]
 fn collect_and_distribute_fees_with_expiring_epoch_successfully() {

@@ -1,23 +1,24 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, QueryRequest, WasmQuery,
+    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
+    StdResult, WasmQuery,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::parse_reply_execute_data;
 
-use white_whale::fee_collector::ForwardFeesResponse;
-use white_whale::fee_distributor::{
-    Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-};
-use white_whale::whale_lair::GlobalIndex;
 use crate::error::ContractError;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
 use crate::{commands, queries, state};
 use semver::Version;
+use white_whale::fee_collector::ForwardFeesResponse;
+use white_whale::fee_distributor::{
+    Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use white_whale::pool_network::asset;
-use white_whale::whale_lair::{QueryMsg as LairQueryMsg};
+use white_whale::whale_lair::GlobalIndex;
+use white_whale::whale_lair::QueryMsg as LairQueryMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
@@ -71,13 +72,14 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         let forward_fees_response: ForwardFeesResponse = from_binary(&data)?;
         let mut new_epoch = forward_fees_response.epoch;
 
-        // Query bonding contract for GlobalIndex weight 
+        // Query bonding contract for GlobalIndex weight
         let config = queries::query_config(deps.as_ref())?;
         // Query the current global index
-        let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: config.bonding_contract_addr.to_string(),
-            msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
-        }))?;
+        let global_index: GlobalIndex =
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: config.bonding_contract_addr.to_string(),
+                msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+            }))?;
         new_epoch.weight = global_index.weight;
 
         // forward fees from the expiring epoch to the new one.
@@ -93,7 +95,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 available: fees,
                 ..new_epoch
             };
-            
+
             // update the expiring epoch's available fees
             expiring_epoch.available = vec![];
             EPOCHS.save(

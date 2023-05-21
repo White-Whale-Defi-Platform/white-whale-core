@@ -228,7 +228,14 @@ impl TestingRobot {
         let bonding_weight_response: BondingWeightResponse = self
             .app
             .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Weight { address, timestamp:Some(self.app.block_info().time), global_weight: None })
+            .query_wasm_smart(
+                &self.whale_lair_addr,
+                &QueryMsg::Weight {
+                    address,
+                    timestamp: Some(self.app.block_info().time),
+                    global_weight: None,
+                },
+            )
             .unwrap();
 
         response(Ok((self, bonding_weight_response)));
