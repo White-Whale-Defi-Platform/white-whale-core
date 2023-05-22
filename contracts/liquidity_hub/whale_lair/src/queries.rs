@@ -1,10 +1,12 @@
+use std::{collections::HashSet};
+
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Bound;
 
-use white_whale::whale_lair::{
+use white_whale::{whale_lair::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
     WithdrawableResponse,
-};
+}, pool_network::asset::AssetInfo};
 
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
@@ -132,6 +134,10 @@ pub(crate) fn query_weight(
     let config = CONFIG.load(deps.storage)?;
 
     let mut total_bond_weight = Uint128::zero();
+    // Search bonds for unique bond.asset.denoms
+    // let copy_of_bonds: Result<Vec<(String, Bond)>, StdError> = bonds;
+    // Make an empty set of unique denoms
+    let mut unique_denoms: HashSet<String> = HashSet::new();
 
     for (_, mut bond) in bonds? {
         bond.weight = get_weight(
@@ -141,20 +147,54 @@ pub(crate) fn query_weight(
             config.growth_rate,
             bond.timestamp,
         )?;
+
+        match bond.asset.info {
+            AssetInfo::NativeToken { denom } => {
+                // If the denom is not in the set of unique denoms, add it
+                if !unique_denoms.contains(&denom) {
+                    unique_denoms.insert(denom.clone());
+                }
+            }
+            AssetInfo::Token { contract_addr } => {
+                // If the contract_addr is not in the set of unique denoms, add it
+                if !unique_denoms.contains(&contract_addr) {
+                    unique_denoms.insert(contract_addr.clone());
+                }
+            }
+        }
         println!("bond weight: {}", bond.weight);
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
     println!("total bond weight: {}", total_bond_weight);
-    // Search bonds for unique bond.asset.denoms
-    // let mut denoms: Vec<String> = bonds?.iter().map(|bond| bond.1.asset.denom.clone()).collect();
-    // // // Loop through unbonds and get the ones that are past the unbonding period
-    // let unbonding: StdResult<Vec<_>> = UNBOND
-    //     .prefix(&address)
-    //     .range(deps.storage, None, None, Order::Ascending)
-    //     .take(MAX_PAGE_LIMIT as usize)
-    //     .collect();
+    
+    // for each of the unique denoms, access the unbondings 
+    // and reduce the weight of the unbonding to the total_bond_weight
+    // TODO: REVIEW THIS WITH J 
+    for denom in unique_denoms {
+        let unbonding = query_unbonding(
+            deps,
+            address.to_string(),
+            denom.to_string(),
+            None,
+            None,
+        )?;
+        for bond in unbonding.unbonding_requests {
+            // TODO: Review this with J
+            if bond.timestamp.plus_nanos(config.unbonding_period.u64()) < timestamp {
+
+            let weight = get_weight(
+                timestamp,
+                bond.weight,
+                bond.asset.amount,
+                config.growth_rate,
+                bond.timestamp,
+            )?;
+            total_bond_weight = total_bond_weight.checked_sub(weight)?;
+        }
+        }
+    }
 
     let mut global_index = GLOBAL
         .may_load(deps.storage)
