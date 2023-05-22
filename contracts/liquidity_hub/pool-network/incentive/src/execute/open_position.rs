@@ -36,15 +36,21 @@ pub fn open_position(
         });
     }
 
+    let mut messages: Vec<CosmosMsg> = vec![];
+
     // ensure that user gave us an allowance for the token amount
     // we check this on the message sender rather than the receiver
     let transfer_token_msg = validate_funds_sent(
         &deps.as_ref(),
         env.clone(),
-        config.lp_address,
+        config.lp_asset,
         info.clone(),
         amount,
     )?;
+
+    if let Some(transfer_token_msg) = transfer_token_msg {
+        messages.push(transfer_token_msg.into());
+    }
 
     // if receiver was not specified, default to the sender of the message.
     let receiver = receiver
@@ -68,14 +74,12 @@ pub fn open_position(
 
     // claim if the user has open positions to ensure that the user gets reward for current weight
     // rather than future weight after opening the position
-
-    let mut claim_msgs: Vec<CosmosMsg> = vec![];
     if !OPEN_POSITIONS
         .may_load(deps.storage, receiver.sender.clone())?
         .unwrap_or_default()
         .is_empty()
     {
-        claim_msgs = crate::claim::claim(&mut deps, &env, &receiver)?;
+        messages.append(&mut crate::claim::claim(&mut deps, &env, &receiver)?);
     }
 
     // create the new position
@@ -106,6 +110,5 @@ pub fn open_position(
             ("amount", amount.to_string()),
             ("unbonding_duration", unbonding_duration.to_string()),
         ])
-        .add_message(transfer_token_msg)
-        .add_messages(claim_msgs))
+        .add_messages(messages))
 }

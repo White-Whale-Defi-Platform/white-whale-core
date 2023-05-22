@@ -7,7 +7,7 @@ use crate::pool_network::asset::{Asset, AssetInfo};
 #[cw_serde]
 pub struct InstantiateMsg {
     /// The address of the LP token that the incentive should be tied to.
-    pub lp_address: AssetInfo,
+    pub lp_asset: AssetInfo,
 }
 
 #[cw_serde]
@@ -150,7 +150,7 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct InstantiateReplyCallback {
     /// The address of the LP token that is tied to the incentive contract.
-    pub lp_address: AssetInfo,
+    pub lp_asset: AssetInfo,
 }
 
 /// Represents the configuration of the incentive contract.
@@ -159,8 +159,8 @@ pub struct Config {
     /// The address of the incentive factory.
     pub factory_address: Addr,
 
-    /// The address of the LP token tied to the incentive contract.
-    pub lp_address: Addr,
+    /// The LP token asset tied to the incentive contract.
+    pub lp_asset: AssetInfo,
 }
 
 /// The type of distribution curve to exist.

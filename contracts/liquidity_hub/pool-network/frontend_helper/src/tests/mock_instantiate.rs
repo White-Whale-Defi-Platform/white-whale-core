@@ -135,7 +135,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
             contract_addr: incentive_factory.to_string(),
             msg: to_binary(
                 &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
-                    lp_address: lp_token.clone(),
+                    lp_asset: lp_token.clone(),
                 },
             )
             .unwrap(),

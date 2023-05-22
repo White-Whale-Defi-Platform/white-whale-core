@@ -38,7 +38,7 @@ pub fn read_incentives(
             let (lp_reference, incentive_address) = item?;
 
             Ok(IncentivesContract {
-                incentive_address: incentive_address.to_string(),
+                incentive_address,
                 lp_reference,
             })
         })
@@ -57,7 +57,8 @@ fn calc_range_start(start_after: Option<AssetInfoRaw>) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Binary, DepsMut, Reply, SubMsgResponse, SubMsgResult,
+        testing::mock_dependencies, to_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,
+        SubMsgResult,
     };
     use protobuf::{Message, SpecialFields};
     use white_whale::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
@@ -81,7 +82,7 @@ mod tests {
                             address: format!("incentive{id}"),
                             data: to_binary(
                                 &white_whale::pool_network::incentive::InstantiateReplyCallback {
-                                    lp_address: get_lp_asset(id),
+                                    lp_asset: get_lp_asset(id),
                                 },
                             )
                             .unwrap()
@@ -132,7 +133,7 @@ mod tests {
             incentives,
             vec![
                 IncentivesContract {
-                    incentive_address: "incentive1".to_string(),
+                    incentive_address: Addr::unchecked("incentive1"),
                     lp_reference: get_lp_asset(1)
                         .to_raw(&deps.api)
                         .unwrap()
@@ -140,7 +141,7 @@ mod tests {
                         .to_vec()
                 },
                 IncentivesContract {
-                    incentive_address: "incentive2".to_string(),
+                    incentive_address: Addr::unchecked("incentive2"),
                     lp_reference: get_lp_asset(2)
                         .to_raw(&deps.api)
                         .unwrap()
@@ -163,7 +164,7 @@ mod tests {
         assert_eq!(
             incentives,
             vec![IncentivesContract {
-                incentive_address: "incentive1".to_string(),
+                incentive_address: Addr::unchecked("incentive1"),
                 lp_reference: get_lp_asset(1)
                     .to_raw(&deps.api)
                     .unwrap()
@@ -177,7 +178,7 @@ mod tests {
         assert_eq!(
             incentives,
             vec![IncentivesContract {
-                incentive_address: "incentive2".to_string(),
+                incentive_address: Addr::unchecked("incentive2"),
                 lp_reference: get_lp_asset(2)
                     .to_raw(&deps.api)
                     .unwrap()
@@ -203,7 +204,7 @@ mod tests {
         assert_eq!(
             incentives,
             vec![IncentivesContract {
-                incentive_address: "incentive2".to_string(),
+                incentive_address: Addr::unchecked("incentive2"),
                 lp_reference: get_lp_asset(2)
                     .to_raw(&deps.api)
                     .unwrap()

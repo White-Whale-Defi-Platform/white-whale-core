@@ -93,9 +93,7 @@ pub fn execute(
     }
 
     match msg {
-        ExecuteMsg::CreateIncentive { lp_address } => {
-            execute::create_incentive(deps, env, lp_address)
-        }
+        ExecuteMsg::CreateIncentive { lp_asset } => execute::create_incentive(deps, env, lp_asset),
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
@@ -139,7 +137,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
-        QueryMsg::Incentive { lp_address } => to_binary(&queries::get_incentive(deps, lp_address)?),
+        QueryMsg::Incentive { lp_asset } => to_binary(&queries::get_incentive(deps, lp_asset)?),
         QueryMsg::Incentives { start_after, limit } => {
             to_binary(&queries::get_incentives(deps, start_after, limit)?)
         }

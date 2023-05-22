@@ -11,12 +11,12 @@ use crate::{
 pub fn create_incentive(
     deps: DepsMut,
     env: Env,
-    lp_address: AssetInfo,
+    lp_asset: AssetInfo,
 ) -> Result<Response, ContractError> {
-    // ensure that lp_address doesn't already have an incentive contract
-    if INCENTIVE_MAPPINGS.has(deps.storage, lp_address.to_raw(deps.api)?.as_bytes()) {
+    // ensure that lp_asset doesn't already have an incentive contract
+    if INCENTIVE_MAPPINGS.has(deps.storage, lp_asset.to_raw(deps.api)?.as_bytes()) {
         return Err(ContractError::DuplicateIncentiveContract {
-            incentive: lp_address,
+            incentive: lp_asset,
         });
     }
 
@@ -30,7 +30,7 @@ pub fn create_incentive(
     Ok(Response::default()
         .add_attributes(vec![
             ("action", "create_incentive".to_string()),
-            ("lp_address", lp_address.to_string()),
+            ("lp_asset", lp_asset.to_string()),
         ])
         .add_submessage(SubMsg {
             id: CREATE_INCENTIVE_REPLY_ID,
@@ -40,10 +40,10 @@ pub fn create_incentive(
                 admin: Some(env.contract.address.into_string()),
                 code_id: config.incentive_code_id,
                 msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
-                    lp_address: lp_address.clone(),
+                    lp_asset: lp_asset.clone(),
                 })?,
                 funds: vec![],
-                label: format!("{} incentives", lp_address.get_label(&deps.as_ref())?),
+                label: format!("{} incentives", lp_asset.get_label(&deps.as_ref())?),
             }
             .into(),
         }))

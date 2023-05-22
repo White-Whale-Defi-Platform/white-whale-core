@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Api, Coin, StdResult, Timestamp, Uint128};
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
@@ -334,7 +334,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
-            lp_address,
+            lp_asset: lp_address,
         };
 
         result(self.app.execute_contract(
@@ -400,7 +400,9 @@ impl TestingSuite {
     ) -> &mut Self {
         let incentive_response: StdResult<IncentiveResponse> = self.app.wrap().query_wasm_smart(
             &self.incentive_factory_addr,
-            &white_whale::pool_network::incentive_factory::QueryMsg::Incentive { lp_address },
+            &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+                lp_asset: lp_address,
+            },
         );
 
         result(incentive_response);
@@ -468,6 +470,21 @@ impl TestingSuite {
             self.incentive_factory_addr.clone(),
             &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
         );
+
+        result(config_response);
+        self
+    }
+
+    pub(crate) fn query_incentive_config(
+        &mut self,
+        incentive: Addr,
+        result: impl Fn(StdResult<white_whale::pool_network::incentive::ConfigResponse>),
+    ) -> &mut Self {
+        let config_response: StdResult<white_whale::pool_network::incentive::ConfigResponse> =
+            self.app.wrap().query_wasm_smart(
+                incentive,
+                &white_whale::pool_network::incentive::QueryMsg::Config {},
+            );
 
         result(config_response);
         self

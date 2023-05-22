@@ -6,6 +6,9 @@ use cosmwasm_std::{coin, coins, Addr, Timestamp, Uint128};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
 use white_whale::pool_network::incentive::{Curve, Flow};
+use white_whale::pool_network::incentive_factory::{
+    IncentiveResponse, IncentivesContract, IncentivesResponse,
+};
 
 use crate::error::ContractError;
 use crate::tests::suite::TestingSuite;
@@ -64,7 +67,7 @@ fn instantiate_incentive_factory_unsuccessful() {
 }
 
 #[test]
-fn create_incentive_with_duplicate() {
+fn create_incentive_cw20_lp_with_duplicate() {
     let mut suite =
         TestingSuite::default_with_balances(coins(1_000_000_000u128, "uwhale".to_string()));
     let creator = suite.creator();
@@ -72,17 +75,20 @@ fn create_incentive_with_duplicate() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let lp_address_1 = AssetInfo::Token {
+    let lp_asset_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
-    let lp_address_2 = AssetInfo::Token {
+    let lp_asset_2 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.last().unwrap().to_string(),
     };
+
+    let lp_assets: Vec<AssetInfo> = vec![lp_asset_1.clone(), lp_asset_2.clone()];
+    let mut incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
 
     // first try to execute anything on the incentive factory contract from a non-owner, it should error
     // then do it with the owner of the contract
     suite
-        .create_incentive(unauthorized, lp_address_1.clone(), |result| {
+        .create_incentive(unauthorized, lp_asset_1.clone(), |result| {
             let err = result
                 .unwrap_err()
                 .downcast::<incentive_factory::error::ContractError>()
@@ -93,15 +99,15 @@ fn create_incentive_with_duplicate() {
                 _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
             }
         })
-        .create_incentive(creator.clone(), lp_address_1.clone(), |result| {
+        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_asset_1.clone(), |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
         })
         // this should error cuz the incentive for that lp was already created
-        .create_incentive(creator.clone(), lp_address_1.clone(), |result| {
+        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
             let err = result
                 .unwrap_err()
                 .downcast::<incentive_factory::error::ContractError>()
@@ -114,13 +120,133 @@ fn create_incentive_with_duplicate() {
                 ),
             }
         })
-        .create_incentive(creator.clone(), lp_address_2, |result| {
+        .create_incentive(creator.clone(), lp_asset_2, |result| {
             result.unwrap();
         })
         .query_incentives(None, None, |result| {
-            let incentives = result.unwrap();
-            assert_eq!(incentives.len(), 2usize);
-        });
+            let incentives_response = result.unwrap();
+            assert_eq!(incentives_response.len(), 2usize);
+            *incentives.borrow_mut() = incentives_response;
+        })
+        .query_incentive_config(
+            incentives
+                .clone()
+                .into_inner()
+                .first()
+                .unwrap()
+                .incentive_address
+                .clone(),
+            |result| {
+                let config = result.unwrap();
+                assert_eq!(config.lp_asset, lp_assets.first().unwrap().clone());
+            },
+        )
+        .query_incentive_config(
+            incentives
+                .clone()
+                .into_inner()
+                .last()
+                .unwrap()
+                .incentive_address
+                .clone(),
+            |result| {
+                let config = result.unwrap();
+                assert_eq!(config.lp_asset, lp_assets.last().unwrap().clone());
+            },
+        );
+}
+
+#[test]
+fn create_incentive_native_lp_with_duplicate() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "factory/creator/uLP".to_string()),
+        coin(1_000_000_000u128, "factory/another_creator/uLP".to_string()),
+    ]);
+    let creator = suite.creator();
+    let unauthorized = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let lp_asset_1 = AssetInfo::NativeToken {
+        denom: "factory/creator1/uLP".to_string(),
+    };
+    let lp_asset_2 = AssetInfo::NativeToken {
+        denom: "factory/creator2/uLP".to_string(),
+    };
+
+    let lp_assets: Vec<AssetInfo> = vec![lp_asset_1.clone(), lp_asset_2.clone()];
+    let mut incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
+
+    // first try to execute anything on the incentive factory contract from a non-owner, it should error
+    // then do it with the owner of the contract
+    suite
+        .create_incentive(unauthorized, lp_asset_1.clone(), |result| {
+            let err = result
+                .unwrap_err()
+                .downcast::<incentive_factory::error::ContractError>()
+                .unwrap();
+
+            match err {
+                incentive_factory::error::ContractError::Unauthorized {} => {}
+                _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+            }
+        })
+        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(lp_asset_1.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+        })
+        // this should error cuz the incentive for that lp was already created
+        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
+            let err = result
+                .unwrap_err()
+                .downcast::<incentive_factory::error::ContractError>()
+                .unwrap();
+
+            match err {
+                incentive_factory::error::ContractError::DuplicateIncentiveContract { .. } => {}
+                _ => panic!(
+                    "Wrong error type, should return ContractError::DuplicateIncentiveContract"
+                ),
+            }
+        })
+        .create_incentive(creator.clone(), lp_asset_2, |result| {
+            result.unwrap();
+        })
+        .query_incentives(None, None, |result| {
+            let incentives_response = result.unwrap();
+            assert_eq!(incentives_response.len(), 2usize);
+            *incentives.borrow_mut() = incentives_response;
+        })
+        .query_incentive_config(
+            incentives
+                .clone()
+                .into_inner()
+                .first()
+                .unwrap()
+                .incentive_address
+                .clone(),
+            |result| {
+                let config = result.unwrap();
+                assert_eq!(config.lp_asset, lp_assets.first().unwrap().clone());
+            },
+        )
+        .query_incentive_config(
+            incentives
+                .clone()
+                .into_inner()
+                .last()
+                .unwrap()
+                .incentive_address
+                .clone(),
+            |result| {
+                let config = result.unwrap();
+                assert_eq!(config.lp_asset, lp_assets.last().unwrap().clone());
+            },
+        );
 }
 
 #[test]

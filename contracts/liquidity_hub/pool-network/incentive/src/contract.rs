@@ -7,6 +7,7 @@ use white_whale::pool_network::incentive::{
 };
 
 use semver::Version;
+use white_whale::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -26,9 +27,16 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    match msg.lp_asset.clone() {
+        AssetInfo::Token { contract_addr } => {
+            deps.api.addr_validate(&contract_addr.to_string())?;
+        }
+        AssetInfo::NativeToken { .. } => {}
+    };
+
     let config = Config {
         factory_address: deps.api.addr_validate(&info.sender.into_string())?,
-        lp_address: deps.api.addr_validate(&msg.lp_address.to_string())?,
+        lp_asset: msg.lp_asset.clone(),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -42,11 +50,11 @@ pub fn instantiate(
         .add_attributes(vec![
             ("action", "instantiate".to_string()),
             ("factory_address", config.factory_address.to_string()),
-            ("lp_address", config.lp_address.to_string()),
+            ("lp_asset", config.lp_asset.to_string()),
         ])
         .set_data(to_binary(
             &white_whale::pool_network::incentive::InstantiateReplyCallback {
-                lp_address: msg.lp_address,
+                lp_asset: msg.lp_asset,
             },
         )?))
 }

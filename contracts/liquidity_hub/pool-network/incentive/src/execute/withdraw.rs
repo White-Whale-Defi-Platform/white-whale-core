@@ -1,5 +1,5 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::Asset;
 
 use crate::{
     error::ContractError,
@@ -51,19 +51,18 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
 
     if !return_token_count.is_zero() {
         let config = CONFIG.load(deps.storage)?;
-        let return_token = Asset {
-            info: AssetInfo::Token {
-                contract_addr: config.lp_address.clone().to_string(),
-            },
+
+        let return_asset = Asset {
+            info: config.lp_asset,
             amount: return_token_count.clone(),
         };
 
         return Ok(Response::default()
             .add_attributes(vec![
                 ("action", "withdraw".to_string()),
-                ("return_token", return_token.to_string()),
+                ("return_asset", return_asset.to_string()),
             ])
-            .add_message(return_token.into_msg(info.sender)?));
+            .add_message(return_asset.into_msg(info.sender)?));
     }
 
     // there was no positions we closed

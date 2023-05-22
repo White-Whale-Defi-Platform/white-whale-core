@@ -25,8 +25,8 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Creates a new incentive contract tied to the `lp_address` specified.
-    CreateIncentive { lp_address: AssetInfo },
+    /// Creates a new incentive contract tied to the `lp_asset` specified.
+    CreateIncentive { lp_asset: AssetInfo },
     /// Updates the configuration of the contract.
     ///
     /// Unspecified fields will not be updated.
@@ -84,8 +84,8 @@ pub enum QueryMsg {
     /// Retrieves a specific incentive address.
     #[returns(IncentiveResponse)]
     Incentive {
-        /// The address of the LP token.
-        lp_address: AssetInfo,
+        /// The LP token asset info.
+        lp_asset: AssetInfo,
     },
     #[returns(IncentivesResponse)]
     Incentives {
@@ -128,7 +128,7 @@ pub type IncentiveResponse = Option<Addr>;
 #[cw_serde]
 pub struct IncentivesContract {
     /// The address of the incentive contract.
-    pub incentive_address: String,
+    pub incentive_address: Addr,
     /// A byte-array reference to the LP address.
     pub lp_reference: Vec<u8>,
 }

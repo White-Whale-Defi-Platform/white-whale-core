@@ -2,6 +2,7 @@ use cosmwasm_std::{
     CheckedFromRatioError, ConversionOverflowError, DivideByZeroError, OverflowError, StdError,
     Uint128,
 };
+use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
@@ -24,6 +25,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),
+
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -77,6 +81,14 @@ pub enum ContractError {
         /// The actual amount that the contract has an allowance for.
         allowance_amount: Uint128,
         /// The amount the account attempted to open a position with
+        deposited_amount: Uint128,
+    },
+
+    #[error("Attempt to create a position with {desired_amount}, but {deposited_amount} was sent")]
+    MissingPositionDepositNative {
+        /// The amount the user intended to deposit.
+        desired_amount: Uint128,
+        /// The amount that was actually deposited.
         deposited_amount: Uint128,
     },
 

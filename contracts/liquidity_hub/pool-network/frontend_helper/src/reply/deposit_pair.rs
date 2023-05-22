@@ -37,7 +37,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         deps.querier.query_wasm_smart(
             config.incentive_factory_addr,
             &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
-                lp_address: pair_info.liquidity_token.clone(),
+                lp_asset: pair_info.liquidity_token.clone(),
             },
         )?;
     // return an error if there was no incentive address

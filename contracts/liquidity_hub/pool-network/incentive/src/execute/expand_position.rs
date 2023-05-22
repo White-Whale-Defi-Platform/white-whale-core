@@ -23,11 +23,14 @@ pub fn expand_position(
         let claim_token_msg = validate_funds_sent(
             &deps.as_ref(),
             env.clone(),
-            config.lp_address,
+            config.lp_asset,
             info.clone(),
             amount,
         )?;
-        messages.push(claim_token_msg.into());
+
+        if let Some(claim_token_msg) = claim_token_msg {
+            messages.push(claim_token_msg.into());
+        }
     }
 
     // if a receiver was specified, use them with the funds sent by the message sender

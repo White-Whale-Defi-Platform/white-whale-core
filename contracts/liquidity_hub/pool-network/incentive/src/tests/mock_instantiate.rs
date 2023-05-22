@@ -25,7 +25,7 @@ pub fn mock_instantiate() -> (OwnedDeps<MockStorage, MockApi, MockQuerier>, Env)
         env.clone(),
         creator,
         white_whale::pool_network::incentive::InstantiateMsg {
-            lp_address: AssetInfo::NativeToken {
+            lp_asset: AssetInfo::NativeToken {
                 denom: "lp_addr".to_string(),
             },
         },
@@ -101,7 +101,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
             contract_addr: incentive_factory.to_string(),
             msg: to_binary(
                 &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
-                    lp_address: AssetInfo::Token {
+                    lp_asset: AssetInfo::Token {
                         contract_addr: lp_addr.to_string(),
                     },
                 },
@@ -118,7 +118,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         .query_wasm_smart(
             incentive_factory,
             &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
-                lp_address: lp_addr_token,
+                lp_asset: lp_addr_token,
             },
         )
         .unwrap();
