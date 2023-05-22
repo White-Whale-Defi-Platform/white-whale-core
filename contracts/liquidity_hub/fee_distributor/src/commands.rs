@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response,
-    StdError, SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
+    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
 
 use white_whale::fee_distributor::{Epoch, EpochConfig};
@@ -100,14 +100,6 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                     global_weight: Some(epoch.weight),
                 })?,
             }))?;
-
-        println!(
-            "bonding_weight_response.weight: {}",
-            bonding_weight_response.weight
-        );
-        println!("bonding: {:?}", bonding_weight_response);
-        println!("epoch.weight: {}", epoch.weight);
-        println!("epoch: {:?}", epoch);
 
         for fee in epoch.total.iter() {
             let reward = fee.amount * bonding_weight_response.share;

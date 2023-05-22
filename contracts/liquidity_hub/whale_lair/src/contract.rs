@@ -1,4 +1,4 @@
-use cosmwasm_std::{entry_point};
+use cosmwasm_std::{entry_point, Addr};
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -45,6 +45,7 @@ pub fn instantiate(
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
         bonding_assets: msg.bonding_assets,
+        fee_distributor_addr: Addr::unchecked("test"),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -82,7 +83,15 @@ pub fn execute(
             owner,
             unbonding_period,
             growth_rate,
-        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
+            fee_distributor_addr,
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            unbonding_period,
+            growth_rate,
+            fee_distributor_addr,
+        ),
     }
 }
 

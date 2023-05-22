@@ -167,6 +167,7 @@ impl TestingRobot {
             owner,
             unbonding_period,
             growth_rate,
+            fee_distributor_addr: None,
         };
 
         response(

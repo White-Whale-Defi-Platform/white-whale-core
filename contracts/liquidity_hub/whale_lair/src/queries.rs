@@ -1,12 +1,15 @@
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Bound;
 
-use white_whale::{whale_lair::{
-    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
-    WithdrawableResponse,
-}, pool_network::asset::AssetInfo};
+use white_whale::{
+    pool_network::asset::AssetInfo,
+    whale_lair::{
+        Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
+        WithdrawableResponse,
+    },
+};
 
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
@@ -115,8 +118,6 @@ pub(crate) fn query_withdrawable(
 }
 
 /// Queries the current weight of the given address.
-/// Fable: From the moment a user deposited tokens until now
-///
 pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
@@ -135,7 +136,6 @@ pub(crate) fn query_weight(
 
     let mut total_bond_weight = Uint128::zero();
     // Search bonds for unique bond.asset.denoms
-    // let copy_of_bonds: Result<Vec<(String, Bond)>, StdError> = bonds;
     // Make an empty set of unique denoms
     let mut unique_denoms: HashSet<String> = HashSet::new();
 
@@ -162,37 +162,28 @@ pub(crate) fn query_weight(
                 }
             }
         }
-        println!("bond weight: {}", bond.weight);
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
-    println!("total bond weight: {}", total_bond_weight);
-    
-    // for each of the unique denoms, access the unbondings 
+
+    // for each of the unique denoms, access the unbondings
     // and reduce the weight of the unbonding to the total_bond_weight
-    // TODO: REVIEW THIS WITH J 
+    // TODO: REVIEW THIS WITH J
     for denom in unique_denoms {
-        let unbonding = query_unbonding(
-            deps,
-            address.to_string(),
-            denom.to_string(),
-            None,
-            None,
-        )?;
+        let unbonding = query_unbonding(deps, address.to_string(), denom.to_string(), None, None)?;
         for bond in unbonding.unbonding_requests {
             // TODO: Review this with J
             if bond.timestamp.plus_nanos(config.unbonding_period.u64()) < timestamp {
-
-            let weight = get_weight(
-                timestamp,
-                bond.weight,
-                bond.asset.amount,
-                config.growth_rate,
-                bond.timestamp,
-            )?;
-            total_bond_weight = total_bond_weight.checked_sub(weight)?;
-        }
+                let weight = get_weight(
+                    timestamp,
+                    bond.weight,
+                    bond.asset.amount,
+                    config.growth_rate,
+                    bond.timestamp,
+                )?;
+                total_bond_weight = total_bond_weight.checked_sub(weight)?;
+            }
         }
     }
 
@@ -232,6 +223,5 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
 /// Queries the global index
 pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-    println!("global_index: {:?}", global_index);
     Ok(global_index)
 }

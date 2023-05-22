@@ -50,6 +50,9 @@ pub enum ContractError {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("There are unclaimed rewards available. Claim them before attempting to bond/unbond")]
+    UnclaimedRewards {},
 }
 
 impl From<semver::Error> for ContractError {
