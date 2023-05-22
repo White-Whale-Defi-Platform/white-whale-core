@@ -4748,7 +4748,7 @@ fn collect_distribute_with_unbonders() {
     )
     .unwrap();
 
-    // Create some epochs, for the first one all good but for the second we will have an unbonding 
+    // Create some epochs, for the first one all good but for the second we will have an unbonding
 
     // Create EPOCH 1 with 100 whale
     // whale -> native
@@ -4954,7 +4954,7 @@ fn collect_distribute_with_unbonders() {
     println!("total_amount_expired: {}", total_amount_expired);
     assert!(total_amount_new_epoch - total_amount_expired > Uint128::zero());
 
-    // Time to unbond with user 1 
+    // Time to unbond with user 1
     app.execute_contract(
         creator.sender.clone(),
         whale_lair_address.clone(),
@@ -4967,11 +4967,12 @@ fn collect_distribute_with_unbonders() {
             },
         },
         &[],
-    ).unwrap();
+    )
+    .unwrap();
 
-    // NOTE: Here is where we could check weights if we wanted too 
-     // Make sure the available tokens on the expiring epoch are transferred to the second one.
-     app.execute_contract(
+    // NOTE: Here is where we could check weights if we wanted too
+    // Make sure the available tokens on the expiring epoch are transferred to the second one.
+    app.execute_contract(
         creator.sender.clone(),
         pair_tokens[0].clone(),
         &pool_network::pair::ExecuteMsg::Swap {
@@ -5111,16 +5112,14 @@ fn collect_distribute_with_unbonders() {
     let user_1_whale_received = uwhale_balance_after_claiming - uwhale_balance_before_claiming;
     println!("whale_received: {}", user_1_whale_received);
 
-    // For these claims, the bonds and weights started the same 
-    // No claims happened 
+    // For these claims, the bonds and weights started the same
+    // No claims happened
     // User 2 should have received more than user 1 as user 1 halfed their bond and thus their weight
-    // User 1 should not get an even share anymore considering all else stays the same 
+    // User 1 should not get an even share anymore considering all else stays the same
     assert_eq!(user_2_whale_received, Uint128::new(200u128));
     assert_eq!(user_1_whale_received, Uint128::new(100u128));
 
     assert_ne!(user_2_whale_received, user_1_whale_received);
-
-
 }
 
 #[test]

@@ -9,9 +9,7 @@ use white_whale::whale_lair::Bond;
 
 use crate::helpers::validate_growth_rate;
 use crate::queries::MAX_PAGE_LIMIT;
-use crate::state::{
-    update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND,
-};
+use crate::state::{update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, UNBOND};
 use crate::{helpers, ContractError};
 
 /// Bonds the provided asset.
@@ -39,12 +37,9 @@ pub(crate) fn bond(
             },
             ..Bond::default()
         });
-    // let config = CONFIG.load(deps.storage)?;
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     // let new_bond_weight = get_weight(timestamp, bond.weight, asset.amount, config.growth_rate, bond.timestamp)?;
-
-    // include time term in the weight
     bond.weight = bond.weight.checked_add(asset.amount)?;
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
 
@@ -54,8 +49,6 @@ pub(crate) fn bond(
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
 
     // include time term in the weight
-    println!("global_index.weight: {:?}", global_index);
-    // global_index.weight = global_index.weight.checked_add(get_weight(timestamp, bond.weight, asset.amount, config.growth_rate, Timestamp::default())?)?;
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
