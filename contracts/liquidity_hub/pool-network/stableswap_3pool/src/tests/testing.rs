@@ -1,12 +1,17 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::CosmosMsg;
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+#[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
@@ -17,7 +22,6 @@ use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
 use crate::queries::query_trio_info;
-use crate::state::LP_SYMBOL;
 
 #[test]
 fn proper_initialization_cw20_lp() {
@@ -130,6 +134,7 @@ fn proper_initialization_cw20_lp() {
     );
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
 fn proper_initialization_tokenfactory_lp() {
     let mut deps = mock_dependencies(&[]);
@@ -197,6 +202,7 @@ fn proper_initialization_tokenfactory_lp() {
     );
 }
 
+#[cfg(feature = "token_factory")]
 #[test]
 fn intialize_with_burnable_token_factory_asset() {
     let mut deps = mock_dependencies(&[]);

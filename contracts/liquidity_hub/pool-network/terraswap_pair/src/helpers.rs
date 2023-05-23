@@ -2,15 +2,28 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, Deps, StdError, StdResult, Storage, Uint128, Uint256};
+use cosmwasm_std::{
+    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
+    Storage, SubMsg, Uint128, Uint256, WasmMsg,
+};
+use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, PairType};
-use white_whale::pool_network::pair::PoolFee;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::CosmosMsg;
+use white_whale::pool_network::asset::{
+    is_factory_token, Asset, AssetInfo, AssetInfoRaw, PairType,
+};
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
 use white_whale::pool_network::querier::query_token_info;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
+use crate::contract::INSTANTIATE_REPLY_ID;
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
+use crate::state::{LP_SYMBOL, PAIR_INFO};
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
@@ -471,6 +484,7 @@ pub fn instantiate_fees(
 
 /// Gets the total supply of the given liquidity token
 pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
+    #[cfg(feature = "token_factory")]
     let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
         deps.querier.query_supply(&liquidity_token)?.amount
@@ -481,6 +495,13 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
         )?
         .total_supply
     };
+    #[cfg(not(feature = "token_factory"))]
+    let total_share = query_token_info(
+        &deps.querier,
+        deps.api.addr_validate(liquidity_token.as_str())?,
+    )?
+    .total_supply;
+
     Ok(total_share)
 }
 
@@ -491,4 +512,58 @@ pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
         AssetInfo::Token { .. } => false,
         AssetInfo::NativeToken { denom } => is_factory_token(denom),
     })
+}
+
+/// Creates a new LP token for this pool
+pub fn create_lp_token(
+    deps: DepsMut,
+    env: &Env,
+    msg: &InstantiateMsg,
+    lp_token_name: &String,
+) -> Result<Response, ContractError> {
+    if msg.token_factory_lp {
+        // create native LP token
+        PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
+            let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
+            pair_info.liquidity_token = AssetInfoRaw::NativeToken { denom };
+
+            Ok(pair_info)
+        })?;
+
+        #[cfg(feature = "token_factory")]
+        return Ok(
+            Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
+                MsgCreateDenom {
+                    sender: env.contract.address.to_string(),
+                    subdenom: LP_SYMBOL.to_string(),
+                },
+            )),
+        );
+        #[allow(unreachable_code)]
+        Err(ContractError::TokenFactoryNotEnabled {})
+    } else {
+        Ok(Response::new().add_submessage(SubMsg {
+            // Create LP token
+            msg: WasmMsg::Instantiate {
+                admin: None,
+                code_id: msg.token_code_id,
+                msg: to_binary(&TokenInstantiateMsg {
+                    name: lp_token_name.to_owned(),
+                    symbol: LP_SYMBOL.to_string(),
+                    decimals: 6,
+                    initial_balances: vec![],
+                    mint: Some(MinterResponse {
+                        minter: env.contract.address.to_string(),
+                        cap: None,
+                    }),
+                })?,
+                funds: vec![],
+                label: lp_token_name.to_owned(),
+            }
+            .into(),
+            gas_limit: None,
+            id: INSTANTIATE_REPLY_ID,
+            reply_on: ReplyOn::Success,
+        }))
+    }
 }

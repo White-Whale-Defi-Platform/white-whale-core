@@ -95,10 +95,11 @@ function init_pool_factory() {
 
   # Prepare the instantiation message
   pair_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_pair.wasm") | .code_id' $output_file)
+  trio_code_id=$(jq -r '.contracts[] | select (.wasm == "stableswap_3pool.wasm") | .code_id' $output_file)
   token_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $output_file)
   fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
 
-  init='{"pair_code_id": '"$pair_code_id"',"token_code_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
+  init='{"pair_code_id": '"$pair_code_id"', "trio_code_id": '"$trio_code_id"', "token_code_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
 
   # Instantiate the contract
   code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .code_id' $output_file)
