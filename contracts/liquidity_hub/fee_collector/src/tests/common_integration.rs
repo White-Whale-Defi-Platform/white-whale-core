@@ -78,7 +78,8 @@ pub fn store_whale_lair_code(app: &mut App) -> u64 {
             whale_lair::contract::instantiate,
             whale_lair::contract::query,
         )
-        .with_migrate(whale_lair::contract::migrate),
+        .with_migrate(whale_lair::contract::migrate)
+        .with_reply(whale_lair::contract::reply),
     );
 
     app.store_code(contract)

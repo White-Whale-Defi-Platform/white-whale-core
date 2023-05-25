@@ -24,8 +24,14 @@ pub(crate) fn bond(
         AssetInfo::NativeToken { denom } => denom,
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
     };
-
+    println!("denom: {}", denom);
+    println!("asset: {}", asset);
     helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
+
+    // denom unbond or bonding 
+    // then we do claim in a submessage 
+    // in reply we do after_claim_bond or after_claim_unbond
+    
 
     let mut bond = BOND
         .key((&info.sender, &denom))
@@ -37,16 +43,19 @@ pub(crate) fn bond(
             },
             ..Bond::default()
         });
+    // bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     // let new_bond_weight = get_weight(timestamp, bond.weight, asset.amount, config.growth_rate, bond.timestamp)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
 
+
     BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    // global_index = update_global_weight(&mut deps, timestamp, global_index)?;
 
     // include time term in the weight
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
@@ -56,7 +65,7 @@ pub(crate) fn bond(
     global_index = update_global_weight(&mut deps, timestamp, global_index)?;
 
     GLOBAL.save(deps.storage, &global_index)?;
-
+        // Do a claim after this 
     Ok(Response::default().add_attributes(vec![
         ("action", "bond".to_string()),
         ("address", info.sender.to_string()),

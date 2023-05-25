@@ -8,7 +8,7 @@ use white_whale::{
     whale_lair::{
         Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
         WithdrawableResponse,
-    },
+    }, fee_distributor::{Epoch, self},
 };
 
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
@@ -125,6 +125,9 @@ pub(crate) fn query_weight(
     global_weight: Option<Uint128>,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
+    let config = CONFIG.load(deps.storage)?;
+    // Query the fee distributor for epoch 
+    // let epoch = deps.querier.query_wasm_smart(config., msg)
 
     let bonds: StdResult<Vec<_>> = BOND
         .prefix(&address)
@@ -138,15 +141,23 @@ pub(crate) fn query_weight(
     // Search bonds for unique bond.asset.denoms
     // Make an empty set of unique denoms
     let mut unique_denoms: HashSet<String> = HashSet::new();
+    
+
+    // Get epochs 
 
     for (_, mut bond) in bonds? {
+        // We use bond timestamp here which is always changing, what if we use Epoch timestamp? 
+        // This will make the weight calculation deterministic rather than non-deterministic/dynamic
         bond.weight = get_weight(
             timestamp,
             bond.weight,
             bond.asset.amount,
             config.growth_rate,
             bond.timestamp,
+            // epoch.timestamp
         )?;
+
+         
 
         match bond.asset.info {
             AssetInfo::NativeToken { denom } => {
@@ -172,18 +183,19 @@ pub(crate) fn query_weight(
     // TODO: REVIEW THIS WITH J
     for denom in unique_denoms {
         let unbonding = query_unbonding(deps, address.to_string(), denom.to_string(), None, None)?;
-        for bond in unbonding.unbonding_requests {
+        for mut bond in unbonding.unbonding_requests {
             // TODO: Review this with J
-            if bond.timestamp.plus_nanos(config.unbonding_period.u64()) < timestamp {
-                let weight = get_weight(
+            // if bond.timestamp.plus_seconds(86400u64) < timestamp {
+                //  if unbonding happened within previous epoch time stamp and next one 
+                bond.weight = get_weight(
                     timestamp,
                     bond.weight,
                     bond.asset.amount,
                     config.growth_rate,
                     bond.timestamp,
                 )?;
-                total_bond_weight = total_bond_weight.checked_sub(weight)?;
-            }
+                total_bond_weight = total_bond_weight.checked_sub(bond.weight)?;
+            // }
         }
     }
 

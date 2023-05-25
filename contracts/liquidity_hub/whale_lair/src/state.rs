@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128, MessageInfo};
 use cw_storage_plus::{Item, Map};
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{AssetInfo, Asset};
 use white_whale::whale_lair::{Bond, Config, GlobalIndex};
 
 use crate::ContractError;
@@ -13,7 +13,7 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub const BOND: Map<(&Addr, &Denom), Bond> = Map::new("bond");
 pub const UNBOND: Map<(&Addr, &Denom, u64), Bond> = Map::new("unbond");
 pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
-
+pub const TEMP_INFO: Item<(MessageInfo, Asset)> = Item::new("temp_info");
 /// Updates the local weight of the given address.
 pub fn update_local_weight(
     deps: &mut DepsMut,

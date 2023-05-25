@@ -37,6 +37,7 @@ semver.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 white-whale.workspace = true
+cw-utils.workspace = true
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"

@@ -19,6 +19,9 @@ pub enum ContractError {
     #[error("The amount of tokens to unbond is greater than the amount of tokens bonded.")]
     InsufficientBond {},
 
+    #[error("Unknown reply id '{0}'")]
+    UnknownReply(u64),
+
     #[error("The amount of tokens to unbond must be greater than zero.")]
     InvalidUnbondingAmount {},
 

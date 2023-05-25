@@ -1,14 +1,15 @@
-use cosmwasm_std::entry_point;
+use cosmwasm_std::{entry_point, Reply, StdError, WasmMsg, SubMsg, CosmosMsg};
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{AssetInfo, Asset};
 
 use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-
+use white_whale::fee_distributor::ExecuteMsg as FeeDistributorExecuteMsg;
+use crate::commands::bond;
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, TEMP_INFO};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -73,8 +74,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.time, info, asset),
-        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.time, info, asset),
+        ExecuteMsg::Bond { asset } => handle_claim_then_bond(deps, env, info, asset, true),
+        ExecuteMsg::Unbond { asset } => handle_claim_then_bond(deps, env, info, asset, false),
         ExecuteMsg::Withdraw { denom } => {
             commands::withdraw(deps, env.block.time, info.sender, denom)
         }
@@ -129,6 +130,85 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::GlobalIndex {} => to_binary(&queries::query_global_index(deps)?),
     }
 }
+
+/// Bonds the provided asset.
+pub(crate) fn handle_claim_then_bond(
+    mut deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    asset: Asset,
+    bond: bool,
+) -> Result<Response, ContractError> {
+    // Store temp info of the sender mapped to their info and asset 
+    let mut temp_info = (info.clone(), asset.clone());
+    temp_info.0 = info.clone();
+    temp_info.1 = asset.clone();
+    TEMP_INFO.save(deps.storage, &temp_info)?;
+    // Ok(Response::new().add_attribute("sender", info.sender.to_string()).add_attribute("amount", info.funds[0].amount.to_string()).add_attribute("asset", asset.to_string()))
+    if bond {
+    Ok(Response::new().add_submessage(SubMsg::reply_always(
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&FeeDistributorExecuteMsg::Claim { }).unwrap(),
+            funds: vec![],
+        }),
+        1,
+    )))
+}else {
+    Ok(Response::new().add_submessage(SubMsg::reply_always(
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&FeeDistributorExecuteMsg::Claim { }).unwrap(),
+            funds: vec![],
+        }),
+        2,
+    )))
+}
+
+}
+/// The entry point to the contract for processing replies from submessages.
+#[entry_point]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    let mut config = CONFIG.load(deps.storage)?;
+    let res = handle_reply(deps, env, msg)?;
+
+    Ok(res)
+}
+
+/// Handles the replies from the lp token and staking contract instantiation sub-messages.
+pub fn handle_reply(
+    deps: DepsMut,
+    env: Env,
+    msg: Reply,
+) -> Result<Response, ContractError> {
+    let msg_id = msg.id;
+    // // parse the reply
+    // let res = cw_utils::parse_reply_execute_data(msg).map_err(|_| {
+    //     StdError::parse_err("MsgExecuteContractResponse", "failed to parse data")
+    // })?;
+    // Load the temp data 
+    let temp_info = TEMP_INFO.load(deps.storage)?;
+    TEMP_INFO.remove(deps.storage);
+    match msg_id {
+        1 => {
+            let msg = to_binary(&ExecuteMsg::Bond { asset: temp_info.1 }).unwrap();
+            Ok(Response::new()
+        .add_message(CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: env.contract.address.to_string(), msg: msg ,funds: temp_info.0.funds})))
+        }
+        2 => {
+            let msg = to_binary(&ExecuteMsg::Unbond { asset: temp_info.1 }).unwrap();
+            Ok(Response::new()
+            .add_message(CosmosMsg::Wasm(WasmMsg::Execute { contract_addr: env.contract.address.to_string(), msg: msg ,funds: temp_info.0.funds})))
+        }
+        _ => {
+            return Err(ContractError::Std(StdError::not_found(
+                "reply id not found",
+            )));
+        }
+    }
+    
+}
+
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]

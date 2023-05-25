@@ -161,6 +161,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     Ok(Response::new()
         .add_attributes(vec![("action", "claim")])
+        .add_attribute("claimer", info.sender)
         .add_messages(messages))
 }
 
