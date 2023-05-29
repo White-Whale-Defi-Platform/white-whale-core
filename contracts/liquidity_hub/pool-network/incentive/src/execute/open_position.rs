@@ -49,6 +49,7 @@ pub fn open_position(
     )?;
 
     if let Some(transfer_token_msg) = transfer_token_msg {
+        println!("trnasfer token");
         messages.push(transfer_token_msg.into());
     }
 
@@ -79,13 +80,15 @@ pub fn open_position(
         .unwrap_or_default()
         .is_empty()
     {
+        // TODO maybe there's something broken here?
+        println!("claiming");
         messages.append(&mut crate::claim::claim(&mut deps, &env, &receiver)?);
     }
 
     // create the new position
     OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.sender.clone(), |positions| {
         let mut positions = positions.unwrap_or_default();
-
+        println!("adding position");
         positions.push(OpenPosition {
             amount,
             unbonding_duration,
@@ -94,6 +97,8 @@ pub fn open_position(
         Ok(positions)
     })?;
 
+    println!("updating weight");
+    //TODO look at weight calculation
     // add the weight
     let weight = calculate_weight(unbonding_duration, amount)?;
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {

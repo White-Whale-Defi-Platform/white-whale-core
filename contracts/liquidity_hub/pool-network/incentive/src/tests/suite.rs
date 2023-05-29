@@ -3,7 +3,9 @@ use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive::{Curve, Flow, FlowResponse};
+use white_whale::pool_network::incentive::{
+    Curve, Flow, FlowResponse, PositionsResponse, RewardsResponse,
+};
 use white_whale::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
 };
@@ -161,7 +163,7 @@ impl TestingSuite {
             },
             7u64,
             incentive_id,
-            100u64,
+            1209600, // 2 weeks
             86400,
             259200,
         )
@@ -389,6 +391,46 @@ impl TestingSuite {
 
         self
     }
+
+    pub(crate) fn open_incentive_position(
+        &mut self,
+        sender: Addr,
+        incentive_addr: Addr,
+        amount: Uint128,
+        unbonding_duration: u64,
+        receiver: Option<String>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+            amount,
+            unbonding_duration,
+            receiver,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr, &msg, &funds),
+        );
+
+        self
+    }
+
+    pub(crate) fn claim(
+        &mut self,
+        incentive_addr: Addr,
+        sender: Addr,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::Claim {};
+        println!("-------------- claiming {}", sender);
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+        );
+
+        self
+    }
 }
 
 /// queries
@@ -456,6 +498,42 @@ impl TestingSuite {
         );
 
         result(flows_response);
+
+        self
+    }
+
+    pub(crate) fn query_positions(
+        &mut self,
+        incentive_addr: Addr,
+        address: Addr,
+        result: impl Fn(StdResult<PositionsResponse>),
+    ) -> &mut Self {
+        let positions_response: StdResult<PositionsResponse> = self.app.wrap().query_wasm_smart(
+            incentive_addr,
+            &white_whale::pool_network::incentive::QueryMsg::Positions {
+                address: address.to_string(),
+            },
+        );
+
+        result(positions_response);
+
+        self
+    }
+
+    pub(crate) fn query_rewards(
+        &mut self,
+        incentive_addr: Addr,
+        address: Addr,
+        result: impl Fn(StdResult<RewardsResponse>),
+    ) -> &mut Self {
+        let rewards_response: StdResult<RewardsResponse> = self.app.wrap().query_wasm_smart(
+            incentive_addr,
+            &white_whale::pool_network::incentive::QueryMsg::Rewards {
+                address: address.to_string(),
+            },
+        );
+
+        result(rewards_response);
 
         self
     }

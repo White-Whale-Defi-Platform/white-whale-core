@@ -1,4 +1,5 @@
 use cosmwasm_std::{to_binary, Deps, Env, MessageInfo, Uint128, WasmMsg};
+use cw_utils::PaymentError;
 use white_whale::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
@@ -18,6 +19,10 @@ pub fn validate_funds_sent(
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Option<WasmMsg>, ContractError> {
+    if amount.is_zero() {
+        return Err(ContractError::PaymentError(PaymentError::NoFunds {}));
+    }
+
     let send_lp_deposit_msg = match lp_token {
         AssetInfo::Token { contract_addr } => {
             let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
@@ -27,7 +32,7 @@ pub fn validate_funds_sent(
                     spender: env.contract.address.clone().into_string(),
                 },
             )?;
-
+            println!("allowance: {:?}", allowance);
             if allowance.allowance < amount {
                 return Err(ContractError::MissingPositionDeposit {
                     allowance_amount: allowance.allowance,
