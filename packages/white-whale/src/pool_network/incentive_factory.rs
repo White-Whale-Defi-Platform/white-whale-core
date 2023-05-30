@@ -7,6 +7,8 @@ use crate::pool_network::asset::{Asset, AssetInfo};
 pub struct InstantiateMsg {
     /// The address of the fee collector to send flow creation fees to.
     pub fee_collector_addr: String,
+    /// Fee distributor contract address.
+    pub fee_distributor_addr: String,
     /// The fee that must be paid to create a flow.
     pub create_flow_fee: Asset,
     /// The maximum amount of flows that can exist for a single LP token at a single time.
@@ -108,14 +110,16 @@ pub struct Config {
     pub owner: Addr,
     /// The address to send fees to.
     pub fee_collector_addr: Addr,
+    /// Fee distributor contract address.
+    pub fee_distributor_addr: Addr,
     /// The fee that must be paid each time a user wants to create a flow.
     pub create_flow_fee: Asset,
     /// The maximum amount of flows that can exist at any one time.
     pub max_concurrent_flows: u64,
     /// The code ID of the incentive contract.
     pub incentive_code_id: u64,
-    /// The maximum amount of time in the future a new flow is allowed to start in.
-    pub max_flow_start_time_buffer: u64,
+    /// The maximum amount of epochs in the future a new flow is allowed to start in.
+    pub max_flow_epoch_buffer: u64,
     /// The minimum amount of seconds that a user must bond their tokens for.
     pub min_unbonding_duration: u64,
     /// The maximum amount of seconds that a user must bond their tokens for.

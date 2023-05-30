@@ -2,6 +2,7 @@ use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uin
 
 use white_whale::pool_network::incentive::OpenPosition;
 
+use crate::state::ADDRESS_WEIGHT_HISTORY;
 use crate::{
     error::ContractError,
     funds_validation::validate_funds_sent,
@@ -61,7 +62,7 @@ pub fn open_position(
             funds: info.funds.clone(),
             sender: receiver,
         })
-        .unwrap_or(info);
+        .unwrap_or(info.clone());
 
     // ensure an existing position with this unbonding time doesn't exist
     let existing_position = OPEN_POSITIONS
@@ -104,9 +105,30 @@ pub fn open_position(
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_add(weight)?)
     })?;
-    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender.clone(), |user_weight| {
-        Ok(user_weight.unwrap_or_default().checked_add(weight)?)
-    })?;
+    // ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender.clone(), |user_weight| {
+    //     Ok(user_weight.unwrap_or_default().checked_add(weight)?)
+    // })?;
+
+    // TODO new stuff, remove/refactor old stuff
+
+    let epoch_response: white_whale::fee_distributor::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.fee_distributor_address.into_string(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )?;
+
+    let mut user_weight = ADDRESS_WEIGHT
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or_default();
+    user_weight = user_weight.checked_add(weight)?;
+
+    ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
+        deps.storage,
+        (&info.sender.clone(), epoch_response.epoch.id.u64()),
+        |_| Ok(user_weight),
+    )?;
+
+    ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
 
     Ok(Response::default()
         .add_attributes(vec![

@@ -41,6 +41,7 @@ pub fn create_incentive(
                 code_id: config.incentive_code_id,
                 msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
                     lp_asset: lp_asset.clone(),
+                    fee_distributor_address: config.fee_distributor_addr.into_string(),
                 })?,
                 funds: vec![],
                 label: format!("{} incentives", lp_asset.get_label(&deps.as_ref())?),

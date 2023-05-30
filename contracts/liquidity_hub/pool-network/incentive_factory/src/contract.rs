@@ -44,10 +44,11 @@ pub fn instantiate(
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+        fee_distributor_addr: deps.api.addr_validate(msg.fee_distributor_addr.as_str())?,
         create_flow_fee: msg.create_flow_fee,
         max_concurrent_flows: msg.max_concurrent_flows,
         incentive_code_id: msg.incentive_code_id,
-        max_flow_start_time_buffer: msg.max_flow_start_time_buffer,
+        max_flow_epoch_buffer: msg.max_flow_start_time_buffer,
         min_unbonding_duration: msg.min_unbonding_duration,
         max_unbonding_duration: msg.max_unbonding_duration,
     };
@@ -58,6 +59,10 @@ pub fn instantiate(
         ("action", "instantiate".to_string()),
         ("owner", config.owner.to_string()),
         ("fee_collector_addr", config.fee_collector_addr.to_string()),
+        (
+            "fee_distributor_addr",
+            config.fee_distributor_addr.to_string(),
+        ),
         ("create_flow_fee", config.create_flow_fee.to_string()),
         (
             "max_concurrent_flows",
@@ -66,7 +71,7 @@ pub fn instantiate(
         ("incentive_code_id", config.incentive_code_id.to_string()),
         (
             "max_flow_start_time_buffer",
-            config.max_flow_start_time_buffer.to_string(),
+            config.max_flow_epoch_buffer.to_string(),
         ),
         (
             "min_unbonding_duration",

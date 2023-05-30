@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::pool_network::asset::{Asset, AssetInfo};
@@ -8,18 +9,29 @@ use crate::pool_network::asset::{Asset, AssetInfo};
 pub struct InstantiateMsg {
     /// The address of the LP token that the incentive should be tied to.
     pub lp_asset: AssetInfo,
+    /// Fee distributor contract address.
+    pub fee_distributor_address: String,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    /// Makes a snapshot of the current global weight.
+    TakeGlobalWeightSnapshot {},
     /// Opens a new liquidity flow
     OpenFlow {
+        //TODO remove timestamps
         /// The start timestamp (in seconds since epoch) of the flow.
         ///
         /// If unspecified, the flow will start at the current block time.
         start_timestamp: Option<u64>,
         /// The timestamp (in seconds since epoch) the flow should end.
         end_timestamp: u64,
+        /// The epoch at which the flow should start.
+        ///
+        /// If unspecified, the flow will start at the current epoch.
+        start_epoch: Option<u64>,
+        /// The epoch at which the flow should end.
+        end_epoch: u64,
         /// The type of distribution curve.
         curve: Curve,
         /// The asset to be distributed in this flow.
@@ -85,6 +97,16 @@ pub struct Flow {
     pub start_timestamp: u64,
     /// The timestamp (in seconds block time) for when the flow will end.
     pub end_timestamp: u64,
+
+    // TODO new stuff, remove/refactor old stuff
+    /// The epoch at which the flow starts.
+    pub start_epoch: u64,
+    /// The epoch at which the flow ends.
+    pub end_epoch: u64,
+    /// The amount of the `flow_asset` that will be distributed per epoch.
+    pub emissions_per_epoch: Uint128,
+    /// emitted tokens
+    pub emitted_tokens: HashMap<u64, Uint128>,
 }
 
 /// Represents a position that accumulates flow rewards.
@@ -158,6 +180,9 @@ pub struct InstantiateReplyCallback {
 pub struct Config {
     /// The address of the incentive factory.
     pub factory_address: Addr,
+
+    /// Fee distributor contract.
+    pub fee_distributor_address: Addr,
 
     /// The LP token asset tied to the incentive contract.
     pub lp_asset: AssetInfo,

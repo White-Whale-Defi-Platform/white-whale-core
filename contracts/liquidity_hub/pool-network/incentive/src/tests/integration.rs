@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use anyhow::Error;
-use cosmwasm_std::{Addr, coin, coins, Timestamp, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Timestamp, Uint128};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
@@ -384,7 +384,7 @@ fn try_open_flows_with_wrong_timestamps() {
     suite
         .query_incentive_factory_config(|result| {
             let config = result.unwrap();
-            *max_flow_start_time_buffer.borrow_mut() = config.max_flow_start_time_buffer;
+            *max_flow_start_time_buffer.borrow_mut() = config.max_flow_epoch_buffer;
         })
         .open_incentive_flow(
             alice.clone(),
@@ -2548,7 +2548,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -2606,7 +2606,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(250_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -2630,7 +2630,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         ) // go beyond the end time of the flow
@@ -2647,7 +2647,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -2693,7 +2693,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::zero(),
-                    }, ]
+                    },]
                 );
             },
         );
@@ -2943,7 +2943,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     vec![Asset {
                         info: flow_asset.clone(),
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -2987,7 +2987,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     vec![Asset {
                         info: flow_asset.clone(),
                         amount: Uint128::new(250_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3009,7 +3009,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     vec![Asset {
                         info: flow_asset.clone(),
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         ) // go beyond the end time of the flow
@@ -3024,7 +3024,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     vec![Asset {
                         info: flow_asset.clone(),
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3062,7 +3062,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     vec![Asset {
                         info: flow_asset.clone(),
                         amount: Uint128::zero(),
-                    }, ]
+                    },]
                 );
             },
         );
@@ -3295,7 +3295,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     vec![Asset {
                         info: flow_asset_1.clone(),
                         amount: Uint128::new(83_333_333u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3305,7 +3305,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 vec![Asset {
                     info: flow_asset_1.clone(),
                     amount: Uint128::new(166_666_666u128),
-                }, ]
+                },]
             );
         })
         .query_rewards(
@@ -3317,7 +3317,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     vec![Asset {
                         info: flow_asset_1.clone(),
                         amount: Uint128::new(250_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3337,13 +3337,9 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 result.unwrap();
             },
         )
-        .claim(
-            incentive_addr.clone().into_inner(),
-            bob.clone(),
-            |result| {
-                result.unwrap();
-            },
-        )
+        .claim(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            result.unwrap();
+        })
         .query_funds(alice.clone(), flow_asset_1.clone(), |result| {
             assert_eq!(
                 result,
@@ -3371,8 +3367,6 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 Uint128::new(250_000_000u128)
             );
         });
-
-    ;
 
     todo!();
 
@@ -3423,7 +3417,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3481,7 +3475,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(250_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3505,7 +3499,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         ) // go beyond the end time of the flow
@@ -3522,7 +3516,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::new(500_000_000u128),
-                    }, ]
+                    },]
                 );
             },
         )
@@ -3568,7 +3562,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             denom: "usdc".to_string(),
                         },
                         amount: Uint128::zero(),
-                    }, ]
+                    },]
                 );
             },
         );

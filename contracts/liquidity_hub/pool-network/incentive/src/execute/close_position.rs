@@ -1,6 +1,7 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError};
 use white_whale::pool_network::incentive::{ClosedPosition, OpenPosition};
 
+use crate::state::{ADDRESS_WEIGHT_HISTORY, CONFIG};
 use crate::{
     error::ContractError,
     state::{ADDRESS_WEIGHT, CLOSED_POSITIONS, GLOBAL_WEIGHT, OPEN_POSITIONS},
@@ -56,11 +57,48 @@ pub fn close_position(
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_sub(reduced_weight)?)
     })?;
-    ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
-        Ok(user_weight
-            .unwrap_or_default()
-            .checked_sub(reduced_weight)?)
-    })?;
+    // ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
+    //     Ok(user_weight
+    //         .unwrap_or_default()
+    //         .checked_sub(reduced_weight)?)
+    // })?;
+
+    // TODO new stuff, remove/refactor old stuff
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let epoch_response: white_whale::fee_distributor::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.fee_distributor_address.into_string(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )?;
+
+    let mut user_weight = ADDRESS_WEIGHT
+        .may_load(deps.storage, info.sender.clone())?
+        .unwrap_or_default();
+    user_weight = user_weight.checked_sub(reduced_weight)?;
+
+    ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
+        deps.storage,
+        (&info.sender.clone(), epoch_response.epoch.id.u64()),
+        |_| Ok(user_weight),
+    )?;
+
+    ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
+
+    // ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
+    //     let new_user_weight = user_weight
+    //         .unwrap_or_default()
+    //         .checked_sub(reduced_weight)?;
+    //
+    //     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
+    //         deps.storage,
+    //         (&info.sender.clone(), epoch_response.epoch.id.u64()),
+    //         |user_weight| Ok(new_user_weight),
+    //     )?;
+    //
+    //     Ok(new_user_weight)
+    // })?;
 
     let closing_position: OpenPosition = open_positions[to_close_index].clone();
 

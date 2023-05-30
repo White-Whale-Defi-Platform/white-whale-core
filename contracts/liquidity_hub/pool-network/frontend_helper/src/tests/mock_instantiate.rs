@@ -122,6 +122,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
                 max_flow_start_time_buffer: 100,
                 max_unbonding_duration: 100000,
                 min_unbonding_duration: 86400,
+                fee_distributor_addr: "fee_distributor".to_string(),
             },
             &[],
             "mock incentive factory",

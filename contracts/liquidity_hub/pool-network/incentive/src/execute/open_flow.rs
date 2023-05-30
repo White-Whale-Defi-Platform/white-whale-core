@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128,
-    WasmMsg,
+    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Timestamp,
+    Uint128, WasmMsg,
 };
 
 use white_whale::pool_network::{
@@ -16,13 +17,14 @@ use crate::{
 };
 
 const MIN_FLOW_AMOUNT: Uint128 = Uint128::new(1_000u128);
+const DAY_IN_SECONDS: u64 = 86_400u64;
 
 pub fn open_flow(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    start_timestamp: Option<u64>,
-    end_timestamp: u64,
+    start_epoch: Option<u64>,
+    end_epoch: u64,
     curve: Curve,
     mut flow_asset: Asset,
 ) -> Result<Response, ContractError> {
@@ -310,24 +312,42 @@ pub fn open_flow(
         }
     }
 
+    // TODO new stuff, remove/refactor old stuff
+
+    let epoch_response: white_whale::fee_distributor::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.fee_distributor_address.into_string(),
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        )?;
+
+    let current_epoch = epoch_response.epoch.id.u64();
+
     // ensure the flow is set for a expire date in the future
-    if env.block.time.seconds() > end_timestamp {
+    if current_epoch > end_epoch {
         return Err(ContractError::FlowExpirationInPast);
     }
 
-    let start_timestamp = start_timestamp.unwrap_or(env.block.time.seconds());
+    let start_epoch = start_epoch.unwrap_or(current_epoch);
 
     // ensure that start date is before end date
-    if start_timestamp > end_timestamp {
+    if start_epoch > end_epoch {
         return Err(ContractError::FlowStartTimeAfterEndTime);
     }
 
     // ensure that start date is set within buffer
-    if start_timestamp
-        > env.block.time.seconds() + incentive_factory_config.max_flow_start_time_buffer
-    {
+    if start_epoch > current_epoch + incentive_factory_config.max_flow_epoch_buffer {
         return Err(ContractError::FlowStartTooFar);
     }
+
+    // calculate end epoch by calculating for how many epochs the flow will be active given the start and end timestamps
+    // round down when calculating the number of epochs
+    let flow_duration_in_epochs = end_epoch.clone() - start_epoch.clone();
+    //let emissions_per_epoch = flow_asset.amount.checked_div_euclid(Uint128::from(flow_duration_in_epochs))?;
+    let emissions_per_epoch = Uint128::zero();
+
+    // emitted_tokens -> tokens that are available for claimed and unclaimed.
+    // flow_duration - flow_epoch should be 1 at the end fo the flow
+    //let emission = (total_tokens - emitted_tokens) / (flow_duration - flow_epoch)
 
     // add the flow
     let flow_id =
@@ -339,8 +359,12 @@ pub fn open_flow(
             curve: curve.clone(),
             flow_asset: flow_asset.clone(),
             claimed_amount: Uint128::zero(),
-            start_timestamp: start_timestamp.clone(),
-            end_timestamp: end_timestamp.clone(),
+            start_timestamp: env.block.time.seconds().clone(), //todo remove this stuff after the start_epoch and end_epoch are settled
+            end_timestamp: env.block.time.seconds().clone(),
+            start_epoch,
+            end_epoch,
+            emissions_per_epoch, //todo remove as not used
+            emitted_tokens: HashMap::new(),
         });
 
         Ok(flows)
@@ -353,8 +377,9 @@ pub fn open_flow(
             ("flow_creator", info.sender.into_string()),
             ("flow_asset", flow_asset.info.to_string()),
             ("flow_asset_amount", flow_asset.amount.to_string()),
-            ("start_timestamp", start_timestamp.to_string()),
-            ("end_timestamp", end_timestamp.to_string()),
+            ("start_epoch", start_epoch.to_string()),
+            ("end_epoch", end_epoch.to_string()),
+            ("emissions_per_epoch", emissions_per_epoch.to_string()),
             ("curve", curve.to_string()),
         ])
         .add_messages(messages))

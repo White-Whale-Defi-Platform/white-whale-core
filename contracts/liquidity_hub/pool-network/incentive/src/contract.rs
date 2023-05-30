@@ -36,6 +36,7 @@ pub fn instantiate(
 
     let config = Config {
         factory_address: deps.api.addr_validate(&info.sender.into_string())?,
+        fee_distributor_address: deps.api.addr_validate(&msg.fee_distributor_address)?,
         lp_asset: msg.lp_asset.clone(),
     };
 
@@ -50,6 +51,10 @@ pub fn instantiate(
         .add_attributes(vec![
             ("action", "instantiate".to_string()),
             ("factory_address", config.factory_address.to_string()),
+            (
+                "fee_distributor_address",
+                config.fee_distributor_address.to_string(),
+            ),
             ("lp_asset", config.lp_asset.to_string()),
         ])
         .set_data(to_binary(
@@ -67,20 +72,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::TakeGlobalWeightSnapshot {} => execute::take_global_weight_snapshot(deps),
         ExecuteMsg::OpenFlow {
             start_timestamp,
             end_timestamp,
+            start_epoch,
+            end_epoch,
             curve,
             flow_asset,
-        } => execute::open_flow(
-            deps,
-            env,
-            info,
-            start_timestamp,
-            end_timestamp,
-            curve,
-            flow_asset,
-        ),
+        } => execute::open_flow(deps, env, info, start_epoch, end_epoch, curve, flow_asset),
         ExecuteMsg::CloseFlow { flow_id } => execute::close_flow(deps, info, flow_id),
         ExecuteMsg::OpenPosition {
             amount,

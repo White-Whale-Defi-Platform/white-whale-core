@@ -42,7 +42,7 @@ pub fn update_config(
     }
 
     if let Some(max_flow_start_time_buffer) = max_flow_start_time_buffer {
-        config.max_flow_start_time_buffer = max_flow_start_time_buffer;
+        config.max_flow_epoch_buffer = max_flow_start_time_buffer;
     }
 
     if let Some(max_unbonding_duration) = max_unbonding_duration {
@@ -81,7 +81,7 @@ pub fn update_config(
         ("incentive_code_id", config.incentive_code_id.to_string()),
         (
             "max_flow_start_time_buffer",
-            config.max_flow_start_time_buffer.to_string(),
+            config.max_flow_epoch_buffer.to_string(),
         ),
         (
             "min_unbonding_duration",
@@ -113,6 +113,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             fee_collector_addr: "fee_collector_addr".to_string(),
+            fee_distributor_addr: "fee_distributor_addr".to_string(),
             create_flow_fee: Asset {
                 info: AssetInfo::NativeToken {
                     denom: "native-fee-token".to_string(),
@@ -135,6 +136,7 @@ mod tests {
             Config {
                 owner: Addr::unchecked("owner"),
                 fee_collector_addr: Addr::unchecked("fee_collector_addr"),
+                fee_distributor_addr: Addr::unchecked("fee_distributor_addr"),
                 create_flow_fee: Asset {
                     info: AssetInfo::NativeToken {
                         denom: "native-fee-token".to_string()
@@ -143,7 +145,7 @@ mod tests {
                 },
                 max_concurrent_flows: 1u64,
                 incentive_code_id: 123,
-                max_flow_start_time_buffer: 3600u64,
+                max_flow_epoch_buffer: 3600u64,
                 min_unbonding_duration: 86400u64,
                 max_unbonding_duration: 259200u64,
             }
@@ -176,6 +178,7 @@ mod tests {
             Config {
                 owner: Addr::unchecked("new_owner"),
                 fee_collector_addr: Addr::unchecked("new_fee_collector_addr"),
+                fee_distributor_addr: Addr::unchecked("fee_distributor_addr"),
                 create_flow_fee: Asset {
                     info: AssetInfo::NativeToken {
                         denom: "uwhale".to_string()
@@ -184,7 +187,7 @@ mod tests {
                 },
                 max_concurrent_flows: 10u64,
                 incentive_code_id: 456u64,
-                max_flow_start_time_buffer: 60u64,
+                max_flow_epoch_buffer: 60u64,
                 min_unbonding_duration: 1000u64,
                 max_unbonding_duration: 86400u64,
             }
@@ -198,6 +201,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             fee_collector_addr: "fee_collector_addr".to_string(),
+            fee_distributor_addr: "fee_distributor_addr".to_string(),
             create_flow_fee: Asset {
                 info: AssetInfo::NativeToken {
                     denom: "native-fee-token".to_string(),

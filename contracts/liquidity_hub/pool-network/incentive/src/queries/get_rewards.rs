@@ -34,4 +34,3 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> StdResult<RewardsRe
     println!("rewards: {:?}", rewards);
     Ok(RewardsResponse { rewards })
 }
-

@@ -76,6 +76,9 @@ pub enum ContractError {
         required_amount: Uint128,
     },
 
+    #[error("Invalid reward")]
+    InvalidReward {},
+
     #[error("Attempt to create a position with {deposited_amount}, but only {allowance_amount} was set in allowance")]
     MissingPositionDeposit {
         /// The actual amount that the contract has an allowance for.
@@ -126,6 +129,14 @@ pub enum ContractError {
 
     #[error("Attempt to compute the weight of a duration of {unbonding_duration} which is outside the allowed bounds")]
     InvalidWeight { unbonding_duration: u64 },
+
+    #[error(
+        "The global weight snapshot for epoch {epoch} has already been taken for this incentive"
+    )]
+    GlobalWeightSnapshotAlreadyExists { epoch: u64 },
+
+    #[error("The global weight snapshot for the current epoch has not been taken")]
+    GlobalWeightSnapshotNotTaken {},
 }
 
 impl From<semver::Error> for ContractError {
