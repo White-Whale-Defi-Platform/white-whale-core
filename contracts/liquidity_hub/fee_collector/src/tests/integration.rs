@@ -5128,32 +5128,32 @@ fn collect_distribute_with_unbonders() {
         .unwrap();
     assert!(expired_epoch_res.epoch.available.is_empty());
 
-    let weight_after: BondingWeightResponse = app
-        .wrap()
-        .query_wasm_smart(
-            whale_lair_address.clone(),
-            &white_whale::whale_lair::QueryMsg::Weight {
-                address: creator.sender.to_string(),
-                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-                global_weight: None,
-                timestamp: None,
-            },
-        )
-        .unwrap();
+    // let weight_after: BondingWeightResponse = app
+    //     .wrap()
+    //     .query_wasm_smart(
+    //         whale_lair_address.clone(),
+    //         &white_whale::whale_lair::QueryMsg::Weight {
+    //             address: creator.sender.to_string(),
+    //             // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+    //             global_weight: None,
+    //             timestamp: None,
+    //         },
+    //     )
+    //     .unwrap();
 
     // Get weight of other user and ensure its lower than the first
-    let user_two_weight: BondingWeightResponse = app
-        .wrap()
-        .query_wasm_smart(
-            whale_lair_address.clone(),
-            &white_whale::whale_lair::QueryMsg::Weight {
-                address: Addr::unchecked("other").to_string(),
-                // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
-                global_weight: None,
-                timestamp: None,
-            },
-        )
-        .unwrap();
+    // let user_two_weight: BondingWeightResponse = app
+    //     .wrap()
+    //     .query_wasm_smart(
+    //         whale_lair_address.clone(),
+    //         &white_whale::whale_lair::QueryMsg::Weight {
+    //             address: Addr::unchecked("other").to_string(),
+    //             // timestamp: Some(Timestamp::from_nanos(1678888800_000000000u64-1)),
+    //             global_weight: None,
+    //             timestamp: None,
+    //         },
+    //     )
+    //     .unwrap();
 
     // since the fees collected for the second epoch were the same for the first, the available
     // assets for the second epoch should be twice the amount of the first
@@ -5173,7 +5173,7 @@ fn collect_distribute_with_unbonders() {
     assert!(total_amount_new_epoch - total_amount_expired > Uint128::zero());
 
     let mut user_1_claims: Vec<Uint128> = vec![];
-    let mut user_2_claims: Vec<Uint128> = vec![];
+    // let mut user_2_claims: Vec<Uint128> = vec![];
 
     // Get the balance of the sender before claiming
     let uwhale_balance_before_claiming = app

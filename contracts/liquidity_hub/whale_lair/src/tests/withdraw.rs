@@ -57,7 +57,7 @@ fn test_withdraw_successfully() {
                 transfer_event,
                 Event::new("transfer").add_attributes(vec![
                     ("recipient", sender.to_string()),
-                    ("sender", "contract0".to_string()),
+                    ("sender", "contract1".to_string()),
                     ("amount", "300ampWHALE".to_string()),
                 ])
             );

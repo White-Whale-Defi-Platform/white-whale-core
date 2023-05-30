@@ -1,12 +1,15 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
+use white_whale::fee_distributor::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_testing::integration::contracts::whale_lair_contract;
+use white_whale_testing::integration::contracts::{
+    store_fee_collector_code, store_fee_distributor_code, whale_lair_contract,
+};
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
 pub struct TestingRobot {
@@ -82,9 +85,59 @@ impl TestingRobot {
         bonding_assets: Vec<AssetInfo>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
+        let fee_collector_id = store_fee_collector_code(&mut self.app);
+        let fee_distributor_id = store_fee_distributor_code(&mut self.app);
+
+        let fee_collector_address = self
+            .app
+            .instantiate_contract(
+                fee_collector_id,
+                self.sender.clone(),
+                &white_whale::fee_collector::InstantiateMsg {},
+                &[],
+                "fee_collector",
+                None,
+            )
+            .unwrap();
+        println!("fee_collector_address: {}", fee_collector_address);
+
         let whale_lair_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
+
+        let fee_distributor_address = self
+            .app
+            .instantiate_contract(
+                fee_distributor_id,
+                self.sender.clone(),
+                &white_whale::fee_distributor::InstantiateMsg {
+                    bonding_contract_addr: whale_lair_addr.clone().to_string(),
+                    fee_collector_addr: fee_collector_address.clone().to_string(),
+                    grace_period: Uint64::new(1),
+                    epoch_config: EpochConfig {
+                        duration: Uint64::new(86_400_000_000_000u64), // a day
+                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    },
+                    distribution_asset: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                },
+                &[],
+                "fee_distributor",
+                None,
+            )
+            .unwrap();
+        // Now set the fee distributor on the config of the whale lair
+        // So that we can check claims before letting them bond/unbond
+        let msg = ExecuteMsg::UpdateConfig {
+            fee_distributor_addr: Some(fee_distributor_address.clone().to_string()),
+            owner: None,
+            unbonding_period: None,
+            growth_rate: None,
+        };
+        self.app
+            .execute_contract(self.sender.clone(), whale_lair_addr.clone(), &msg, &[])
+            .unwrap();
         self.whale_lair_addr = whale_lair_addr;
 
         self

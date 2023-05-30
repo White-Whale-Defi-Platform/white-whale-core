@@ -45,7 +45,7 @@ pub fn instantiate(
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
         bonding_assets: msg.bonding_assets,
-        fee_distributor_addr: Addr::unchecked("test"),
+        fee_distributor_addr: Addr::unchecked(""),
     };
 
     CONFIG.save(deps.storage, &config)?;

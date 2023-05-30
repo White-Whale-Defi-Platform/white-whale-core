@@ -26,7 +26,7 @@ pub(crate) fn bond(
     };
 
     helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
-    helpers::validate_claimed(&deps, &info, &asset, denom.clone())?;
+    helpers::validate_claimed(&deps, &info)?;
 
     let mut bond = BOND
         .key((&info.sender, &denom))
@@ -83,7 +83,7 @@ pub(crate) fn unbond(
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
     };
 
-    helpers::validate_claimed(&deps, &info, &asset, denom.clone())?;
+    helpers::validate_claimed(&deps, &info)?;
 
     if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
         // check if the address has enough bond

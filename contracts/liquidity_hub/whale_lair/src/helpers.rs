@@ -43,9 +43,7 @@ pub fn validate_funds(
 // if user has unclaimed rewards, fail with an exception prompting them to claim
 pub fn validate_claimed(
     deps: &DepsMut,
-    info: &MessageInfo,
-    asset: &Asset,
-    denom: String,
+    info: &MessageInfo
 ) -> Result<(), ContractError> {
     // Query fee distributor
     // if user has unclaimed rewards, fail with an exception prompting them to claim
