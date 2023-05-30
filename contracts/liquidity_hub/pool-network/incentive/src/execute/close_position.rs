@@ -80,7 +80,7 @@ pub fn close_position(
 
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&info.sender.clone(), epoch_response.epoch.id.u64()),
+        (&info.sender.clone(), epoch_response.epoch.id.u64() + 1u64),
         |_| Ok(user_weight),
     )?;
 

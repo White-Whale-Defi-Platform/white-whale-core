@@ -5,6 +5,7 @@ use crate::{
     error::ContractError,
     state::{ADDRESS_WEIGHT, CLOSED_POSITIONS, CONFIG, GLOBAL_WEIGHT},
 };
+use crate::state::ADDRESS_WEIGHT_HISTORY;
 
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     // counter of how many LP tokens we must return to use and the weight to remove
@@ -42,11 +43,31 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
         GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
             Ok(global_weight.checked_sub(weight_to_remove)?)
         })?;
-        ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
-            Ok(user_weight
-                .unwrap_or_default()
-                .checked_sub(weight_to_remove)?)
-        })?;
+        // ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, info.sender.clone(), |user_weight| {
+        //     Ok(user_weight
+        //         .unwrap_or_default()
+        //         .checked_sub(weight_to_remove)?)
+        // })?;
+
+        let config = CONFIG.load(deps.storage)?;
+        let epoch_response: white_whale::fee_distributor::EpochResponse =
+            deps.querier.query_wasm_smart(
+                config.fee_distributor_address.into_string(),
+                &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+            )?;
+
+        let mut user_weight = ADDRESS_WEIGHT
+            .may_load(deps.storage, info.sender.clone())?
+            .unwrap_or_default();
+        user_weight = user_weight.checked_sub(weight_to_remove)?;
+
+        ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
+            deps.storage,
+            (&info.sender.clone(), epoch_response.epoch.id.u64() + 1u64),
+            |_| Ok(user_weight),
+        )?;
+
+        ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
     }
 
     if !return_token_count.is_zero() {

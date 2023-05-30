@@ -199,7 +199,8 @@ pub fn claim2(
         .may_load(deps.storage)?
         .unwrap_or_default()
         .into_iter()
-        .filter(|flow| flow.start_timestamp <= env.block.time.seconds())
+        //.filter(|flow| flow.start_timestamp <= env.block.time.seconds())
+        .filter(|flow| flow.start_epoch <= current_epoch)
         .collect();
     //
     // let user_last_claimed = LAST_CLAIMED_INDEX

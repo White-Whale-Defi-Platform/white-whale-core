@@ -76,15 +76,16 @@ pub fn open_position(
 
     // claim if the user has open positions to ensure that the user gets reward for current weight
     // rather than future weight after opening the position
-    if !OPEN_POSITIONS
-        .may_load(deps.storage, receiver.sender.clone())?
-        .unwrap_or_default()
-        .is_empty()
-    {
-        // TODO maybe there's something broken here?
-        println!("claiming");
-        messages.append(&mut crate::claim::claim(&mut deps, &env, &receiver)?);
-    }
+    // todo remove? not needed if we are keeping history of the user's weight
+    // if !OPEN_POSITIONS
+    //     .may_load(deps.storage, receiver.sender.clone())?
+    //     .unwrap_or_default()
+    //     .is_empty()
+    // {
+    //     // TODO maybe there's something broken here?
+    //     println!("claiming");
+    //     messages.append(&mut crate::claim::claim(&mut deps, &env, &receiver)?);
+    // }
 
     // create the new position
     OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.sender.clone(), |positions| {
@@ -124,7 +125,7 @@ pub fn open_position(
 
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&info.sender.clone(), epoch_response.epoch.id.u64()),
+        (&info.sender.clone(), epoch_response.epoch.id.u64() + 1u64),
         |_| Ok(user_weight),
     )?;
 
