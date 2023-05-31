@@ -116,7 +116,7 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
             println!("user_weight: {:?}", user_weight);
 
             // check if the flow is active in this epoch
-            if epoch_id < flow.start_epoch || epoch_id > flow.end_epoch {
+            if epoch_id < flow.start_epoch || epoch_id >= flow.end_epoch {
                 println!("this flow has not started yet, or it already finished");
                 // the flow is not active at this epoch yet, skip
                 continue;
@@ -161,7 +161,10 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
                 .amount
                 .saturating_sub(emitted_tokens)
                 .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
-            flow_emitted_tokens.insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
+            if flow_emitted_tokens.get(&epoch_id).is_none() {
+                flow_emitted_tokens.insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
+            }
+
             total_emitted_tokens += emission_per_epoch;
             println!("emission_per_epoch: {:?}", emission_per_epoch);
             println!("total_emitted_tokens: {:?}", total_emitted_tokens);

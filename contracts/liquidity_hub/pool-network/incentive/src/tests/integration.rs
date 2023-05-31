@@ -1,7 +1,7 @@
 use std::cell::RefCell;
+use std::error::Error;
 
-use anyhow::Error;
-use cosmwasm_std::{coin, coins, Addr, Timestamp, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Timestamp, Uint128, StdError};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
@@ -2724,7 +2724,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
     });
 
     let mut carol_usdc_funds = RefCell::new(Uint128::zero());
-
+    println!("CURRENT_EPOCH  -> {:?}", current_epoch);
     suite
         .open_incentive_flow(
             alice.clone(),
@@ -2898,20 +2898,18 @@ fn open_flow_positions_and_claim_native_token_incentive() {
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    // this should still return the remaining that has not been claimed, which is 500_000_000usdc
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::zero(),
-                    },]
-                );
+                // There's nothing left to claim
+                let err = result.unwrap_err();
+                match err {
+                    StdError::GenericErr { msg} => {
+                        assert_eq!( msg.rsplit_once(": ").unwrap().1 ,(ContractError::NothingToClaim {}).to_string());
+                    }
+                    _ => panic!("Unexpected error type"),
+                }
             },
         );
 }
-/*
+
 #[test]
 fn open_flow_positions_claim_cw20_token_incentive() {
     let mut suite =
@@ -3120,6 +3118,13 @@ fn open_flow_positions_claim_cw20_token_incentive() {
     let time = Timestamp::from_seconds(1684766796u64);
     suite.set_time(time);
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10,vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
     let mut carol_cw20_funds = RefCell::new(Uint128::zero());
 
     suite
@@ -3134,6 +3139,8 @@ fn open_flow_positions_claim_cw20_token_incentive() {
             incentive_addr.clone().into_inner(),
             None,
             time.plus_seconds(172800u64).seconds(), //2 days
+            None,
+            current_epoch.clone().into_inner() + 10,
             Curve::Linear,
             Asset {
                 info: flow_asset.clone(),
@@ -3147,6 +3154,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
         // move time a day forward, so given that the flow ends in a day, Carol should have 50%
         // of the rewards (as she owns 100% of the pool)
         .set_time(time.plus_seconds(86400u64))
+        .create_epochs_on_fee_distributor(4, vec![incentive_addr.clone().into_inner()]) // epoch is 15 now, half way of the duration of the flow
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -3188,9 +3196,10 @@ fn open_flow_positions_claim_cw20_token_incentive() {
             );
         });
 
-    // increase half a day, carol should have an additional 250_000_000usdc to claim.
+    // move 3 more epochs, so carol should have 300 more to claim
     suite
         .set_time(time.plus_seconds(129600u64))
+        .create_epochs_on_fee_distributor(3, vec![incentive_addr.clone().into_inner()])
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -3199,7 +3208,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     result.unwrap().rewards,
                     vec![Asset {
                         info: flow_asset.clone(),
-                        amount: Uint128::new(250_000_000u128),
+                        amount: Uint128::new(300_000_000u128),
                     },]
                 );
             },
@@ -3211,8 +3220,9 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                 Uint128::new(500_000_000u128)
             );
         })
-        // increase another half a day, so carold should have an additional 250_000_000usdc to claim.
+        // move 2 more epochs, so carol should have an additional 200_000_000usdc to claim.
         .set_time(time.plus_seconds(172800u64))
+        .create_epochs_on_fee_distributor(2, vec![incentive_addr.clone().into_inner()])
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -3227,6 +3237,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
             },
         ) // go beyond the end time of the flow
         .set_time(time.plus_seconds(190000u64))
+        .create_epochs_on_fee_distributor(1, vec![incentive_addr.clone().into_inner()])
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -3269,18 +3280,19 @@ fn open_flow_positions_claim_cw20_token_incentive() {
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    // this should still return the remaining that has not been claimed, which is 500_000_000usdc
-                    vec![Asset {
-                        info: flow_asset.clone(),
-                        amount: Uint128::zero(),
-                    },]
-                );
+                // There's nothing left to claim
+                let err = result.unwrap_err();
+                match err {
+                    StdError::GenericErr { msg} => {
+                        assert_eq!( msg.rsplit_once(": ").unwrap().1 ,(ContractError::NothingToClaim {}).to_string());
+                    }
+                    _ => panic!("Unexpected error type"),
+                }
             },
         );
 }
 
+/*
 /// this test tries to recreate a scenario with multiple parties involved in flows.
 //#[test]
 fn open_expand_close_flows_positions_and_claim_native_token_incentive() {

@@ -272,7 +272,7 @@ pub fn claim2(
             };
 
             // check if the flow is active in this epoch
-            if epoch_id < flow.start_epoch || epoch_id > flow.end_epoch {
+            if epoch_id < flow.start_epoch || epoch_id >= flow.end_epoch {
                 // the flow is not active, skip
                 continue;
             }
@@ -393,18 +393,25 @@ pub fn claim2(
         // }
     }
 
+    println!("hello");
+
     // update the last seen weight for the user
     //delete all the entries in ADDRESS_WEIGHT_HISTORY that has prefix  info.sender.clone()
-    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).remove_all(deps.storage);
-    //ADDRESS_WEIGHT_HISTORY.remove(deps.storage, &info.sender.clone());
-    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).;
+    let epoch_keys = ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone())
+        .keys(deps.storage, None, None, Order::Ascending)
+        .map(|k| {
+            let key = k?;
+            println!("key is {:?}", key);
+            Ok(key)
+        })
+        .collect::<StdResult<Vec<u64>>>()?
+    ;
 
+    epoch_keys.iter().for_each(|&k| {
+        println!("deleting key {:?}", (&info.sender.clone(), k.clone()));
+        ADDRESS_WEIGHT_HISTORY.remove(deps.storage, (&info.sender.clone(), k.clone()));
+    });
 
-    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).update(deps.storage, |last_seen_weight| {
-        Ok((last_seen_weight.0, user_weight))
-    })?;
-
-    ADDRESS_WEIGHT_HISTORY.remove(deps.storage, (&info.sender.clone(), current_epoch));
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
         (&info.sender.clone(), current_epoch + 1),
