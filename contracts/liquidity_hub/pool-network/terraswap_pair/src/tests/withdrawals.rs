@@ -5,7 +5,10 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
 use white_whale::fee::Fee;
+#[cfg(feature = "token_factory")]
 use white_whale::pool_network;
 use white_whale::pool_network::asset::{AssetInfo, PairType};
 #[cfg(feature = "token_factory")]
@@ -15,7 +18,6 @@ use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, P
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-use crate::state::LP_SYMBOL;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 
 #[test]
