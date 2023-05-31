@@ -3,13 +3,13 @@ use crate::error::ContractError;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::coin;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
-#[cfg(feature = "token_factory")]
-use cosmwasm_std::{coin};
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::AssetInfo;
