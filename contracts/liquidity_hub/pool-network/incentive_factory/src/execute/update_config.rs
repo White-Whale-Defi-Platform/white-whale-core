@@ -122,7 +122,7 @@ mod tests {
             },
             max_concurrent_flows: 1u64,
             incentive_code_id: 123,
-            max_flow_start_time_buffer: 3600u64,
+            max_flow_epoch_buffer: 3600u64,
             min_unbonding_duration: 86400u64,
             max_unbonding_duration: 259200u64,
         };
@@ -210,7 +210,7 @@ mod tests {
             },
             max_concurrent_flows: 1u64,
             incentive_code_id: 123,
-            max_flow_start_time_buffer: 3600u64,
+            max_flow_epoch_buffer: 3600u64,
             min_unbonding_duration: 86400u64,
             max_unbonding_duration: 259200u64,
         };

@@ -1,7 +1,8 @@
-use cosmwasm_std::{Addr, Api, Coin, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Api, Coin, StdResult, Timestamp, Uint128, Uint64};
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
+use white_whale::fee_distributor::{EpochConfig, EpochResponse};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive::{
     Curve, Flow, FlowResponse, PositionsResponse, RewardsResponse,
@@ -12,13 +13,15 @@ use white_whale::pool_network::incentive_factory::{
 
 use crate::error::ContractError;
 use crate::tests::suite_contracts::{
-    cw20_token_contract, fee_collector_contract, incentive_contract, incentive_factory_contract,
+    cw20_token_contract, fee_collector_contract, fee_distributor_contract,
+    fee_distributor_mock_contract, incentive_contract, incentive_factory_contract,
 };
 
 pub struct TestingSuite {
     app: App,
     pub senders: [Addr; 3],
     pub incentive_factory_addr: Addr,
+    pub fee_distributor_addr: Addr,
     pub cw20_tokens: Vec<Addr>,
 }
 
@@ -80,6 +83,7 @@ impl TestingSuite {
             app: App::default(),
             senders: [sender_1, sender_2, sender_3],
             incentive_factory_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked(""),
             cw20_tokens: vec![],
         }
     }
@@ -109,6 +113,7 @@ impl TestingSuite {
             app,
             senders: [sender_1, sender_2, sender_3],
             incentive_factory_addr: Addr::unchecked(""),
+            fee_distributor_addr: Addr::unchecked(""),
             cw20_tokens: vec![],
         }
     }
@@ -118,6 +123,8 @@ impl TestingSuite {
         let incentive_id = self.app.store_code(incentive_contract());
         let fee_collector_addr =
             instantiate_contract(self, InstatiateContract::FeeCollector {}).unwrap();
+        let fee_distributor_addr =
+            instantiate_contract(self, InstatiateContract::FeeDistributor {}).unwrap();
 
         let cw20_token = instantiate_contract(
             self,
@@ -155,6 +162,7 @@ impl TestingSuite {
 
         self.instantiate(
             fee_collector_addr.to_string(),
+            fee_distributor_addr.to_string(),
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -163,7 +171,7 @@ impl TestingSuite {
             },
             7u64,
             incentive_id,
-            1209600, // 2 weeks
+            14, // 2 weeks
             86400,
             259200,
         )
@@ -174,6 +182,8 @@ impl TestingSuite {
         let incentive_id = self.app.store_code(incentive_contract());
         let fee_collector_addr =
             instantiate_contract(self, InstatiateContract::FeeCollector {}).unwrap();
+        let fee_distributor_addr =
+            instantiate_contract(self, InstatiateContract::FeeDistributor {}).unwrap();
 
         let cw20_token = instantiate_contract(
             self,
@@ -211,6 +221,7 @@ impl TestingSuite {
 
         self.instantiate(
             fee_collector_addr.to_string(),
+            fee_distributor_addr.to_string(),
             Asset {
                 info: AssetInfo::Token {
                     contract_addr: cw20_token.to_string(),
@@ -229,10 +240,11 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         fee_collector_addr: String,
+        fee_distributor_addr: String,
         create_flow_fee: Asset,
         max_concurrent_flows: u64,
         incentive_code_id: u64,
-        max_flow_start_time_buffer: u64,
+        max_flow_epoch_buffer: u64,
         min_unbonding_duration: u64,
         max_unbonding_duration: u64,
     ) -> &mut Self {
@@ -240,10 +252,11 @@ impl TestingSuite {
             self,
             InstatiateContract::IncentiveFactory {
                 fee_collector_addr,
+                fee_distributor_addr: fee_distributor_addr.clone(),
                 create_flow_fee,
                 max_concurrent_flows,
                 incentive_code_id,
-                max_flow_start_time_buffer,
+                max_flow_epoch_buffer,
                 min_unbonding_duration,
                 max_unbonding_duration,
             },
@@ -251,6 +264,7 @@ impl TestingSuite {
         .unwrap();
 
         self.incentive_factory_addr = incentive_factory_addr;
+        self.fee_distributor_addr = Addr::unchecked(fee_distributor_addr);
         self
     }
 
@@ -258,10 +272,11 @@ impl TestingSuite {
     pub(crate) fn instantiate_err(
         &mut self,
         fee_collector_addr: String,
+        fee_distributor_addr: String,
         create_flow_fee: Asset,
         max_concurrent_flows: u64,
         incentive_code_id: u64,
-        max_flow_start_time_buffer: u64,
+        max_flow_epoch_buffer: u64,
         min_unbonding_duration: u64,
         max_unbonding_duration: u64,
         error: impl Fn(anyhow::Error),
@@ -270,10 +285,11 @@ impl TestingSuite {
             self,
             InstatiateContract::IncentiveFactory {
                 fee_collector_addr,
+                fee_distributor_addr,
                 create_flow_fee,
                 max_concurrent_flows,
                 incentive_code_id,
-                max_flow_start_time_buffer,
+                max_flow_epoch_buffer,
                 min_unbonding_duration,
                 max_unbonding_duration,
             },
@@ -355,6 +371,8 @@ impl TestingSuite {
         incentive_addr: Addr,
         start_timestamp: Option<u64>,
         end_timestamp: u64,
+        start_epoch: Option<u64>,
+        end_epoch: u64,
         curve: Curve,
         flow_asset: Asset,
         funds: &Vec<Coin>,
@@ -363,6 +381,8 @@ impl TestingSuite {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenFlow {
             start_timestamp,
             end_timestamp,
+            start_epoch,
+            end_epoch,
             curve,
             flow_asset,
         };
@@ -431,10 +451,60 @@ impl TestingSuite {
 
         self
     }
+
+    pub(crate) fn create_epochs_on_fee_distributor(&mut self, epoch_amount: u64, incentive_addresses_to_snapshot_global_weight_for : Vec<Addr>) -> &mut Self {
+        let msg = white_whale::fee_distributor::ExecuteMsg::NewEpoch {};
+
+        for _ in 0..epoch_amount {
+            self.app
+                .execute_contract(
+                    self.senders[0].clone(),
+                    self.fee_distributor_addr.clone(),
+                    &msg,
+                    &vec![],
+                )
+                .unwrap();
+
+            incentive_addresses_to_snapshot_global_weight_for.iter().for_each(|incentive_addr| {
+                self.take_global_weight_snapshot(incentive_addr.clone());
+            });
+        }
+
+        self
+    }
+
+    pub(crate) fn take_global_weight_snapshot(&mut self, incentive_addr: Addr,) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::TakeGlobalWeightSnapshot {};
+
+        self.app
+            .execute_contract(
+                self.senders[0].clone(),
+                incentive_addr.clone(),
+                &msg,
+                &vec![],
+            )
+            .unwrap();
+
+        self
+    }
 }
 
 /// queries
 impl TestingSuite {
+    pub(crate) fn query_current_epoch(
+        &mut self,
+        result: impl Fn(StdResult<EpochResponse>),
+    ) -> &mut Self {
+        let current_epoch_response: StdResult<EpochResponse> = self.app.wrap().query_wasm_smart(
+            &self.fee_distributor_addr,
+            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        );
+
+        result(current_epoch_response);
+
+        self
+    }
+
     pub(crate) fn query_incentive(
         &mut self,
         lp_address: AssetInfo,
@@ -600,14 +670,16 @@ impl TestingSuite {
 enum InstatiateContract {
     IncentiveFactory {
         fee_collector_addr: String,
+        fee_distributor_addr: String,
         create_flow_fee: Asset,
         max_concurrent_flows: u64,
         incentive_code_id: u64,
-        max_flow_start_time_buffer: u64,
+        max_flow_epoch_buffer: u64,
         min_unbonding_duration: u64,
         max_unbonding_duration: u64,
     },
     FeeCollector,
+    FeeDistributor,
     CW20 {
         name: String,
         symbol: String,
@@ -624,19 +696,21 @@ fn instantiate_contract(
     match instantiate_contract {
         InstatiateContract::IncentiveFactory {
             fee_collector_addr,
+            fee_distributor_addr,
             create_flow_fee,
             max_concurrent_flows,
             incentive_code_id,
-            max_flow_start_time_buffer,
+            max_flow_epoch_buffer,
             min_unbonding_duration,
             max_unbonding_duration,
         } => {
             let msg = InstantiateMsg {
                 fee_collector_addr,
+                fee_distributor_addr,
                 create_flow_fee,
                 max_concurrent_flows,
                 incentive_code_id,
-                max_flow_start_time_buffer,
+                max_flow_epoch_buffer,
                 min_unbonding_duration,
                 max_unbonding_duration,
             };
@@ -689,6 +763,20 @@ fn instantiate_contract(
                 &msg,
                 &[],
                 "mock cw20 token",
+                Some(suite.senders[0].clone().into_string()),
+            )
+        }
+        InstatiateContract::FeeDistributor => {
+            let msg = fee_distributor_mock::msg::InstantiateMsg {};
+
+            let fee_distributor_mock_id = suite.app.store_code(fee_distributor_mock_contract());
+
+            suite.app.instantiate_contract(
+                fee_distributor_mock_id,
+                suite.senders[0].clone(),
+                &msg,
+                &[],
+                "mock fee distributor",
                 Some(suite.senders[0].clone().into_string()),
             )
         }

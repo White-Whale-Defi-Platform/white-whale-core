@@ -1,11 +1,11 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 use white_whale::pool_network::asset::Asset;
 
+use crate::state::ADDRESS_WEIGHT_HISTORY;
 use crate::{
     error::ContractError,
     state::{ADDRESS_WEIGHT, CLOSED_POSITIONS, CONFIG, GLOBAL_WEIGHT},
 };
-use crate::state::ADDRESS_WEIGHT_HISTORY;
 
 pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     // counter of how many LP tokens we must return to use and the weight to remove

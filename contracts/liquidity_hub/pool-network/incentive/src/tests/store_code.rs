@@ -38,3 +38,18 @@ pub fn store_incentive(app: &mut App) -> u64 {
 
     app.store_code(contract)
 }
+
+/// Stores the fee distributor contract to the app
+pub fn store_fee_distributor(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new(
+            fee_distributor::contract::execute,
+            fee_distributor::contract::instantiate,
+            fee_distributor::contract::query,
+        )
+        .with_reply(fee_distributor::contract::reply)
+        .with_migrate(fee_distributor::contract::migrate),
+    );
+
+    app.store_code(contract)
+}

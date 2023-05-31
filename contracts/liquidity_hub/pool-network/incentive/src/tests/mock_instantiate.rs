@@ -1,12 +1,14 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_binary, Addr, Env, OwnedDeps, Uint128, WasmMsg,
+    to_binary, Addr, Env, OwnedDeps, Uint128, Uint64, WasmMsg,
 };
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
+use white_whale::fee_distributor::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::contract::instantiate;
+use crate::tests::store_code::store_fee_distributor;
 
 use super::{
     mock_creator,
@@ -28,6 +30,7 @@ pub fn mock_instantiate() -> (OwnedDeps<MockStorage, MockApi, MockQuerier>, Env)
             lp_asset: AssetInfo::NativeToken {
                 denom: "lp_addr".to_string(),
             },
+            fee_distributor_address: "fee_distributor_address".to_string(),
         },
     )
     .unwrap();
@@ -44,6 +47,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
     let factory_id = store_factory_code(app);
     let token_id = store_cw20_token_code(app);
     let incentive_id = store_incentive(app);
+    let fee_distributor_id = store_fee_distributor(app);
 
     // create the LP token to use
     let lp_addr = app
@@ -71,6 +75,29 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         contract_addr: lp_addr.to_string(),
     };
 
+    // create the fee distributor to use
+    let lp_addr = app
+        .instantiate_contract(
+            fee_distributor_id,
+            mock_admin().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: "".to_string(),
+                fee_collector_addr: "".to_string(),
+                grace_period: Default::default(),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86400_000000000u64),
+                    genesis_epoch: Uint64::new(1685458800_000000000u64),
+                },
+                distribution_asset: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+            },
+            &[],
+            "mock fee distributor",
+            None,
+        )
+        .unwrap();
+
     let incentive_factory = app
         .instantiate_contract(
             factory_id,
@@ -85,9 +112,10 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
                 fee_collector_addr: "fee_collector".to_string(),
                 incentive_code_id: incentive_id,
                 max_concurrent_flows: 7,
-                max_flow_start_time_buffer: 100,
+                max_flow_epoch_buffer: 100,
                 max_unbonding_duration: 31556926,
                 min_unbonding_duration: 86400,
+                fee_distributor_addr: "fee_distributor_addr".to_string(),
             },
             &[],
             "mock incentive factory",

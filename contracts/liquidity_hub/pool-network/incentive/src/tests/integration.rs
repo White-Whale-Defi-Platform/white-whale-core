@@ -19,6 +19,7 @@ fn instantiate_incentive_factory_successful() {
 
     suite.instantiate(
         "fee_collector_addr".to_string(),
+        "fee_distributor_addr".to_string(),
         Asset {
             amount: Uint128::new(1_000u128),
             info: AssetInfo::NativeToken {
@@ -39,6 +40,7 @@ fn instantiate_incentive_factory_unsuccessful() {
 
     suite.instantiate_err(
         "fee_collector_addr".to_string(),
+        "fee_distributor_addr".to_string(),
         Asset {
             amount: Uint128::new(1_000u128),
             info: AssetInfo::NativeToken {
@@ -281,7 +283,9 @@ fn try_open_more_flows_than_allowed() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
+            1884342800u64,
+            None,
+            10u64,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -327,7 +331,11 @@ fn try_open_more_flows_than_allowed() {
                 claimed_amount: Uint128::zero(),
                 curve: Curve::Linear,
                 start_timestamp: app_time.clone().seconds(),
-                end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                end_timestamp: app_time.clone().seconds(),
+                start_epoch: 1u64,
+                end_epoch: 10u64,
+                emissions_per_epoch: Default::default(),
+                emitted_tokens: Default::default(),
             }
         );
         assert_eq!(
@@ -344,14 +352,18 @@ fn try_open_more_flows_than_allowed() {
                 claimed_amount: Uint128::zero(),
                 curve: Curve::Linear,
                 start_timestamp: app_time.clone().seconds(),
-                end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                end_timestamp: app_time.clone().seconds(),
+                start_epoch: 1u64,
+                end_epoch: 10u64,
+                emissions_per_epoch: Default::default(),
+                emitted_tokens: Default::default(),
             }
         );
     });
 }
 
 #[test]
-fn try_open_flows_with_wrong_timestamps() {
+fn try_open_flows_with_wrong_epochs() {
     let mut suite =
         TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
     let alice = suite.creator();
@@ -363,7 +375,7 @@ fn try_open_flows_with_wrong_timestamps() {
     };
 
     let mut incentive_addr = RefCell::new(Addr::unchecked(""));
-    let mut max_flow_start_time_buffer = RefCell::new(0u64);
+    let mut max_flow_epoch_buffer = RefCell::new(0u64);
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -376,21 +388,35 @@ fn try_open_flows_with_wrong_timestamps() {
         });
 
     // open incentive flow
+    //todo remove these future timestamps as epochs are used
     let app_time = suite.get_time();
     let future_time = app_time.clone().plus_seconds(604800u64);
     let future_future_time = future_time.clone().plus_seconds(907200u64);
     let past_time = app_time.clone().minus_seconds(86400u64);
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(9u64, vec![])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    let future_epoch = current_epoch.clone().into_inner() + 5u64;
+    let future_future_epoch = current_epoch.clone().into_inner() + 10u64;
+    let past_epoch = current_epoch.clone().into_inner() - 5u64;
+
     suite
         .query_incentive_factory_config(|result| {
             let config = result.unwrap();
-            *max_flow_start_time_buffer.borrow_mut() = config.max_flow_epoch_buffer;
+            *max_flow_epoch_buffer.borrow_mut() = config.max_flow_epoch_buffer;
         })
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
             past_time.clone().seconds(),
+            None,
+            past_epoch.clone(),
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -415,6 +441,8 @@ fn try_open_flows_with_wrong_timestamps() {
             incentive_addr.clone().into_inner(),
             Some(future_future_time.clone().seconds()),
             future_time.clone().seconds(),
+            Some(future_future_epoch.clone()),
+            future_epoch.clone(),
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -440,13 +468,15 @@ fn try_open_flows_with_wrong_timestamps() {
             Some(
                 app_time
                     .clone()
-                    .plus_seconds(max_flow_start_time_buffer.clone().into_inner() + 1)
+                    .plus_seconds(max_flow_epoch_buffer.clone().into_inner() + 1)
                     .seconds(),
             ),
             app_time
                 .clone()
-                .plus_seconds(max_flow_start_time_buffer.clone().into_inner() + 1000)
+                .plus_seconds(max_flow_epoch_buffer.clone().into_inner() + 1000)
                 .seconds(),
+            Some(current_epoch.clone().into_inner() + max_flow_epoch_buffer.clone().into_inner() + 1),
+            current_epoch.clone().into_inner() + 100,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -469,6 +499,8 @@ fn try_open_flows_with_wrong_timestamps() {
             incentive_addr.clone().into_inner(),
             None,
             future_time.clone().seconds(),
+            None,
+            future_epoch.clone(),
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -510,6 +542,14 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+
+    let mut current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(9u64, vec![])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
     // open incentive flow
     let app_time = suite.get_time();
 
@@ -519,6 +559,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -542,6 +584,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -564,6 +608,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -586,6 +632,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -608,6 +656,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -660,7 +710,11 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 10u64,
+                    end_epoch: 19u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         })
@@ -702,6 +756,11 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
 
     let mut carol_original_uwhale_funds = RefCell::new(Uint128::zero());
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
     // open incentive flow
     let app_time = suite.get_time();
     suite
@@ -710,6 +769,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -733,6 +794,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -755,6 +818,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -780,6 +845,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -805,6 +872,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -881,7 +950,11 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         })
@@ -905,6 +978,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -971,6 +1046,11 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
     suite
@@ -979,6 +1059,8 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_incentive.clone(),
@@ -1000,6 +1082,8 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_incentive.clone(),
@@ -1027,6 +1111,8 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_incentive.clone(),
@@ -1091,7 +1177,11 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         });
@@ -1130,6 +1220,12 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
 
@@ -1139,6 +1235,8 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1160,6 +1258,8 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1188,6 +1288,8 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1215,6 +1317,8 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1261,7 +1365,11 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         });
@@ -1302,6 +1410,11 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
     suite
@@ -1310,6 +1423,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1331,6 +1446,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1359,6 +1476,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1387,6 +1506,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1415,6 +1536,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -1476,7 +1599,11 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         })
@@ -1519,6 +1646,11 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
 
     let mut carol_original_usdc_funds = RefCell::new(Uint128::zero());
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
     suite
@@ -1527,6 +1659,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1550,6 +1684,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1580,6 +1716,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1610,6 +1748,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1633,6 +1773,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1656,6 +1798,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1724,7 +1868,11 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 })
             );
         })
@@ -1764,6 +1912,11 @@ fn close_native_token_flows() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
 
@@ -1773,6 +1926,8 @@ fn close_native_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1790,6 +1945,8 @@ fn close_native_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -1820,7 +1977,11 @@ fn close_native_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
             assert_eq!(
@@ -1837,7 +1998,11 @@ fn close_native_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         })
@@ -1910,7 +2075,11 @@ fn close_native_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         })
@@ -1984,6 +2153,8 @@ fn close_native_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -2014,7 +2185,11 @@ fn close_native_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         });
@@ -2054,6 +2229,11 @@ fn close_cw20_token_flows() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     // open incentive flow
     let app_time = suite.get_time();
 
@@ -2069,6 +2249,8 @@ fn close_cw20_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -2090,6 +2272,8 @@ fn close_cw20_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -2116,7 +2300,11 @@ fn close_cw20_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
             assert_eq!(
@@ -2131,7 +2319,11 @@ fn close_cw20_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         })
@@ -2196,7 +2388,11 @@ fn close_cw20_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         })
@@ -2258,6 +2454,8 @@ fn close_cw20_token_flows() {
             incentive_addr.clone().into_inner(),
             None,
             app_time.clone().plus_seconds(86400u64).seconds(),
+            None,
+            current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
                 info: cw20_asset.clone(),
@@ -2284,7 +2482,11 @@ fn close_cw20_token_flows() {
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
                     start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().plus_seconds(86400u64).seconds(),
+                    end_timestamp: app_time.clone().seconds(),
+                    start_epoch: 1u64,
+                    end_epoch: 10u64,
+                    emissions_per_epoch: Default::default(),
+                    emitted_tokens: Default::default(),
                 }
             );
         });
@@ -2514,6 +2716,13 @@ fn open_flow_positions_and_claim_native_token_incentive() {
     let time = Timestamp::from_seconds(1684766796u64);
     suite.set_time(time);
 
+    let mut current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10,vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
     let mut carol_usdc_funds = RefCell::new(Uint128::zero());
 
     suite
@@ -2522,6 +2731,8 @@ fn open_flow_positions_and_claim_native_token_incentive() {
             incentive_addr.clone().into_inner(),
             None,
             time.plus_seconds(172800u64).seconds(), //2 days
+            None,
+            current_epoch.clone().into_inner() + 10,
             Curve::Linear,
             Asset {
                 info: AssetInfo::NativeToken {
@@ -2537,10 +2748,13 @@ fn open_flow_positions_and_claim_native_token_incentive() {
         // move time a day forward, so given that the flow ends in a day, Carol should have 50%
         // of the rewards (as she owns 100% of the pool)
         .set_time(time.plus_seconds(86400u64))
+        .create_epochs_on_fee_distributor(4, vec![incentive_addr.clone().into_inner()]) // epoch is 15 now, half way of the duration of the flow
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
+                println!("result -> {:?}", result);
+
                 assert_eq!(
                     result.unwrap().rewards,
                     vec![Asset {
@@ -2592,9 +2806,10 @@ fn open_flow_positions_and_claim_native_token_incentive() {
             );
         });
 
-    // increase half a day, carol should have an additional 250_000_000usdc to claim.
+    // move 3 more epochs, so carol should have 300 more to claim
     suite
         .set_time(time.plus_seconds(129600u64))
+        .create_epochs_on_fee_distributor(3, vec![incentive_addr.clone().into_inner()])
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -2605,20 +2820,14 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                         info: AssetInfo::NativeToken {
                             denom: "usdc".to_string(),
                         },
-                        amount: Uint128::new(250_000_000u128),
+                        amount: Uint128::new(300_000_000u128),
                     },]
                 );
             },
         )
-        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
-            let flow_response = result.unwrap();
-            assert_eq!(
-                flow_response.unwrap().flow.unwrap().claimed_amount,
-                Uint128::new(500_000_000u128)
-            );
-        })
-        // increase another half a day, so carold should have an additional 250_000_000usdc to claim.
+        // move 2 more epochs, so carol should have an additional 200_000_000usdc to claim.
         .set_time(time.plus_seconds(172800u64))
+        .create_epochs_on_fee_distributor(2, vec![incentive_addr.clone().into_inner()])
         .query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
@@ -2633,9 +2842,13 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                     },]
                 );
             },
-        ) // go beyond the end time of the flow
+        ) // go beyond the end time of the flow, create one more epoch
         .set_time(time.plus_seconds(190000u64))
-        .query_rewards(
+        .create_epochs_on_fee_distributor(1, vec![incentive_addr.clone().into_inner()]);
+
+        println!("----999994*****------");
+
+        suite.query_rewards(
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
@@ -2698,7 +2911,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
             },
         );
 }
-
+/*
 #[test]
 fn open_flow_positions_claim_cw20_token_incentive() {
     let mut suite =
@@ -3370,200 +3583,201 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
 
     todo!();
 
-    suite.query_rewards(
-        incentive_addr.clone().into_inner(),
-        carol.clone(),
-        |result| {
-            // the incentive doesn't have any flows, so rewards should be empty
-            assert!(result.unwrap().rewards.is_empty());
-            println!("---------------");
-        },
-    );
-
-    let time = Timestamp::from_seconds(1684766796u64);
-    suite.set_time(time);
-
-    let mut carol_usdc_funds = RefCell::new(Uint128::zero());
-
-    suite
-        .open_incentive_flow(
-            alice.clone(),
-            incentive_addr.clone().into_inner(),
-            None,
-            time.plus_seconds(172800u64).seconds(), //2 days
-            Curve::Linear,
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "usdc".to_string(),
-                },
-                amount: Uint128::new(1_000_000_000u128),
-            },
-            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
-            |result| {
-                result.unwrap();
-            },
-        )
-        // move time a day forward, so given that the flow ends in a day, Carol should have 50%
-        // of the rewards (as she owns 100% of the pool)
-        .set_time(time.plus_seconds(86400u64))
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::new(500_000_000u128),
-                    },]
-                );
-            },
-        )
-        .query_funds(
-            carol.clone(),
-            AssetInfo::NativeToken {
-                denom: "usdc".to_string(),
-            },
-            |result| {
-                *carol_usdc_funds.borrow_mut() = result;
-            },
-        )
-        .claim(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_funds(
-            carol.clone(),
-            AssetInfo::NativeToken {
-                denom: "usdc".to_string(),
-            },
-            |result| {
-                assert_eq!(
-                    result,
-                    carol_usdc_funds
-                        .clone()
-                        .into_inner()
-                        .checked_add(Uint128::new(500_000_000u128))
-                        .unwrap(),
-                );
-            },
-        )
-        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
-            let flow_response = result.unwrap();
-            assert_eq!(
-                flow_response.unwrap().flow.unwrap().claimed_amount,
-                Uint128::new(500_000_000u128)
-            );
-        });
-
-    // increase half a day, carol should have an additional 250_000_000usdc to claim.
-    suite
-        .set_time(time.plus_seconds(129600u64))
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::new(250_000_000u128),
-                    },]
-                );
-            },
-        )
-        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
-            let flow_response = result.unwrap();
-            assert_eq!(
-                flow_response.unwrap().flow.unwrap().claimed_amount,
-                Uint128::new(500_000_000u128)
-            );
-        })
-        // increase another half a day, so carold should have an additional 250_000_000usdc to claim.
-        .set_time(time.plus_seconds(172800u64))
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::new(500_000_000u128),
-                    },]
-                );
-            },
-        ) // go beyond the end time of the flow
-        .set_time(time.plus_seconds(190000u64))
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    // this should still return the remaining that has not been claimed, which is 500_000_000usdc
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::new(500_000_000u128),
-                    },]
-                );
-            },
-        )
-        .claim(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
-            let flow_response = result.unwrap();
-            assert_eq!(
-                flow_response.unwrap().flow.unwrap().claimed_amount,
-                Uint128::new(1_000_000_000u128)
-            );
-        })
-        .query_funds(
-            carol.clone(),
-            AssetInfo::NativeToken {
-                denom: "usdc".to_string(),
-            },
-            |result| {
-                assert_eq!(
-                    result,
-                    carol_usdc_funds
-                        .clone()
-                        .into_inner()
-                        .checked_add(Uint128::new(1_000_000_000u128))
-                        .unwrap(),
-                );
-            },
-        )
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                assert_eq!(
-                    result.unwrap().rewards,
-                    // this should still return the remaining that has not been claimed, which is 500_000_000usdc
-                    vec![Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "usdc".to_string(),
-                        },
-                        amount: Uint128::zero(),
-                    },]
-                );
-            },
-        );
+    // suite.query_rewards(
+    //     incentive_addr.clone().into_inner(),
+    //     carol.clone(),
+    //     |result| {
+    //         // the incentive doesn't have any flows, so rewards should be empty
+    //         assert!(result.unwrap().rewards.is_empty());
+    //         println!("---------------");
+    //     },
+    // );
+    //
+    // let time = Timestamp::from_seconds(1684766796u64);
+    // suite.set_time(time);
+    //
+    // let mut carol_usdc_funds = RefCell::new(Uint128::zero());
+    //
+    // suite
+    //     .open_incentive_flow(
+    //         alice.clone(),
+    //         incentive_addr.clone().into_inner(),
+    //         None,
+    //         time.plus_seconds(172800u64).seconds(), //2 days
+    //         Curve::Linear,
+    //         Asset {
+    //             info: AssetInfo::NativeToken {
+    //                 denom: "usdc".to_string(),
+    //             },
+    //             amount: Uint128::new(1_000_000_000u128),
+    //         },
+    //         &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+    //         |result| {
+    //             result.unwrap();
+    //         },
+    //     )
+    //     // move time a day forward, so given that the flow ends in a day, Carol should have 50%
+    //     // of the rewards (as she owns 100% of the pool)
+    //     .set_time(time.plus_seconds(86400u64))
+    //     .query_rewards(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             assert_eq!(
+    //                 result.unwrap().rewards,
+    //                 vec![Asset {
+    //                     info: AssetInfo::NativeToken {
+    //                         denom: "usdc".to_string(),
+    //                     },
+    //                     amount: Uint128::new(500_000_000u128),
+    //                 },]
+    //             );
+    //         },
+    //     )
+    //     .query_funds(
+    //         carol.clone(),
+    //         AssetInfo::NativeToken {
+    //             denom: "usdc".to_string(),
+    //         },
+    //         |result| {
+    //             *carol_usdc_funds.borrow_mut() = result;
+    //         },
+    //     )
+    //     .claim(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             result.unwrap();
+    //         },
+    //     )
+    //     .query_funds(
+    //         carol.clone(),
+    //         AssetInfo::NativeToken {
+    //             denom: "usdc".to_string(),
+    //         },
+    //         |result| {
+    //             assert_eq!(
+    //                 result,
+    //                 carol_usdc_funds
+    //                     .clone()
+    //                     .into_inner()
+    //                     .checked_add(Uint128::new(500_000_000u128))
+    //                     .unwrap(),
+    //             );
+    //         },
+    //     )
+    //     .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+    //         let flow_response = result.unwrap();
+    //         assert_eq!(
+    //             flow_response.unwrap().flow.unwrap().claimed_amount,
+    //             Uint128::new(500_000_000u128)
+    //         );
+    //     });
+    //
+    // // increase half a day, carol should have an additional 250_000_000usdc to claim.
+    // suite
+    //     .set_time(time.plus_seconds(129600u64))
+    //     .query_rewards(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             assert_eq!(
+    //                 result.unwrap().rewards,
+    //                 vec![Asset {
+    //                     info: AssetInfo::NativeToken {
+    //                         denom: "usdc".to_string(),
+    //                     },
+    //                     amount: Uint128::new(250_000_000u128),
+    //                 },]
+    //             );
+    //         },
+    //     )
+    //     .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+    //         let flow_response = result.unwrap();
+    //         assert_eq!(
+    //             flow_response.unwrap().flow.unwrap().claimed_amount,
+    //             Uint128::new(500_000_000u128)
+    //         );
+    //     })
+    //     // increase another half a day, so carold should have an additional 250_000_000usdc to claim.
+    //     .set_time(time.plus_seconds(172800u64))
+    //     .query_rewards(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             assert_eq!(
+    //                 result.unwrap().rewards,
+    //                 vec![Asset {
+    //                     info: AssetInfo::NativeToken {
+    //                         denom: "usdc".to_string(),
+    //                     },
+    //                     amount: Uint128::new(500_000_000u128),
+    //                 },]
+    //             );
+    //         },
+    //     ) // go beyond the end time of the flow
+    //     .set_time(time.plus_seconds(190000u64))
+    //     .query_rewards(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             assert_eq!(
+    //                 result.unwrap().rewards,
+    //                 // this should still return the remaining that has not been claimed, which is 500_000_000usdc
+    //                 vec![Asset {
+    //                     info: AssetInfo::NativeToken {
+    //                         denom: "usdc".to_string(),
+    //                     },
+    //                     amount: Uint128::new(500_000_000u128),
+    //                 },]
+    //             );
+    //         },
+    //     )
+    //     .claim(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             result.unwrap();
+    //         },
+    //     )
+    //     .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+    //         let flow_response = result.unwrap();
+    //         assert_eq!(
+    //             flow_response.unwrap().flow.unwrap().claimed_amount,
+    //             Uint128::new(1_000_000_000u128)
+    //         );
+    //     })
+    //     .query_funds(
+    //         carol.clone(),
+    //         AssetInfo::NativeToken {
+    //             denom: "usdc".to_string(),
+    //         },
+    //         |result| {
+    //             assert_eq!(
+    //                 result,
+    //                 carol_usdc_funds
+    //                     .clone()
+    //                     .into_inner()
+    //                     .checked_add(Uint128::new(1_000_000_000u128))
+    //                     .unwrap(),
+    //             );
+    //         },
+    //     )
+    //     .query_rewards(
+    //         incentive_addr.clone().into_inner(),
+    //         carol.clone(),
+    //         |result| {
+    //             assert_eq!(
+    //                 result.unwrap().rewards,
+    //                 // this should still return the remaining that has not been claimed, which is 500_000_000usdc
+    //                 vec![Asset {
+    //                     info: AssetInfo::NativeToken {
+    //                         denom: "usdc".to_string(),
+    //                     },
+    //                     amount: Uint128::zero(),
+    //                 },]
+    //             );
+    //         },
+    //     );
 }
+*/

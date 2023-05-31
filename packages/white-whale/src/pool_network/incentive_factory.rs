@@ -15,10 +15,10 @@ pub struct InstantiateMsg {
     pub max_concurrent_flows: u64,
     /// The code ID of the incentive contract.
     pub incentive_code_id: u64,
-    /// The maximum start time buffer for a new flow (in seconds).
+    /// The maximum epoch buffer for a new flow (in epochs).
     ///
-    /// New flows are allowed to start up to `now + start_time_buffer` into the future.
-    pub max_flow_start_time_buffer: u64,
+    /// New flows are allowed to start up to `current_epoch + start_epoch_buffer` into the future.
+    pub max_flow_epoch_buffer: u64,
     /// The minimum amount of seconds that a user must bond their tokens for.
     pub min_unbonding_duration: u64,
     /// The maximum amount of seconds that a user must bond their tokens for.

@@ -1,12 +1,12 @@
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
+use crate::state::ADDRESS_WEIGHT_HISTORY;
 use crate::{
     error::ContractError,
     funds_validation::validate_funds_sent,
     state::{ADDRESS_WEIGHT, CONFIG, GLOBAL_WEIGHT, OPEN_POSITIONS},
     weight::calculate_weight,
 };
-use crate::state::ADDRESS_WEIGHT_HISTORY;
 
 pub fn expand_position(
     mut deps: DepsMut,
@@ -94,7 +94,10 @@ pub fn expand_position(
 
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&receiver.sender.clone(), epoch_response.epoch.id.u64() + 1u64),
+        (
+            &receiver.sender.clone(),
+            epoch_response.epoch.id.u64() + 1u64,
+        ),
         |_| Ok(user_weight),
     )?;
 

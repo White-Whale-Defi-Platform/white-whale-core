@@ -137,6 +137,9 @@ pub enum ContractError {
 
     #[error("The global weight snapshot for the current epoch has not been taken")]
     GlobalWeightSnapshotNotTaken {},
+
+    #[error("There's nothing to claim for this address")]
+    NothingToClaim {},
 }
 
 impl From<semver::Error> for ContractError {

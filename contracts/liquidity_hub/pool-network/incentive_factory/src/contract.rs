@@ -48,7 +48,7 @@ pub fn instantiate(
         create_flow_fee: msg.create_flow_fee,
         max_concurrent_flows: msg.max_concurrent_flows,
         incentive_code_id: msg.incentive_code_id,
-        max_flow_epoch_buffer: msg.max_flow_start_time_buffer,
+        max_flow_epoch_buffer: msg.max_flow_epoch_buffer,
         min_unbonding_duration: msg.min_unbonding_duration,
         max_unbonding_duration: msg.max_unbonding_duration,
     };
@@ -70,7 +70,7 @@ pub fn instantiate(
         ),
         ("incentive_code_id", config.incentive_code_id.to_string()),
         (
-            "max_flow_start_time_buffer",
+            "max_flow_epoch_buffer",
             config.max_flow_epoch_buffer.to_string(),
         ),
         (

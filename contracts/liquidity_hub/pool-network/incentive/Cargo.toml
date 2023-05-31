@@ -45,4 +45,6 @@ cw20-base.workspace = true
 anyhow.workspace = true
 incentive-factory.workspace = true
 fee_collector.workspace = true
+fee_distributor.workspace = true
+fee-distributor-mock.workspace = true
 terraswap-token.workspace = true

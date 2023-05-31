@@ -190,6 +190,14 @@ pub fn claim2(
         )?;
 
     let current_epoch = epoch_response.epoch.id.u64();
+    let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &info.sender.clone())?;
+
+    if let Some(last_claimed_epoch) = last_claimed_epoch {
+        // if the last claimed epoch is the same as the current epoch, then there is nothing to claim
+        if current_epoch == last_claimed_epoch {
+            return Err(ContractError::NothingToClaim {});
+        }
+    }
 
     // let user_share = get_user_share(&deps.as_ref(), info.sender.clone())?;
 
@@ -208,6 +216,8 @@ pub fn claim2(
     //     // .unwrap_or(env.block.time.seconds());
     //     .unwrap_or(0u64);
 
+    let mut last_user_weight_seen: (u64, Uint128) = (064, Uint128::zero());
+
     for mut flow in flows.iter_mut() {
         // check if flow already ended and if everything has been claimed for that flow.
         if current_epoch > flow.end_epoch && flow.claimed_amount == flow.flow_asset.amount {
@@ -215,7 +225,7 @@ pub fn claim2(
             continue;
         }
 
-        let mut last_user_weight_seen: (u64, Uint128) = (064, Uint128::zero());
+        last_user_weight_seen = (064, Uint128::zero());
         // check what is the earliest available weight for the user
         let first_available_weight_for_user = ADDRESS_WEIGHT_HISTORY
             .prefix(&info.sender.clone())
@@ -228,7 +238,6 @@ pub fn claim2(
             last_user_weight_seen = first_available_weight_for_user[0];
         }
 
-        let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &info.sender.clone())?;
         let first_claimable_epoch = if let Some(last_claimed_epoch) = last_claimed_epoch {
             // start claiming from the last claimed epoch + 1
             last_claimed_epoch + 1
@@ -263,8 +272,8 @@ pub fn claim2(
             };
 
             // check if the flow is active in this epoch
-            if epoch_id < flow.start_epoch {
-                // the flow is not active at this epoch yet, skip
+            if epoch_id < flow.start_epoch || epoch_id > flow.end_epoch {
+                // the flow is not active, skip
                 continue;
             }
 
@@ -300,6 +309,10 @@ pub fn claim2(
                 .amount
                 .saturating_sub(emitted_tokens)
                 .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
+
+            if flow.emitted_tokens.get(&epoch_id).is_none() {
+                flow.emitted_tokens.insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
+            }
 
             // calculate user reward
 
@@ -380,15 +393,34 @@ pub fn claim2(
         // }
     }
 
-    //todo clean the ADDRESS_WEIGHT_HISTORY for previous epochs as they are not needed anymore
+    // update the last seen weight for the user
+    //delete all the entries in ADDRESS_WEIGHT_HISTORY that has prefix  info.sender.clone()
+    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).remove_all(deps.storage);
+    //ADDRESS_WEIGHT_HISTORY.remove(deps.storage, &info.sender.clone());
+    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).;
+
+
+    ADDRESS_WEIGHT_HISTORY.prefix(&info.sender.clone()).update(deps.storage, |last_seen_weight| {
+        Ok((last_seen_weight.0, user_weight))
+    })?;
+
+    ADDRESS_WEIGHT_HISTORY.remove(deps.storage, (&info.sender.clone(), current_epoch));
+    ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
+        deps.storage,
+        (&info.sender.clone(), current_epoch + 1),
+        |_| Ok(last_user_weight_seen.1),
+    )?;
+
+    println!("last_user_weight_seen by {} is {:?} in epoch {}", info.sender.clone(), last_user_weight_seen.1, current_epoch + 1);
 
     LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender.clone(), &current_epoch)?;
 
+    println!("last_claimed_epoch by {} is {}", info.sender.clone(), current_epoch);
     // save the new flow state
     FLOWS.save(deps.storage, &flows)?;
 
     //todo to remove?
     LAST_CLAIMED_INDEX.save(deps.storage, info.sender.clone(), &env.block.time.seconds())?;
-
+    println!("////////");
     Ok(messages)
 }
