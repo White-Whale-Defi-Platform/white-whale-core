@@ -147,7 +147,11 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, VaultError> {
     // initialize the loan counter
+
+    use white_whale::migrate_guards::check_contract_name;
     LOAN_COUNTER.save(deps.storage, &0)?;
+
+    check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
     let version: Version = CONTRACT_VERSION
         .parse()

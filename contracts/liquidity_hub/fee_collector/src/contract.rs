@@ -154,6 +154,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use white_whale::migrate_guards::check_contract_name;
+
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
@@ -163,6 +165,8 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
             new_version: version,
         });
     }
+
+    check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
     if storage_version <= Version::parse("1.0.5")? {
         migrations::migrate_to_v110(deps.branch())?;
