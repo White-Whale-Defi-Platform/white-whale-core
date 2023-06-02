@@ -140,6 +140,9 @@ pub enum ContractError {
 
     #[error("There's nothing to claim for this address")]
     NothingToClaim {},
+
+    #[error("There're pending rewards to be claimed before you can execute this action")]
+    PendingRewards {},
 }
 
 impl From<semver::Error> for ContractError {

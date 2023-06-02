@@ -81,9 +81,9 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
             fee_distributor_id,
             mock_admin().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: "".to_string(),
-                fee_collector_addr: "".to_string(),
-                grace_period: Default::default(),
+                bonding_contract_addr: "bonding_contract_addr".to_string(),
+                fee_collector_addr: "fee_collector_addr".to_string(),
+                grace_period: Uint64::one(),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86400_000000000u64),
                     genesis_epoch: Uint64::new(1685458800_000000000u64),

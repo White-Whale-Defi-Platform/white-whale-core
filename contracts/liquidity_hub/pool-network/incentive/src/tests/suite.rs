@@ -436,6 +436,48 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn close_incentive_position(
+        &mut self,
+        sender: Addr,
+        incentive_addr: Addr,
+        unbonding_duration: u64,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg =
+            white_whale::pool_network::incentive::ExecuteMsg::ClosePosition { unbonding_duration };
+
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+        );
+
+        self
+    }
+
+    pub(crate) fn expand_incentive_position(
+        &mut self,
+        sender: Addr,
+        incentive_addr: Addr,
+        amount: Uint128,
+        unbonding_duration: u64,
+        receiver: Option<String>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::ExpandPosition {
+            amount,
+            unbonding_duration,
+            receiver,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr, &msg, &funds),
+        );
+
+        self
+    }
+
     pub(crate) fn claim(
         &mut self,
         incentive_addr: Addr,
@@ -452,7 +494,26 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn create_epochs_on_fee_distributor(&mut self, epoch_amount: u64, incentive_addresses_to_snapshot_global_weight_for : Vec<Addr>) -> &mut Self {
+    pub(crate) fn withdraw(
+        &mut self,
+        incentive_addr: Addr,
+        sender: Addr,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::Withdraw {};
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+        );
+
+        self
+    }
+
+    pub(crate) fn create_epochs_on_fee_distributor(
+        &mut self,
+        epoch_amount: u64,
+        incentive_addresses_to_snapshot_global_weight_for: Vec<Addr>,
+    ) -> &mut Self {
         let msg = white_whale::fee_distributor::ExecuteMsg::NewEpoch {};
 
         for _ in 0..epoch_amount {
@@ -465,25 +526,31 @@ impl TestingSuite {
                 )
                 .unwrap();
 
-            incentive_addresses_to_snapshot_global_weight_for.iter().for_each(|incentive_addr| {
-                self.take_global_weight_snapshot(incentive_addr.clone());
-            });
+            incentive_addresses_to_snapshot_global_weight_for
+                .iter()
+                .for_each(|incentive_addr| {
+                    self.take_global_weight_snapshot(incentive_addr.clone(), |result| {
+                        result.unwrap();
+                    });
+                });
         }
 
         self
     }
 
-    pub(crate) fn take_global_weight_snapshot(&mut self, incentive_addr: Addr,) -> &mut Self {
+    pub(crate) fn take_global_weight_snapshot(
+        &mut self,
+        incentive_addr: Addr,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::TakeGlobalWeightSnapshot {};
 
-        self.app
-            .execute_contract(
-                self.senders[0].clone(),
-                incentive_addr.clone(),
-                &msg,
-                &vec![],
-            )
-            .unwrap();
+        result(self.app.execute_contract(
+            self.senders[0].clone(),
+            incentive_addr.clone(),
+            &msg,
+            &vec![],
+        ));
 
         self
     }

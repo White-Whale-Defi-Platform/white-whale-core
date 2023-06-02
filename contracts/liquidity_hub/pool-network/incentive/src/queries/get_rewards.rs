@@ -9,7 +9,11 @@ use crate::{
     state::{FLOWS, LAST_CLAIMED_INDEX},
 };
 
-pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsResponse, ContractError> {
+pub fn get_rewards(
+    deps: Deps,
+    env: Env,
+    address: String,
+) -> Result<RewardsResponse, ContractError> {
     let address = deps.api.addr_validate(&address)?;
 
     let config = CONFIG.load(deps.storage)?;
@@ -29,7 +33,6 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
         }
     }
 
-
     // let user_share = get_user_share(&deps, address.clone())?;
     //
     // let last_claim_time = LAST_CLAIMED_INDEX
@@ -37,13 +40,25 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
     //     //.unwrap_or(env.block.time.seconds());
     //     .unwrap_or(0u64);
 
+    // let mut flows: Vec<Flow> = FLOWS
+    //     .may_load(deps.storage)?
+    //     .unwrap_or_default()
+    //     .into_iter()
+    //     //.filter(|flow| flow.start_timestamp <= env.block.time.seconds())
+    //     .filter(|flow| {
+    //         println!("filter flow.start_epoch: {:?}", flow.start_epoch);
+    //         println!("satisfies the predicate???? : {:?}",   flow.start_epoch <= current_epoch);
+    //         flow.start_epoch <= current_epoch
+    //     })
+    //     .collect();
+
     let mut flows: Vec<Flow> = FLOWS
-        .may_load(deps.storage)?
-        .unwrap_or_default()
+        .range(deps.storage, None, None, Order::Ascending)
+        .collect::<StdResult<Vec<((u64, u64), Flow)>>>()?
         .into_iter()
-        //.filter(|flow| flow.start_timestamp <= env.block.time.seconds())
-        .filter(|flow| flow.start_epoch <= current_epoch)
-        .collect();
+        .filter(|((start_epoch, _), _)| start_epoch <= &current_epoch)
+        .map(|((_, _), flow)| flow)
+        .collect::<Vec<Flow>>();
 
     println!("current_epoch: {:?}", current_epoch);
     println!("flows: {:?}", flows);
@@ -51,7 +66,6 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
     let mut rewards = vec![];
     for flow in flows.iter() {
         println!("flow: {:?}", flow);
-
 
         let mut last_user_weight_seen: (u64, Uint128) = (064, Uint128::zero());
         // check what is the earliest available weight for the user
@@ -62,7 +76,10 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
             .map(|item| Ok(item?))
             .collect::<StdResult<Vec<(u64, Uint128)>>>()?;
 
-        println!("first_available_weight_for_user: {:?}", first_available_weight_for_user);
+        println!(
+            "first_available_weight_for_user: {:?}",
+            first_available_weight_for_user
+        );
 
         if !first_available_weight_for_user.is_empty() {
             last_user_weight_seen = first_available_weight_for_user[0];
@@ -94,7 +111,79 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
         let mut total_reward = Uint128::zero();
         for epoch_id in first_claimable_epoch..=current_epoch {
             println!("-------");
-            println!("epoch_id: {:?}", epoch_id);
+            println!("epoch_id: {:?}, flow_id: {}", epoch_id, flow.flow_id);
+
+            // check if the flow is active in this epoch
+            if epoch_id < flow.start_epoch {
+                println!("this flow has not started yet: {}", flow.flow_id);
+
+                // the flow is not active yet, skip
+                continue;
+            } else if epoch_id >= flow.end_epoch {
+                //todo check this condition
+                // this flow has finished
+                println!("this flow has already finished: {}", flow.flow_id);
+                break;
+            }
+            // current epoch is 1
+            // calculate emissions per epoch
+            let emitted_tokens = if flow_emitted_tokens.is_empty() {
+                Uint128::zero()
+            } else {
+                let previous_emission = flow_emitted_tokens
+                    .get(&(epoch_id - 1))
+                    .unwrap_or(&Uint128::zero())
+                    .clone();
+                println!("previous_emission: {:?}", previous_emission);
+
+                // if flow_emitted_tokens.get(&epoch_id).is_some() && epoch_id == flow.start_epoch {
+                //     previous_emission
+                // } else if {
+                //     flow_emitted_tokens
+                //         .get(&epoch_id)
+                //         .unwrap_or(&previous_emission)
+                //         .clone()
+                // }
+                previous_emission
+
+                // if flow_emitted_tokens.get(&epoch_id).is_none() {
+                //     previous_emission
+                // }
+
+                // flow_emitted_tokens
+                //     .get(&epoch_id)
+                //     .unwrap_or(&previous_emission)
+                //     .clone()
+            };
+
+            // alice claims until epoch 3
+            // emitted_tokens -> previous 0 -> epoch 1 -> emitted_tokens_epoch_1 = 100
+            // emitted_tokens -> previous 100 -> epoch 2 -> emitted_tokens_epoch_2 = 200
+            // emitted_tokens -> previous 200 -> epoch 3 -> emitted_tokens_epoch_3 = 300
+
+            // bob comes and claims until epoch 5
+            // emitted_tokens -> previous 0 | emitted_tokens_epoch_1 = 100  -> epoch 1 -> emitted_tokens_epoch_1 = X
+            // emitted_tokens -> previous 100 | emitted_tokens_epoch_2 = 200  -> epoch 2 -> emitted_tokens_epoch_2 = X
+            // emitted_tokens -> previous 200 | emitted_tokens_epoch_3 = 300  -> epoch 3 -> emitted_tokens_epoch_3 = X
+            // emitted_tokens -> previous 300 | emitted_tokens_epoch_4 = 400  -> epoch 4 -> emitted_tokens_epoch_4 = X
+
+            println!("emitted_tokens: {:?}", emitted_tokens);
+            println!("flow.end_epoch: {:?}", flow.end_epoch);
+
+            // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
+            let emission_per_epoch = flow
+                .flow_asset
+                .amount
+                .saturating_sub(emitted_tokens)
+                .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
+            if flow_emitted_tokens.get(&epoch_id).is_none() {
+                flow_emitted_tokens
+                    .insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
+            }
+
+            total_emitted_tokens += emission_per_epoch;
+            println!("emission_per_epoch: {:?}", emission_per_epoch);
+            println!("total_emitted_tokens: {:?}", total_emitted_tokens);
 
             // get user weight
             let user_weight_at_epoch =
@@ -115,13 +204,6 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
 
             println!("user_weight: {:?}", user_weight);
 
-            // check if the flow is active in this epoch
-            if epoch_id < flow.start_epoch || epoch_id >= flow.end_epoch {
-                println!("this flow has not started yet, or it already finished");
-                // the flow is not active at this epoch yet, skip
-                continue;
-            }
-
             let global_weight_at_epoch = GLOBAL_WEIGHT_SNAPSHOT
                 .may_load(deps.storage, epoch_id)?
                 .unwrap_or_default();
@@ -137,37 +219,37 @@ pub fn get_rewards(deps: Deps, env: Env, address: String) -> Result<RewardsRespo
 
             println!("user_share_at_epoch: {:?}", user_share_at_epoch);
 
-            // calculate emissions per epoch
-            let emitted_tokens = if flow_emitted_tokens.is_empty() {
-                Uint128::zero()
-            } else {
-                let previous_emission = flow_emitted_tokens
-                    .get(&(epoch_id - 1))
-                    .unwrap_or(&Uint128::zero())
-                    .clone();
-                println!("previous_emission: {:?}", previous_emission);
-                flow_emitted_tokens
-                    .get(&epoch_id)
-                    .unwrap_or(&previous_emission)
-                    .clone()
-            };
-
-            println!("emitted_tokens: {:?}", emitted_tokens);
-            println!("flow.end_epoch: {:?}", flow.end_epoch);
-
-            // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
-            let emission_per_epoch = flow
-                .flow_asset
-                .amount
-                .saturating_sub(emitted_tokens)
-                .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
-            if flow_emitted_tokens.get(&epoch_id).is_none() {
-                flow_emitted_tokens.insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
-            }
-
-            total_emitted_tokens += emission_per_epoch;
-            println!("emission_per_epoch: {:?}", emission_per_epoch);
-            println!("total_emitted_tokens: {:?}", total_emitted_tokens);
+            // // calculate emissions per epoch
+            // let emitted_tokens = if flow_emitted_tokens.is_empty() {
+            //     Uint128::zero()
+            // } else {
+            //     let previous_emission = flow_emitted_tokens
+            //         .get(&(epoch_id - 1))
+            //         .unwrap_or(&Uint128::zero())
+            //         .clone();
+            //     println!("previous_emission: {:?}", previous_emission);
+            //     flow_emitted_tokens
+            //         .get(&epoch_id)
+            //         .unwrap_or(&previous_emission)
+            //         .clone()
+            // };
+            //
+            // println!("emitted_tokens: {:?}", emitted_tokens);
+            // println!("flow.end_epoch: {:?}", flow.end_epoch);
+            //
+            // // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
+            // let emission_per_epoch = flow
+            //     .flow_asset
+            //     .amount
+            //     .saturating_sub(emitted_tokens)
+            //     .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
+            // if flow_emitted_tokens.get(&epoch_id).is_none() {
+            //     flow_emitted_tokens.insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
+            // }
+            //
+            // total_emitted_tokens += emission_per_epoch;
+            // println!("emission_per_epoch: {:?}", emission_per_epoch);
+            // println!("total_emitted_tokens: {:?}", total_emitted_tokens);
 
             // calculate user reward
 

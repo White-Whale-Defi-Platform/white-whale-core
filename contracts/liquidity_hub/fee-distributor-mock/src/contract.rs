@@ -1,6 +1,8 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary, Uint64};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
+};
 
 use white_whale::fee_distributor::EpochResponse;
 
@@ -23,13 +25,16 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    CURRENT_EPOCH.save(deps.storage, &white_whale::fee_distributor::Epoch {
-        id: Uint64::one(),
-        start_time: env.block.time,
-        total: vec![],
-        available: vec![],
-        claimed: vec![],
-    })?;
+    CURRENT_EPOCH.save(
+        deps.storage,
+        &white_whale::fee_distributor::Epoch {
+            id: Uint64::one(),
+            start_time: env.block.time,
+            total: vec![],
+            available: vec![],
+            claimed: vec![],
+        },
+    )?;
 
     Ok(Response::default())
 }
@@ -60,11 +65,17 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: white_whale::fee_distributor::QueryMsg) -> StdResult<Binary> {
+pub fn query(
+    deps: Deps,
+    env: Env,
+    msg: white_whale::fee_distributor::QueryMsg,
+) -> StdResult<Binary> {
     match msg {
         white_whale::fee_distributor::QueryMsg::Config {} => {}
         white_whale::fee_distributor::QueryMsg::CurrentEpoch {} => {
-            return Ok(to_binary(&EpochResponse { epoch: CURRENT_EPOCH.load(deps.storage)? })?);
+            return Ok(to_binary(&EpochResponse {
+                epoch: CURRENT_EPOCH.load(deps.storage)?,
+            })?);
         }
         white_whale::fee_distributor::QueryMsg::Epoch { .. } => {}
         white_whale::fee_distributor::QueryMsg::ClaimableEpochs { .. } => {}

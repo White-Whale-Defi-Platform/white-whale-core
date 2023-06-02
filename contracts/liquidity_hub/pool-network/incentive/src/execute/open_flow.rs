@@ -2,10 +2,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Timestamp,
-    Uint128, WasmMsg,
+    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError,
+    StdResult, Timestamp, Uint128, WasmMsg,
 };
 
+use white_whale::pool_network::incentive::Flow;
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo},
     incentive::Curve,
@@ -187,13 +188,29 @@ pub fn open_flow(
     }
 
     // verify that not too many flows have been made for this LP token
-    let flows = u64::try_from(FLOWS.load(deps.storage)?.len())
-        .map_err(|_| StdError::generic_err("Failed to parse flow count"))?;
+    let flows = u64::try_from(
+        FLOWS
+            .range(deps.storage, None, None, Order::Ascending)
+            .collect::<StdResult<Vec<_>>>()?
+            .into_iter()
+            .len(),
+    )
+    .map_err(|_| StdError::generic_err("Failed to parse flow count"))?;
     if flows >= incentive_factory_config.max_concurrent_flows {
         return Err(ContractError::TooManyFlows {
             maximum: incentive_factory_config.max_concurrent_flows,
         });
     }
+
+    // todo remove
+    // // verify that not too many flows have been made for this LP token
+    // let flows = u64::try_from(FLOWS.load(deps.storage)?.len())
+    //     .map_err(|_| StdError::generic_err("Failed to parse flow count"))?;
+    // if flows >= incentive_factory_config.max_concurrent_flows {
+    //     return Err(ContractError::TooManyFlows {
+    //         maximum: incentive_factory_config.max_concurrent_flows,
+    //     });
+    // }
 
     // transfer the `flow_asset` over to us if it was a cw20 token
     // otherwise, verify the user sent the claimed amount in `info.funds`
@@ -352,8 +369,11 @@ pub fn open_flow(
     // add the flow
     let flow_id =
         FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1))?;
-    FLOWS.update::<_, StdError>(deps.storage, |mut flows| {
-        flows.push(white_whale::pool_network::incentive::Flow {
+
+    FLOWS.save(
+        deps.storage,
+        (start_epoch, flow_id),
+        &Flow {
             flow_creator: info.sender.clone(),
             flow_id: flow_id.clone(),
             curve: curve.clone(),
@@ -365,10 +385,27 @@ pub fn open_flow(
             end_epoch,
             emissions_per_epoch, //todo remove as not used
             emitted_tokens: HashMap::new(),
-        });
+        },
+    )?;
 
-        Ok(flows)
-    })?;
+    // todo remove
+    // FLOWS.update::<_, StdError>(deps.storage, |mut flows| {
+    //     flows.push(white_whale::pool_network::incentive::Flow {
+    //         flow_creator: info.sender.clone(),
+    //         flow_id: flow_id.clone(),
+    //         curve: curve.clone(),
+    //         flow_asset: flow_asset.clone(),
+    //         claimed_amount: Uint128::zero(),
+    //         start_timestamp: env.block.time.seconds().clone(), //todo remove this stuff after the start_epoch and end_epoch are settled
+    //         end_timestamp: env.block.time.seconds().clone(),
+    //         start_epoch,
+    //         end_epoch,
+    //         emissions_per_epoch, //todo remove as not used
+    //         emitted_tokens: HashMap::new(),
+    //     });
+    //
+    //     Ok(flows)
+    // })?;
 
     Ok(Response::default()
         .add_attributes(vec![

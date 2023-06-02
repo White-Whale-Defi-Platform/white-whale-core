@@ -43,7 +43,8 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
 
     FLOW_COUNTER.save(deps.storage, &0)?;
-    FLOWS.save(deps.storage, &Vec::new())?;
+
+    //FLOWS.save(deps.storage, &Vec::new())?;
 
     GLOBAL_WEIGHT.save(deps.storage, &Uint128::zero())?;
 
