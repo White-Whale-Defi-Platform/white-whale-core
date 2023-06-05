@@ -3,10 +3,15 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "lp_address"
+    "fee_distributor_address",
+    "lp_asset"
   ],
   "properties": {
-    "lp_address": {
+    "fee_distributor_address": {
+      "description": "Fee distributor contract address.",
+      "type": "string"
+    },
+    "lp_asset": {
       "description": "The address of the LP token that the incentive should be tied to.",
       "allOf": [
         {

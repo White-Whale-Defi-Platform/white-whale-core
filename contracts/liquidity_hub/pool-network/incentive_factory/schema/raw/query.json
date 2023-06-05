@@ -26,11 +26,11 @@
         "incentive": {
           "type": "object",
           "required": [
-            "lp_address"
+            "lp_asset"
           ],
           "properties": {
-            "lp_address": {
-              "description": "The address of the LP token.",
+            "lp_asset": {
+              "description": "The LP token asset info.",
               "allOf": [
                 {
                   "$ref": "#/definitions/AssetInfo"

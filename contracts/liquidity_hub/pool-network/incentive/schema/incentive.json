@@ -7,10 +7,15 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "lp_address"
+      "fee_distributor_address",
+      "lp_asset"
     ],
     "properties": {
-      "lp_address": {
+      "fee_distributor_address": {
+        "description": "Fee distributor contract address.",
+        "type": "string"
+      },
+      "lp_asset": {
         "description": "The address of the LP token that the incentive should be tied to.",
         "allOf": [
           {
@@ -75,6 +80,20 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
+        "description": "Makes a snapshot of the current global weight, at the current epoch.",
+        "type": "object",
+        "required": [
+          "take_global_weight_snapshot"
+        ],
+        "properties": {
+          "take_global_weight_snapshot": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Opens a new liquidity flow",
         "type": "object",
         "required": [
@@ -85,7 +104,7 @@
             "type": "object",
             "required": [
               "curve",
-              "end_timestamp",
+              "end_epoch",
               "flow_asset"
             ],
             "properties": {
@@ -97,8 +116,8 @@
                   }
                 ]
               },
-              "end_timestamp": {
-                "description": "The timestamp (in seconds since epoch) the flow should end.",
+              "end_epoch": {
+                "description": "The epoch at which the flow should end.",
                 "type": "integer",
                 "format": "uint64",
                 "minimum": 0.0
@@ -111,8 +130,8 @@
                   }
                 ]
               },
-              "start_timestamp": {
-                "description": "The start timestamp (in seconds since epoch) of the flow.\n\nIf unspecified, the flow will start at the current block time.",
+              "start_epoch": {
+                "description": "The epoch at which the flow should start.\n\nIf unspecified, the flow will start at the current epoch.",
                 "type": [
                   "integer",
                   "null"
@@ -193,6 +212,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Expands an existing position to earn more flow rewards.",
         "type": "object",
         "required": [
           "expand_position"
@@ -233,6 +253,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Closes an existing position to stop earning flow rewards.",
         "type": "object",
         "required": [
           "close_position"
@@ -257,6 +278,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Withdraws the LP tokens from a closed position once the unbonding duration has passed.",
         "type": "object",
         "required": [
           "withdraw"
@@ -270,6 +292,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Claims the flow rewards.",
         "type": "object",
         "required": [
           "claim"
@@ -349,14 +372,9 @@
       },
       "Curve": {
         "description": "The type of distribution curve to exist.",
-        "oneOf": [
-          {
-            "description": "A linear curve that releases assets as we approach the end of the flow period.",
-            "type": "string",
-            "enum": [
-              "linear"
-            ]
-          }
+        "type": "string",
+        "enum": [
+          "linear"
         ]
       },
       "Uint128": {
@@ -423,6 +441,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the positions for an address.",
         "type": "object",
         "required": [
           "positions"
@@ -445,6 +464,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the rewards for an address.",
         "type": "object",
         "required": [
           "rewards"
@@ -483,7 +503,8 @@
       "type": "object",
       "required": [
         "factory_address",
-        "lp_address"
+        "fee_distributor_address",
+        "lp_asset"
       ],
       "properties": {
         "factory_address": {
@@ -494,11 +515,19 @@
             }
           ]
         },
-        "lp_address": {
-          "description": "The address of the LP token tied to the incentive contract.",
+        "fee_distributor_address": {
+          "description": "Fee distributor contract.",
           "allOf": [
             {
               "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
+        "lp_asset": {
+          "description": "The LP token asset tied to the incentive contract.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AssetInfo"
             }
           ]
         }
@@ -508,6 +537,53 @@
         "Addr": {
           "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
           "type": "string"
+        },
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       }
     },
@@ -599,14 +675,9 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "oneOf": [
-            {
-              "description": "A linear curve that releases assets as we approach the end of the flow period.",
-              "type": "string",
-              "enum": [
-                "linear"
-              ]
-            }
+          "type": "string",
+          "enum": [
+            "linear"
           ]
         },
         "Flow": {
@@ -615,11 +686,12 @@
           "required": [
             "claimed_amount",
             "curve",
-            "end_timestamp",
+            "emitted_tokens",
+            "end_epoch",
             "flow_asset",
             "flow_creator",
             "flow_id",
-            "start_timestamp"
+            "start_epoch"
           ],
           "properties": {
             "claimed_amount": {
@@ -638,8 +710,15 @@
                 }
               ]
             },
-            "end_timestamp": {
-              "description": "The timestamp (in seconds block time) for when the flow will end.",
+            "emitted_tokens": {
+              "description": "emitted tokens",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "end_epoch": {
+              "description": "The epoch at which the flow ends.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
@@ -666,8 +745,8 @@
               "format": "uint64",
               "minimum": 0.0
             },
-            "start_timestamp": {
-              "description": "The timestamp (in seconds block time) for when the flow began.",
+            "start_epoch": {
+              "description": "The epoch at which the flow starts.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
@@ -768,14 +847,9 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "oneOf": [
-            {
-              "description": "A linear curve that releases assets as we approach the end of the flow period.",
-              "type": "string",
-              "enum": [
-                "linear"
-              ]
-            }
+          "type": "string",
+          "enum": [
+            "linear"
           ]
         },
         "Flow": {
@@ -784,11 +858,12 @@
           "required": [
             "claimed_amount",
             "curve",
-            "end_timestamp",
+            "emitted_tokens",
+            "end_epoch",
             "flow_asset",
             "flow_creator",
             "flow_id",
-            "start_timestamp"
+            "start_epoch"
           ],
           "properties": {
             "claimed_amount": {
@@ -807,8 +882,15 @@
                 }
               ]
             },
-            "end_timestamp": {
-              "description": "The timestamp (in seconds block time) for when the flow will end.",
+            "emitted_tokens": {
+              "description": "emitted tokens",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "end_epoch": {
+              "description": "The epoch at which the flow ends.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
@@ -835,8 +917,8 @@
               "format": "uint64",
               "minimum": 0.0
             },
-            "start_timestamp": {
-              "description": "The timestamp (in seconds block time) for when the flow began.",
+            "start_epoch": {
+              "description": "The epoch at which the flow starts.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0

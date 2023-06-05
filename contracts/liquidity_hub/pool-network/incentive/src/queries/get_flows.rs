@@ -8,11 +8,8 @@ use crate::state::FLOWS;
 pub fn get_flows(deps: Deps) -> Result<Vec<Flow>, StdError> {
     Ok(FLOWS
         .range(deps.storage, None, None, Order::Ascending)
-        .collect::<StdResult<Vec<((_, _), Flow)>>>()?
+        .collect::<StdResult<Vec<(_, Flow)>>>()?
         .into_iter()
-        .map(|((_, _), flow)| flow)
+        .map(|(_, flow)| flow)
         .collect::<Vec<Flow>>())
-
-    // todo remove
-    //FLOWS.load(deps.storage)
 }

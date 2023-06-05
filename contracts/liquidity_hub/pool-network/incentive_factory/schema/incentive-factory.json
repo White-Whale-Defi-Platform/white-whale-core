@@ -9,9 +9,10 @@
     "required": [
       "create_flow_fee",
       "fee_collector_addr",
+      "fee_distributor_addr",
       "incentive_code_id",
       "max_concurrent_flows",
-      "max_flow_start_time_buffer",
+      "max_flow_epoch_buffer",
       "max_unbonding_duration",
       "min_unbonding_duration"
     ],
@@ -28,6 +29,10 @@
         "description": "The address of the fee collector to send flow creation fees to.",
         "type": "string"
       },
+      "fee_distributor_addr": {
+        "description": "Fee distributor contract address.",
+        "type": "string"
+      },
       "incentive_code_id": {
         "description": "The code ID of the incentive contract.",
         "type": "integer",
@@ -40,8 +45,8 @@
         "format": "uint64",
         "minimum": 0.0
       },
-      "max_flow_start_time_buffer": {
-        "description": "The maximum start time buffer for a new flow (in seconds).\n\nNew flows are allowed to start up to `now + start_time_buffer` into the future.",
+      "max_flow_epoch_buffer": {
+        "description": "The maximum epoch buffer for a new flow (in epochs).\n\nNew flows are allowed to start up to `current_epoch + start_epoch_buffer` into the future.",
         "type": "integer",
         "format": "uint64",
         "minimum": 0.0
@@ -135,7 +140,7 @@
     "title": "ExecuteMsg",
     "oneOf": [
       {
-        "description": "Creates a new incentive contract tied to the `lp_address` specified.",
+        "description": "Creates a new incentive contract tied to the `lp_asset` specified.",
         "type": "object",
         "required": [
           "create_incentive"
@@ -144,10 +149,10 @@
           "create_incentive": {
             "type": "object",
             "required": [
-              "lp_address"
+              "lp_asset"
             ],
             "properties": {
-              "lp_address": {
+              "lp_asset": {
                 "$ref": "#/definitions/AssetInfo"
               }
             },
@@ -372,11 +377,11 @@
           "incentive": {
             "type": "object",
             "required": [
-              "lp_address"
+              "lp_asset"
             ],
             "properties": {
-              "lp_address": {
-                "description": "The address of the LP token.",
+              "lp_asset": {
+                "description": "The LP token asset info.",
                 "allOf": [
                   {
                     "$ref": "#/definitions/AssetInfo"
@@ -491,9 +496,10 @@
       "required": [
         "create_flow_fee",
         "fee_collector_addr",
+        "fee_distributor_addr",
         "incentive_code_id",
         "max_concurrent_flows",
-        "max_flow_start_time_buffer",
+        "max_flow_epoch_buffer",
         "max_unbonding_duration",
         "min_unbonding_duration",
         "owner"
@@ -515,6 +521,14 @@
             }
           ]
         },
+        "fee_distributor_addr": {
+          "description": "Fee distributor contract address.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
         "incentive_code_id": {
           "description": "The code ID of the incentive contract.",
           "type": "integer",
@@ -527,8 +541,8 @@
           "format": "uint64",
           "minimum": 0.0
         },
-        "max_flow_start_time_buffer": {
-          "description": "The maximum amount of time in the future a new flow is allowed to start in.",
+        "max_flow_epoch_buffer": {
+          "description": "The maximum amount of epochs in the future a new flow is allowed to start in.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
@@ -650,6 +664,10 @@
         "$ref": "#/definitions/IncentivesContract"
       },
       "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
         "IncentivesContract": {
           "type": "object",
           "required": [
@@ -659,7 +677,11 @@
           "properties": {
             "incentive_address": {
               "description": "The address of the incentive contract.",
-              "type": "string"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
             },
             "lp_reference": {
               "description": "A byte-array reference to the LP address.",

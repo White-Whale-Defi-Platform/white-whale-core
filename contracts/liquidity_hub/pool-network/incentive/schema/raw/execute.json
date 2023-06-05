@@ -3,6 +3,20 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
+      "description": "Makes a snapshot of the current global weight, at the current epoch.",
+      "type": "object",
+      "required": [
+        "take_global_weight_snapshot"
+      ],
+      "properties": {
+        "take_global_weight_snapshot": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Opens a new liquidity flow",
       "type": "object",
       "required": [
@@ -13,7 +27,7 @@
           "type": "object",
           "required": [
             "curve",
-            "end_timestamp",
+            "end_epoch",
             "flow_asset"
           ],
           "properties": {
@@ -25,8 +39,8 @@
                 }
               ]
             },
-            "end_timestamp": {
-              "description": "The timestamp (in seconds since epoch) the flow should end.",
+            "end_epoch": {
+              "description": "The epoch at which the flow should end.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
@@ -39,8 +53,8 @@
                 }
               ]
             },
-            "start_timestamp": {
-              "description": "The start timestamp (in seconds since epoch) of the flow.\n\nIf unspecified, the flow will start at the current block time.",
+            "start_epoch": {
+              "description": "The epoch at which the flow should start.\n\nIf unspecified, the flow will start at the current epoch.",
               "type": [
                 "integer",
                 "null"
@@ -121,6 +135,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Expands an existing position to earn more flow rewards.",
       "type": "object",
       "required": [
         "expand_position"
@@ -161,6 +176,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Closes an existing position to stop earning flow rewards.",
       "type": "object",
       "required": [
         "close_position"
@@ -185,6 +201,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Withdraws the LP tokens from a closed position once the unbonding duration has passed.",
       "type": "object",
       "required": [
         "withdraw"
@@ -198,6 +215,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Claims the flow rewards.",
       "type": "object",
       "required": [
         "claim"
@@ -277,14 +295,9 @@
     },
     "Curve": {
       "description": "The type of distribution curve to exist.",
-      "oneOf": [
-        {
-          "description": "A linear curve that releases assets as we approach the end of the flow period.",
-          "type": "string",
-          "enum": [
-            "linear"
-          ]
-        }
+      "type": "string",
+      "enum": [
+        "linear"
       ]
     },
     "Uint128": {

@@ -7,7 +7,7 @@ pub fn calculate_weight(
     unbonding_duration: u64,
     amount: Uint128,
 ) -> Result<Uint128, ContractError> {
-    if unbonding_duration < 86400 || unbonding_duration > 31556926 {
+    if !(86400..=31556926).contains(&unbonding_duration) {
         return Err(ContractError::InvalidWeight { unbonding_duration });
     }
 

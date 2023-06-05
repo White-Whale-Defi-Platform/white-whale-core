@@ -56,6 +56,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieves the positions for an address.",
       "type": "object",
       "required": [
         "positions"
@@ -78,6 +79,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieves the rewards for an address.",
       "type": "object",
       "required": [
         "rewards"

@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdError,
-    StdResult, WasmMsg,
+    coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
 };
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::pool_network::incentive::Flow;
@@ -10,6 +9,7 @@ use crate::{
     state::{CONFIG, FLOWS},
 };
 
+/// Closes the flow with the given id and return the unclaimed assets to the flow creator
 pub fn close_flow(
     deps: DepsMut,
     info: MessageInfo,
@@ -25,27 +25,13 @@ pub fn close_flow(
 
     let flow = FLOWS
         .range(deps.storage, None, None, Order::Ascending)
-        .collect::<StdResult<Vec<((u64, u64), Flow)>>>()?
+        .collect::<StdResult<Vec<(_, Flow)>>>()?
         .into_iter()
-        .find(|((_, _), flow)| flow.flow_id == flow_id)
+        .find(|(_, flow)| flow.flow_id == flow_id)
         .ok_or(ContractError::NonExistentFlow {
             invalid_id: flow_id,
         })
-        .map(|((_, _), flow)| flow)?;
-
-    // todo remove
-    // let flow = {
-    //
-    //     let flows = FLOWS.load(deps.storage)?;
-    //
-    //     // search for the `flow_id` specified
-    //     flows
-    //         .into_iter()
-    //         .find(|flow| flow.flow_id == flow_id)
-    //         .ok_or(ContractError::NonExistentFlow {
-    //             invalid_id: flow_id,
-    //         })?
-    // };
+        .map(|(_, flow)| flow)?;
 
     if !(flow.flow_creator == info.sender || info.sender == factory_config.owner) {
         return Err(ContractError::UnauthorizedFlowClose { flow_id });
@@ -53,7 +39,7 @@ pub fn close_flow(
 
     let amount_to_return = flow.flow_asset.amount.saturating_sub(flow.claimed_amount);
 
-    // return the flow assets available
+    // return the flow assets available, i.e. the ones that haven't been claimed
     let messages: Vec<CosmosMsg> = vec![match flow.flow_asset.info {
         AssetInfo::NativeToken { denom } => BankMsg::Send {
             to_address: flow.flow_creator.clone().into_string(),
@@ -73,13 +59,6 @@ pub fn close_flow(
 
     // close the flow by removing it from storage
     FLOWS.remove(deps.storage, (flow.start_epoch, flow.flow_id));
-
-    // FLOWS.update::<_, StdError>(deps.storage, |flows| {
-    //     Ok(flows
-    //         .into_iter()
-    //         .filter(|flow| flow.flow_id != flow_id)
-    //         .collect())
-    // })?;
 
     Ok(Response::default()
         .add_attributes(vec![

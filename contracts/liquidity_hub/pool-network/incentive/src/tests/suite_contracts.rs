@@ -1,8 +1,6 @@
 use cosmwasm_std::Empty;
 use cw_multi_test::{Contract, ContractWrapper};
 
-use white_whale::pool_network::incentive;
-
 pub fn incentive_factory_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         incentive_factory::contract::execute,
@@ -48,17 +46,6 @@ pub fn cw20_token_contract() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
-pub fn fee_distributor_contract() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(
-        fee_distributor::contract::execute,
-        fee_distributor::contract::instantiate,
-        fee_distributor::contract::query,
-    )
-    .with_reply(fee_distributor::contract::reply)
-    .with_migrate(fee_distributor::contract::migrate);
-
-    Box::new(contract)
-}
 pub fn fee_distributor_mock_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         fee_distributor_mock::contract::execute,

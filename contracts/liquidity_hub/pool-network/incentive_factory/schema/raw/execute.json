@@ -3,7 +3,7 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
-      "description": "Creates a new incentive contract tied to the `lp_address` specified.",
+      "description": "Creates a new incentive contract tied to the `lp_asset` specified.",
       "type": "object",
       "required": [
         "create_incentive"
@@ -12,10 +12,10 @@
         "create_incentive": {
           "type": "object",
           "required": [
-            "lp_address"
+            "lp_asset"
           ],
           "properties": {
-            "lp_address": {
+            "lp_asset": {
               "$ref": "#/definitions/AssetInfo"
             }
           },

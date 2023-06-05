@@ -1,4 +1,3 @@
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
@@ -7,7 +6,7 @@ use cosmwasm_std::{
 use white_whale::fee_distributor::EpochResponse;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::InstantiateMsg;
 use crate::state::CURRENT_EPOCH;
 
 // use cw2::set_contract_version;
@@ -46,19 +45,16 @@ pub fn execute(
     _info: MessageInfo,
     msg: white_whale::fee_distributor::ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    match msg {
-        white_whale::fee_distributor::ExecuteMsg::NewEpoch {} => {
-            CURRENT_EPOCH.update(deps.storage, |epoch| -> StdResult<_> {
-                Ok(white_whale::fee_distributor::Epoch {
-                    id: epoch.id + Uint64::one(),
-                    start_time: epoch.start_time.plus_seconds(86400u64),
-                    total: vec![],
-                    available: vec![],
-                    claimed: vec![],
-                })
-            })?;
-        }
-        _ => {}
+    if let white_whale::fee_distributor::ExecuteMsg::NewEpoch {} = msg {
+        CURRENT_EPOCH.update(deps.storage, |epoch| -> StdResult<_> {
+            Ok(white_whale::fee_distributor::Epoch {
+                id: epoch.id + Uint64::one(),
+                start_time: epoch.start_time.plus_seconds(86400u64),
+                total: vec![],
+                available: vec![],
+                claimed: vec![],
+            })
+        })?;
     }
 
     Ok(Response::default())
@@ -67,20 +63,20 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(
     deps: Deps,
-    env: Env,
+    _env: Env,
     msg: white_whale::fee_distributor::QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
         white_whale::fee_distributor::QueryMsg::Config {} => {}
         white_whale::fee_distributor::QueryMsg::CurrentEpoch {} => {
-            return Ok(to_binary(&EpochResponse {
+            return to_binary(&EpochResponse {
                 epoch: CURRENT_EPOCH.load(deps.storage)?,
-            })?);
+            });
         }
         white_whale::fee_distributor::QueryMsg::Epoch { .. } => {}
         white_whale::fee_distributor::QueryMsg::ClaimableEpochs { .. } => {}
         white_whale::fee_distributor::QueryMsg::Claimable { .. } => {}
     }
 
-    Ok(to_binary(&"")?)
+    to_binary(&"")
 }

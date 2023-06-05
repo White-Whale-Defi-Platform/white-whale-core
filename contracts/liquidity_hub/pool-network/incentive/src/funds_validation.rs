@@ -32,7 +32,7 @@ pub fn validate_funds_sent(
                     spender: env.contract.address.clone().into_string(),
                 },
             )?;
-            println!("allowance: {:?}", allowance);
+
             if allowance.allowance < amount {
                 return Err(ContractError::MissingPositionDeposit {
                     allowance_amount: allowance.allowance,

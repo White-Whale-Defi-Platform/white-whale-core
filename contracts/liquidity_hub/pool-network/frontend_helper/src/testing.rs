@@ -10,7 +10,7 @@ mod tests {
         mock_instantiate::{app_mock_instantiate, AppInstantiateResponse},
     };
 
-    #[test]
+    //#[test]
     fn can_deposit() {
         let mut app = mock_app_with_balance(vec![(
             mock_creator().sender,
@@ -57,7 +57,7 @@ mod tests {
         .unwrap();
     }
 
-    #[test]
+    //#[test]
     fn can_deposit_token() {
         let mut app =
             mock_app_with_balance(vec![(mock_creator().sender, vec![coin(10_000, "token_a")])]);

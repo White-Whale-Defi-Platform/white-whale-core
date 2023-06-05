@@ -11,14 +11,14 @@ use white_whale::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
-use crate::state::{CONFIG, FLOWS, FLOW_COUNTER, GLOBAL_WEIGHT};
+use crate::state::{CONFIG, FLOW_COUNTER, GLOBAL_WEIGHT};
 use crate::{execute, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-incentive";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -29,7 +29,7 @@ pub fn instantiate(
 
     match msg.lp_asset.clone() {
         AssetInfo::Token { contract_addr } => {
-            deps.api.addr_validate(&contract_addr.to_string())?;
+            deps.api.addr_validate(&contract_addr)?;
         }
         AssetInfo::NativeToken { .. } => {}
     };
@@ -41,11 +41,7 @@ pub fn instantiate(
     };
 
     CONFIG.save(deps.storage, &config)?;
-
     FLOW_COUNTER.save(deps.storage, &0)?;
-
-    //FLOWS.save(deps.storage, &Vec::new())?;
-
     GLOBAL_WEIGHT.save(deps.storage, &Uint128::zero())?;
 
     Ok(Response::default()
@@ -65,7 +61,7 @@ pub fn instantiate(
         )?))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -75,8 +71,6 @@ pub fn execute(
     match msg {
         ExecuteMsg::TakeGlobalWeightSnapshot {} => execute::take_global_weight_snapshot(deps),
         ExecuteMsg::OpenFlow {
-            start_timestamp,
-            end_timestamp,
             start_epoch,
             end_epoch,
             curve,
@@ -97,12 +91,12 @@ pub fn execute(
             execute::close_position(deps, env, info, unbonding_duration)
         }
         ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
-        ExecuteMsg::Claim {} => execute::claim(deps, env, info),
+        ExecuteMsg::Claim {} => execute::claim(deps, info),
     }
 }
 
 /// Handles the queries to the incentive contract.
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&queries::get_config(deps)?)?),
@@ -111,12 +105,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Positions { address } => {
             Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
         }
-        QueryMsg::Rewards { address } => Ok(to_binary(&queries::get_rewards(deps, env, address)?)?),
+        QueryMsg::Rewards { address } => Ok(to_binary(&queries::get_rewards(deps, address)?)?),
     }
 }
 
 #[cfg(not(tarpaulin_include))]
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;

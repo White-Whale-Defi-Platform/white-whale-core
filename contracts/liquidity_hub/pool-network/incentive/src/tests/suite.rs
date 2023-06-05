@@ -1,8 +1,8 @@
-use cosmwasm_std::{Addr, Api, Coin, StdResult, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Coin, StdResult, Timestamp, Uint128};
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
-use white_whale::fee_distributor::{EpochConfig, EpochResponse};
+use white_whale::fee_distributor::EpochResponse;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive::{
     Curve, Flow, FlowResponse, PositionsResponse, RewardsResponse,
@@ -11,10 +11,9 @@ use white_whale::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
 };
 
-use crate::error::ContractError;
 use crate::tests::suite_contracts::{
-    cw20_token_contract, fee_collector_contract, fee_distributor_contract,
-    fee_distributor_mock_contract, incentive_contract, incentive_factory_contract,
+    cw20_token_contract, fee_collector_contract, fee_distributor_mock_contract, incentive_contract,
+    incentive_factory_contract,
 };
 
 pub struct TestingSuite {
@@ -29,14 +28,6 @@ pub struct TestingSuite {
 impl TestingSuite {
     pub(crate) fn creator(&mut self) -> Addr {
         self.senders.first().unwrap().clone()
-    }
-
-    pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
-        let mut block_info = self.app.block_info();
-        block_info.time = block_info.time.plus_nanos(seconds * 1_000_000_000);
-        self.app.set_block(block_info);
-
-        self
     }
 
     pub(crate) fn set_time(&mut self, timestamp: Timestamp) -> &mut Self {
@@ -369,8 +360,6 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         incentive_addr: Addr,
-        start_timestamp: Option<u64>,
-        end_timestamp: u64,
         start_epoch: Option<u64>,
         end_epoch: u64,
         curve: Curve,
@@ -379,8 +368,6 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenFlow {
-            start_timestamp,
-            end_timestamp,
             start_epoch,
             end_epoch,
             curve,

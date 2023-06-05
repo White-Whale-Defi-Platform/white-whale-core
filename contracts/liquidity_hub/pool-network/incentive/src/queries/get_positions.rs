@@ -7,6 +7,7 @@ use crate::{
     weight::calculate_weight,
 };
 
+/// Gets the positions for the given address. Returns a [PositionsResponse] struct.
 pub fn get_positions(
     deps: Deps,
     env: Env,
@@ -26,6 +27,7 @@ pub fn get_positions(
             })
         })
         .collect::<Result<Vec<_>, ContractError>>()?;
+
     let closed_positions = CLOSED_POSITIONS
         .may_load(deps.storage, address)?
         .unwrap_or_default()

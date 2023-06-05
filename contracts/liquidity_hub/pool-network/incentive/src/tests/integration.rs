@@ -1,14 +1,11 @@
 use std::cell::RefCell;
-use std::error::Error;
 
 use cosmwasm_std::{coin, coins, Addr, StdError, Timestamp, Uint128};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
 use white_whale::pool_network::incentive::{Curve, Flow};
-use white_whale::pool_network::incentive_factory::{
-    IncentiveResponse, IncentivesContract, IncentivesResponse,
-};
+use white_whale::pool_network::incentive_factory::IncentivesContract;
 
 use crate::error::ContractError;
 use crate::tests::suite::TestingSuite;
@@ -85,7 +82,7 @@ fn create_incentive_cw20_lp_with_duplicate() {
     };
 
     let lp_assets: Vec<AssetInfo> = vec![lp_asset_1.clone(), lp_asset_2.clone()];
-    let mut incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
+    let incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
 
     // first try to execute anything on the incentive factory contract from a non-owner, it should error
     // then do it with the owner of the contract
@@ -178,7 +175,7 @@ fn create_incentive_native_lp_with_duplicate() {
     };
 
     let lp_assets: Vec<AssetInfo> = vec![lp_asset_1.clone(), lp_asset_2.clone()];
-    let mut incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
+    let incentives: RefCell<Vec<IncentivesContract>> = RefCell::new(vec![]);
 
     // first try to execute anything on the incentive factory contract from a non-owner, it should error
     // then do it with the owner of the contract
@@ -263,7 +260,7 @@ fn try_open_more_flows_than_allowed() {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -276,14 +273,10 @@ fn try_open_more_flows_than_allowed() {
         });
 
     // open 7 incentives, it should fail on the 8th
-    let app_time = suite.get_time();
-
     for i in 1..=8 {
         suite.open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            1884342800u64,
             None,
             10u64,
             Curve::Linear,
@@ -310,7 +303,7 @@ fn try_open_more_flows_than_allowed() {
         );
     }
 
-    let mut incentive_flows = RefCell::new(vec![]);
+    let incentive_flows = RefCell::new(vec![]);
     suite.query_flows(incentive_addr.clone().into_inner(), |result| {
         let flows = result.unwrap();
 
@@ -330,11 +323,8 @@ fn try_open_more_flows_than_allowed() {
                 },
                 claimed_amount: Uint128::zero(),
                 curve: Curve::Linear,
-                start_timestamp: app_time.clone().seconds(),
-                end_timestamp: app_time.clone().seconds(),
                 start_epoch: 1u64,
                 end_epoch: 10u64,
-                emissions_per_epoch: Default::default(),
                 emitted_tokens: Default::default(),
             }
         );
@@ -351,11 +341,8 @@ fn try_open_more_flows_than_allowed() {
                 },
                 claimed_amount: Uint128::zero(),
                 curve: Curve::Linear,
-                start_timestamp: app_time.clone().seconds(),
-                end_timestamp: app_time.clone().seconds(),
                 start_epoch: 1u64,
                 end_epoch: 10u64,
-                emissions_per_epoch: Default::default(),
                 emitted_tokens: Default::default(),
             }
         );
@@ -374,8 +361,8 @@ fn try_open_flows_with_wrong_epochs() {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
-    let mut max_flow_epoch_buffer = RefCell::new(0u64);
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+    let max_flow_epoch_buffer = RefCell::new(0u64);
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -388,13 +375,7 @@ fn try_open_flows_with_wrong_epochs() {
         });
 
     // open incentive flow
-    //todo remove these future timestamps as epochs are used
-    let app_time = suite.get_time();
-    let future_time = app_time.clone().plus_seconds(604800u64);
-    let future_future_time = future_time.clone().plus_seconds(907200u64);
-    let past_time = app_time.clone().minus_seconds(86400u64);
-
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite
         .create_epochs_on_fee_distributor(9u64, vec![])
         .query_current_epoch(|result| {
@@ -413,8 +394,6 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            past_time.clone().seconds(),
             None,
             past_epoch.clone(),
             Curve::Linear,
@@ -439,8 +418,6 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            Some(future_future_time.clone().seconds()),
-            future_time.clone().seconds(),
             Some(future_future_epoch.clone()),
             future_epoch.clone(),
             Curve::Linear,
@@ -466,16 +443,6 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             Some(
-                app_time
-                    .clone()
-                    .plus_seconds(max_flow_epoch_buffer.clone().into_inner() + 1)
-                    .seconds(),
-            ),
-            app_time
-                .clone()
-                .plus_seconds(max_flow_epoch_buffer.clone().into_inner() + 1000)
-                .seconds(),
-            Some(
                 current_epoch.clone().into_inner() + max_flow_epoch_buffer.clone().into_inner() + 1,
             ),
             current_epoch.clone().into_inner() + 100,
@@ -499,8 +466,6 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            future_time.clone().seconds(),
             None,
             future_epoch.clone(),
             Curve::Linear,
@@ -526,13 +491,13 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let lp_address_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -544,7 +509,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite
         .create_epochs_on_fee_distributor(9u64, vec![])
         .query_current_epoch(|result| {
@@ -552,14 +517,10 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
         });
 
     // open incentive flow
-    let app_time = suite.get_time();
-
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -584,8 +545,6 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -607,8 +566,6 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -632,8 +589,6 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -655,8 +610,6 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -710,11 +663,8 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 10u64,
                     end_epoch: 19u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -737,13 +687,13 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let lp_address_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -755,21 +705,18 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut carol_original_uwhale_funds = RefCell::new(Uint128::zero());
+    let carol_original_uwhale_funds = RefCell::new(Uint128::zero());
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -794,8 +741,6 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -817,8 +762,6 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -845,8 +788,6 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -871,8 +812,6 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -950,11 +889,8 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -977,8 +913,6 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1023,7 +957,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let lp_address_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
@@ -1035,7 +969,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
 
     let cw20_incentive_address = suite.cw20_tokens.last().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -1047,19 +981,16 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1081,8 +1012,6 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1110,8 +1039,6 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1177,11 +1104,8 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -1197,7 +1121,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
 
     suite.instantiate_default_cw20_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let lp_address_last = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.last().unwrap().to_string(),
@@ -1209,7 +1133,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
 
     let cw20_asset_addr = suite.cw20_tokens.first().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_last.clone(), |result| {
@@ -1223,20 +1147,16 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
-
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1258,8 +1178,6 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1289,8 +1207,6 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1317,8 +1233,6 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1366,11 +1280,8 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -1388,7 +1299,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
 
     suite.instantiate_default_cw20_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let cw20_fee_asset = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
@@ -1400,7 +1311,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
     };
     let cw20_asset_addr = suite.cw20_tokens.last().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), cw20_fee_asset.clone(), |result| {
@@ -1412,19 +1323,16 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1446,8 +1354,6 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1477,8 +1383,6 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1507,8 +1411,6 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1536,8 +1438,6 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1600,11 +1500,8 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -1627,14 +1524,14 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
 
     suite.instantiate_default_cw20_fee().create_lp_tokens();
 
-    let mut fee_collector_addr = RefCell::new(Addr::unchecked(""));
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
 
     let cw20_fee_asset = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
     let cw20_fee_asset_addr = suite.cw20_tokens.first().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), cw20_fee_asset.clone(), |result| {
@@ -1646,21 +1543,16 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut carol_original_usdc_funds = RefCell::new(Uint128::zero());
-
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1684,8 +1576,6 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1717,8 +1607,6 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1749,8 +1637,6 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1774,8 +1660,6 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -1798,8 +1682,6 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1869,11 +1751,8 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 })
             );
@@ -1895,14 +1774,14 @@ fn close_native_token_flows() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let mut alice_funds = RefCell::new(Uint128::zero());
-    let mut carol_funds = RefCell::new(Uint128::zero());
+    let alice_funds = RefCell::new(Uint128::zero());
+    let carol_funds = RefCell::new(Uint128::zero());
 
     let lp_address_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -1914,20 +1793,17 @@ fn close_native_token_flows() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
 
     suite
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1945,8 +1821,6 @@ fn close_native_token_flows() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -1978,11 +1852,8 @@ fn close_native_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -1999,11 +1870,8 @@ fn close_native_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2076,11 +1944,8 @@ fn close_native_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2154,8 +2019,6 @@ fn close_native_token_flows() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -2186,11 +2049,8 @@ fn close_native_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2207,8 +2067,8 @@ fn close_cw20_token_flows() {
 
     suite.instantiate_default_native_fee().create_lp_tokens();
 
-    let mut alice_funds = RefCell::new(Uint128::zero());
-    let mut carol_funds = RefCell::new(Uint128::zero());
+    let alice_funds = RefCell::new(Uint128::zero());
+    let carol_funds = RefCell::new(Uint128::zero());
 
     let lp_address_1 = AssetInfo::Token {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
@@ -2219,7 +2079,7 @@ fn close_cw20_token_flows() {
     };
     let cw20_asset_addr = suite.cw20_tokens.last().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
@@ -2231,14 +2091,12 @@ fn close_cw20_token_flows() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         });
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite.query_current_epoch(|result| {
         *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
     });
 
     // open incentive flow
-    let app_time = suite.get_time();
-
     suite
         .increase_allowance(
             carol.clone(),
@@ -2249,8 +2107,6 @@ fn close_cw20_token_flows() {
         .open_incentive_flow(
             carol.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -2272,8 +2128,6 @@ fn close_cw20_token_flows() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
             None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
@@ -2301,11 +2155,8 @@ fn close_cw20_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2320,11 +2171,8 @@ fn close_cw20_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2389,11 +2237,8 @@ fn close_cw20_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2455,8 +2300,6 @@ fn close_cw20_token_flows() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            app_time.clone().plus_seconds(86400u64).seconds(),
-            None,
             current_epoch.clone().into_inner() + 9,
             Curve::Linear,
             Asset {
@@ -2483,11 +2326,8 @@ fn close_cw20_token_flows() {
                     },
                     claimed_amount: Uint128::zero(),
                     curve: Curve::Linear,
-                    start_timestamp: app_time.clone().seconds(),
-                    end_timestamp: app_time.clone().seconds(),
                     start_epoch: 1u64,
                     end_epoch: 10u64,
-                    emissions_per_epoch: Default::default(),
                     emitted_tokens: Default::default(),
                 }
             );
@@ -2510,7 +2350,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
         denom: "ampWHALE".to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
@@ -2718,21 +2558,19 @@ fn open_flow_positions_and_claim_native_token_incentive() {
     let time = Timestamp::from_seconds(1684766796u64);
     suite.set_time(time);
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite
         .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
         .query_current_epoch(|result| {
             *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
         });
 
-    let mut carol_usdc_funds = RefCell::new(Uint128::zero());
+    let carol_usdc_funds = RefCell::new(Uint128::zero());
     println!("CURRENT_EPOCH  -> {:?}", current_epoch);
     suite
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            time.plus_seconds(172800u64).seconds(), //2 days
             None,
             current_epoch.clone().into_inner() + 10,
             Curve::Linear,
@@ -2937,7 +2775,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
 
     let flow_asset_addr = suite.cw20_tokens.last().unwrap().clone();
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
@@ -3124,14 +2962,14 @@ fn open_flow_positions_claim_cw20_token_incentive() {
     let time = Timestamp::from_seconds(1684766796u64);
     suite.set_time(time);
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite
         .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
         .query_current_epoch(|result| {
             *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
         });
 
-    let mut carol_cw20_funds = RefCell::new(Uint128::zero());
+    let carol_cw20_funds = RefCell::new(Uint128::zero());
 
     suite
         .increase_allowance(
@@ -3143,8 +2981,6 @@ fn open_flow_positions_claim_cw20_token_incentive() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            time.plus_seconds(172800u64).seconds(), //2 days
             None,
             current_epoch.clone().into_inner() + 10,
             Curve::Linear,
@@ -3320,7 +3156,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
     };
 
     let incentive_asset_addr = suite.cw20_tokens.first().unwrap().clone();
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     let flow_asset_1 = AssetInfo::NativeToken {
         denom: "ampWHALE".to_string(),
@@ -3344,26 +3180,24 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
     let time = Timestamp::from_seconds(1684766796u64);
     suite.set_time(time);
 
-    let mut current_epoch = RefCell::new(0u64);
+    let current_epoch = RefCell::new(0u64);
     suite
         .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
         .query_current_epoch(|result| {
             *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
         });
 
-    let mut alice_ampWHALE_funds = RefCell::new(Uint128::zero());
-    let mut alice_usdc_funds = RefCell::new(Uint128::zero());
-    let mut bob_ampWHALE_funds = RefCell::new(Uint128::zero());
-    let mut bob_usdc_funds = RefCell::new(Uint128::zero());
-    let mut carol_ampWHALE_funds = RefCell::new(Uint128::zero());
-    let mut carol_usdc_funds = RefCell::new(Uint128::zero());
+    let alice_ampWHALE_funds = RefCell::new(Uint128::zero());
+    let alice_usdc_funds = RefCell::new(Uint128::zero());
+    let bob_ampWHALE_funds = RefCell::new(Uint128::zero());
+    let bob_usdc_funds = RefCell::new(Uint128::zero());
+    let carol_ampWHALE_funds = RefCell::new(Uint128::zero());
+    let carol_usdc_funds = RefCell::new(Uint128::zero());
 
     suite
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,
-            time.plus_seconds(864000u64).seconds(),  //10 days
             None,                                    //epoch 11
             current_epoch.clone().into_inner() + 10, // epoch 21
             Curve::Linear,
@@ -3382,8 +3216,6 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            Some(time.plus_seconds(864000u64).seconds()), // start in 10 days, i.e. when the first flow finishes
-            time.plus_seconds(2592000u64).seconds(),      // ends in 20 days from the start
             Some(current_epoch.clone().into_inner() + 10), // epoch 21
             current_epoch.clone().into_inner() + 30, //epoch 41 , ends in 30 epochs from the start, i.e. has a duration of 20 epochs
             Curve::Linear,
@@ -4252,7 +4084,7 @@ fn take_global_weight_snapshot() {
         contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
     };
 
-    let mut incentive_addr = RefCell::new(Addr::unchecked(""));
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {

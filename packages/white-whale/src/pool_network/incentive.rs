@@ -15,17 +15,10 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Makes a snapshot of the current global weight.
+    /// Makes a snapshot of the current global weight, at the current epoch.
     TakeGlobalWeightSnapshot {},
     /// Opens a new liquidity flow
     OpenFlow {
-        //TODO remove timestamps
-        /// The start timestamp (in seconds since epoch) of the flow.
-        ///
-        /// If unspecified, the flow will start at the current block time.
-        start_timestamp: Option<u64>,
-        /// The timestamp (in seconds since epoch) the flow should end.
-        end_timestamp: u64,
         /// The epoch at which the flow should start.
         ///
         /// If unspecified, the flow will start at the current epoch.
@@ -57,6 +50,7 @@ pub enum ExecuteMsg {
         /// If left empty, defaults to the message sender.
         receiver: Option<String>,
     },
+    /// Expands an existing position to earn more flow rewards.
     ExpandPosition {
         /// The amount to add to the existing position.
         amount: Uint128,
@@ -69,11 +63,14 @@ pub enum ExecuteMsg {
         /// If left empty, defaults to the message sender.
         receiver: Option<String>,
     },
+    /// Closes an existing position to stop earning flow rewards.
     ClosePosition {
         /// The unbonding duration of the position to close.
         unbonding_duration: u64,
     },
+    /// Withdraws the LP tokens from a closed position once the unbonding duration has passed.
     Withdraw {},
+    /// Claims the flow rewards.
     Claim {},
 }
 
@@ -92,19 +89,11 @@ pub struct Flow {
     /// The amount of the `flow_asset` that has been claimed so far.
     pub claimed_amount: Uint128,
     /// The type of curve the flow has.
-    pub curve: Curve,
-    /// The timestamp (in seconds block time) for when the flow began.
-    pub start_timestamp: u64,
-    /// The timestamp (in seconds block time) for when the flow will end.
-    pub end_timestamp: u64,
-
-    // TODO new stuff, remove/refactor old stuff
+    pub curve: Curve, //todo not doing anything for now
     /// The epoch at which the flow starts.
     pub start_epoch: u64,
     /// The epoch at which the flow ends.
     pub end_epoch: u64,
-    /// The amount of the `flow_asset` that will be distributed per epoch.
-    pub emissions_per_epoch: Uint128,
     /// emitted tokens
     pub emitted_tokens: HashMap<u64, Uint128>,
 }
@@ -156,11 +145,13 @@ pub enum QueryMsg {
     /// Retrieves the current flows.
     #[returns(FlowsResponse)]
     Flows {},
+    /// Retrieves the positions for an address.
     #[returns(PositionsResponse)]
     Positions {
         /// The address to get positions for.
         address: String,
     },
+    /// Retrieves the rewards for an address.
     #[returns(RewardsResponse)]
     Rewards {
         /// The address to get all the incentive rewards for.

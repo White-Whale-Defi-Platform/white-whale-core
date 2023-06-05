@@ -85,14 +85,9 @@
     },
     "Curve": {
       "description": "The type of distribution curve to exist.",
-      "oneOf": [
-        {
-          "description": "A linear curve that releases assets as we approach the end of the flow period.",
-          "type": "string",
-          "enum": [
-            "linear"
-          ]
-        }
+      "type": "string",
+      "enum": [
+        "linear"
       ]
     },
     "Flow": {
@@ -101,11 +96,12 @@
       "required": [
         "claimed_amount",
         "curve",
-        "end_timestamp",
+        "emitted_tokens",
+        "end_epoch",
         "flow_asset",
         "flow_creator",
         "flow_id",
-        "start_timestamp"
+        "start_epoch"
       ],
       "properties": {
         "claimed_amount": {
@@ -124,8 +120,15 @@
             }
           ]
         },
-        "end_timestamp": {
-          "description": "The timestamp (in seconds block time) for when the flow will end.",
+        "emitted_tokens": {
+          "description": "emitted tokens",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Uint128"
+          }
+        },
+        "end_epoch": {
+          "description": "The epoch at which the flow ends.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
@@ -152,8 +155,8 @@
           "format": "uint64",
           "minimum": 0.0
         },
-        "start_timestamp": {
-          "description": "The timestamp (in seconds block time) for when the flow began.",
+        "start_epoch": {
+          "description": "The epoch at which the flow starts.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0

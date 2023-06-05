@@ -6,12 +6,14 @@ use crate::state::ADDRESS_WEIGHT_HISTORY;
 use crate::{
     error::ContractError,
     funds_validation::validate_funds_sent,
+    helpers,
     state::{ADDRESS_WEIGHT, CONFIG, GLOBAL_WEIGHT, OPEN_POSITIONS},
     weight::calculate_weight,
 };
 
+/// Opens a position for the user with the given unbonding_duration.
 pub fn open_position(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     amount: Uint128,
@@ -41,16 +43,10 @@ pub fn open_position(
 
     // ensure that user gave us an allowance for the token amount
     // we check this on the message sender rather than the receiver
-    let transfer_token_msg = validate_funds_sent(
-        &deps.as_ref(),
-        env.clone(),
-        config.lp_asset,
-        info.clone(),
-        amount,
-    )?;
+    let transfer_token_msg =
+        validate_funds_sent(&deps.as_ref(), env, config.lp_asset, info.clone(), amount)?;
 
     if let Some(transfer_token_msg) = transfer_token_msg {
-        println!("trnasfer token");
         messages.push(transfer_token_msg.into());
     }
 
@@ -74,23 +70,9 @@ pub fn open_position(
         return Err(ContractError::DuplicatePosition);
     }
 
-    // claim if the user has open positions to ensure that the user gets reward for current weight
-    // rather than future weight after opening the position
-    // todo remove? not needed if we are keeping history of the user's weight
-    // if !OPEN_POSITIONS
-    //     .may_load(deps.storage, receiver.sender.clone())?
-    //     .unwrap_or_default()
-    //     .is_empty()
-    // {
-    //     // TODO maybe there's something broken here?
-    //     println!("claiming");
-    //     messages.append(&mut crate::claim::claim(&mut deps, &env, &receiver)?);
-    // }
-
     // create the new position
     OPEN_POSITIONS.update::<_, StdError>(deps.storage, receiver.sender.clone(), |positions| {
         let mut positions = positions.unwrap_or_default();
-        println!("adding position");
         positions.push(OpenPosition {
             amount,
             unbonding_duration,
@@ -99,37 +81,25 @@ pub fn open_position(
         Ok(positions)
     })?;
 
-    println!("updating weight");
-    //TODO look at weight calculation
-    // add the weight
+    // add the weight to the global weight and the user's weight
     let weight = calculate_weight(unbonding_duration, amount)?;
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
         Ok(global_weight.checked_add(weight)?)
     })?;
-    // ADDRESS_WEIGHT.update::<_, StdError>(deps.storage, receiver.sender.clone(), |user_weight| {
-    //     Ok(user_weight.unwrap_or_default().checked_add(weight)?)
-    // })?;
-
-    // TODO new stuff, remove/refactor old stuff
-
-    let epoch_response: white_whale::fee_distributor::EpochResponse =
-        deps.querier.query_wasm_smart(
-            config.fee_distributor_address.into_string(),
-            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
-        )?;
 
     let mut user_weight = ADDRESS_WEIGHT
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or_default();
     user_weight = user_weight.checked_add(weight)?;
+    ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
+
+    let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
 
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&info.sender.clone(), epoch_response.epoch.id.u64() + 1u64),
+        (&info.sender, current_epoch + 1u64),
         |_| Ok(user_weight),
     )?;
-
-    ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
 
     Ok(Response::default()
         .add_attributes(vec![

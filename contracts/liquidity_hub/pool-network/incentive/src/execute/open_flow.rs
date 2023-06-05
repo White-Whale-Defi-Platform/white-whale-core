@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{
     to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError,
-    StdResult, Timestamp, Uint128, WasmMsg,
+    StdResult, Uint128, WasmMsg,
 };
 
 use white_whale::pool_network::incentive::Flow;
@@ -14,12 +14,13 @@ use white_whale::pool_network::{
 
 use crate::{
     error::ContractError,
+    helpers,
     state::{CONFIG, FLOWS, FLOW_COUNTER},
 };
 
 const MIN_FLOW_AMOUNT: Uint128 = Uint128::new(1_000u128);
-const DAY_IN_SECONDS: u64 = 86_400u64;
 
+/// Opens a flow to incentivize liquidity providers
 pub fn open_flow(
     deps: DepsMut,
     env: Env,
@@ -152,13 +153,11 @@ pub fn open_flow(
                                 min: MIN_FLOW_AMOUNT,
                             });
                         }
-                    } else {
-                        if flow_fee_allowance.allowance < flow_fee.amount {
-                            return Err(ContractError::FlowFeeNotPaid {
-                                paid_amount: flow_fee_allowance.allowance,
-                                required_amount: flow_fee.amount,
-                            });
-                        }
+                    } else if flow_fee_allowance.allowance < flow_fee.amount {
+                        return Err(ContractError::FlowFeeNotPaid {
+                            paid_amount: flow_fee_allowance.allowance,
+                            required_amount: flow_fee.amount,
+                        });
                     }
                 }
                 AssetInfo::NativeToken { .. } => {
@@ -202,23 +201,13 @@ pub fn open_flow(
         });
     }
 
-    // todo remove
-    // // verify that not too many flows have been made for this LP token
-    // let flows = u64::try_from(FLOWS.load(deps.storage)?.len())
-    //     .map_err(|_| StdError::generic_err("Failed to parse flow count"))?;
-    // if flows >= incentive_factory_config.max_concurrent_flows {
-    //     return Err(ContractError::TooManyFlows {
-    //         maximum: incentive_factory_config.max_concurrent_flows,
-    //     });
-    // }
-
     // transfer the `flow_asset` over to us if it was a cw20 token
     // otherwise, verify the user sent the claimed amount in `info.funds`
     match flow_asset.info.clone() {
         AssetInfo::NativeToken {
             denom: flow_asset_denom,
         } => {
-            match flow_fee.info.clone() {
+            match flow_fee.info {
                 AssetInfo::Token { .. } => {
                     info.funds
                         .iter()
@@ -266,7 +255,7 @@ pub fn open_flow(
                         // create the transfer message to us
                         messages.push(
                             WasmMsg::Execute {
-                                contract_addr: flow_asset_contract_addr.clone(),
+                                contract_addr: flow_asset_contract_addr,
                                 msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
@@ -295,7 +284,7 @@ pub fn open_flow(
                         // the fee_flow.amount is being sent to the fee_collector_addr above
                         messages.push(
                             WasmMsg::Execute {
-                                contract_addr: flow_asset_contract_addr.clone(),
+                                contract_addr: flow_asset_contract_addr,
                                 msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
@@ -314,7 +303,7 @@ pub fn open_flow(
 
                     messages.push(
                         WasmMsg::Execute {
-                            contract_addr: flow_asset_contract_addr.clone(),
+                            contract_addr: flow_asset_contract_addr,
                             msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.clone().into_string(),
                                 recipient: env.contract.address.into_string(),
@@ -329,15 +318,7 @@ pub fn open_flow(
         }
     }
 
-    // TODO new stuff, remove/refactor old stuff
-
-    let epoch_response: white_whale::fee_distributor::EpochResponse =
-        deps.querier.query_wasm_smart(
-            config.fee_distributor_address.into_string(),
-            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
-        )?;
-
-    let current_epoch = epoch_response.epoch.id.u64();
+    let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
 
     // ensure the flow is set for a expire date in the future
     if current_epoch > end_epoch {
@@ -356,56 +337,27 @@ pub fn open_flow(
         return Err(ContractError::FlowStartTooFar);
     }
 
-    // calculate end epoch by calculating for how many epochs the flow will be active given the start and end timestamps
-    // round down when calculating the number of epochs
-    let flow_duration_in_epochs = end_epoch.clone() - start_epoch.clone();
     //let emissions_per_epoch = flow_asset.amount.checked_div_euclid(Uint128::from(flow_duration_in_epochs))?;
     let emissions_per_epoch = Uint128::zero();
 
-    // emitted_tokens -> tokens that are available for claimed and unclaimed.
-    // flow_duration - flow_epoch should be 1 at the end fo the flow
-    //let emission = (total_tokens - emitted_tokens) / (flow_duration - flow_epoch)
-
     // add the flow
     let flow_id =
-        FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1))?;
+        FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1u64))?;
 
     FLOWS.save(
         deps.storage,
         (start_epoch, flow_id),
         &Flow {
             flow_creator: info.sender.clone(),
-            flow_id: flow_id.clone(),
+            flow_id,
             curve: curve.clone(),
             flow_asset: flow_asset.clone(),
             claimed_amount: Uint128::zero(),
-            start_timestamp: env.block.time.seconds().clone(), //todo remove this stuff after the start_epoch and end_epoch are settled
-            end_timestamp: env.block.time.seconds().clone(),
             start_epoch,
             end_epoch,
-            emissions_per_epoch, //todo remove as not used
             emitted_tokens: HashMap::new(),
         },
     )?;
-
-    // todo remove
-    // FLOWS.update::<_, StdError>(deps.storage, |mut flows| {
-    //     flows.push(white_whale::pool_network::incentive::Flow {
-    //         flow_creator: info.sender.clone(),
-    //         flow_id: flow_id.clone(),
-    //         curve: curve.clone(),
-    //         flow_asset: flow_asset.clone(),
-    //         claimed_amount: Uint128::zero(),
-    //         start_timestamp: env.block.time.seconds().clone(), //todo remove this stuff after the start_epoch and end_epoch are settled
-    //         end_timestamp: env.block.time.seconds().clone(),
-    //         start_epoch,
-    //         end_epoch,
-    //         emissions_per_epoch, //todo remove as not used
-    //         emitted_tokens: HashMap::new(),
-    //     });
-    //
-    //     Ok(flows)
-    // })?;
 
     Ok(Response::default()
         .add_attributes(vec![
