@@ -58,7 +58,7 @@ pub fn open_position(
             funds: info.funds.clone(),
             sender: receiver,
         })
-        .unwrap_or(info.clone());
+        .unwrap_or_else(|| info.clone());
 
     // ensure an existing position with this unbonding time doesn't exist
     let existing_position = OPEN_POSITIONS

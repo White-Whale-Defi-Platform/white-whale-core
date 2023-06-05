@@ -3,6 +3,7 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
+      "description": "Deposits assets into a pair pool and opens or expands a position on the respective incentive contract with the received LP tokens.",
       "type": "object",
       "required": [
         "deposit"
@@ -45,6 +46,36 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Updates the configuration of the frontend helper.",
+      "type": "object",
+      "required": [
+        "update_config"
+      ],
+      "properties": {
+        "update_config": {
+          "type": "object",
+          "properties": {
+            "incentive_factory_addr": {
+              "description": "The new incentive_factory_addr.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "owner": {
+              "description": "The new owner.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
