@@ -609,6 +609,7 @@ dependencies = [
  "cw2 0.15.1",
  "cw20",
  "cw20-base",
+ "fee-distributor-mock",
  "incentive",
  "incentive-factory",
  "schemars",

@@ -53,3 +53,13 @@ pub fn store_fee_distributor(app: &mut App) -> u64 {
 
     app.store_code(contract)
 }
+
+pub fn fee_distributor_mock_contract(app: &mut App) -> u64 {
+    let contract = Box::new(ContractWrapper::new(
+        fee_distributor_mock::contract::execute,
+        fee_distributor_mock::contract::instantiate,
+        fee_distributor_mock::contract::query,
+    ));
+
+    app.store_code(contract)
+}

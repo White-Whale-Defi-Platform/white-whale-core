@@ -1,3 +1,5 @@
+use crate::tests::mock_info::mock_creator;
+use crate::tests::store_code::fee_distributor_mock_contract;
 use cosmwasm_std::{to_binary, Addr, Decimal, Uint128, WasmMsg};
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
@@ -7,7 +9,6 @@ use white_whale::{
 };
 
 use super::{
-    mock_creator,
     mock_info::mock_admin,
     store_code::{
         store_cw20_token_code, store_factory_code, store_frontend_helper, store_incentive,
@@ -18,8 +19,10 @@ use super::{
 pub struct AppInstantiateResponse {
     pub frontend_helper: Addr,
     pub pair_address: Addr,
+    pub lp_token: AssetInfo,
     /// The returned pool assets.
     pub pool_assets: [AssetInfo; 2],
+    pub incentive_factory: Addr,
 }
 
 pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppInstantiateResponse {
@@ -28,6 +31,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
     let incentive_id = store_incentive(app);
     let frontend_helper_id = store_frontend_helper(app);
     let pair_id = store_pair(app);
+    let fee_distributor_id = fee_distributor_mock_contract(app);
 
     // if the pair needs a token, create it and give the token to the user
     let pool_assets: [AssetInfo; 2] = pool_assets
@@ -105,6 +109,18 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         .unwrap()
         .liquidity_token;
 
+    // create the fee distributor to use
+    let fee_distributor = app
+        .instantiate_contract(
+            fee_distributor_id,
+            mock_admin().sender,
+            &fee_distributor_mock::msg::InstantiateMsg {},
+            &[],
+            "mock fee distributor",
+            None,
+        )
+        .unwrap();
+
     let incentive_factory = app
         .instantiate_contract(
             factory_id,
@@ -122,7 +138,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
                 max_flow_epoch_buffer: 100,
                 max_unbonding_duration: 100000,
                 min_unbonding_duration: 86400,
-                fee_distributor_addr: "fee_distributor".to_string(),
+                fee_distributor_addr: fee_distributor.to_string(),
             },
             &[],
             "mock incentive factory",
@@ -162,6 +178,8 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
     AppInstantiateResponse {
         frontend_helper,
         pair_address: pair,
+        lp_token,
         pool_assets,
+        incentive_factory,
     }
 }

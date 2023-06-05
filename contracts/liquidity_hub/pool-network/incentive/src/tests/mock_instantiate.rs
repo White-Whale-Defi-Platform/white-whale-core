@@ -8,12 +8,13 @@ use white_whale::fee_distributor::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::contract::instantiate;
-use crate::tests::store_code::store_fee_distributor;
 
 use super::{
     mock_creator,
     mock_info::mock_admin,
-    store_code::{store_cw20_token_code, store_factory_code, store_incentive},
+    store_code::{
+        fee_distributor_mock_contract, store_cw20_token_code, store_factory_code, store_incentive,
+    },
 };
 
 pub fn mock_instantiate() -> (OwnedDeps<MockStorage, MockApi, MockQuerier>, Env) {
@@ -47,7 +48,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
     let factory_id = store_factory_code(app);
     let token_id = store_cw20_token_code(app);
     let incentive_id = store_incentive(app);
-    let fee_distributor_id = store_fee_distributor(app);
+    let fee_distributor_id = fee_distributor_mock_contract(app);
 
     // create the LP token to use
     let lp_addr = app
@@ -76,7 +77,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
     };
 
     // create the fee distributor to use
-    let lp_addr = app
+    let fee_distributor = app
         .instantiate_contract(
             fee_distributor_id,
             mock_admin().sender,
@@ -115,7 +116,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
                 max_flow_epoch_buffer: 100,
                 max_unbonding_duration: 31556926,
                 min_unbonding_duration: 86400,
-                fee_distributor_addr: "fee_distributor_addr".to_string(),
+                fee_distributor_addr: fee_distributor.to_string(),
             },
             &[],
             "mock incentive factory",

@@ -100,7 +100,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
 			return false;
 		};
 
-		return unbonding_duration == position_unbonding_duration;
+		unbonding_duration == position_unbonding_duration
     });
 
     Ok(Response::default()
@@ -109,7 +109,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
             ("pair_address", pair_addr.to_string().as_str()),
             ("lp_amount", &lp_amount.to_string()),
             ("unbonding_duration", &unbonding_duration.to_string()),
-            ("receiver", &receiver.to_string()),
+            ("receiver", receiver.as_ref()),
         ])
         .add_messages(messages)
         .add_message(WasmMsg::Execute {

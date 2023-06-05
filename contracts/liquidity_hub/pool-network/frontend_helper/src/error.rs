@@ -20,6 +20,9 @@ pub enum ContractError {
     #[error("Failed to deposit due to {reason}")]
     DepositCallback { reason: String },
 
+    #[error("Sender is not authorized to invoke functions on the frontend helper")]
+    Unauthorized {},
+
     #[error("Pair had no incentive associated with it")]
     MissingIncentive { pair_address: String },
 

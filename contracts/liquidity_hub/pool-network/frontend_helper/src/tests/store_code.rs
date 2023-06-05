@@ -1,4 +1,3 @@
-use cosmwasm_std::StdError;
 use cw_multi_test::{App, ContractWrapper};
 
 /// Stores the base CW20 contract to the app.
@@ -50,11 +49,7 @@ pub fn store_frontend_helper(app: &mut App) -> u64 {
         ContractWrapper::new(
             crate::contract::execute,
             crate::contract::instantiate,
-            |_, _, _: white_whale::pool_network::incentive::QueryMsg| {
-                Err(StdError::generic_err(
-                    "query not implemented for frontend helper",
-                ))
-            },
+            crate::contract::query,
         )
         .with_reply(crate::contract::reply)
         .with_migrate(crate::contract::migrate),
@@ -73,6 +68,16 @@ pub fn store_pair(app: &mut App) -> u64 {
         .with_migrate(terraswap_pair::contract::migrate)
         .with_reply(terraswap_pair::contract::reply),
     );
+
+    app.store_code(contract)
+}
+
+pub fn fee_distributor_mock_contract(app: &mut App) -> u64 {
+    let contract = Box::new(ContractWrapper::new(
+        fee_distributor_mock::contract::execute,
+        fee_distributor_mock::contract::instantiate,
+        fee_distributor_mock::contract::query,
+    ));
 
     app.store_code(contract)
 }

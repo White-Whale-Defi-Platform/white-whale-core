@@ -1,13 +1,15 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, Reply, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
+use semver::Version;
+
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::frontend_helper::{
-    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, TempState,
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TempState,
 };
-
-use semver::Version;
 use white_whale::traits::OptionDecimal;
 
 use crate::error::ContractError;
@@ -20,17 +22,18 @@ use crate::state::{CONFIG, TEMP_STATE};
 const CONTRACT_NAME: &str = "white_whale-frontend-helper";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
         incentive_factory_addr: deps.api.addr_validate(&msg.incentive_factory)?,
+        owner: deps.api.addr_validate(info.sender.as_ref())?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -38,7 +41,7 @@ pub fn instantiate(
     Ok(Response::new())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -140,11 +143,39 @@ pub fn execute(
                     .into(),
                 }))
         }
+        ExecuteMsg::UpdateConfig {
+            incentive_factory_addr,
+            owner,
+        } => {
+            let mut config = CONFIG.load(deps.storage)?;
+            if config.owner != info.sender {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            if let Some(owner) = owner {
+                config.owner = deps.api.addr_validate(&owner)?;
+            }
+
+            if let Some(incentive_factory_addr) = incentive_factory_addr {
+                config.incentive_factory_addr = deps.api.addr_validate(&incentive_factory_addr)?;
+            }
+
+            CONFIG.save(deps.storage, &config)?;
+
+            Ok(Response::default().add_attributes(vec![
+                ("action", "update_config".to_string()),
+                ("owner", config.owner.to_string()),
+                (
+                    "incentive_factory_addr",
+                    config.incentive_factory_addr.to_string(),
+                ),
+            ]))
+        }
     }
 }
 
 /// Handles reply messages from submessages sent out by the frontend contract.
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         DEPOSIT_PAIR_REPLY_ID => reply::deposit_pair::deposit_pair(deps, env, msg),
@@ -152,8 +183,15 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
     }
 }
 
+#[entry_point]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => Ok(to_binary(&CONFIG.load(deps.storage)?)?),
+    }
+}
+
 #[cfg(not(tarpaulin_include))]
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
