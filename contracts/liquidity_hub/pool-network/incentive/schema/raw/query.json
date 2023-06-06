@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Retrieves the current contract configuration.",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves a specific flow.",
+      "type": "object",
+      "required": [
+        "flow"
+      ],
+      "properties": {
+        "flow": {
+          "type": "object",
+          "required": [
+            "flow_id"
+          ],
+          "properties": {
+            "flow_id": {
+              "description": "The id of the flow to find.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the current flows.",
+      "type": "object",
+      "required": [
+        "flows"
+      ],
+      "properties": {
+        "flows": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the positions for an address.",
+      "type": "object",
+      "required": [
+        "positions"
+      ],
+      "properties": {
+        "positions": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to get positions for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards for an address.",
+      "type": "object",
+      "required": [
+        "rewards"
+      ],
+      "properties": {
+        "rewards": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to get all the incentive rewards for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}
