@@ -8,6 +8,7 @@ pub fn update_config(
     deps: DepsMut,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
+    fee_distributor_addr: Option<String>,
     create_flow_fee: Option<Asset>,
     max_concurrent_flows: Option<u64>,
     incentive_contract_id: Option<u64>,
@@ -23,6 +24,10 @@ pub fn update_config(
 
     if let Some(fee_collector_addr) = fee_collector_addr {
         config.fee_collector_addr = deps.api.addr_validate(&fee_collector_addr)?;
+    }
+
+    if let Some(fee_distributor_addr) = fee_distributor_addr {
+        config.fee_distributor_addr = deps.api.addr_validate(&fee_distributor_addr)?;
     }
 
     if let Some(create_flow_fee) = create_flow_fee {
@@ -73,6 +78,10 @@ pub fn update_config(
         ("action", "update_config".to_string()),
         ("owner", config.owner.to_string()),
         ("fee_collector_addr", config.fee_collector_addr.to_string()),
+        (
+            "fee_distributor_addr",
+            config.fee_distributor_addr.to_string(),
+        ),
         ("create_flow_fee", config.create_flow_fee.to_string()),
         (
             "max_concurrent_flows",
@@ -154,6 +163,7 @@ mod tests {
         let msg = UpdateConfig {
             owner: Some("new_owner".to_string()),
             fee_collector_addr: Some("new_fee_collector_addr".to_string()),
+            fee_distributor_addr: Some("new_fee_distributor_addr".to_string()),
             create_flow_fee: Some(Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -178,7 +188,7 @@ mod tests {
             Config {
                 owner: Addr::unchecked("new_owner"),
                 fee_collector_addr: Addr::unchecked("new_fee_collector_addr"),
-                fee_distributor_addr: Addr::unchecked("fee_distributor_addr"),
+                fee_distributor_addr: Addr::unchecked("new_fee_distributor_addr"),
                 create_flow_fee: Asset {
                     info: AssetInfo::NativeToken {
                         denom: "uwhale".to_string()
@@ -220,6 +230,7 @@ mod tests {
         let msg = UpdateConfig {
             owner: None,
             fee_collector_addr: None,
+            fee_distributor_addr: None,
             create_flow_fee: None,
             max_concurrent_flows: Some(0u64),
             incentive_code_id: None,
@@ -245,6 +256,7 @@ mod tests {
         let msg = UpdateConfig {
             owner: None,
             fee_collector_addr: None,
+            fee_distributor_addr: None,
             create_flow_fee: None,
             max_concurrent_flows: None,
             incentive_code_id: None,
@@ -262,6 +274,7 @@ mod tests {
         let msg = UpdateConfig {
             owner: None,
             fee_collector_addr: None,
+            fee_distributor_addr: None,
             create_flow_fee: None,
             max_concurrent_flows: None,
             incentive_code_id: None,
