@@ -102,6 +102,7 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
+            fee_distributor_addr,
             create_flow_fee,
             max_concurrent_flows,
             incentive_code_id: incentive_contract_id,
@@ -112,6 +113,7 @@ pub fn execute(
             deps,
             owner,
             fee_collector_addr,
+            fee_distributor_addr,
             create_flow_fee,
             max_concurrent_flows,
             incentive_contract_id,

@@ -52,6 +52,13 @@
                 "null"
               ]
             },
+            "fee_distributor_addr": {
+              "description": "The new fee distributor address to get epochs from.\n\nIf unspecified, the fee distributor address will not change.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "incentive_code_id": {
               "description": "The new code ID of the incentive contract.\n\nIf unspecified, the incentive contract id will not change.",
               "type": [

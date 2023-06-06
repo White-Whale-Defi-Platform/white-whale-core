@@ -41,6 +41,10 @@ pub enum ExecuteMsg {
         ///
         /// If unspecified, the fee collector address will not change.
         fee_collector_addr: Option<String>,
+        /// The new fee distributor address to get epochs from.
+        ///
+        /// If unspecified, the fee distributor address will not change.
+        fee_distributor_addr: Option<String>,
         /// The new fee that must be paid to create a flow.
         ///
         /// If unspecified, the flow fee will not change.
