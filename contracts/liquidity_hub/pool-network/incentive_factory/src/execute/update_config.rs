@@ -11,7 +11,7 @@ pub fn update_config(
     fee_distributor_addr: Option<String>,
     create_flow_fee: Option<Asset>,
     max_concurrent_flows: Option<u64>,
-    incentive_contract_id: Option<u64>,
+    incentive_code_id: Option<u64>,
     max_flow_start_time_buffer: Option<u64>,
     min_unbonding_duration: Option<u64>,
     max_unbonding_duration: Option<u64>,
@@ -42,8 +42,8 @@ pub fn update_config(
         config.max_concurrent_flows = max_concurrent_flows;
     }
 
-    if let Some(incentive_contract_id) = incentive_contract_id {
-        config.incentive_code_id = incentive_contract_id;
+    if let Some(incentive_code_id) = incentive_code_id {
+        config.incentive_code_id = incentive_code_id;
     }
 
     if let Some(max_flow_start_time_buffer) = max_flow_start_time_buffer {
