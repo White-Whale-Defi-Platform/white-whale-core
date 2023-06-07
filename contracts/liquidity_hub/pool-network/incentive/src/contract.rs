@@ -1,6 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, Uint128};
+use cosmwasm_std::{
+    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale::pool_network::incentive::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
@@ -21,7 +23,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -58,7 +60,13 @@ pub fn instantiate(
             &white_whale::pool_network::incentive::InstantiateReplyCallback {
                 lp_asset: msg.lp_asset,
             },
-        )?))
+        )?)
+        // takes a snapshot of the global weight at the current epoch from the start
+        .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: env.contract.address.to_string(),
+            msg: to_binary(&ExecuteMsg::TakeGlobalWeightSnapshot {})?,
+            funds: vec![],
+        })))
 }
 
 #[entry_point]

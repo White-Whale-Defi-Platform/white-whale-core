@@ -1,4 +1,5 @@
 use cosmwasm_std::{Decimal256, Deps, Uint128, Uint256};
+
 use white_whale::pool_network::{asset::Asset, incentive::RewardsResponse};
 
 use crate::error::ContractError;
@@ -16,7 +17,7 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
     if let Some(last_claimed_epoch) = last_claimed_epoch {
         // if the last claimed epoch is the same as the current epoch, then there is nothing to claim
         if current_epoch == last_claimed_epoch {
-            return Err(ContractError::NothingToClaim {});
+            return Ok(RewardsResponse { rewards: vec![] });
         }
     }
 

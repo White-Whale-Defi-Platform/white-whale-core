@@ -2740,16 +2740,8 @@ fn open_flow_positions_and_claim_native_token_incentive() {
             carol.clone(),
             |result| {
                 // There's nothing left to claim
-                let err = result.unwrap_err();
-                match err {
-                    StdError::GenericErr { msg } => {
-                        assert_eq!(
-                            msg.rsplit_once(": ").unwrap().1,
-                            (ContractError::NothingToClaim {}).to_string()
-                        );
-                    }
-                    _ => panic!("Unexpected error type"),
-                }
+                let result = result.unwrap();
+                assert!(result.rewards.is_empty());
             },
         );
 }
@@ -3122,17 +3114,9 @@ fn open_flow_positions_claim_cw20_token_incentive() {
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
-                // There's nothing left to claim
-                let err = result.unwrap_err();
-                match err {
-                    StdError::GenericErr { msg } => {
-                        assert_eq!(
-                            msg.rsplit_once(": ").unwrap().1,
-                            (ContractError::NothingToClaim {}).to_string()
-                        );
-                    }
-                    _ => panic!("Unexpected error type"),
-                }
+                // There's nothing left to claim, returns an empty vector
+                let response = result.unwrap();
+                assert!(response.rewards.is_empty());
             },
         );
 }
@@ -4096,13 +4080,26 @@ fn take_global_weight_snapshot() {
             *incentive_addr.borrow_mut() = incentive.unwrap();
         })
         .take_global_weight_snapshot(incentive_addr.clone().into_inner(), |result| {
-            result.unwrap();
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+            // a snapshot with weight 0 for the current epoch is taken when instantiating the incentive contract
+            match err {
+                ContractError::GlobalWeightSnapshotAlreadyExists { epoch } => assert_eq!(epoch, 1),
+                _ => panic!(
+                    "Wrong error type, should return ContractError::GlobalWeightSnapshotAlreadyExists"
+                ),
+            }
+
+        })
+        .create_epochs_on_fee_distributor_without_snapshot_on_incentive(1)
+        .take_global_weight_snapshot(incentive_addr.clone().into_inner(), |result| {
+           result.unwrap();
         })
         .take_global_weight_snapshot(incentive_addr.clone().into_inner(), |result| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
             match err {
-                ContractError::GlobalWeightSnapshotAlreadyExists { epoch } => assert_eq!(epoch, 1),
+                ContractError::GlobalWeightSnapshotAlreadyExists { epoch } => assert_eq!(epoch, 2),
                 _ => panic!(
                     "Wrong error type, should return ContractError::GlobalWeightSnapshotAlreadyExists"
                 ),
