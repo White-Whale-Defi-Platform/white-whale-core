@@ -525,6 +525,26 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn create_epochs_on_fee_distributor_without_snapshot_on_incentive(
+        &mut self,
+        epoch_amount: u64,
+    ) -> &mut Self {
+        let msg = white_whale::fee_distributor::ExecuteMsg::NewEpoch {};
+
+        for _ in 0..epoch_amount {
+            self.app
+                .execute_contract(
+                    self.senders[0].clone(),
+                    self.fee_distributor_addr.clone(),
+                    &msg,
+                    &vec![],
+                )
+                .unwrap();
+        }
+
+        self
+    }
+
     pub(crate) fn take_global_weight_snapshot(
         &mut self,
         incentive_addr: Addr,
