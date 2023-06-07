@@ -4110,3 +4110,119 @@ fn take_global_weight_snapshot() {
         })
     ;
 }
+
+#[test]
+fn open_expand_position_with_optional_receiver() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(100_000_000_000u128, "uwhale".to_string()),
+        coin(100_000_000_000u128, "usdc".to_string()),
+        coin(100_000_000_000u128, "ampWHALE".to_string()),
+    ]);
+    let alice = suite.creator();
+    let bob = suite.senders[1].clone();
+
+    suite.instantiate_default_native_fee();
+
+    let incentive_asset = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let incentive_asset_addr = suite.cw20_tokens.first().unwrap().clone();
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    let flow_asset_1 = AssetInfo::NativeToken {
+        denom: "ampWHALE".to_string(),
+    };
+
+    suite
+        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(incentive_asset.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    // alice creates two flows
+    let time = Timestamp::from_seconds(1684766796u64);
+    suite.set_time(time);
+
+    let current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    suite
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,                                    //epoch 11
+            current_epoch.clone().into_inner() + 10, // epoch 21
+            Curve::Linear,
+            Asset {
+                info: flow_asset_1.clone(),
+                amount: Uint128::new(1_000_000_000u128),
+            },
+            &vec![
+                coin(1_000_000_000u128, "ampWHALE"),
+                coin(1_000u128, "uwhale"),
+            ],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+            assert_eq!(flows.len(), 1);
+            assert_eq!(
+                flows[0].clone().flow_asset.amount,
+                Uint128::new(1_000_000_000u128)
+            );
+        });
+
+    let position = incentive::OpenPosition {
+        amount: Uint128::new(1_000u128),
+        unbonding_duration: 86400u64,
+    };
+
+    suite
+        .increase_allowance(
+            alice.clone(),
+            incentive_asset_addr.clone(),
+            Uint128::new(2_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .open_incentive_position(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            position.amount,
+            position.unbonding_duration,
+            Some(bob.clone().into_string()),
+            vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                assert!(result.unwrap().positions.is_empty());
+            },
+        )
+        .query_positions(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            assert_eq!(result.unwrap().positions.len(), 1usize);
+        })
+        .create_epochs_on_fee_distributor(5, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(incentive_addr.clone().into_inner(), bob, |result| {
+            // Bob has some rewards as Alice opened a position for him
+            assert!(result.unwrap().rewards[0].amount > Uint128::zero());
+        })
+        .query_rewards(incentive_addr.clone().into_inner(), alice, |result| {
+            // Alice should have 0, as she didn't open any position for herself but for Bob
+            assert_eq!(result.unwrap().rewards[0].amount, Uint128::zero());
+        });
+}
