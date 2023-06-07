@@ -88,16 +88,16 @@ pub fn open_position(
     })?;
 
     let mut user_weight = ADDRESS_WEIGHT
-        .may_load(deps.storage, info.sender.clone())?
+        .may_load(deps.storage, receiver.sender.clone())?
         .unwrap_or_default();
     user_weight = user_weight.checked_add(weight)?;
-    ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
+    ADDRESS_WEIGHT.save(deps.storage, receiver.sender.clone(), &user_weight)?;
 
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
 
     ADDRESS_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&info.sender, current_epoch + 1u64),
+        (&receiver.sender, current_epoch + 1u64),
         |_| Ok(user_weight),
     )?;
 

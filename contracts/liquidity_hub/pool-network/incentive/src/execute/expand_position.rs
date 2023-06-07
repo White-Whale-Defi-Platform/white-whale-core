@@ -41,7 +41,7 @@ pub fn expand_position(
             funds: info.funds.clone(),
             sender: receiver,
         })
-        .unwrap_or(info);
+        .unwrap_or_else(|| info.clone());
 
     // increase position
     OPEN_POSITIONS.update::<_, ContractError>(
