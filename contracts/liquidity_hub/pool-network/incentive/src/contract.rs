@@ -114,6 +114,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
         }
         QueryMsg::Rewards { address } => Ok(to_binary(&queries::get_rewards(deps, address)?)?),
+        QueryMsg::GlobalWeight { epoch_id } => {
+            Ok(to_binary(&queries::get_global_weight(deps, epoch_id)?)?)
+        }
+        QueryMsg::CurrentEpochRewardsShare { address } => Ok(to_binary(
+            &queries::get_rewards_share(deps, deps.api.addr_validate(&address)?)?,
+        )?),
     }
 }
 

@@ -136,7 +136,7 @@ pub enum ContractError {
     GlobalWeightSnapshotAlreadyExists { epoch: u64 },
 
     #[error("The global weight snapshot for the current epoch has not been taken")]
-    GlobalWeightSnapshotNotTaken {},
+    GlobalWeightSnapshotNotTakenForEpoch { epoch: u64 },
 
     #[error("There's nothing to claim for this address")]
     NothingToClaim {},

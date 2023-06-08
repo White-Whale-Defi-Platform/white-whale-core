@@ -11,7 +11,9 @@ pub fn claim(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractE
 
     let global_weight_snapshot = GLOBAL_WEIGHT_SNAPSHOT.may_load(deps.storage, current_epoch)?;
     if global_weight_snapshot.is_none() {
-        return Err(ContractError::GlobalWeightSnapshotNotTaken {});
+        return Err(ContractError::GlobalWeightSnapshotNotTakenForEpoch {
+            epoch: current_epoch,
+        });
     }
 
     Ok(Response::default()

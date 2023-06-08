@@ -100,6 +100,54 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards for an address.",
+      "type": "object",
+      "required": [
+        "global_weight"
+      ],
+      "properties": {
+        "global_weight": {
+          "type": "object",
+          "required": [
+            "epoch_id"
+          ],
+          "properties": {
+            "epoch_id": {
+              "description": "The epoch to get the global weight for.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards/weight share of an address for the current epoch.",
+      "type": "object",
+      "required": [
+        "current_epoch_rewards_share"
+      ],
+      "properties": {
+        "current_epoch_rewards_share": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to query the rewards share for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ]
 }
