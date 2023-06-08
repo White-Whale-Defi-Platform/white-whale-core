@@ -5,7 +5,8 @@ use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 use white_whale::fee_distributor::EpochResponse;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive::{
-    Curve, Flow, FlowResponse, PositionsResponse, RewardsResponse,
+    Curve, Flow, FlowResponse, GlobalWeightResponse, PositionsResponse, RewardsResponse,
+    RewardsShareResponse,
 };
 use white_whale::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
@@ -611,6 +612,42 @@ impl TestingSuite {
         );
 
         result(incentive_response);
+
+        self
+    }
+
+    pub(crate) fn query_incentive_global_weight(
+        &mut self,
+        incentive_addr: Addr,
+        epoch_id: u64,
+        result: impl Fn(StdResult<GlobalWeightResponse>),
+    ) -> &mut Self {
+        let global_weight_response: StdResult<GlobalWeightResponse> =
+            self.app.wrap().query_wasm_smart(
+                &incentive_addr,
+                &white_whale::pool_network::incentive::QueryMsg::GlobalWeight { epoch_id },
+            );
+
+        result(global_weight_response);
+
+        self
+    }
+
+    pub(crate) fn query_current_epoch_rewards_share(
+        &mut self,
+        incentive_addr: Addr,
+        address: Addr,
+        result: impl Fn(StdResult<RewardsShareResponse>),
+    ) -> &mut Self {
+        let current_epoch_rewards_share: StdResult<RewardsShareResponse> =
+            self.app.wrap().query_wasm_smart(
+                &incentive_addr,
+                &white_whale::pool_network::incentive::QueryMsg::CurrentEpochRewardsShare {
+                    address: address.to_string(),
+                },
+            );
+
+        result(current_epoch_rewards_share);
 
         self
     }

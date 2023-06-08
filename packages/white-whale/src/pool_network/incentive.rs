@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal256, Uint128};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -157,6 +157,18 @@ pub enum QueryMsg {
         /// The address to get all the incentive rewards for.
         address: String,
     },
+    /// Retrieves the rewards for an address.
+    #[returns(GlobalWeightResponse)]
+    GlobalWeight {
+        /// The epoch to get the global weight for.
+        epoch_id: u64,
+    },
+    /// Retrieves the rewards/weight share of an address for the current epoch.
+    #[returns(RewardsShareResponse)]
+    CurrentEpochRewardsShare {
+        /// The address to query the rewards share for.
+        address: String,
+    },
 }
 
 /// Stores the reply data set in the response when instantiating an incentive contract.
@@ -243,4 +255,21 @@ pub struct PositionsResponse {
 pub struct RewardsResponse {
     /// The rewards that is available to a user if they executed the `claim` function at this point.
     pub rewards: Vec<Asset>,
+}
+
+#[cw_serde]
+pub struct GlobalWeightResponse {
+    /// the global weight of the incentive contract for the given epoch
+    pub global_weight: Uint128,
+    /// Epoch id for which the global weight is calculated
+    pub epoch_id: u64,
+}
+
+#[cw_serde]
+pub struct RewardsShareResponse {
+    pub address: Addr,
+    pub global_weight: Uint128,
+    pub address_weight: Uint128,
+    pub share: Decimal256,
+    pub epoch_id: u64,
 }

@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 
-use cosmwasm_std::{coin, coins, Addr, StdError, Timestamp, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal256, Timestamp, Uint128};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
-use white_whale::pool_network::incentive::{Curve, Flow};
+use white_whale::pool_network::incentive::{Curve, Flow, RewardsShareResponse};
 use white_whale::pool_network::incentive_factory::IncentivesContract;
 
 use crate::error::ContractError;
@@ -3224,7 +3224,15 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 flows[1].clone().flow_asset.amount,
                 Uint128::new(10_000_000_000u128)
             );
-        });
+        })
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(rewards_share.share, Decimal256::zero()); // alice has not bonded anything yet, for the current epoch she has 0 share
+            },
+        );
 
     // alice bonds 1k, unbonding 1 day
     // bob bonds 2k, unbonding in 1 day
@@ -3357,6 +3365,26 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
     println!("--------HEEEERE-------");
     // lets query rewards and claim with alice and bob, carol will claim at the end all at once
     suite
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(
+                    rewards_share,
+                    RewardsShareResponse {
+                        address: alice.clone(),
+                        global_weight: Uint128::new(6_000u128),
+                        address_weight: Uint128::new(1_000u128),
+                        share: Decimal256::from_ratio(
+                            Uint128::new(1_000u128),
+                            Uint128::new(6_000u128)
+                        ),
+                        epoch_id: 16u64,
+                    }
+                );
+            },
+        )
         .query_rewards(
             incentive_addr.clone().into_inner(),
             alice.clone(),
@@ -3504,6 +3532,26 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                             amount: Uint128::new(499_999_998u128),
                         },
                     ]
+                );
+            },
+        )
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(
+                    rewards_share,
+                    RewardsShareResponse {
+                        address: alice.clone(),
+                        global_weight: Uint128::new(6_000u128),
+                        address_weight: Uint128::new(1_000u128),
+                        share: Decimal256::from_ratio(
+                            Uint128::new(1_000u128),
+                            Uint128::new(6_000u128)
+                        ),
+                        epoch_id: 26u64,
+                    }
                 );
             },
         )
@@ -3719,6 +3767,46 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         });
 
     println!("current epoch is now -> {}", current_epoch.into_inner());
+
+    // check rewards shares
+    suite
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(
+                    rewards_share,
+                    RewardsShareResponse {
+                        address: alice.clone(),
+                        global_weight: Uint128::new(4_000u128),
+                        address_weight: Uint128::new(2_000u128),
+                        share: Decimal256::from_ratio(
+                            Uint128::new(2_000u128),
+                            Uint128::new(4_000u128)
+                        ),
+                        epoch_id: 27u64,
+                    }
+                );
+            },
+        )
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(
+                    rewards_share,
+                    RewardsShareResponse {
+                        address: carol.clone(),
+                        global_weight: Uint128::new(4_000u128),
+                        address_weight: Uint128::zero(),
+                        share: Decimal256::zero(),
+                        epoch_id: 27u64,
+                    }
+                );
+            },
+        );
 
     // let's close flow 1
     suite
@@ -4089,11 +4177,10 @@ fn take_global_weight_snapshot() {
                     "Wrong error type, should return ContractError::GlobalWeightSnapshotAlreadyExists"
                 ),
             }
-
         })
         .create_epochs_on_fee_distributor_without_snapshot_on_incentive(1)
         .take_global_weight_snapshot(incentive_addr.clone().into_inner(), |result| {
-           result.unwrap();
+            result.unwrap();
         })
         .take_global_weight_snapshot(incentive_addr.clone().into_inner(), |result| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -4139,6 +4226,9 @@ fn open_expand_position_with_optional_receiver() {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
+        })
+        .query_incentive_global_weight(incentive_addr.clone().into_inner(), 1u64, |result| {
+            assert_eq!(result.unwrap().global_weight, Uint128::zero());
         });
 
     // alice creates two flows
@@ -4214,12 +4304,33 @@ fn open_expand_position_with_optional_receiver() {
             assert_eq!(result.unwrap().positions.len(), 1usize);
         })
         .create_epochs_on_fee_distributor(5, vec![incentive_addr.clone().into_inner()])
+        .query_incentive_global_weight(incentive_addr.clone().into_inner(), 12u64, |result| {
+            assert_eq!(result.unwrap().global_weight, Uint128::new(1000u128));
+        })
         .query_rewards(incentive_addr.clone().into_inner(), bob, |result| {
             // Bob has some rewards as Alice opened a position for him
             assert!(result.unwrap().rewards[0].amount > Uint128::zero());
         })
-        .query_rewards(incentive_addr.clone().into_inner(), alice, |result| {
+        .query_rewards(incentive_addr.clone().into_inner(), alice.clone(), |result| {
             // Alice should have 0, as she didn't open any position for herself but for Bob
             assert_eq!(result.unwrap().rewards[0].amount, Uint128::zero());
+        })
+        .create_epochs_on_fee_distributor_without_snapshot_on_incentive(3u64)
+        .claim(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::GlobalWeightSnapshotNotTakenForEpoch { epoch } => assert_eq!(epoch, 19),
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::GlobalWeightSnapshotNotTakenForEpoch"
+                    ),
+                }
+            },
+        )
+        .query_incentive_global_weight(incentive_addr.clone().into_inner(), 100u64, |result| {
+            assert_eq!(result.unwrap_err().to_string().rsplit_once(": ").unwrap().1, (ContractError::GlobalWeightSnapshotNotTakenForEpoch { epoch: 100u64 }).to_string());
         });
 }
