@@ -562,6 +562,30 @@ impl TestingSuite {
 
         self
     }
+
+    pub(crate) fn expand_flow(
+        &mut self,
+        sender: Addr,
+        incentive_addr: Addr,
+        flow_id: u64,
+        end_epoch: u64,
+        flow_asset: Asset,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::ExpandFlow {
+            flow_id,
+            end_epoch,
+            flow_asset,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
 }
 
 /// queries

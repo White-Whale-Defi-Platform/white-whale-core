@@ -304,6 +304,47 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Expands an existing flow.",
+        "type": "object",
+        "required": [
+          "expand_flow"
+        ],
+        "properties": {
+          "expand_flow": {
+            "type": "object",
+            "required": [
+              "end_epoch",
+              "flow_asset",
+              "flow_id"
+            ],
+            "properties": {
+              "end_epoch": {
+                "description": "The epoch at which the flow should end.",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "flow_asset": {
+                "description": "The asset to be expanded in this flow.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Asset"
+                  }
+                ]
+              },
+              "flow_id": {
+                "description": "The id of the flow to expand.",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {

@@ -3378,7 +3378,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                         address_weight: Uint128::new(1_000u128),
                         share: Decimal256::from_ratio(
                             Uint128::new(1_000u128),
-                            Uint128::new(6_000u128)
+                            Uint128::new(6_000u128),
                         ),
                         epoch_id: 16u64,
                     }
@@ -3548,7 +3548,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                         address_weight: Uint128::new(1_000u128),
                         share: Decimal256::from_ratio(
                             Uint128::new(1_000u128),
-                            Uint128::new(6_000u128)
+                            Uint128::new(6_000u128),
                         ),
                         epoch_id: 26u64,
                     }
@@ -3783,7 +3783,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                         address_weight: Uint128::new(2_000u128),
                         share: Decimal256::from_ratio(
                             Uint128::new(2_000u128),
-                            Uint128::new(4_000u128)
+                            Uint128::new(4_000u128),
                         ),
                         epoch_id: 27u64,
                     }
@@ -4678,4 +4678,313 @@ fn close_position_if_empty_rewards() {
                 result.unwrap();
             },
         );
+}
+
+#[test]
+fn open_expand_flow_with_native_token() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "usdc".to_string()),
+    ]);
+    let alice = suite.creator();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let fee_collector_addr = RefCell::new(Addr::unchecked(""));
+
+    let lp_address_1 = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    suite
+        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(lp_address_1.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    let current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(9u64, vec![])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    // open incentive flow
+    suite
+        .open_incentive_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            current_epoch.clone().into_inner() + 9,
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".clone().to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            &vec![coin(2_000u128, "uwhale".to_string())],
+            |result| {
+                // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
+                result.unwrap();
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+            assert_eq!(
+                flow_response.unwrap().flow,
+                Some(Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string()
+                        },
+                        amount: Uint128::new(1_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_epoch: 10u64,
+                    end_epoch: 19u64,
+                    emitted_tokens: Default::default(),
+                })
+            );
+        })
+        .expand_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            5u64, // invalid flow id
+            19u64,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            coins(1_000u128, "uwhale".to_string()),
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::NonExistentFlow { invalid_id } => assert_eq!(invalid_id, 5u64),
+                    _ => panic!("Wrong error type, should return ContractError::NonExistentFlow"),
+                }
+            },
+        )
+        .expand_flow(
+            alice.clone(), //unauthorized
+            incentive_addr.clone().into_inner(),
+            1u64,
+            19u64,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            coins(1_000u128, "uwhale".to_string()),
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized {} => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            18u64, //invalid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            coins(1_000u128, "uwhale".to_string()),
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidEndEpoch {} => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidEndEpoch"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            19u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            vec![], //invalid funds
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            19u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            coins(500, "uwhale"), //invalid funds
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::MissingPositionDepositNative { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::MissingPositionDepositNative"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            19u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            coins(1_000, "usdc"), //invalid funds
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::FlowAssetNotSent { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::FlowAssetNotSent"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            19u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            vec![coin(1_000, "uwhale"), coin(1_000, "usdc")], //invalid funds
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            19u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            vec![coin(1_000, "uwhale")], //valid funds
+            |result| {
+                result.unwrap();
+            }, )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+            assert_eq!(
+                flow_response.unwrap().flow,
+                Some(Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string()
+                        },
+                        amount: Uint128::new(2_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_epoch: 10u64,
+                    end_epoch: 19u64,
+                    emitted_tokens: Default::default(),
+                })
+            );
+        })
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            20u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(0u128),
+            },
+            vec![coin(0, "uwhale")], //valid funds
+            |result| {
+                result.unwrap_err(); //can't send 0 coins
+            },
+        )
+        .expand_flow(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64, // valid flow id
+            30u64, //valid epoch
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+            vec![coin(1_000u128, "uwhale")], //valid funds
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+            assert_eq!(
+                flow_response.unwrap().flow,
+                Some(Flow {
+                    flow_id: 1,
+                    flow_creator: carol.clone(),
+                    flow_asset: Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string()
+                        },
+                        amount: Uint128::new(3_000u128),
+                    },
+                    claimed_amount: Uint128::zero(),
+                    curve: Curve::Linear,
+                    start_epoch: 10u64,
+                    end_epoch: 30u64,
+                    emitted_tokens: Default::default(),
+                })
+            );
+        })
+    ;
 }
