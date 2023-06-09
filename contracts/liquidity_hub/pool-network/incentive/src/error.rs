@@ -149,6 +149,9 @@ pub enum ContractError {
 
     #[error("The end epoch for this flow is invalid")]
     InvalidEndEpoch {},
+
+    #[error("The flow has already ended, can't be expanded")]
+    FlowAlreadyEnded {},
 }
 
 impl From<semver::Error> for ContractError {

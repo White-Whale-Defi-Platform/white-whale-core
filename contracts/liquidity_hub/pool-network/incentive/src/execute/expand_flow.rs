@@ -6,8 +6,10 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive::Flow;
 
 use crate::error::ContractError;
+use crate::helpers;
 use crate::state::{EpochId, FlowId, FLOWS};
 
+/// Expands a flow with the given id.
 pub fn expand_flow(
     deps: DepsMut,
     info: MessageInfo,
@@ -28,7 +30,11 @@ pub fn expand_flow(
             return Err(ContractError::Unauthorized {});
         }
 
-        //todo check that the incentive has not finished already, otherwise the flow should just be closed.
+        // check if the flow has already ended
+        let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
+        if current_epoch > flow.end_epoch {
+            return Err(ContractError::FlowAlreadyEnded {});
+        }
 
         if flow.flow_asset.info != flow_asset.info {
             return Err(ContractError::FlowAssetNotSent {});
