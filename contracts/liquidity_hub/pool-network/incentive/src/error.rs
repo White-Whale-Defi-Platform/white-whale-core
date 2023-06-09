@@ -29,6 +29,9 @@ pub enum ContractError {
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
 
+    #[error("Unauthorized")]
+    Unauthorized {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,
@@ -143,6 +146,9 @@ pub enum ContractError {
 
     #[error("There're pending rewards to be claimed before you can execute this action")]
     PendingRewards {},
+
+    #[error("The end epoch for this flow is invalid")]
+    InvalidEndEpoch {},
 }
 
 impl From<semver::Error> for ContractError {

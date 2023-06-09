@@ -72,6 +72,15 @@ pub enum ExecuteMsg {
     Withdraw {},
     /// Claims the flow rewards.
     Claim {},
+    /// Expands an existing flow.
+    ExpandFlow {
+        /// The id of the flow to expand.
+        flow_id: u64,
+        /// The epoch at which the flow should end.
+        end_epoch: u64,
+        /// The asset to be expanded in this flow.
+        flow_asset: Asset,
+    },
 }
 
 #[cw_serde]

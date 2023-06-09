@@ -100,6 +100,11 @@ pub fn execute(
         }
         ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
         ExecuteMsg::Claim {} => execute::claim(deps, info),
+        ExecuteMsg::ExpandFlow {
+            flow_id,
+            end_epoch,
+            flow_asset,
+        } => execute::expand_flow(deps, info, env, flow_id, end_epoch, flow_asset),
     }
 }
 
