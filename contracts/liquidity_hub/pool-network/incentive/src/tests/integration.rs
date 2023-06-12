@@ -1,6 +1,7 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 
-use cosmwasm_std::{coin, coins, Addr, Decimal256, Timestamp, Uint128};
+use cosmwasm_std::{coin, coins, Addr, Decimal, Decimal256, Timestamp, Uint128};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive;
@@ -5349,4 +5350,636 @@ fn fail_expand_ended_flow() {
                 }
             },
         );
+}
+
+#[test]
+fn expand_flow_verify_rewards() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(5_000_000_000u128, "uwhale".to_string()),
+        coin(50_000_000_000u128, "usdc".to_string()),
+        coin(5_000_000_000u128, "ampWHALE".to_string()),
+        coin(5_000_000_000u128, "bWHALE".to_string()),
+    ]);
+    let alice = suite.creator();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let incentive_asset = AssetInfo::NativeToken {
+        denom: "ampWHALE".to_string(),
+    };
+
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    suite
+        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(incentive_asset.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        })
+        .query_incentive_config(incentive_addr.clone().into_inner(), |result| {
+            let config = result.unwrap();
+            assert_eq!(config.lp_asset, incentive_asset.clone());
+        });
+
+    let open_position = incentive::OpenPosition {
+        amount: Uint128::new(1_000u128),
+        unbonding_duration: 86400u64,
+    };
+    suite
+        .open_incentive_position(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            open_position.amount,
+            open_position.unbonding_duration,
+            None,
+            vec![coin(1_000u128, "ampWHALE".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(1_000u128),
+                        unbonding_duration: open_position.unbonding_duration,
+                        weight: Uint128::new(1_000u128),
+                    }
+                );
+            },
+        );
+
+    let time = Timestamp::from_seconds(1684766796u64);
+    suite.set_time(time);
+
+    let current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    let carol_usdc_funds = RefCell::new(Uint128::zero());
+    let alice_usdc_funds = RefCell::new(Uint128::zero());
+    println!("CURRENT_EPOCH  -> {:?}", current_epoch);
+
+    let flow_end_epoch = current_epoch.clone().into_inner() + 10;
+    suite
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            flow_end_epoch.clone(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(1_000_000_000u128),
+            },
+            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .create_epochs_on_fee_distributor(4, vec![incentive_addr.clone().into_inner()]) // epoch is 15 now, half way of the duration of the flow
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                println!("result -> {:?}", result);
+
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(500_000_000u128),
+                    },]
+                );
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                *carol_usdc_funds.borrow_mut() = result;
+            },
+        )
+        .claim(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                assert_eq!(
+                    result,
+                    carol_usdc_funds
+                        .clone()
+                        .into_inner()
+                        .checked_add(Uint128::new(500_000_000u128))
+                        .unwrap(),
+                );
+                *carol_usdc_funds.borrow_mut() = result;
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+            assert_eq!(
+                flow_response.unwrap().flow.unwrap().claimed_amount,
+                Uint128::new(500_000_000u128)
+            );
+        });
+
+    // move 3 more epochs, so carol should have 300 more to claim
+    suite
+        .set_time(time.plus_seconds(129600u64))
+        .create_epochs_on_fee_distributor(3, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(300_000_000u128),
+                    },]
+                );
+            },
+        )
+        // move 2 more epochs, so carol should have an additional 200_000_000usdc to claim.
+        .create_epochs_on_fee_distributor(2, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(500_000_000u128),
+                    },]
+                );
+            },
+        )
+        .claim(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                assert_eq!(
+                    result,
+                    carol_usdc_funds
+                        .clone()
+                        .into_inner()
+                        .checked_add(Uint128::new(500_000_000u128))
+                        .unwrap(),
+                );
+                *carol_usdc_funds.borrow_mut() = result;
+            },
+        );
+
+    // expand the flow now
+    suite
+        .expand_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            flow_end_epoch.clone() + 20,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(4_000_000_000u128),
+            },
+            vec![coin(4_000_000_000u128, "usdc")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+
+            let mut emitted_tokens: HashMap<u64, Uint128> = HashMap::new();
+
+            for i in 1..=10 {
+                emitted_tokens.insert(i + 10, Uint128::from(100_000_000u64 * i));
+            }
+
+            let flow_res = flow_response.unwrap().flow.unwrap();
+
+            assert_eq!(flow_res.flow_id, 1u64);
+            assert_eq!(flow_res.flow_creator, alice.clone());
+            assert_eq!(
+                flow_res.flow_asset,
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "usdc".to_string(),
+                    },
+                    amount: Uint128::new(5_000_000_000u128),
+                }
+            );
+            assert_eq!(flow_res.claimed_amount, Uint128::new(1_000_000_000u128));
+            assert_eq!(flow_res.curve, Curve::Linear);
+            assert_eq!(flow_res.start_epoch, 11u64);
+            assert_eq!(flow_res.end_epoch, flow_end_epoch + 20);
+
+            println!("flow finishes at: {:?}", flow_end_epoch + 20);
+
+            let mut vec1: Vec<(&u64, &Uint128)> = emitted_tokens.iter().collect();
+            let mut vec2: Vec<(&u64, &Uint128)> = flow_res.emitted_tokens.iter().collect();
+            vec1.sort();
+            vec2.sort();
+
+            assert_eq!(vec1, vec2);
+        });
+
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
+    // move 1 epoch, so carol should have 200_000_000usdc to claim
+    suite
+        .create_epochs_on_fee_distributor(1, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(200_000_000u128),
+                    },]
+                );
+            },
+        )
+        .create_epochs_on_fee_distributor(9, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(2_000_000_000u128),
+                    },]
+                );
+            },
+        )
+        .create_epochs_on_fee_distributor(20, vec![incentive_addr.clone().into_inner()])
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(4_000_000_000u128),
+                    },]
+                );
+            },
+        )
+        .claim(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(
+            carol.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                assert_eq!(
+                    result,
+                    carol_usdc_funds
+                        .clone()
+                        .into_inner()
+                        .checked_add(Uint128::new(4_000_000_000u128))
+                        .unwrap(),
+                );
+                *carol_usdc_funds.borrow_mut() = result;
+            },
+        );
+
+    // let's create a new flow and try to mess up things
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
+    println!(
+        "current epoch for new flow: {:?}",
+        current_epoch.clone().into_inner()
+    );
+
+    let incentive_asset = AssetInfo::NativeToken {
+        denom: "bWHALE".to_string(),
+    };
+
+    suite
+        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(incentive_asset.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        })
+        .query_incentive_config(incentive_addr.clone().into_inner(), |result| {
+            let config = result.unwrap();
+            assert_eq!(config.lp_asset, incentive_asset.clone());
+        });
+
+    // both alice and carol will open positions
+
+    let open_position_alice = incentive::OpenPosition {
+        amount: Uint128::new(3_000u128),
+        unbonding_duration: 86400u64,
+    };
+
+    let open_position_carol = incentive::OpenPosition {
+        amount: Uint128::new(1_000u128),
+        unbonding_duration: 86400u64,
+    };
+
+    // alice has 3_000_000_000bWHALE, carol has 1_000_000_000bWHALE
+    // in %, that is 75% and 25% respectively
+
+    let flow_2_end_epoch = current_epoch.clone().into_inner() + 10;
+
+    suite
+        .open_incentive_position(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            open_position_carol.amount,
+            open_position_carol.unbonding_duration,
+            None,
+            vec![coin(1_000u128, "bWHALE".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .open_incentive_position(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            open_position_alice.amount,
+            open_position_alice.unbonding_duration,
+            None,
+            vec![coin(3_000u128, "bWHALE".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(1_000u128),
+                        unbonding_duration: open_position_carol.unbonding_duration,
+                        weight: Uint128::new(1_000u128),
+                    }
+                );
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(3_000u128),
+                        unbonding_duration: open_position_alice.unbonding_duration,
+                        weight: Uint128::new(3_000u128),
+                    }
+                );
+            },
+        )
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            flow_2_end_epoch.clone(),
+            Curve::Linear,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(1_000_000_000u128),
+            },
+            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+            assert_eq!(
+                flow_response.unwrap().flow.unwrap().flow_asset.amount,
+                Uint128::new(1_000_000_000u128)
+            );
+        })
+        // epoch 52
+        .create_epochs_on_fee_distributor(2, vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(rewards_share.share, Decimal256::percent(75));
+            },
+        )
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                println!("-----query rewards next");
+                assert_eq!(rewards_share.share, Decimal256::percent(25));
+            },
+        )
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(150_000_000u128),
+                    },]
+                );
+            },
+        )
+        .query_funds(
+            alice.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                *alice_usdc_funds.borrow_mut() = result;
+            },
+        )
+        .claim(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(
+            alice.clone(),
+            AssetInfo::NativeToken {
+                denom: "usdc".to_string(),
+            },
+            |result| {
+                assert_eq!(
+                    result,
+                    alice_usdc_funds
+                        .clone()
+                        .into_inner()
+                        .checked_add(Uint128::new(150_000_000u128))
+                        .unwrap(),
+                );
+                *alice_usdc_funds.borrow_mut() = result;
+            },
+        )
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "usdc".to_string(),
+                        },
+                        amount: Uint128::new(50_000_000u128),
+                    },]
+                );
+            },
+        );
+
+    // let's expand the flow now
+
+    suite
+        .expand_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            1u64,
+            flow_2_end_epoch.clone() + 10,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(4_000_000_000u128),
+            },
+            vec![coin(4_000_000_000u128, "usdc")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+            let flow_response = result.unwrap();
+
+            let mut emitted_tokens: HashMap<u64, Uint128> = HashMap::new();
+
+            for i in 50..=52 {
+                emitted_tokens.insert(i, Uint128::from(100_000_000u64 * (i - 49)));
+            }
+
+            let flow_res = flow_response.unwrap().flow.unwrap();
+
+            assert_eq!(flow_res.flow_id, 1u64);
+            assert_eq!(flow_res.flow_creator, alice.clone());
+            assert_eq!(
+                flow_res.flow_asset,
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "usdc".to_string(),
+                    },
+                    amount: Uint128::new(5_000_000_000u128),
+                }
+            );
+            assert_eq!(flow_res.claimed_amount, Uint128::new(150_000_000u128));
+            assert_eq!(flow_res.curve, Curve::Linear);
+            assert_eq!(flow_res.start_epoch, 50u64);
+            assert_eq!(flow_res.end_epoch, flow_2_end_epoch + 10);
+
+            println!("flow finishes at: {:?}", flow_2_end_epoch + 10);
+
+            let mut vec1: Vec<(&u64, &Uint128)> = emitted_tokens.iter().collect();
+            let mut vec2: Vec<(&u64, &Uint128)> = flow_res.emitted_tokens.iter().collect();
+
+            println!("vec1: {:?}", vec1);
+            vec1.sort();
+            vec2.sort();
+
+            assert_eq!(vec1, vec2);
+        });
+
+    //todo we need to fix the rewards calculation for the epochs before the expansion was done
+    // so maybe we can do something like the expansion applies from a certain epoch onwards and compute the
+    // new emissions based on the total + expanded amount?
+    suite.query_rewards(
+        incentive_addr.clone().into_inner(),
+        carol.clone(),
+        |result| {
+            assert_eq!(
+                result.unwrap().rewards,
+                vec![Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "usdc".to_string(),
+                    },
+                    amount: Uint128::new(50_000_000u128),
+                },]
+            );
+        },
+    );
 }
