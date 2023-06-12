@@ -21,11 +21,15 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
         }
     }
 
+    println!("current_epoch: {:?}", current_epoch);
+    println!("last_claimed_epoch: {:?}", last_claimed_epoch);
+
     let flows = helpers::get_available_flows(deps, &current_epoch)?;
 
     let mut last_epoch_user_weight_update: EpochId = 0u64;
     let mut last_user_weight_seen: Uint128 = Uint128::zero();
     let mut rewards = vec![];
+    println!("flows: {:?}", flows);
     for flow in flows.iter() {
         // check if flow already ended and if everything has been claimed for that flow.
         if current_epoch > flow.end_epoch && flow.claimed_amount == flow.flow_asset.amount {
@@ -46,6 +50,11 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
                 earliest_available_weight_for_user[0];
         }
 
+        println!(
+            "earliest_available_weight_for_user: {:?}",
+            earliest_available_weight_for_user
+        );
+
         let first_claimable_epoch = if let Some(last_claimed_epoch) = last_claimed_epoch {
             // start claiming from the last claimed epoch + 1
             last_claimed_epoch + 1u64
@@ -60,6 +69,8 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
                 flow.start_epoch
             }
         };
+
+        println!("first_claimable_epoch: {:?}", first_claimable_epoch);
 
         let mut flow_emitted_tokens = flow.emitted_tokens.clone();
         let mut total_reward = Uint128::zero();
@@ -93,12 +104,16 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
                 previous_emission
             };
 
+            println!("emitted_tokens: {:?}", emitted_tokens);
+
             // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
             let emission_per_epoch = flow
                 .flow_asset
                 .amount
                 .saturating_sub(emitted_tokens)
                 .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
+
+            println!("emission_per_epoch: {:?}", emission_per_epoch);
 
             // record the emitted tokens for this epoch if it hasn't been recorded before.
             // emitted tokens for this epoch is the total emitted tokens in previous epoch + the ones
