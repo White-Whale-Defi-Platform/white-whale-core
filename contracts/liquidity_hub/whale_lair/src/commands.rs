@@ -26,6 +26,7 @@ pub(crate) fn bond(
     };
 
     helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
+    helpers::validate_claimed(&deps, &info)?;
 
     let mut bond = BOND
         .key((&info.sender, &denom))
@@ -39,21 +40,24 @@ pub(crate) fn bond(
         });
 
     // update local values
-    bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
-    // include time term in the weight
+    // let new_bond_weight = get_weight(timestamp, bond.weight, asset.amount, config.growth_rate, bond.timestamp)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
+    bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
+
     BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    // global_index = update_global_weight(&mut deps, timestamp, global_index)?;
 
-    global_index = update_global_weight(&mut deps, timestamp, global_index)?;
     // include time term in the weight
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
         asset::aggregate_assets(global_index.bonded_assets, vec![asset.clone()])?;
+    global_index = update_global_weight(&mut deps, timestamp, global_index)?;
+
     GLOBAL.save(deps.storage, &global_index)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -78,6 +82,8 @@ pub(crate) fn unbond(
         AssetInfo::NativeToken { denom } => denom,
         AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
     };
+
+    helpers::validate_claimed(&deps, &info)?;
 
     if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
         // check if the address has enough bond
@@ -186,6 +192,7 @@ pub(crate) fn update_config(
     owner: Option<String>,
     unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
+    fee_distributor_addr: Option<String>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
     let mut config = CONFIG.load(deps.storage)?;
@@ -204,6 +211,10 @@ pub(crate) fn update_config(
     if let Some(growth_rate) = growth_rate {
         validate_growth_rate(growth_rate)?;
         config.growth_rate = growth_rate;
+    }
+
+    if let Some(fee_distributor_addr) = fee_distributor_addr {
+        config.fee_distributor_addr = deps.api.addr_validate(&fee_distributor_addr)?;
     }
 
     CONFIG.save(deps.storage, &config)?;

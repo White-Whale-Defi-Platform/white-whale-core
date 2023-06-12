@@ -1696,6 +1696,8 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test 0.16.4",
+ "fee_collector",
+ "fee_distributor",
  "schemars",
  "serde",
  "whale-lair",

@@ -1,9 +1,14 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Bound;
 
-use white_whale::whale_lair::{
-    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
-    WithdrawableResponse,
+use white_whale::{
+    pool_network::asset::AssetInfo,
+    whale_lair::{
+        Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
+        WithdrawableResponse,
+    },
 };
 
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
@@ -117,6 +122,7 @@ pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
     address: String,
+    global_weight: Option<Uint128>,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
 
@@ -129,6 +135,9 @@ pub(crate) fn query_weight(
     let config = CONFIG.load(deps.storage)?;
 
     let mut total_bond_weight = Uint128::zero();
+    // Search bonds for unique bond.asset.denoms
+    // Make an empty set of unique denoms
+    let mut unique_denoms: HashSet<String> = HashSet::new();
 
     for (_, mut bond) in bonds? {
         bond.weight = get_weight(
@@ -139,24 +148,58 @@ pub(crate) fn query_weight(
             bond.timestamp,
         )?;
 
+        match bond.asset.info {
+            AssetInfo::NativeToken { denom } => {
+                // If the denom is not in the set of unique denoms, add it
+                if !unique_denoms.contains(&denom) {
+                    unique_denoms.insert(denom.clone());
+                }
+            }
+            AssetInfo::Token { contract_addr } => {
+                // If the contract_addr is not in the set of unique denoms, add it
+                if !unique_denoms.contains(&contract_addr) {
+                    unique_denoms.insert(contract_addr.clone());
+                }
+            }
+        }
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
+    }
+
+    // for each of the unique denoms, access the unbondings
+    // and reduce the weight of the unbonding to the total_bond_weight
+    // TODO: REVIEW THIS WITH J
+    for denom in unique_denoms {
+        let unbonding = query_unbonding(deps, address.to_string(), denom.to_string(), None, None)?;
+        for bond in unbonding.unbonding_requests {
+            // TODO: Review this with J
+            if bond.timestamp.plus_nanos(config.unbonding_period.u64()) < timestamp {
+                let weight = get_weight(
+                    timestamp,
+                    bond.weight,
+                    bond.asset.amount,
+                    config.growth_rate,
+                    bond.timestamp,
+                )?;
+                total_bond_weight = total_bond_weight.checked_sub(weight)?;
+            }
+        }
     }
 
     let mut global_index = GLOBAL
         .may_load(deps.storage)
         .unwrap_or_else(|_| Some(GlobalIndex::default()))
         .ok_or_else(|| StdError::generic_err("Global index not found"))?;
-
+    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
         timestamp,
-        global_index.weight,
+        global_weight.unwrap_or(global_index.weight),
         global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
     )?;
-
+    // Represents the share of the global weight that the address has
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
 
     Ok(BondingWeightResponse {
@@ -175,4 +218,10 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
         total_bonded: global_index.bonded_amount,
         bonded_assets: global_index.bonded_assets,
     })
+}
+
+/// Queries the global index
+pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
+    let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    Ok(global_index)
 }
