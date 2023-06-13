@@ -8,5 +8,6 @@ pub mod state;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tests;
+mod migrations;
 
 pub use crate::error::ContractError;
