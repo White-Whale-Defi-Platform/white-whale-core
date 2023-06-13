@@ -240,10 +240,10 @@
       "required": [
         "available",
         "claimed",
+        "global_index",
         "id",
         "start_time",
-        "total",
-        "weight"
+        "total"
       ],
       "properties": {
         "available": {
@@ -258,6 +258,9 @@
             "$ref": "#/definitions/Asset"
           }
         },
+        "global_index": {
+          "$ref": "#/definitions/GlobalIndex"
+        },
         "id": {
           "$ref": "#/definitions/Uint64"
         },
@@ -269,9 +272,6 @@
           "items": {
             "$ref": "#/definitions/Asset"
           }
-        },
-        "weight": {
-          "$ref": "#/definitions/Uint128"
         }
       },
       "additionalProperties": false
@@ -404,6 +404,49 @@
           "additionalProperties": false
         }
       ]
+    },
+    "GlobalIndex": {
+      "type": "object",
+      "required": [
+        "bonded_amount",
+        "bonded_assets",
+        "timestamp",
+        "weight"
+      ],
+      "properties": {
+        "bonded_amount": {
+          "description": "The total amount of tokens bonded in the contract.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        },
+        "bonded_assets": {
+          "description": "Assets that are bonded in the contract.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Asset"
+          }
+        },
+        "timestamp": {
+          "description": "The timestamp at which the total bond was registered.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Timestamp"
+            }
+          ]
+        },
+        "weight": {
+          "description": "The total weight of the bond at the given block height.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "Timestamp": {
       "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",

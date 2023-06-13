@@ -287,7 +287,7 @@ impl TestingRobot {
                 &QueryMsg::Weight {
                     address,
                     timestamp: Some(self.app.block_info().time),
-                    global_weight: None,
+                    global_index: None,
                 },
             )
             .unwrap();

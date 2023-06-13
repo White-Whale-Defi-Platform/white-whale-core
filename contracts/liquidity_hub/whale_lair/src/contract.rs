@@ -122,7 +122,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Weight {
             address,
             timestamp,
-            global_weight,
+            global_index,
         } => {
             // If timestamp is not provided, use current block time
             let timestamp = timestamp.unwrap_or(env.block.time);
@@ -132,7 +132,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 deps,
                 timestamp,
                 address,
-                global_weight,
+                global_index,
             )?)
         }
         QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),

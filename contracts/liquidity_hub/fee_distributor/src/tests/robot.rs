@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
     from_binary, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,

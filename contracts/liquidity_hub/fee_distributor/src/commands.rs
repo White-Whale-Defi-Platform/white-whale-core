@@ -50,7 +50,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
         total: vec![],
         available: vec![],
         claimed: vec![],
-        weight: env.block.time.nanos().into(),
+        global_index: Default::default(),
     };
 
     Ok(Response::new()
@@ -91,13 +91,17 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 msg: to_binary(&QueryMsg::Weight {
                     address: info.sender.to_string(),
                     timestamp: Some(epoch.start_time),
-                    global_weight: Some(epoch.weight),
+                    global_index: Some(epoch.global_index.clone()),
                 })?,
             }))?;
 
         for fee in epoch.total.iter() {
             let reward = fee.amount * bonding_weight_response.share;
 
+            if reward.is_zero() {
+                // nothing to claim
+                continue;
+            }
             // make sure the reward is sound
             let _ = epoch
                 .available

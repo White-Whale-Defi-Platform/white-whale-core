@@ -80,7 +80,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 contract_addr: config.bonding_contract_addr.to_string(),
                 msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
             }))?;
-        new_epoch.weight = global_index.weight;
+        new_epoch.global_index = global_index;
 
         // forward fees from the expiring epoch to the new one.
         let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;

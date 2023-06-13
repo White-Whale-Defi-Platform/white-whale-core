@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env};
-use cosmwasm_std::{Addr, Uint64};
+use cosmwasm_std::Uint64;
 
 use crate::tests::robot::TestingRobot;
 use crate::tests::test_helpers;

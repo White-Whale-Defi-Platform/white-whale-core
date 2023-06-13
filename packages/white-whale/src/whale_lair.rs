@@ -113,7 +113,7 @@ pub enum QueryMsg {
     Weight {
         address: String,
         timestamp: Option<Timestamp>,
-        global_weight: Option<Uint128>,
+        global_index: Option<GlobalIndex>,
     },
 
     /// Returns the total amount of assets that have been bonded to the contract.
