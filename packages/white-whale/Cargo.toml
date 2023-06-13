@@ -24,6 +24,7 @@ schemars.workspace = true
 serde.workspace = true
 cosmwasm-schema.workspace = true
 cw20.workspace = true
+cw2.workspace = true
 protobuf.workspace = true
 uint.workspace = true
 osmosis-std-derive.workspace = true

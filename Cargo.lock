@@ -1521,6 +1521,7 @@ version = "1.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw2 0.15.1",
  "cw20",
  "osmosis-std-derive",
  "prost 0.11.9",
