@@ -5,6 +5,7 @@ pub mod helpers;
 mod queries;
 pub mod state;
 
+mod migrations;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tests;

@@ -9,7 +9,7 @@ use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, Qu
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
-use crate::{commands, queries};
+use crate::{commands, migrations, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-whale_lair";
@@ -31,6 +31,7 @@ pub fn instantiate(
 
     validate_growth_rate(msg.growth_rate)?;
 
+    //todo since this should only accept native tokens, we could omit the asset type and pass the denom directly
     for asset in &msg.bonding_assets {
         match asset {
             AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
@@ -121,7 +122,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Weight {
             address,
             timestamp,
-            global_weight,
+            global_index,
         } => {
             // If timestamp is not provided, use current block time
             let timestamp = timestamp.unwrap_or(env.block.time);
@@ -131,7 +132,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
                 deps,
                 timestamp,
                 address,
-                global_weight,
+                global_index,
             )?)
         }
         QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),
@@ -141,7 +142,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
@@ -150,6 +151,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             current_version: storage_version,
             new_version: version,
         });
+    }
+
+    if storage_version < Version::parse("0.9.0")? {
+        migrations::migrate_to_v090(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

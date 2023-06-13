@@ -1,8 +1,12 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{
+    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    WasmQuery,
+};
 use cw_storage_plus::Bound;
 
+use white_whale::fee_distributor::QueryMsg;
 use white_whale::{
     pool_network::asset::AssetInfo,
     whale_lair::{
@@ -11,6 +15,7 @@ use white_whale::{
     },
 };
 
+use crate::helpers;
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
@@ -35,14 +40,30 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     let mut total_bonded = Uint128::zero();
     let mut bonded_assets = vec![];
 
+    let mut first_bond_timestamp = Timestamp::from_seconds(16725229261u64);
+
     for bond in bonds {
+        if bond.timestamp.seconds() < first_bond_timestamp.seconds() {
+            first_bond_timestamp = bond.timestamp;
+        }
+
         total_bonded = total_bonded.checked_add(bond.asset.amount)?;
         bonded_assets.push(bond.asset);
     }
 
+    let fee_distributor_addr = CONFIG.load(deps.storage)?.fee_distributor_addr;
+    let config: white_whale::fee_distributor::Config =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: fee_distributor_addr.to_string(),
+            msg: to_binary(&QueryMsg::Config {})?,
+        }))?;
+    let epoch_config = config.epoch_config;
+    let first_bonded_epoch_id = helpers::calculate_epoch(epoch_config, first_bond_timestamp)?;
+
     Ok(BondedResponse {
         total_bonded,
         bonded_assets,
+        first_bonded_epoch_id,
     })
 }
 
@@ -122,7 +143,7 @@ pub(crate) fn query_weight(
     deps: Deps,
     timestamp: Timestamp,
     address: String,
-    global_weight: Option<Uint128>,
+    global_index: Option<GlobalIndex>,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
 
@@ -154,7 +175,7 @@ pub(crate) fn query_weight(
                 if !unique_denoms.contains(&denom) {
                     unique_denoms.insert(denom.clone());
                 }
-            }
+            } //todo the bonding assets can't be Tokens, so this could be removed
             AssetInfo::Token { contract_addr } => {
                 // If the contract_addr is not in the set of unique denoms, add it
                 if !unique_denoms.contains(&contract_addr) {
@@ -167,38 +188,24 @@ pub(crate) fn query_weight(
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
 
-    // for each of the unique denoms, access the unbondings
-    // and reduce the weight of the unbonding to the total_bond_weight
-    // TODO: REVIEW THIS WITH J
-    for denom in unique_denoms {
-        let unbonding = query_unbonding(deps, address.to_string(), denom.to_string(), None, None)?;
-        for bond in unbonding.unbonding_requests {
-            // TODO: Review this with J
-            if bond.timestamp.plus_nanos(config.unbonding_period.u64()) < timestamp {
-                let weight = get_weight(
-                    timestamp,
-                    bond.weight,
-                    bond.asset.amount,
-                    config.growth_rate,
-                    bond.timestamp,
-                )?;
-                total_bond_weight = total_bond_weight.checked_sub(weight)?;
-            }
-        }
-    }
+    let mut global_index = if let Some(global_index) = global_index {
+        global_index
+    } else {
+        GLOBAL
+            .may_load(deps.storage)
+            .unwrap_or_else(|_| Some(GlobalIndex::default()))
+            .ok_or_else(|| StdError::generic_err("Global index not found"))?
+    };
 
-    let mut global_index = GLOBAL
-        .may_load(deps.storage)
-        .unwrap_or_else(|_| Some(GlobalIndex::default()))
-        .ok_or_else(|| StdError::generic_err("Global index not found"))?;
     // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
         timestamp,
-        global_weight.unwrap_or(global_index.weight),
+        global_index.weight,
         global_index.bonded_amount,
         config.growth_rate,
         global_index.timestamp,
     )?;
+
     // Represents the share of the global weight that the address has
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
 
@@ -217,6 +224,7 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
     Ok(BondedResponse {
         total_bonded: global_index.bonded_amount,
         bonded_assets: global_index.bonded_assets,
+        first_bonded_epoch_id: Default::default(), //ignore this parameter here
     })
 }
 
