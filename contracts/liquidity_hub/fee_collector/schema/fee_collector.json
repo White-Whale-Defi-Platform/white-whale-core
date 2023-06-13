@@ -252,7 +252,8 @@
           "claimed",
           "id",
           "start_time",
-          "total"
+          "total",
+          "weight"
         ],
         "properties": {
           "available": {
@@ -278,6 +279,9 @@
             "items": {
               "$ref": "#/definitions/Asset"
             }
+          },
+          "weight": {
+            "$ref": "#/definitions/Uint128"
           }
         },
         "additionalProperties": false

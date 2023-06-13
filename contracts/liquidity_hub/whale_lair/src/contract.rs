@@ -31,6 +31,7 @@ pub fn instantiate(
 
     validate_growth_rate(msg.growth_rate)?;
 
+    //todo since this should only accept native tokens, we could omit the asset type and pass the denom directly
     for asset in &msg.bonding_assets {
         match asset {
             AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),

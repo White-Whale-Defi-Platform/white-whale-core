@@ -44,12 +44,6 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 .plus_nanos(config.epoch_config.duration.u64())
         };
 
-    // Query the current global index
-    // let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-    //     contract_addr: config.bonding_contract_addr.to_string(),
-    //     msg: to_binary(&QueryMsg::GlobalIndex {})?,
-    // }))?;
-
     let new_epoch = Epoch {
         id: current_epoch.id.checked_add(Uint64::new(1u64))?,
         start_time,
@@ -111,6 +105,11 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 .find(|available_fee| available_fee.info == fee.info)
                 .map(|available_fee| {
                     if reward > available_fee.amount {
+                        //todo maybe we can just skip this epoch and log something on the attributes instead
+                        // of returning an error and blocking the whole operation
+                        // this would "solve" the case when users unbond and then those who have not claimed
+                        // past epochs won't be able to do it as their rewards exceed the available claimable fees
+                        // cuz their weight increased in relation to the global weight
                         return Err(ContractError::InvalidReward {});
                     }
                     Ok(())

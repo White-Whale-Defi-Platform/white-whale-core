@@ -133,6 +133,7 @@ pub struct MigrateMsg {}
 pub struct BondedResponse {
     pub total_bonded: Uint128,
     pub bonded_assets: Vec<Asset>,
+    pub first_bonded_epoch_id: Uint64,
 }
 
 /// Response for the Unbonding query

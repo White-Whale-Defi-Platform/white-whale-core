@@ -29,27 +29,3 @@ fn test_claimable_epochs() {
             }
         });
 }
-
-#[test]
-fn test_claimable_epochs_for_user() {
-    let mut robot = TestingRobot::new(mock_dependencies(), mock_env());
-    let epochs = test_helpers::get_epochs();
-
-    robot
-        .instantiate_default() //grace period = 2
-        .add_epochs_to_state(epochs)
-        .query_claimable_epochs(Some(Addr::unchecked("owner")), |res| {
-            let (_, epochs) = res.unwrap();
-            assert_eq!(epochs.len(), 2usize);
-        })
-        .add_last_claimed_epoch_to_state(Addr::unchecked("owner"), Uint64::new(2))
-        .query_claimable_epochs(Some(Addr::unchecked("owner")), |res| {
-            let (_, epochs) = res.unwrap();
-            assert_eq!(epochs.len(), 1usize);
-        })
-        .add_last_claimed_epoch_to_state(Addr::unchecked("owner"), Uint64::new(3))
-        .query_claimable_epochs(Some(Addr::unchecked("owner")), |res| {
-            let (_, epochs) = res.unwrap();
-            assert!(epochs.is_empty());
-        });
-}

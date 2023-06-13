@@ -1,7 +1,8 @@
-use cosmwasm_std::{Addr, Deps, Order, StdResult, Uint64};
+use cosmwasm_std::{to_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
 use cw_storage_plus::{Item, Map};
 
 use white_whale::fee_distributor::{ClaimableEpochsResponse, Config, Epoch, EpochResponse};
+use white_whale::whale_lair::{BondedResponse, QueryMsg};
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch");
@@ -83,6 +84,27 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
     // filter out epochs that have already been claimed by the user
     if let Some(last_claimed_epoch) = last_claimed_epoch {
         claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
+    } else {
+        // if the user doesn't have any last_claimed_epoch two things might be happening:
+        // 1- the user has never bonded before
+        // 2- the user has bonded, but never claimed any rewards so far
+        let bonding_contract = CONFIG.load(deps.storage)?.bonding_contract_addr;
+
+        let bonded_response: BondedResponse =
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: bonding_contract.to_string(),
+                msg: to_binary(&QueryMsg::Bonded {
+                    address: address.to_string(),
+                })?,
+            }))?;
+
+        if bonded_response.bonded_assets.is_empty() {
+            // the user has never bonded before, therefore it shouldn't be able to claim anything
+            claimable_epochs.clear();
+        } else {
+            // the user has bonded, but never claimed any rewards so far
+            claimable_epochs.retain(|epoch| epoch.id > bonded_response.first_bonded_epoch_id);
+        }
     };
 
     // filter out epochs that have no available fees. This would only happen in case the grace period

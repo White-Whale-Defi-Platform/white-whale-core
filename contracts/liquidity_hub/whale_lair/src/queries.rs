@@ -1,8 +1,13 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{
+    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    WasmQuery,
+};
 use cw_storage_plus::Bound;
 
+use crate::helpers;
+use white_whale::fee_distributor::QueryMsg;
 use white_whale::{
     pool_network::asset::AssetInfo,
     whale_lair::{
@@ -35,14 +40,30 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     let mut total_bonded = Uint128::zero();
     let mut bonded_assets = vec![];
 
+    let mut first_bond_timestamp = Timestamp::from_seconds(16725229261u64);
+
     for bond in bonds {
+        if bond.timestamp.seconds() < first_bond_timestamp.seconds() {
+            first_bond_timestamp = bond.timestamp;
+        }
+
         total_bonded = total_bonded.checked_add(bond.asset.amount)?;
         bonded_assets.push(bond.asset);
     }
 
+    let fee_distributor_addr = CONFIG.load(deps.storage)?.fee_distributor_addr;
+    let config: white_whale::fee_distributor::Config =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: fee_distributor_addr.to_string(),
+            msg: to_binary(&QueryMsg::Config {})?,
+        }))?;
+    let genesis_epoch = config.epoch_config;
+    let first_bonded_epoch_id = helpers::calculate_epoch(genesis_epoch, first_bond_timestamp)?;
+
     Ok(BondedResponse {
         total_bonded,
         bonded_assets,
+        first_bonded_epoch_id,
     })
 }
 
@@ -154,7 +175,7 @@ pub(crate) fn query_weight(
                 if !unique_denoms.contains(&denom) {
                     unique_denoms.insert(denom.clone());
                 }
-            }
+            } //todo the bonding assets can't be Tokens, so this could be removed
             AssetInfo::Token { contract_addr } => {
                 // If the contract_addr is not in the set of unique denoms, add it
                 if !unique_denoms.contains(&contract_addr) {
@@ -217,6 +238,7 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
     Ok(BondedResponse {
         total_bonded: global_index.bonded_amount,
         bonded_assets: global_index.bonded_assets,
+        first_bonded_epoch_id: Default::default(), //ignore this parameter here
     })
 }
 
