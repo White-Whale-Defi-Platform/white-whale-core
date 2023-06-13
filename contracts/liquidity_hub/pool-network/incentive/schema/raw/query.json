@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "oneOf": [
+    {
+      "description": "Retrieves the current contract configuration.",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves a specific flow.",
+      "type": "object",
+      "required": [
+        "flow"
+      ],
+      "properties": {
+        "flow": {
+          "type": "object",
+          "required": [
+            "flow_id"
+          ],
+          "properties": {
+            "flow_id": {
+              "description": "The id of the flow to find.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the current flows.",
+      "type": "object",
+      "required": [
+        "flows"
+      ],
+      "properties": {
+        "flows": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the positions for an address.",
+      "type": "object",
+      "required": [
+        "positions"
+      ],
+      "properties": {
+        "positions": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to get positions for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards for an address.",
+      "type": "object",
+      "required": [
+        "rewards"
+      ],
+      "properties": {
+        "rewards": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to get all the incentive rewards for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards for an address.",
+      "type": "object",
+      "required": [
+        "global_weight"
+      ],
+      "properties": {
+        "global_weight": {
+          "type": "object",
+          "required": [
+            "epoch_id"
+          ],
+          "properties": {
+            "epoch_id": {
+              "description": "The epoch to get the global weight for.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the rewards/weight share of an address for the current epoch.",
+      "type": "object",
+      "required": [
+        "current_epoch_rewards_share"
+      ],
+      "properties": {
+        "current_epoch_rewards_share": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "description": "The address to query the rewards share for.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

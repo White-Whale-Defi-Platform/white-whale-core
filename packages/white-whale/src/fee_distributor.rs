@@ -1,6 +1,6 @@
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Timestamp, Uint64};
+use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
 use std::fmt;
 use std::fmt::Display;
 
@@ -27,6 +27,8 @@ pub struct Epoch {
     pub available: Vec<Asset>,
     // Fees that were claimed on this epoch. For keeping record on the total fees claimed.
     pub claimed: Vec<Asset>,
+    // Global weight index taken at the time of Epoch Creation
+    pub weight: Uint128,
 }
 
 impl Display for Epoch {

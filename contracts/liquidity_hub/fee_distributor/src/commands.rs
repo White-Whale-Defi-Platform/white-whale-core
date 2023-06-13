@@ -17,7 +17,6 @@ use crate::ContractError;
 pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = get_current_epoch(deps.as_ref())?.epoch;
-
     if env
         .block
         .time
@@ -45,12 +44,19 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
                 .plus_nanos(config.epoch_config.duration.u64())
         };
 
+    // Query the current global index
+    // let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+    //     contract_addr: config.bonding_contract_addr.to_string(),
+    //     msg: to_binary(&QueryMsg::GlobalIndex {})?,
+    // }))?;
+
     let new_epoch = Epoch {
         id: current_epoch.id.checked_add(Uint64::new(1u64))?,
         start_time,
         total: vec![],
         available: vec![],
         claimed: vec![],
+        weight: env.block.time.nanos().into(),
     };
 
     Ok(Response::new()
@@ -77,15 +83,6 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
     let config = CONFIG.load(deps.storage)?;
-    let bonding_weight_response: BondingWeightResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: config.bonding_contract_addr.to_string(),
-            msg: to_binary(&QueryMsg::Weight {
-                address: info.sender.to_string(),
-            })?,
-        }))?;
-
-    let fee_share = bonding_weight_response.share;
 
     let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
     if claimable_epochs.is_empty() {
@@ -94,8 +91,18 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
+        let bonding_weight_response: BondingWeightResponse =
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: config.bonding_contract_addr.to_string(),
+                msg: to_binary(&QueryMsg::Weight {
+                    address: info.sender.to_string(),
+                    timestamp: Some(epoch.start_time),
+                    global_weight: Some(epoch.weight),
+                })?,
+            }))?;
+
         for fee in epoch.total.iter() {
-            let reward = fee.amount * fee_share;
+            let reward = fee.amount * bonding_weight_response.share;
 
             // make sure the reward is sound
             let _ = epoch

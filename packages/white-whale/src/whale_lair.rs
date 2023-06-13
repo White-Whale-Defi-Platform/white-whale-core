@@ -13,6 +13,8 @@ pub struct Config {
     pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
     pub bonding_assets: Vec<AssetInfo>,
+    /// Address of the fee distributor contract.
+    pub fee_distributor_addr: Addr,
 }
 
 #[cw_serde]
@@ -76,6 +78,7 @@ pub enum ExecuteMsg {
         owner: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
+        fee_distributor_addr: Option<String>,
     },
 }
 
@@ -107,11 +110,19 @@ pub enum QueryMsg {
 
     /// Returns the weight of the address.
     #[returns(BondingWeightResponse)]
-    Weight { address: String },
+    Weight {
+        address: String,
+        timestamp: Option<Timestamp>,
+        global_weight: Option<Uint128>,
+    },
 
     /// Returns the total amount of assets that have been bonded to the contract.
     #[returns(BondedResponse)]
     TotalBonded {},
+
+    /// Returns the global index of the contract.
+    #[returns(GlobalIndex)]
+    GlobalIndex {},
 }
 
 #[cw_serde]

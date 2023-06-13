@@ -34,6 +34,7 @@ fn test_instantiate_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
+            fee_distributor_addr: Addr::unchecked("contract2"),
         });
 }
 
