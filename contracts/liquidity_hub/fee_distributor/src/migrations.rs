@@ -1,11 +1,13 @@
 #![cfg(not(tarpaulin_include))]
+use crate::state::{CONFIG, EPOCHS};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, to_binary, Uint64, WasmQuery};
+use cosmwasm_std::{
+    to_binary, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64, WasmQuery,
+};
 use cw_storage_plus::Map;
 use white_whale::fee_distributor::Epoch;
 use white_whale::pool_network::asset::Asset;
 use white_whale::whale_lair::GlobalIndex;
-use crate::state::{CONFIG, EPOCHS};
 use white_whale::whale_lair::QueryMsg as LairQueryMsg;
 
 /// Migrates state from the first iteration, v0.8.* to v0.9.0, which includes the global index in
@@ -28,7 +30,7 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
 
     const EPOCHSV08: Map<&[u8], Epoch> = Map::new("epochs");
 
-    let epochs_v08 =  EPOCHSV08
+    let epochs_v08 = EPOCHSV08
         .range(deps.storage, None, None, Order::Descending)
         .map(|item| {
             let (_, epoch) = item?;
@@ -38,11 +40,10 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
 
     let bonding_contract_addr = CONFIG.load(deps.storage)?.bonding_contract_addr;
     // Query the current global index
-    let global_index: GlobalIndex =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: bonding_contract_addr.to_string(),
-            msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
-        }))?;
+    let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: bonding_contract_addr.to_string(),
+        msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+    }))?;
 
     for mut epoch in epochs_v08 {
         // assign the current global index to all epochs

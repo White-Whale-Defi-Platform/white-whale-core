@@ -9,7 +9,7 @@ use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, Qu
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
-use crate::{commands, queries};
+use crate::{commands, migrations, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-whale_lair";
@@ -142,7 +142,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
@@ -151,6 +151,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             current_version: storage_version,
             new_version: version,
         });
+    }
+
+    if storage_version < Version::parse("0.9.0")? {
+        migrations::migrate_to_v090(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
