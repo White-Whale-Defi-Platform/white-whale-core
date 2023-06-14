@@ -28,7 +28,7 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
         pub claimed: Vec<Asset>,
     }
 
-    const EPOCHSV08: Map<&[u8], Epoch> = Map::new("epochs");
+    const EPOCHSV08: Map<&[u8], EpochV08> = Map::new("epochs");
 
     let epochs_v08 = EPOCHSV08
         .range(deps.storage, None, None, Order::Descending)
@@ -36,7 +36,7 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
             let (_, epoch) = item?;
             Ok(epoch)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<Vec<EpochV08>>>()?;
 
     let bonding_contract_addr = CONFIG.load(deps.storage)?.bonding_contract_addr;
     // Query the current global index
@@ -45,14 +45,18 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
         msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
     }))?;
 
-    for mut epoch in epochs_v08 {
+    for epoch in epochs_v08 {
         // assign the current global index to all epochs
-        epoch = Epoch {
+        let epochv090 = Epoch {
+            id: epoch.id,
+            start_time: epoch.start_time,
+            total: epoch.total,
+            available: epoch.available,
+            claimed: epoch.claimed,
             global_index: global_index.clone(),
-            ..epoch
         };
 
-        EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), &epoch)?;
+        EPOCHS.save(deps.storage, &epochv090.id.to_be_bytes(), &epochv090)?;
     }
 
     Ok(())
