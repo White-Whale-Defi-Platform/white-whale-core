@@ -1,5 +1,5 @@
-use cosmwasm_std::{Decimal, DepsMut, MessageInfo};
-use white_whale::fee_distributor::ClaimableEpochsResponse;
+use cosmwasm_std::{Decimal, DepsMut, MessageInfo, StdResult, Timestamp, Uint64};
+use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochConfig};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
@@ -40,7 +40,7 @@ pub fn validate_funds(
     Ok(())
 }
 
-// if user has unclaimed rewards, fail with an exception prompting them to claim
+/// if user has unclaimed rewards, fail with an exception prompting them to claim
 pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Query fee distributor
     // if user has unclaimed rewards, fail with an exception prompting them to claim
@@ -64,4 +64,78 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
     }
 
     Ok(())
+}
+
+/// Calculates the epoch id for any given timestamp based on the genesis epoch configuration.
+pub fn calculate_epoch(
+    genesis_epoch_config: EpochConfig,
+    timestamp: Timestamp,
+) -> StdResult<Uint64> {
+    let epoch_duration: Uint64 = genesis_epoch_config.duration;
+
+    // if this is true, it means the epoch is before the genesis epoch. In that case return Epoch 0.
+    if Uint64::new(timestamp.nanos()) < genesis_epoch_config.genesis_epoch {
+        return Ok(Uint64::zero());
+    }
+
+    let elapsed_time =
+        Uint64::new(timestamp.nanos()).checked_sub(genesis_epoch_config.genesis_epoch)?;
+    let epoch = elapsed_time
+        .checked_div(epoch_duration)?
+        .checked_add(Uint64::one())?;
+
+    Ok(epoch)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_epoch() {
+        let genesis_epoch = EpochConfig {
+            duration: Uint64::from(86400000000000u64), // 1 day in nanoseconds
+            genesis_epoch: Uint64::from(1683212400000000000u64), // May 4th 2023 15:00:00
+        };
+
+        // First bond timestamp equals genesis epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683212400000000000u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(1u64));
+
+        // First bond timestamp is one day after genesis epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683309600000000000u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(2u64));
+
+        // First bond timestamp is three days after genesis epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683471600000000000u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(4u64));
+
+        // First bond timestamp is before genesis epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683212300000000000u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::zero());
+
+        // First bond timestamp is within the same epoch as genesis epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683223200000000000u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(1u64));
+
+        // First bond timestamp is at the end of the genesis epoch, but not exactly (so it's still not epoch 2)
+        let first_bond_timestamp = Timestamp::from_nanos(1683298799999999999u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(1u64));
+
+        // First bond timestamp is exactly one nanosecond after the end of an epoch
+        let first_bond_timestamp = Timestamp::from_nanos(1683298800000000001u64);
+        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(2u64));
+
+        // First bond timestamp is June 13th 2023 10:56:53
+        let first_bond_timestamp = Timestamp::from_nanos(1686653813000000000u64);
+        let epoch = calculate_epoch(genesis_epoch, first_bond_timestamp).unwrap();
+        assert_eq!(epoch, Uint64::from(40u64));
+    }
 }

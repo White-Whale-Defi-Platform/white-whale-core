@@ -113,7 +113,7 @@ pub enum QueryMsg {
     Weight {
         address: String,
         timestamp: Option<Timestamp>,
-        global_weight: Option<Uint128>,
+        global_index: Option<GlobalIndex>,
     },
 
     /// Returns the total amount of assets that have been bonded to the contract.
@@ -133,6 +133,7 @@ pub struct MigrateMsg {}
 pub struct BondedResponse {
     pub total_bonded: Uint128,
     pub bonded_assets: Vec<Asset>,
+    pub first_bonded_epoch_id: Uint64,
 }
 
 /// Response for the Unbonding query

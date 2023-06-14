@@ -82,6 +82,7 @@ fn test_unbond_successfully() {
                     },
                     amount: Uint128::new(700u128),
                 }],
+                first_bonded_epoch_id: Default::default(),
             },
         )
         .assert_bonding_weight_response(
@@ -164,7 +165,8 @@ fn test_unbond_successfully() {
                             },
                             amount: Uint128::new(1_000u128),
                         },
-                    ]
+                    ],
+                    first_bonded_epoch_id: Default::default(),
                 }
             )
         });

@@ -32,6 +32,7 @@ pub fn instantiate(
             total: vec![],
             available: vec![],
             claimed: vec![],
+            global_index: Default::default(),
         },
     )?;
 
@@ -53,6 +54,7 @@ pub fn execute(
                 total: vec![],
                 available: vec![],
                 claimed: vec![],
+                global_index: Default::default(),
             })
         })?;
     }

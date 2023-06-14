@@ -10,7 +10,7 @@ use cw_utils::parse_reply_execute_data;
 use crate::error::ContractError;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
-use crate::{commands, queries, state};
+use crate::{commands, migrations, queries, state};
 use semver::Version;
 use white_whale::fee_collector::ForwardFeesResponse;
 use white_whale::fee_distributor::{
@@ -80,7 +80,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 contract_addr: config.bonding_contract_addr.to_string(),
                 msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
             }))?;
-        new_epoch.weight = global_index.weight;
+        new_epoch.global_index = global_index;
 
         // forward fees from the expiring epoch to the new one.
         let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
@@ -166,7 +166,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use white_whale::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
@@ -178,6 +178,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             current_version: storage_version,
             new_version: version,
         });
+    }
+
+    if storage_version < Version::parse("0.9.0")? {
+        migrations::migrate_to_v090(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

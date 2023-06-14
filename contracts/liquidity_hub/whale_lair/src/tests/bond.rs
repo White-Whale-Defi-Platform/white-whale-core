@@ -34,6 +34,7 @@ fn test_bond_successfully() {
                     },
                     amount: Uint128::new(1_000u128),
                 }],
+                first_bonded_epoch_id: Default::default(),
             },
         )
         .fast_forward(10u64)
@@ -77,6 +78,7 @@ fn test_bond_successfully() {
                         amount: Uint128::new(3_000u128),
                     },
                 ],
+                first_bonded_epoch_id: Default::default(),
             },
         )
         .fast_forward(10u64)
@@ -141,7 +143,8 @@ fn test_bond_successfully() {
                             },
                             amount: Uint128::new(3_000u128),
                         },
-                    ]
+                    ],
+                    first_bonded_epoch_id: Default::default(),
                 }
             )
         });
