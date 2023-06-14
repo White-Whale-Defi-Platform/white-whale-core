@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
-use cw2::{get_contract_version, ContractVersion};
+use cw2::{get_contract_version, set_contract_version, ContractVersion};
 use std::env;
 use white_whale::pool_network::asset::AssetInfo;
 
@@ -127,6 +127,26 @@ fn test_migration() {
     match res {
         Err(ContractError::MigrateInvalidVersion { .. }) => (),
         _ => panic!("should return ContractError::MigrateInvalidVersion"),
+    }
+
+    set_contract_version(
+        &mut deps.storage,
+        "notWW-fee_collector".to_string(),
+        "1.0.0",
+    )
+    .unwrap();
+
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
+    // should not be able to migrate as the contract name is different Should be a StdError Contract name mismatch
+    match res {
+        Err(ContractError::Std { .. }) => {
+            // Match the error message Contract name mismatch
+            assert_eq!(
+                res.unwrap_err().to_string(),
+                "Generic error: Contract name mismatch".to_string()
+            );
+        }
+        _ => panic!("should return ContractError::Std"),
     }
 }
 

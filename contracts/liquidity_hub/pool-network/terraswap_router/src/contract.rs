@@ -509,6 +509,10 @@ fn test_invalid_operations() {
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use white_whale::migrate_guards::check_contract_name;
+
+    check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
+
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
