@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128, Uint64,
     WasmQuery,
 };
 use cw_storage_plus::Bound;
@@ -36,6 +36,15 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
+
+    // if it doesn't have bonded, return empty response
+    if bonds.is_empty() {
+        return Ok(BondedResponse {
+            total_bonded: Uint128::zero(),
+            bonded_assets: vec![],
+            first_bonded_epoch_id: Uint64::zero(),
+        });
+    }
 
     let mut total_bonded = Uint128::zero();
     let mut bonded_assets = vec![];
