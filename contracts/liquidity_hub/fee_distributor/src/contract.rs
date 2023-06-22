@@ -180,10 +180,18 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     if storage_version < Version::parse("0.9.0")? {
         migrations::migrate_to_v090(deps.branch())?;
     }
 
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    if storage_version == Version::parse("0.9.0")? {
+        let fees_refund_messages = migrations::migrate_to_v091(deps.branch())?;
+        return Ok(Response::default()
+            .add_messages(fees_refund_messages)
+            .add_attribute("action", "migrate"));
+    }
+
     Ok(Response::default())
 }
