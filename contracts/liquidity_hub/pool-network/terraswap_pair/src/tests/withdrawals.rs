@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 

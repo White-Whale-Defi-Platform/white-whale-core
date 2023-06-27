@@ -2,8 +2,8 @@
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp,
-    Uint64, WasmQuery,
+    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64,
+    WasmQuery,
 };
 use cw_storage_plus::Map;
 
@@ -92,7 +92,7 @@ pub fn migrate_to_v091(deps: DepsMut) -> Result<Vec<CosmosMsg>, StdError> {
         epoch.available = vec![];
 
         // save the faulty epoch in the state
-        EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), &epoch)?;
+        EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), epoch)?;
     }
 
     // create messages to send total_fees back to the fee collector
