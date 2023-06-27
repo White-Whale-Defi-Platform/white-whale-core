@@ -28,42 +28,26 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
 
-      # Enable caching for cargo deps to improve run time
-      - uses: actions/cache@v3
+      # Use Rust Cache to speed up subsequent jobs with no cargo lock changes
+      - name: Use Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/git/checkouts
-            ~/.cargo/git/db
-            ~/.cargo/registry/cache
-            ~/.cargo/registry/index
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: "test"
+
       # Install rust
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.65.0
+          toolchain: 1.70.0
           override: true
           components: rustfmt, clippy
-
-      #- name: Set up Python
-      #  uses: actions/setup-python@v2
-      #  with:
-      #    python-version: 3.9.7
-
-      #- name: Install cargo-dylint
-      #  run: cargo install --force cargo-dylint
-
-      #- name: Install dylint-link
-      #  run: cargo install --force dylint-link
 
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.15.0'
-          args: '--features "injective token_factory" --locked -- --test-threads 1'
+          version: "0.15.0"
+          args: '--features "injective token_factory" --locked -- --test-threads 4'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
@@ -85,9 +69,17 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-      
+
       - name: Generate Schemas and Exit on uncommitted changes
         run: |
-         chmod +x ./scripts/build_schemas.sh
-         ./scripts/build_schemas.sh true
+          chmod +x ./scripts/build_schemas.sh
+          ./scripts/build_schemas.sh true
         shell: bash
+
+      - name: Compile WASM contract
+        uses: actions-rs/cargo@v1
+        with:
+          toolchain: 1.70.0
+          command: wasm
+        env:
+          RUSTFLAGS: "-C link-arg=-s"
