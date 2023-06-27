@@ -75,11 +75,3 @@ jobs:
           chmod +x ./scripts/build_schemas.sh
           ./scripts/build_schemas.sh true
         shell: bash
-
-      - name: Compile WASM contract
-        uses: actions-rs/cargo@v1
-        with:
-          toolchain: 1.70.0
-          command: wasm
-        env:
-          RUSTFLAGS: "-C link-arg=-s"
