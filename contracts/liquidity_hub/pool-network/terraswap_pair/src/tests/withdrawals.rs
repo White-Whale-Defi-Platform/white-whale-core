@@ -1,12 +1,14 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coin, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::coin;
 use white_whale::fee::Fee;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network;

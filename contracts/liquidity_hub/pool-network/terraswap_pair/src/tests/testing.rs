@@ -1,9 +1,12 @@
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::CosmosMsg;
+
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, Reply, ReplyOn, StdError, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 use white_whale::fee::Fee;
