@@ -1,5 +1,8 @@
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::CosmosMsg;
+
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,

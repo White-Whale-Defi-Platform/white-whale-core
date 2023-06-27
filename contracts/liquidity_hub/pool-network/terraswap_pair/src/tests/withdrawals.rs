@@ -7,6 +7,8 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
+#[cfg(feature = "token_factory")]
+use cosmwasm_std::coin;
 use white_whale::fee::Fee;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network;
