@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The denoms file in White Whale docs.
 # The table looks like this -> | Name | Chain-ID | Denom | Logo |
@@ -20,5 +20,5 @@ extract_ibc_denom() {
     # Clean up temporary file
     rm .denom_temp.md
 
-    echo "$denom"
+    echo $(echo "$denom" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 }

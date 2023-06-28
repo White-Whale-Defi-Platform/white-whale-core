@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Import the deploy_liquidity_hub script
@@ -165,9 +165,9 @@ while getopts $optstring arg; do
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
     if [[ "$chain" = "local" ]]; then
-      tx_delay=0.5s
+      tx_delay=0.5
     else
-      tx_delay=8s
+      tx_delay=8
     fi
     ;;
   p)

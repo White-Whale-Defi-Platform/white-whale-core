@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -86,9 +86,9 @@ while getopts $optstring arg; do
     import_deployer_wallet $chain
 
     if [[ "$chain" = "local" ]]; then
-      tx_delay=0.5s
+      tx_delay=0.5
     else
-      tx_delay=8s
+      tx_delay=8
     fi
     ;;
   p)

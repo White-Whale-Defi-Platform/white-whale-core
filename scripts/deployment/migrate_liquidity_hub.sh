@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8s
+tx_delay=8
 
 # Displays tool usage
 function display_usage() {
