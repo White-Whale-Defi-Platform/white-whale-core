@@ -2,8 +2,8 @@
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp,
-    Uint64, WasmQuery,
+    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64,
+    WasmQuery,
 };
 use cw_storage_plus::Map;
 
