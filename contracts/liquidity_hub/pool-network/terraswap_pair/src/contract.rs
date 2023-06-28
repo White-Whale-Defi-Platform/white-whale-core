@@ -239,7 +239,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
-    let version: Version = CONTRACT_VERSION.parse()?;
+    //let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
     // we remove this block not to bump the version of the contract again as the migration was done
