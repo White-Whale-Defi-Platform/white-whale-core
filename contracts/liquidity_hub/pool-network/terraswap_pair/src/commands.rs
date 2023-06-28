@@ -4,15 +4,17 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-#[cfg(feature = "token_factory")]
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::coins;
-#[cfg(feature = "token_factory")]
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{
     Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
 use white_whale::pool_network::U256;
 
@@ -571,7 +573,7 @@ fn mint_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
-    #[cfg(feature = "token_factory")]
+    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
     if is_factory_token(liquidity_token.as_str()) {
         let mut messages = vec![];
         messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
@@ -598,7 +600,7 @@ fn mint_lp_token_msg(
         })])
     }
 
-    #[cfg(not(feature = "token_factory"))]
+    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
@@ -613,7 +615,7 @@ fn burn_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
-    #[cfg(feature = "token_factory")]
+    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
     if is_factory_token(liquidity_token.as_str()) {
         Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
             sender,
@@ -629,7 +631,7 @@ fn burn_lp_token_msg(
             funds: vec![],
         }))
     }
-    #[cfg(not(feature = "token_factory"))]
+    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,

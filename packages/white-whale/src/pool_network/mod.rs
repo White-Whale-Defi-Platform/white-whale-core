@@ -1,6 +1,8 @@
 pub mod asset;
 #[cfg(feature = "token_factory")]
 pub mod denom;
+#[cfg(feature = "osmosis_token_factory")]
+pub mod denom_osmosis;
 pub mod factory;
 pub mod frontend_helper;
 pub mod incentive;

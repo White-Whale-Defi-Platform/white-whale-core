@@ -30,6 +30,7 @@ crate-type = ["cdylib", "rlib"]
 backtraces = ["cosmwasm-std/backtraces"]
 injective = ["white-whale/injective"]
 token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 
 [dependencies]
 cw2.workspace = true

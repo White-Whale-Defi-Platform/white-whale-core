@@ -9,13 +9,15 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-#[cfg(feature = "token_factory")]
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::CosmosMsg;
 use white_whale::pool_network::asset::{
     is_factory_token, Asset, AssetInfo, AssetInfoRaw, PairType,
 };
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
 use white_whale::pool_network::querier::query_token_info;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
@@ -484,7 +486,7 @@ pub fn instantiate_fees(
 
 /// Gets the total supply of the given liquidity token
 pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
-    #[cfg(feature = "token_factory")]
+    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
     let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
         deps.querier.query_supply(&liquidity_token)?.amount
@@ -495,7 +497,7 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
         )?
         .total_supply
     };
-    #[cfg(not(feature = "token_factory"))]
+    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
     let total_share = query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_token.as_str())?,
@@ -530,7 +532,7 @@ pub fn create_lp_token(
             Ok(pair_info)
         })?;
 
-        #[cfg(feature = "token_factory")]
+        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
         return Ok(
             Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
                 MsgCreateDenom {

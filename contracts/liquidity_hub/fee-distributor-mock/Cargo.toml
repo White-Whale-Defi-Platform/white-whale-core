@@ -27,7 +27,9 @@ incremental = false
 overflow-checks = true
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
+injective = ["white-whale/injective"]
+token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []

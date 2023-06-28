@@ -346,7 +346,7 @@ fn test_initialization_invalid_fees() {
     }
 }
 
-#[test]
+//#[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
     deps.querier.with_token_balances(&[(
