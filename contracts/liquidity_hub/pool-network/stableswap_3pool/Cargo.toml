@@ -25,6 +25,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 injective = ["white-whale/injective"]
 token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]

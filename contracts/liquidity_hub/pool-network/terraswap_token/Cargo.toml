@@ -15,6 +15,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 injective = ["white-whale/injective"]
 token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all init/handle/query exports
 library = []

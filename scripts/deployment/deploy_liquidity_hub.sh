@@ -1,9 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
+#set -x
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 artifacts_path=$project_root_path/artifacts
+
+source $deployment_script_dir/ibc_denoms.sh
 
 # Displays tool usage
 function display_usage() {
@@ -87,6 +90,120 @@ function init_fee_collector() {
 
   # Append contract_address to output file
   append_contract_address_to_output $contract_address 'fee_collector.wasm'
+  sleep $tx_delay
+}
+
+function init_fee_distributor() {
+  echo -e "\nInitializing the Fee Distributor..."
+
+  whale_denom=$(extract_ibc_denom "$CHAIN_ID")
+
+  # Prepare the instantiation message
+  bonding_contract_addr=$(jq '.contracts[] | select (.wasm == "whale_lair.wasm") | .contract_address' $output_file)
+  fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
+  grace_period=21 #default value is 21 epochs
+  distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
+  epoch_duration=86400000000000     #default value is 1 day, in nanoseconds
+  genesis_epoch=1689260400000000000 #fill with desired unix time, in nanoseconds
+  epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
+
+  init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period": "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'fee_distributor.wasm'
+  sleep $tx_delay
+}
+
+function init_whale_lair() {
+  echo -e "\nInitializing the Whale Lair..."
+
+  # Prepare the instantiation message
+  unbonding_period=1209600000000000  # default value is 14 days, in nanoseconds
+  growth_rate="0.000000064300411522" # this is the value when you interpolate the growth rate to 2X with 365 days of bonding
+
+  bonding_assets=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
+  grace_period="21" #default value is 21 epochs
+  distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
+  epoch_duration="86400000000000"      #default value is 1 day, in nanoseconds
+  genesis_epoch="16740564423000000000" #fill with desired unix time, in nanoseconds
+  epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
+
+  init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period":
+  "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'fee_distributor.wasm'
+  sleep $tx_delay
+}
+
+function init_incentive_factory() {
+  echo -e "\nInitializing the Incentive Factory..."
+
+  # Prepare the instantiation message
+  incentive_code_id=$(jq -r '.contracts[] | select (.wasm == "incentive.wasm") | .code_id' $output_file)
+  fee_distributor_addr=$(jq '.contracts[] | select (.wasm == "fee_distributor.wasm") | .contract_address' $output_file)
+  fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
+  whale_denom=$(extract_ibc_denom "$CHAIN_ID")
+  create_flow_fee='{"amount": "1000000000", "info": {"native_token":{"denom":"'$whale_denom'"}}}'
+  max_concurrent_flows=5          #we start with 5 concurrent flows
+  max_flow_epoch_buffer=14        #default value is 14 epochs
+  min_unbonding_duration=86400    #default value is 1 day, in seconds
+  max_unbonding_duration=31556926 #default value is 1 year, in seconds
+
+  init=$(jq -n \
+    --arg fee_collector_addr "$fee_collector_addr" \
+    --arg fee_distributor_addr "$fee_distributor_addr" \
+    --arg create_flow_fee "$create_flow_fee" \
+    --argjson max_concurrent_flows "$max_concurrent_flows" \
+    --argjson incentive_code_id "$incentive_code_id" \
+    --argjson max_flow_epoch_buffer "$max_flow_epoch_buffer" \
+    --argjson min_unbonding_duration "$min_unbonding_duration" \
+    --argjson max_unbonding_duration "$max_unbonding_duration" \
+    '{ "fee_collector_addr": $fee_collector_addr[1:-1], "fee_distributor_addr": $fee_distributor_addr[1:-1], "create_flow_fee": ($create_flow_fee | fromjson), "max_concurrent_flows": $max_concurrent_flows, "incentive_code_id": $incentive_code_id, "max_flow_epoch_buffer": $max_flow_epoch_buffer, "min_unbonding_duration": $min_unbonding_duration, "max_unbonding_duration": $max_unbonding_duration }')
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "incentive_factory.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Incentive Factory" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'incentive_factory.wasm'
+  sleep $tx_delay
+}
+
+function init_frontend_helper() {
+  echo -e "\nInitializing the Frontend Helper..."
+
+  # Prepare the instantiation message
+  incentive_factory=$(jq '.contracts[] | select (.wasm == "incentive_factory.wasm") | .contract_address' $output_file)
+
+  init='{"incentive_factory": '"$incentive_factory"'}'
+
+  # Instantiate the contract
+  code_id=$(jq -r '.contracts[] | select (.wasm == "frontend_helper.wasm") | .code_id' $output_file)
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Frontend Helper" $TXFLAG --admin $deployer_address
+
+  # Get contract address
+  contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
+
+  # Append contract_address to output file
+  append_contract_address_to_output $contract_address 'frontend_helper.wasm'
   sleep $tx_delay
 }
 
@@ -212,6 +329,16 @@ function deploy() {
   fee-collector)
     init_fee_collector
     ;;
+  fee-distributor)
+    init_fee_distributor
+    # TODO add case for whale lair
+    ;;
+  incentive-factory)
+    init_incentive_factory
+    ;;
+  frontend-helper)
+    init_frontend_helper
+    ;;
   pool-factory)
     init_pool_factory
     ;;
@@ -281,6 +408,15 @@ function store() {
   whale-lair)
     store_artifact_on_chain $artifacts_path/whale_lair.wasm
     ;;
+  incentive)
+    store_artifact_on_chain $artifacts_path/incentive.wasm
+    ;;
+  incentive-factory)
+    store_artifact_on_chain $artifacts_path/incentive_factory.wasm
+    ;;
+  frontend-helper)
+    store_artifact_on_chain $artifacts_path/frontend_helper.wasm
+    ;;
   *) # store all
     store_artifacts_on_chain
     ;;
@@ -303,9 +439,9 @@ while getopts $optstring arg; do
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
     if [[ "$chain" = "local" ]]; then
-      tx_delay=0.5s
+      tx_delay=0.5
     else
-      tx_delay=8s
+      tx_delay=8
     fi
     ;;
   d)

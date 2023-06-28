@@ -239,15 +239,18 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
-    let version: Version = CONTRACT_VERSION.parse()?;
+    //let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
-    if storage_version >= version {
-        return Err(ContractError::MigrateInvalidVersion {
-            current_version: storage_version,
-            new_version: version,
-        });
-    }
+    // we remove this block not to bump the version of the contract again as the migration was done
+    // already (without the token factory fix)
+
+    // if storage_version >= version {
+    //     return Err(ContractError::MigrateInvalidVersion {
+    //         current_version: storage_version,
+    //         new_version: version,
+    //     });
+    // }
 
     if storage_version <= Version::parse("1.0.4")? {
         migrations::migrate_to_v110(deps.branch())?;
