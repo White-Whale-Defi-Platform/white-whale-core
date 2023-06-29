@@ -99,6 +99,20 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Gets all swap routes registered",
+      "type": "object",
+      "required": [
+        "swap_routes"
+      ],
+      "properties": {
+        "swap_routes": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

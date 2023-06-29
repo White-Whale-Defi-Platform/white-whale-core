@@ -393,6 +393,20 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Gets all swap routes registered",
+        "type": "object",
+        "required": [
+          "swap_routes"
+        ],
+        "properties": {
+          "swap_routes": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
@@ -624,6 +638,115 @@
               "additionalProperties": false
             }
           ]
+        }
+      }
+    },
+    "swap_routes": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Array_of_SwapRouteResponse",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SwapRouteResponse"
+      },
+      "definitions": {
+        "AssetInfo": {
+          "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "token"
+              ],
+              "properties": {
+                "token": {
+                  "type": "object",
+                  "required": [
+                    "contract_addr"
+                  ],
+                  "properties": {
+                    "contract_addr": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "native_token"
+              ],
+              "properties": {
+                "native_token": {
+                  "type": "object",
+                  "required": [
+                    "denom"
+                  ],
+                  "properties": {
+                    "denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "SwapOperation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "terra_swap"
+              ],
+              "properties": {
+                "terra_swap": {
+                  "type": "object",
+                  "required": [
+                    "ask_asset_info",
+                    "offer_asset_info"
+                  ],
+                  "properties": {
+                    "ask_asset_info": {
+                      "$ref": "#/definitions/AssetInfo"
+                    },
+                    "offer_asset_info": {
+                      "$ref": "#/definitions/AssetInfo"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "SwapRouteResponse": {
+          "type": "object",
+          "required": [
+            "ask_asset",
+            "offer_asset",
+            "swap_route"
+          ],
+          "properties": {
+            "ask_asset": {
+              "type": "string"
+            },
+            "offer_asset": {
+              "type": "string"
+            },
+            "swap_route": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SwapOperation"
+              }
+            }
+          },
+          "additionalProperties": false
         }
       }
     }
