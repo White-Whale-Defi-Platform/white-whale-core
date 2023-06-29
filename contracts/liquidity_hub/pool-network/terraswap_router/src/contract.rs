@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Uint128, WasmMsg,
+    Order, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
@@ -15,7 +15,7 @@ use white_whale::pool_network::pair::SimulationResponse;
 use white_whale::pool_network::querier::{query_pair_info, reverse_simulate, simulate};
 use white_whale::pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-    SimulateSwapOperationsResponse, SwapOperation, SwapRoute,
+    SimulateSwapOperationsResponse, SwapOperation, SwapRoute, SwapRouteResponse,
 };
 
 use crate::error::ContractError;
@@ -291,6 +291,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             offer_asset_info,
             ask_asset_info,
         )?)?),
+        QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
     }
 }
 
@@ -409,6 +410,29 @@ fn reverse_simulate_return_amount(
     )?;
 
     Ok(res.offer_amount)
+}
+
+// get_swap_routes which only takes deps: Deps as input
+// the function will read from SWAP_ROUTES and return all swpa routes in a vec
+fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractError> {
+    let swap_routes: Vec<SwapRouteResponse> = SWAP_ROUTES
+        .range(deps.storage, None, None, Order::Ascending)
+        .map(|item| {
+            let swap_info = item?;
+            // Destructure key into (offer_asset, ask_asset)
+            let (offer_asset, ask_asset) = swap_info.0;
+            // Destructure value into vec of SwapOperation
+            let swap_route = swap_info.1;
+
+            Ok(SwapRouteResponse {
+                offer_asset,
+                ask_asset,
+                swap_route,
+            })
+        })
+        .collect::<StdResult<Vec<SwapRouteResponse>>>()?;
+
+    Ok(swap_routes)
 }
 
 fn get_swap_route(

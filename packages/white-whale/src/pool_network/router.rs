@@ -48,6 +48,14 @@ pub struct SwapRoute {
     pub swap_operations: Vec<SwapOperation>,
 }
 
+// Used for all swap routes
+#[cw_serde]
+pub struct SwapRouteResponse {
+    pub offer_asset: String,
+    pub ask_asset: String,
+    pub swap_route: Vec<SwapOperation>,
+}
+
 impl fmt::Display for SwapRoute {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -120,6 +128,9 @@ pub enum QueryMsg {
         offer_asset_info: AssetInfo,
         ask_asset_info: AssetInfo,
     },
+    /// Gets all swap routes registered
+    #[returns(Vec<SwapRouteResponse>)]
+    SwapRoutes {},
 }
 
 // We define a custom struct for each query response
