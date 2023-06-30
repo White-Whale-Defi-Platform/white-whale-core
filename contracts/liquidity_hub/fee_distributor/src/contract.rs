@@ -167,7 +167,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use cosmwasm_std::Uint64;
     use white_whale::migrate_guards::check_contract_name;
+
+    use crate::state::get_epoch;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
     let version: Version = CONTRACT_VERSION.parse()?;
@@ -192,6 +195,11 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
             .add_messages(fees_refund_messages)
             .add_attribute("action", "migrate"));
     }
+
+    let epoch_res = get_epoch(deps.as_ref(), Uint64::one())?;
+    let mut epoch = epoch_res.epoch;
+    epoch.global_index.timestamp = epoch.start_time;
+    EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), &epoch)?;
 
     Ok(Response::default())
 }
