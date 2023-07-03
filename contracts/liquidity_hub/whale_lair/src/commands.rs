@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, Response, StdResult,
+    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult,
     Timestamp, Uint128, Uint64,
 };
 use white_whale::pool_network::asset;
@@ -17,6 +17,7 @@ pub(crate) fn bond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
+    env: Env,
     asset: Asset,
 ) -> Result<Response, ContractError> {
     // validate the denom sent is the whitelisted one for bonding
@@ -27,6 +28,7 @@ pub(crate) fn bond(
 
     helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
     helpers::validate_claimed(&deps, &info)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     let mut bond = BOND
         .key((&info.sender, &denom))
@@ -72,6 +74,7 @@ pub(crate) fn unbond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
+    env: Env,
     asset: Asset,
 ) -> Result<Response, ContractError> {
     if asset.amount.is_zero() {
@@ -84,6 +87,7 @@ pub(crate) fn unbond(
     };
 
     helpers::validate_claimed(&deps, &info)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
         // check if the address has enough bond

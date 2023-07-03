@@ -53,6 +53,9 @@ pub enum ContractError {
 
     #[error("There are unclaimed rewards available. Claim them before attempting to bond/unbond")]
     UnclaimedRewards {},
+
+    #[error("Trying to bond/unbond at a late time before the new/latest epoch has been created")]
+    NewEpochNotCreatedYet {},
 }
 
 impl From<semver::Error> for ContractError {
