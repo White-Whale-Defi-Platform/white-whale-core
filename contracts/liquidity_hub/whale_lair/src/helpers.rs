@@ -1,5 +1,5 @@
-use cosmwasm_std::{Decimal, DepsMut, MessageInfo, StdResult, Timestamp, Uint64};
-use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochConfig};
+use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
+use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochConfig, EpochResponse};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
@@ -48,19 +48,44 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
     let fee_distributor = config.fee_distributor_addr;
 
     // Do a smart query for Claimable
-    let claimable_rewards: ClaimableEpochsResponse = deps
-        .querier
-        .query_wasm_smart(
-            fee_distributor,
-            &white_whale::fee_distributor::QueryMsg::Claimable {
-                address: info.sender.to_string(),
-            },
-        )
-        .unwrap();
+    let claimable_rewards: ClaimableEpochsResponse = deps.querier.query_wasm_smart(
+        fee_distributor,
+        &white_whale::fee_distributor::QueryMsg::Claimable {
+            address: info.sender.to_string(),
+        },
+    )?;
 
     // If epochs is greater than none
     if !claimable_rewards.epochs.is_empty() {
         return Err(ContractError::UnclaimedRewards {});
+    }
+
+    Ok(())
+}
+
+/// Validates that the current time is not more than a day after the epoch start time. Helps preventing
+/// global_index timestamp issues when querying the weight.
+pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
+    // Query current epoch on fee distributor
+    let config = CONFIG.load(deps.storage)?;
+    let fee_distributor = config.fee_distributor_addr;
+
+    let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
+        fee_distributor,
+        &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+    )?;
+
+    let current_epoch = epoch_response.epoch;
+    let current_time = env.block.time.seconds();
+    pub const DAY_IN_SECONDS: u64 = 86_400u64;
+
+    // if the current time is more than a day after the epoch start time, then it means the latest
+    // epoch has not been created and thus, prevent users from bonding/unbonding to avoid global_index
+    // timestamp issues when querying the weight.
+    if current_epoch.id != Uint64::zero()
+        && current_time - current_epoch.start_time.seconds() > DAY_IN_SECONDS
+    {
+        return Err(ContractError::NewEpochNotCreatedYet {});
     }
 
     Ok(())

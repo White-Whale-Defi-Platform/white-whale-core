@@ -75,8 +75,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.time, info, asset),
-        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.time, info, asset),
+        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.time, info, env, asset),
+        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.time, info, env, asset),
         ExecuteMsg::Withdraw { denom } => {
             commands::withdraw(deps, env.block.time, info.sender, denom)
         }
