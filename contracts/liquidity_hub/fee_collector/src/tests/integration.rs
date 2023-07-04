@@ -1928,6 +1928,7 @@ fn collect_fees_for_vault() {
                             share: Decimal::zero(),
                         },
                     },
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -2294,6 +2295,7 @@ fn aggregate_fees_for_vault() {
                             share: Decimal::zero(),
                         },
                     },
+                    token_factory_lp: false,
                 },
                 &[],
             )

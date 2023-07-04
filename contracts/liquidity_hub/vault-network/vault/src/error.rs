@@ -57,4 +57,19 @@ pub enum VaultError {
 
     #[error("Cannot deposit while flash-loaning")]
     DepositDuringLoan {},
+
+    #[error("Burn fee is not allowed when using factory tokens")]
+    TokenFactoryAssetBurnDisabled {},
+
+    #[error("The token factory feature is not enabled")]
+    TokenFactoryNotEnabled {},
+
+    #[error("Initial liquidity amount must be over {0}")]
+    InvalidInitialLiquidityAmount(Uint128),
+
+    #[error("Failed to compute the LP share with the given deposit")]
+    LiquidityShareComputation {},
+
+    #[error("The asset doesn't match the asset stored in contract")]
+    AssetMismatch {},
 }

@@ -15,6 +15,9 @@ pub struct InstantiateMsg {
     pub vault_fees: VaultFee,
     /// The address of the fee collector
     pub fee_collector_addr: String,
+    /// If true, the vault will use the token factory to create the LP token. If false, it will
+    /// use a cw20 token instead.
+    pub token_factory_lp: bool,
 }
 
 /// The callback messages available. Only callable by the vault contract itself.
@@ -61,6 +64,8 @@ pub enum ExecuteMsg {
     Deposit {
         amount: Uint128,
     },
+    /// Withdraws from the vault. Used when the LP token is a token factory token.
+    Withdraw {},
     /// Flash-loans a given amount from the vault.
     FlashLoan {
         amount: Uint128,
@@ -118,8 +123,8 @@ pub struct Config {
     pub deposit_enabled: bool,
     /// If withdrawals are enabled
     pub withdraw_enabled: bool,
-    /// The address of the liquidity token
-    pub liquidity_token: Addr,
+    /// The LP asset
+    pub lp_asset: AssetInfo,
     /// The address of the fee collector
     pub fee_collector_addr: Addr,
     /// The fees associated with this vault

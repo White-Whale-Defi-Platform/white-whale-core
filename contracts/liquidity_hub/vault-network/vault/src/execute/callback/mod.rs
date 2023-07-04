@@ -49,6 +49,7 @@ mod test {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
+            false,
             white_whale::vault_network::vault::ExecuteMsg::Callback(
                 white_whale::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
@@ -80,6 +81,7 @@ mod test {
                     },
                     fee_collector_addr: "fee_collector".to_string(),
                     vault_fees: get_fees(),
+                    token_factory_lp: false,
                 },
                 &coins(1_000, "uluna"),
                 "vault",

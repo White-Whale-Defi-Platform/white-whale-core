@@ -1,5 +1,6 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Response};
+use cosmwasm_std::{Decimal, DepsMut, MessageInfo, Response};
 
+use white_whale::pool_network::asset::has_factory_token;
 use white_whale::vault_network::vault::UpdateConfigParams;
 
 use crate::{error::VaultError, state::CONFIG};
@@ -42,6 +43,13 @@ pub fn update_config(
     }
     if let Some(new_fees) = new_vault_fees {
         new_fees.is_valid()?;
+
+        if has_factory_token(&[config.clone().lp_asset])
+            && new_fees.burn_fee.share > Decimal::zero()
+        {
+            return Err(VaultError::TokenFactoryAssetBurnDisabled {});
+        }
+
         config.fees = new_fees;
     }
 
@@ -85,6 +93,7 @@ mod test {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
+            false,
         );
 
         let res = execute(
@@ -114,7 +123,9 @@ mod test {
             asset_info: AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            liquidity_token: Addr::unchecked("lp_token"),
+            lp_asset: AssetInfo::Token {
+                contract_addr: "lp_token".to_string(),
+            },
             deposit_enabled: false,
             flash_loan_enabled: false,
             withdraw_enabled: false,
@@ -166,7 +177,9 @@ mod test {
             asset_info: AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            liquidity_token: Addr::unchecked("lp_token"),
+            lp_asset: AssetInfo::Token {
+                contract_addr: "lp_token".to_string(),
+            },
             deposit_enabled: false,
             flash_loan_enabled: false,
             withdraw_enabled: false,
@@ -217,7 +230,9 @@ mod test {
             asset_info: AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
-            liquidity_token: Addr::unchecked("lp_token"),
+            lp_asset: AssetInfo::Token {
+                contract_addr: "lp_token".to_string(),
+            },
             deposit_enabled: false,
             flash_loan_enabled: false,
             withdraw_enabled: false,
@@ -272,7 +287,9 @@ mod test {
             config_after,
             Config {
                 owner: Addr::unchecked("new_owner"),
-                liquidity_token: Addr::unchecked("lp_token"),
+                lp_asset: AssetInfo::Token {
+                    contract_addr: "lp_token".to_string()
+                },
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string()
                 },

@@ -18,6 +18,7 @@ use crate::tests::mock_app::mock_app;
 pub fn mock_instantiate(
     token_id: u64,
     asset_info: AssetInfo,
+    token_factory_lp: bool,
 ) -> (OwnedDeps<MockStorage, MockApi, MockQuerier>, Env) {
     let mut deps = mock_dependencies();
     let env = mock_env();
@@ -34,6 +35,7 @@ pub fn mock_instantiate(
             asset_info,
             vault_fees: get_fees(),
             fee_collector_addr: "fee_collector".to_string(),
+            token_factory_lp,
         },
     )
     .unwrap();
@@ -68,6 +70,7 @@ pub fn app_mock_instantiate(app: &mut App, asset_info: AssetInfo) -> Addr {
             asset_info,
             fee_collector_addr: fee_collector_addr.into_string(),
             vault_fees: get_fees(),
+            token_factory_lp: false,
         },
         &[],
         "vault",

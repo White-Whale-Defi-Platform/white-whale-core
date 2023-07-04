@@ -3,23 +3,20 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
-    Storage, SubMsg, Uint128, Uint256, WasmMsg,
+    to_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult, Storage,
+    SubMsg, Uint128, Uint256, WasmMsg,
 };
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::CosmosMsg;
-use white_whale::pool_network::asset::{
-    is_factory_token, Asset, AssetInfo, AssetInfoRaw, PairType,
-};
+use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
-use white_whale::pool_network::querier::query_token_info;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::contract::INSTANTIATE_REPLY_ID;
@@ -482,38 +479,6 @@ pub fn instantiate_fees(
             },
         ],
     )
-}
-
-/// Gets the total supply of the given liquidity token
-pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-    let total_share = if is_factory_token(liquidity_token.as_str()) {
-        //bank query total
-        deps.querier.query_supply(&liquidity_token)?.amount
-    } else {
-        query_token_info(
-            &deps.querier,
-            deps.api.addr_validate(liquidity_token.as_str())?,
-        )?
-        .total_supply
-    };
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
-    let total_share = query_token_info(
-        &deps.querier,
-        deps.api.addr_validate(liquidity_token.as_str())?,
-    )?
-    .total_supply;
-
-    Ok(total_share)
-}
-
-/// Verifies if there's a factory token in the vector of [AssetInfo]s.
-/// todo consolidate this once the pool PRs are merged
-pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
-    assets.iter().any(|asset| match asset {
-        AssetInfo::Token { .. } => false,
-        AssetInfo::NativeToken { denom } => is_factory_token(denom),
-    })
 }
 
 /// Creates a new LP token for this pool

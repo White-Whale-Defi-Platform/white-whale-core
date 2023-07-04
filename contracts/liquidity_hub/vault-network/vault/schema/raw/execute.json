@@ -25,6 +25,20 @@
       "additionalProperties": false
     },
     {
+      "description": "Withdraws from the vault. Used when the LP token is a token factory token.",
+      "type": "object",
+      "required": [
+        "withdraw"
+      ],
+      "properties": {
+        "withdraw": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Flash-loans a given amount from the vault.",
       "type": "object",
       "required": [

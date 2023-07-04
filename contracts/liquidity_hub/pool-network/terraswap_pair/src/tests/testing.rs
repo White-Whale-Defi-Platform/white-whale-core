@@ -15,10 +15,10 @@ use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
 use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::pair::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
+use white_whale::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
-use crate::contract::{execute, instantiate, migrate, query, reply};
+use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
 use crate::queries::query_pair_info;
@@ -343,54 +343,6 @@ fn test_initialization_invalid_fees() {
         Ok(_) => panic!("should return StdError::generic_err(Invalid fee)"),
         Err(ContractError::Std { .. }) => (),
         _ => panic!("should return StdError::generic_err(Invalid fee)"),
-    }
-}
-
-//#[test]
-fn can_migrate_contract() {
-    let mut deps = mock_dependencies(&[]);
-    deps.querier.with_token_balances(&[(
-        &"asset0000".to_string(),
-        &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
-    )]);
-
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        },
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-    };
-
-    let env = mock_env();
-    let info = mock_info("addr0000", &[]);
-    instantiate(deps.as_mut(), env, info, msg).unwrap();
-
-    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {});
-
-    // should not be able to migrate as the version is lower
-    match res {
-        Err(ContractError::MigrateInvalidVersion { .. }) => (),
-        _ => panic!("should return ContractError::MigrateInvalidVersion"),
     }
 }
 
