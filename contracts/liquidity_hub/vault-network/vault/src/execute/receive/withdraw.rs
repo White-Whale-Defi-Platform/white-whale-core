@@ -1,9 +1,15 @@
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
-use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg, TokenInfoResponse};
+use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
-use white_whale::pool_network::asset::AssetInfo;
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+use white_whale::pool_network::asset::is_factory_token;
+use white_whale::pool_network::asset::{get_total_share, AssetInfo};
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::{Coin, MsgBurn};
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn};
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
@@ -29,14 +35,14 @@ pub fn withdraw(
     let total_asset_amount = match &config.asset_info {
         AssetInfo::NativeToken { denom } => {
             deps.querier
-                .query_balance(env.contract.address, denom)?
+                .query_balance(env.contract.address.clone(), denom)?
                 .amount
         }
         AssetInfo::Token { contract_addr } => {
             let balance: BalanceResponse = deps.querier.query_wasm_smart(
                 contract_addr,
                 &Cw20QueryMsg::Balance {
-                    address: env.contract.address.into_string(),
+                    address: env.contract.address.clone().into_string(),
                 },
             )?;
             balance.balance
@@ -44,11 +50,14 @@ pub fn withdraw(
     } // deduct protocol fees
     .checked_sub(collected_protocol_fees.amount)?;
 
-    let total_share_amount: TokenInfoResponse = deps
-        .querier
-        .query_wasm_smart(config.liquidity_token.clone(), &Cw20QueryMsg::TokenInfo {})?;
-    let withdraw_amount =
-        Decimal::from_ratio(amount, total_share_amount.total_supply) * total_asset_amount;
+    let liquidity_asset = match config.lp_asset {
+        AssetInfo::Token { contract_addr } => contract_addr,
+        AssetInfo::NativeToken { denom } => denom,
+    };
+
+    let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
+
+    let withdraw_amount = Decimal::from_ratio(amount, total_share) * total_asset_amount;
 
     // create message to send back to user if cw20
     let messages: Vec<CosmosMsg> = vec![
@@ -68,12 +77,7 @@ pub fn withdraw(
             }
             .into(),
         },
-        WasmMsg::Execute {
-            contract_addr: config.liquidity_token.into_string(),
-            funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
-        }
-        .into(),
+        burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), amount)?,
     ];
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
@@ -81,6 +85,37 @@ pub fn withdraw(
         ("lp_amount", &amount.to_string()),
         ("asset_amount", &withdraw_amount.to_string()),
     ]))
+}
+
+/// Creates the Burn LP message
+#[allow(unused_variables)]
+fn burn_lp_asset_msg(
+    liquidity_asset: String,
+    sender: String,
+    amount: Uint128,
+) -> Result<CosmosMsg, VaultError> {
+    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    if is_factory_token(liquidity_asset.as_str()) {
+        Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
+            sender,
+            amount: Some(Coin {
+                denom: liquidity_asset,
+                amount: amount.to_string(),
+            }),
+        }))
+    } else {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: liquidity_asset,
+            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            funds: vec![],
+        }))
+    }
+    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: liquidity_asset,
+        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+        funds: vec![],
+    }))
 }
 
 #[cfg(test)]
@@ -111,12 +146,13 @@ mod tests {
     };
 
     #[test]
-    fn cannot_send_from_non_liquidity_token() {
+    fn cannot_send_from_non_liquidity_native_token() {
         let (res, ..) = mock_execute(
             1,
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
+            false,
             white_whale::vault_network::vault::ExecuteMsg::Receive(
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     sender: mock_creator().sender.into_string(),
@@ -126,7 +162,27 @@ mod tests {
                 },
             ),
         );
-        assert_eq!(res.unwrap_err(), VaultError::ExternalCallback {})
+        assert_eq!(res.unwrap_err(), VaultError::Unauthorized {})
+    }
+
+    #[test]
+    fn cannot_send_from_non_liquidity_token() {
+        let (res, ..) = mock_execute(
+            1,
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            false,
+            white_whale::vault_network::vault::ExecuteMsg::Receive(
+                white_whale::vault_network::vault::Cw20ReceiveMsg {
+                    sender: mock_creator().sender.into_string(),
+                    amount: Uint128::new(5_000),
+                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                        .unwrap(),
+                },
+            ),
+        );
+        assert_eq!(res.unwrap_err(), VaultError::Unauthorized {})
     }
 
     #[test]
@@ -136,6 +192,7 @@ mod tests {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
+            false,
             white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
@@ -148,10 +205,31 @@ mod tests {
 
         res.unwrap();
 
+        // change the asset_info
+        CONFIG
+            .save(
+                &mut deps.storage,
+                &Config {
+                    owner: mock_creator().sender,
+                    asset_info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    lp_asset: AssetInfo::Token {
+                        contract_addr: Addr::unchecked("lp_token").to_string(),
+                    },
+                    deposit_enabled: false,
+                    flash_loan_enabled: true,
+                    withdraw_enabled: false,
+                    fee_collector_addr: Addr::unchecked("fee_collector_addr"),
+                    fees: get_fees(),
+                },
+            )
+            .unwrap();
+
         let res = execute(
             deps.as_mut(),
             mock_env(),
-            mock_info("", &[]),
+            mock_info("lp_token", &[]),
             white_whale::vault_network::vault::ExecuteMsg::Receive(
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(2_000),
@@ -186,6 +264,11 @@ mod tests {
             )
             .unwrap();
 
+        let lp_token_addr = match config.lp_asset.clone() {
+            AssetInfo::Token { contract_addr } => contract_addr,
+            AssetInfo::NativeToken { .. } => "".to_string(),
+        };
+
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
@@ -195,14 +278,15 @@ mod tests {
             &coins(10_000, "uluna"),
         )
         .unwrap();
+        // user got 9k lp tokens
 
         // withdraw 50% of funds
         app.execute_contract(
             mock_creator().sender,
-            config.liquidity_token.clone(),
+            Addr::unchecked(lp_token_addr.clone()),
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
-                amount: Uint128::new(5_000),
+                amount: Uint128::new(4_500),
                 msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
@@ -210,26 +294,26 @@ mod tests {
         )
         .unwrap();
 
-        // user should now have a balance of 10_000 uluna (their 5_000 after depositing + 5_000 they just withdrew)
+        // user should now have a balance of 9_500 uluna (their 5_000 after depositing + 4_500 they just withdrew)
         assert_eq!(
-            Uint128::new(10_000),
+            Uint128::new(9_500),
             app.wrap()
                 .query_balance(mock_creator().sender, "uluna")
                 .unwrap()
                 .amount
         );
 
-        // user should only have 5000 lp tokens
+        // user should only have 4500 lp tokens
         let cw20_balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
-                config.liquidity_token,
+                lp_token_addr.clone(),
                 &cw20::Cw20QueryMsg::Balance {
                     address: mock_creator().sender.into_string(),
                 },
             )
             .unwrap();
-        assert_eq!(Uint128::new(5_000), cw20_balance.balance)
+        assert_eq!(Uint128::new(4_500), cw20_balance.balance)
     }
 
     #[test]
@@ -274,6 +358,11 @@ mod tests {
             )
             .unwrap();
 
+        let lp_token_addr = match config.lp_asset.clone() {
+            AssetInfo::Token { contract_addr } => contract_addr,
+            AssetInfo::NativeToken { .. } => "".to_string(),
+        };
+
         // increment allowance for deposit
         app.execute_contract(
             mock_creator().sender,
@@ -297,14 +386,15 @@ mod tests {
             &[],
         )
         .unwrap();
+        // user got 9k lp tokens
 
         // withdraw 50% of funds
         app.execute_contract(
             mock_creator().sender,
-            config.liquidity_token.clone(),
+            Addr::unchecked(lp_token_addr.clone()),
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
-                amount: Uint128::new(5_000),
+                amount: Uint128::new(4_500),
                 msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
@@ -312,7 +402,7 @@ mod tests {
         )
         .unwrap();
 
-        // user should now have a balance of 10_000 token (their 5_000 left after depositing + 5_000 they just withdrew)
+        // user should now have a balance of 9_500 token (their 5_000 left after depositing + 4_500 they just withdrew)
         let balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
@@ -322,19 +412,19 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(Uint128::new(10_000), balance.balance);
+        assert_eq!(Uint128::new(9_500), balance.balance);
 
-        // user should only have 5000 lp tokens
+        // user should only have 4500 lp tokens
         let cw20_balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
-                config.liquidity_token,
+                lp_token_addr.clone(),
                 &cw20::Cw20QueryMsg::Balance {
                     address: mock_creator().sender.into_string(),
                 },
             )
             .unwrap();
-        assert_eq!(Uint128::new(5_000), cw20_balance.balance)
+        assert_eq!(Uint128::new(4_500), cw20_balance.balance)
     }
 
     #[test]
@@ -366,7 +456,9 @@ mod tests {
             .save(
                 &mut deps.storage,
                 &Config {
-                    liquidity_token: Addr::unchecked("lp_token"),
+                    lp_asset: AssetInfo::Token {
+                        contract_addr: "lp_token".to_string(),
+                    },
                     asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },
@@ -474,7 +566,9 @@ mod tests {
             .save(
                 &mut deps.storage,
                 &Config {
-                    liquidity_token: Addr::unchecked("lp_token"),
+                    lp_asset: AssetInfo::Token {
+                        contract_addr: "lp_token".to_string(),
+                    },
                     asset_info: AssetInfo::Token {
                         contract_addr: "vault_token".to_string(),
                     },

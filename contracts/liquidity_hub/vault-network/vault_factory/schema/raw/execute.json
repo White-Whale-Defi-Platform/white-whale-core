@@ -14,7 +14,8 @@
           "type": "object",
           "required": [
             "asset_info",
-            "fees"
+            "fees",
+            "token_factory_lp"
           ],
           "properties": {
             "asset_info": {
@@ -22,6 +23,10 @@
             },
             "fees": {
               "$ref": "#/definitions/VaultFee"
+            },
+            "token_factory_lp": {
+              "description": "If true, the vault will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+              "type": "boolean"
             }
           },
           "additionalProperties": false

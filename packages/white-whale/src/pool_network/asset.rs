@@ -257,6 +257,14 @@ impl AssetInfo {
     }
 }
 
+/// Verifies if there's a factory token in the vector of [AssetInfo]s.
+pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
+    assets.iter().any(|asset| match asset {
+        AssetInfo::Token { .. } => false,
+        AssetInfo::NativeToken { denom } => is_factory_token(denom),
+    })
+}
+
 /// Verifies if the given denom is an ibc token or not
 fn is_ibc_token(denom: &str) -> bool {
     let split: Vec<&str> = denom.splitn(2, '/').collect();
@@ -608,4 +616,27 @@ impl TrioInfoRaw {
             },
         ])
     }
+}
+
+/// Gets the total supply of the given liquidity asset
+pub fn get_total_share(deps: &Deps, liquidity_asset: String) -> StdResult<Uint128> {
+    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    let total_share = if is_factory_token(liquidity_asset.as_str()) {
+        //bank query total
+        deps.querier.query_supply(&liquidity_asset)?.amount
+    } else {
+        query_token_info(
+            &deps.querier,
+            deps.api.addr_validate(liquidity_asset.as_str())?,
+        )?
+        .total_supply
+    };
+    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    let total_share = query_token_info(
+        &deps.querier,
+        deps.api.addr_validate(liquidity_asset.as_str())?,
+    )?
+    .total_supply;
+
+    Ok(total_share)
 }

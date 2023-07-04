@@ -9,7 +9,8 @@ use cosmwasm_std::coins;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{
-    Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
+    get_total_share, has_factory_token, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw,
+    MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
@@ -20,7 +21,7 @@ use white_whale::pool_network::U256;
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::helpers::{get_protocol_fee_for_asset, get_total_share, has_factory_token};
+use crate::helpers::get_protocol_fee_for_asset;
 use crate::state::{
     store_fee, ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
     CONFIG, PAIR_INFO,

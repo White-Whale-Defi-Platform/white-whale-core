@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
-use cw20::{BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+use cw20::{BalanceResponse, Cw20QueryMsg};
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{get_total_share, AssetInfo};
 
 use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
@@ -10,9 +10,12 @@ use crate::state::CONFIG;
 pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
-    let lp_amount: TokenInfoResponse = deps
-        .querier
-        .query_wasm_smart(config.liquidity_token, &Cw20QueryMsg::TokenInfo {})?;
+    let liquidity_asset = match config.lp_asset.clone() {
+        AssetInfo::Token { contract_addr } => contract_addr,
+        AssetInfo::NativeToken { denom } => denom,
+    };
+
+    let lp_amount = get_total_share(&deps, liquidity_asset)?;
 
     let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
 
@@ -36,7 +39,7 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultE
 
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
-    let asset_share = Decimal::from_ratio(amount, lp_amount.total_supply) * balance;
+    let asset_share = Decimal::from_ratio(amount, lp_amount) * balance;
     Ok(to_binary(&asset_share)?)
 }
 
@@ -80,7 +83,9 @@ mod test {
                 &mut deps.storage,
                 &Config {
                     owner: mock_creator().sender,
-                    liquidity_token: Addr::unchecked("lp_token"),
+                    lp_asset: AssetInfo::Token {
+                        contract_addr: "lp_token".to_string(),
+                    },
                     asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },
@@ -149,7 +154,9 @@ mod test {
                 &mut deps.storage,
                 &Config {
                     owner: mock_creator().sender,
-                    liquidity_token: Addr::unchecked("lp_token"),
+                    lp_asset: AssetInfo::Token {
+                        contract_addr: "lp_token".to_string(),
+                    },
                     asset_info: AssetInfo::Token {
                         contract_addr: "vault_token".to_string(),
                     },

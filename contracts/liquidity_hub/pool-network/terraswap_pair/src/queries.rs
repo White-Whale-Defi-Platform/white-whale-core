@@ -3,7 +3,9 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use white_whale::pool_network::asset::{
+    get_total_share, Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType,
+};
 use white_whale::pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
@@ -11,7 +13,7 @@ use white_whale::pool_network::pair::{
 
 use crate::error::ContractError;
 use crate::helpers::{
-    self, calculate_stableswap_y, get_protocol_fee_for_asset, get_total_share, StableSwapDirection,
+    self, calculate_stableswap_y, get_protocol_fee_for_asset, StableSwapDirection,
 };
 use crate::math::Decimal256Helper;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};

@@ -92,6 +92,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
                 denom: "uluna".to_string(),
             },
             fees: get_fees(),
+            token_factory_lp: false,
         },
         &[],
     )
@@ -146,6 +147,7 @@ pub fn app_mock_instantiate(app: &mut App) -> AppInstantiateResponse {
                 contract_addr: token_addr.clone().into_string(),
             },
             fees: get_fees(),
+            token_factory_lp: false,
         },
         &[],
     )
