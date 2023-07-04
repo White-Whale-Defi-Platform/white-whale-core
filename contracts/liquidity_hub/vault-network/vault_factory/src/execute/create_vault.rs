@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg, MessageInfo};
 use white_whale::fee::VaultFee;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault::InstantiateMsg;
@@ -13,6 +13,7 @@ use crate::{
 pub fn create_vault(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_info: AssetInfo,
     fees: VaultFee,
     token_factory_lp: bool,
@@ -44,7 +45,7 @@ pub fn create_vault(
                 vault_fees: fees,
                 token_factory_lp,
             })?,
-            funds: vec![],
+            funds: info.funds,
             label: format!(
                 "White Whale {} Vault",
                 asset_info.clone().get_label(&deps.as_ref())?
