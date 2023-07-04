@@ -50,7 +50,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
             asset_info,
             fees,
             token_factory_lp,
-        } => create_vault(deps, env, asset_info, fees, token_factory_lp),
+        } => create_vault(deps, env, info, asset_info, fees, token_factory_lp),
         ExecuteMsg::UpdateVaultConfig { vault_addr, params } => {
             update_vault_config(deps, vault_addr, params)
         }
