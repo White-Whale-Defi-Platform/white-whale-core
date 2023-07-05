@@ -1,0 +1,519 @@
+{
+    "data": {
+      "epochs": [
+        {
+          "id": "48",
+          "start_time": "1687273200000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1209902410"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "864476648"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "345425762"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "9029100781418",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7816196804768"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1212903976650"
+              }
+            ],
+            "timestamp": "1687202802265887720",
+            "weight": "10891921246284"
+          }
+        },
+        {
+          "id": "47",
+          "start_time": "1687186800000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1102271357"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "794341586"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "307929771"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8928453751566",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7715549774916"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1212903976650"
+              }
+            ],
+            "timestamp": "1687183253494198514",
+            "weight": "10780018224577"
+          }
+        },
+        {
+          "id": "46",
+          "start_time": "1687100400000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "836325086"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "597278946"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "239046140"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8927127884289",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7714459400231"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1212668484058"
+              }
+            ],
+            "timestamp": "1687053617021366354",
+            "weight": "10704271567288"
+          }
+        },
+        {
+          "id": "45",
+          "start_time": "1687014000000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1786862651"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1273422117"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "513440534"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8925671346625",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7713273135935"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1212398210690"
+              }
+            ],
+            "timestamp": "1686977698490200366",
+            "weight": "10659241253535"
+          }
+        },
+        {
+          "id": "44",
+          "start_time": "1686927600000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "2348999024"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1669610987"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "679388037"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8848140009065",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7697840257298"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1150299751767"
+              }
+            ],
+            "timestamp": "1686922543092603161",
+            "weight": "10550201644550"
+          }
+        },
+        {
+          "id": "43",
+          "start_time": "1686841200000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1829880000"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1300836568"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "529043432"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8841029249415",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7691520477617"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1149508771798"
+              }
+            ],
+            "timestamp": "1686821485132419409",
+            "weight": "10485628668740"
+          }
+        },
+        {
+          "id": "42",
+          "start_time": "1686754800000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "836788459"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "595663881"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "241124578"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8827559200925",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7678050429127"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1149508771798"
+              }
+            ],
+            "timestamp": "1686722794237823397",
+            "weight": "10416054603547"
+          }
+        },
+        {
+          "id": "41",
+          "start_time": "1686668400000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "4192093643"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "3107884141"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1084209502"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8827559200925",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7678050429127"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1149508771798"
+              }
+            ],
+            "timestamp": "1686722794237823397",
+            "weight": "10416054603547"
+          }
+        },
+        {
+          "id": "40",
+          "start_time": "1686582000000000000",
+          "total": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "3663868234"
+            }
+          ],
+          "available": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "2462723262"
+            }
+          ],
+          "claimed": [
+            {
+              "info": {
+                "native_token": {
+                  "denom": "ibc/36A02FFC4E74DF4F64305130C3DFA1B06BEAC775648927AA44467C76A77AB8DB"
+                }
+              },
+              "amount": "1201144972"
+            }
+          ],
+          "global_index": {
+            "bonded_amount": "8827559200925",
+            "bonded_assets": [
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36"
+                  }
+                },
+                "amount": "7678050429127"
+              },
+              {
+                "info": {
+                  "native_token": {
+                    "denom": "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E"
+                  }
+                },
+                "amount": "1149508771798"
+              }
+            ],
+            "timestamp": "1686722794237823397",
+            "weight": "10416054603547"
+          }
+        }
+      ]
+    }
+  }
