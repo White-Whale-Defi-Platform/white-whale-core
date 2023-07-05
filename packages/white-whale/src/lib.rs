@@ -7,3 +7,4 @@ pub mod pool_network;
 pub mod traits;
 pub mod vault_network;
 pub mod whale_lair;
+pub mod vault_manager;
