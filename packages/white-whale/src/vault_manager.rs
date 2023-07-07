@@ -15,6 +15,7 @@ pub struct InstantiateMsg {
     pub token_id: u64,
     /// The address where fees get collected
     pub fee_collector_addr: String,
+    pub vault_creation_fee: Asset,
 }
 
 #[cw_serde]
@@ -22,6 +23,7 @@ pub struct ManagerConfig {
     pub owner: Addr,
     pub token_id: u64,
     pub fee_collector_addr: Addr,
+    pub vault_creation_fee: Asset,
     /// If flash-loans are enabled
     pub flash_loan_enabled: bool,
     /// If deposits are enabled
