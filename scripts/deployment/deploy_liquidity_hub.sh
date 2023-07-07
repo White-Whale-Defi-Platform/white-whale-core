@@ -31,6 +31,10 @@ function store_artifact_on_chain() {
 
   echo "Storing $(basename $artifact) on $CHAIN_ID..."
 
+  if [[ $artifact == *"-aarch64.wasm" ]]; then
+    artifact=$(echo "$artifact" | sed 's/-aarch64//')
+  fi
+
   # Get contract version for storing purposes
   local contract_path=$(find "$project_root_path" -iname $(cut -d . -f 1 <<<$(basename $artifact)) -type d)
   local version=$(cat ''"$contract_path"'/Cargo.toml' | awk -F= '/^version/ { print $2 }')
