@@ -189,14 +189,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v090(deps.branch())?;
     }
 
-    if storage_version == Version::parse("0.9.0")? {
-        let fees_refund_messages = migrations::migrate_to_v091(deps.branch())?;
-        return Ok(Response::default()
-            .add_messages(fees_refund_messages)
-            .add_attribute("action", "migrate"));
-    }
-
-    let epoch_res = get_epoch(deps.as_ref(), Uint64::one())?;
+    let epoch_res = get_epoch(deps.as_ref(), Uint64::new(9u64))?;
     let mut epoch = epoch_res.epoch;
     epoch.global_index.timestamp = epoch.start_time;
     EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), &epoch)?;
