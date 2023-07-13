@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg, MessageInfo};
+use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::fee::VaultFee;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault::InstantiateMsg;

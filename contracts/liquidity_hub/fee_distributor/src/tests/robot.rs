@@ -3,10 +3,10 @@ use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
     from_binary, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,
 };
+use white_whale::epoch_manager::EpochConfig;
 
 use white_whale::fee_distributor::{
-    ClaimableEpochsResponse, Config, Epoch, EpochConfig, EpochResponse, ExecuteMsg, InstantiateMsg,
-    QueryMsg,
+    ClaimableEpochsResponse, Config, Epoch, EpochResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
 use white_whale::pool_network::asset::AssetInfo;
 

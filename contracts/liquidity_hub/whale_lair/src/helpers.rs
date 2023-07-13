@@ -1,5 +1,6 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
-use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochConfig, EpochResponse};
+use white_whale::epoch_manager::EpochConfig;
+use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochResponse};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
