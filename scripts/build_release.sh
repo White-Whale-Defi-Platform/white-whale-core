@@ -9,7 +9,7 @@ arch=$(uname -m)
 docker_options=(
   --rm
   -v "$projectRootPath":/code
-  --mount type=volume,source="$(basename "$projectRootPath")_cache",target=/code/target
+  --mount type=volume,source="$(basename "$projectRootPath")_cache",target=/target
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
 )
 
