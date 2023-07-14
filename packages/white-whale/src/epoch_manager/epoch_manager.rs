@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::Display;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Timestamp, Uint64};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -49,7 +49,20 @@ pub struct Config {
     pub epoch_config: EpochConfig,
 }
 
-pub type ConfigResponse = Config;
+impl Config {
+    pub fn to_config_response(self, owner: Addr) -> ConfigResponse {
+        ConfigResponse {
+            owner,
+            epoch_config: self.epoch_config,
+        }
+    }
+}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub owner: Addr,
+    pub epoch_config: EpochConfig,
+}
 
 #[cw_serde]
 pub struct EpochResponse {
@@ -86,6 +99,12 @@ pub struct EpochV2 {
     pub id: u64,
     // Epoch start time
     pub start_time: Timestamp,
+}
+
+impl EpochV2 {
+    pub fn to_epoch_response(self) -> EpochResponse {
+        EpochResponse { epoch: self }
+    }
 }
 
 impl Display for EpochV2 {

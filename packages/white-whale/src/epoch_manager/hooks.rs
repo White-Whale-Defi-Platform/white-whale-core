@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{to_binary, Binary, Coin, CosmosMsg, StdResult, WasmMsg};
-use white_whale::epoch_manager::EpochV2;
+use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, WasmMsg};
+
+use crate::epoch_manager::epoch_manager::EpochV2;
 
 #[cw_serde]
 pub struct EpochChangedHookMsg {

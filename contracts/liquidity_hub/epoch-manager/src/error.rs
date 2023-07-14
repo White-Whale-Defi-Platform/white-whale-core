@@ -1,4 +1,5 @@
 use cosmwasm_std::StdError;
+use cw_controllers::{AdminError, HookError};
 use semver::Version;
 use thiserror::Error;
 
@@ -7,8 +8,11 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("{0}")]
+    AdminError(#[from] AdminError),
+
+    #[error("{0}")]
+    HookError(#[from] HookError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),

@@ -1,4 +1,4 @@
-use crate::epoch_manager::EpochConfig;
+use crate::epoch_manager::epoch_manager::EpochConfig;
 use crate::pool_network::asset::{Asset, AssetInfo};
 use crate::whale_lair::GlobalIndex;
 use cosmwasm_schema::{cw_serde, QueryResponses};
