@@ -163,5 +163,7 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
         });
     }
 
+    rewards.retain(|asset| asset.amount > Uint128::zero());
+
     Ok(RewardsResponse { rewards })
 }
