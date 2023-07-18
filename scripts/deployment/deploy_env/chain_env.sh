@@ -71,10 +71,12 @@ function init_chain_env() {
 
   migaloo)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/migaloo.env)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_migaloo.env)
     ;;
 
   migaloo-testnet)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/migaloo.env)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_migaloo.env)
     ;;
 
   orai)
@@ -87,7 +89,7 @@ function init_chain_env() {
     ;;
   esac
 
-  if [[ $chain != "chihuahua" && $chain != "injective" && $chain != "injective-testnet" ]]; then
+  if [[ $chain != "chihuahua" && $chain != "injective" && $chain != "injective-testnet" && $chain != "migaloo" && $chain != "migaloo-testnet" ]]; then
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/base.env)
   fi
 }
