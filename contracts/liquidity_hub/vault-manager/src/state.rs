@@ -1,6 +1,6 @@
 use cosmwasm_std::{Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::Asset;
 use white_whale::vault_manager::{ManagerConfig, Vault};
 
 pub const MANAGER_CONFIG: Item<ManagerConfig> = Item::new("manager_config");
@@ -11,7 +11,6 @@ pub const COLLECTED_PROTOCOL_FEES: Item<Asset> = Item::new("collected_protocol_f
 pub const ALL_TIME_BURNED_FEES: Item<Asset> = Item::new("all_time_burned_fees");
 // A counter for how many active loans are being performed
 pub const LOAN_COUNTER: Item<u32> = Item::new("loan_counter");
-
 
 // settings for pagination
 const MAX_LIMIT: u32 = 30;

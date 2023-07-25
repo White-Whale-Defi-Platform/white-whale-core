@@ -1,26 +1,35 @@
-use cosmwasm_std::{Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary, MessageInfo, Order, OverflowError, Response, StdError, StdResult, Storage, to_binary, Uint128, Uint256, wasm_execute, WasmMsg};
+use cosmwasm_std::{
+    Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary, MessageInfo,
+    OverflowError, Response, StdError, StdResult, Storage, to_binary, Uint128, WasmMsg,
+};
+use cosmwasm_std::coins;
 use cosmwasm_std::entry_point;
 use cw2::{get_contract_version, set_contract_version};
 use cw20::{AllowanceResponse, BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::Item;
 use semver::Version;
-use white_whale::fee::{Fee, VaultFee};
-use white_whale::pool_network::asset::{Asset, AssetInfo, get_total_share, is_factory_token, MINIMUM_LIQUIDITY_AMOUNT};
-use white_whale::traits::AssetReference;
 
-use white_whale::vault_manager::{CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg, PaybackAmountResponse, QueryMsg, Vault};
-
-#[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgMint, MsgBurn};
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgMint, MsgBurn};
+use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{
+    Asset, AssetInfo, get_total_share, MINIMUM_LIQUIDITY_AMOUNT,
+};
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
-use cosmwasm_std::coins;
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale::traits::AssetReference;
+use white_whale::vault_manager::{
+    CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LpTokenType, ManagerConfig, MigrateMsg,
+    PaybackAmountResponse, QueryMsg, VaultFee,
+};
 
 use crate::error::ContractError;
 use crate::manager;
-use crate::state::{ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, VAULTS};
+use crate::state::{
+    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, VAULTS,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "ww-vault-manager";
@@ -29,15 +38,22 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    _env: Env,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    match msg.vault_creation_fee.info {
+        AssetInfo::Token { .. } => {
+            return Err(StdError::generic_err("Vault creation fee must be native token").into());
+        }
+        AssetInfo::NativeToken { .. } => {}
+    }
+
     let manager_config = ManagerConfig {
         owner: deps.api.addr_validate(&msg.owner)?,
-        token_id: msg.token_id,
+        lp_token_type: msg.lp_token_type,
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         vault_creation_fee: msg.vault_creation_fee,
         flash_loan_enabled: true,
@@ -46,7 +62,19 @@ pub fn instantiate(
     };
     MANAGER_CONFIG.save(deps.storage, &manager_config)?;
 
-    Ok(Response::default())
+    Ok(Response::default().add_attributes(vec![
+        ("method", "instantiate".to_string()),
+        ("owner", manager_config.owner.into_string()),
+        ("lp_token_type", manager_config.lp_token_type.to_string()),
+        (
+            "fee_collector_addr",
+            manager_config.fee_collector_addr.into_string(),
+        ),
+        (
+            "vault_creation_fee",
+            manager_config.vault_creation_fee.to_string(),
+        ),
+    ]))
 }
 
 #[entry_point]
@@ -57,8 +85,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateVault { asset_info, fees, token_factory_lp } => manager::commands::create_vault(deps, env, info, asset_info, fees, token_factory_lp),
+        ExecuteMsg::CreateVault { asset_info, fees } => {
+            manager::commands::create_vault(deps, env, info, asset_info, fees)
+        }
         ExecuteMsg::RemoveVault { asset_info } => {
+            todo!();
             if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
                 return Err(ContractError::NonExistentVault {});
             }
@@ -66,44 +97,66 @@ pub fn execute(
             VAULTS.remove(deps.storage, asset_info.get_reference());
 
             Ok(Response::new().add_attributes(vec![("method", "remove_vault")]))
-
-        },
-        ExecuteMsg::UpdateVault { vault_asset_info, params } => {
-
-            let mut vault = VAULTS.may_load(deps.storage, vault_asset_info.get_reference())?.unwrap();
+        }
+        ExecuteMsg::UpdateVault {
+            vault_asset_info,
+            params,
+        } => {
+            todo!();
+            let mut vault = VAULTS
+                .may_load(deps.storage, vault_asset_info.get_reference())?
+                .unwrap();
 
             vault.fees = VaultFee {
-                protocol_fee: Fee { share: Default::default() },
-                flash_loan_fee: Fee { share: Default::default() },
-                burn_fee: Fee { share: Default::default() },
+                protocol_fee: Fee {
+                    share: Default::default(),
+                },
+                flash_loan_fee: Fee {
+                    share: Default::default(),
+                },
             };
 
             vault.fees = VaultFee {
-                protocol_fee: Fee { share: Default::default() },
-                flash_loan_fee: Fee { share: Default::default() },
-                burn_fee: Fee { share: Default::default() },
+                protocol_fee: Fee {
+                    share: Default::default(),
+                },
+                flash_loan_fee: Fee {
+                    share: Default::default(),
+                },
             };
 
-            Ok(Response::new()
-                    .add_attribute("method", "update_vault_config"))
+            Ok(Response::new().add_attribute("method", "update_vault_config"))
+        }
+        ExecuteMsg::UpdateManagerConfig {
+            owner,
+            fee_collector_addr,
+            token_id,
+        } => {
+            todo!();
+            let new_config =
+                MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
+                    if let Some(new_owner) = owner {
+                        config.owner = deps.api.addr_validate(&new_owner)?;
+                    };
 
-        },
-        ExecuteMsg::UpdateManagerConfig { owner, fee_collector_addr, token_id } => {
-            let new_config = MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
-                if let Some(new_owner) = owner {
-                    config.owner = deps.api.addr_validate(&new_owner)?;
-                };
+                    if let Some(new_fee_collector_addr) = fee_collector_addr {
+                        config.fee_collector_addr =
+                            deps.api.addr_validate(&new_fee_collector_addr)?;
+                    }
 
-                if let Some(new_fee_collector_addr) = fee_collector_addr {
-                    config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
-                }
+                    if let Some(new_token_id) = token_id {
+                        match config.lp_token_type {
+                            LpTokenType::Cw20(_) => {
+                                config.lp_token_type = LpTokenType::Cw20(new_token_id);
+                            }
+                            LpTokenType::TokenFactory => {
+                                return Err(ContractError::InvalidLpTokenType {});
+                            }
+                        }
+                    }
 
-                if let Some(new_token_id) = token_id {
-                    config.token_id = new_token_id;
-                }
-
-                Ok(config)
-            })?;
+                    Ok(config)
+                })?;
 
             Ok(Response::new().add_attributes(vec![
                 ("method", "update_config"),
@@ -112,11 +165,11 @@ pub fn execute(
                     "fee_collector_addr",
                     &new_config.fee_collector_addr.into_string(),
                 ),
-                ("token_id", &new_config.token_id.to_string()),
+                ("lp_token_type", &new_config.lp_token_type.to_string()),
             ]))
-
-        },
+        }
         ExecuteMsg::Deposit { asset } => {
+            todo!();
             let config = MANAGER_CONFIG.load(deps.storage)?;
 
             // check that deposits are enabled
@@ -182,9 +235,14 @@ pub fn execute(
             let lp_amount = if total_share.is_zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                 // depositor preventing small liquidity providers from joining the vault
-                let share = asset.amount.clone()
+                let share = asset
+                    .amount
+                    .clone()
                     .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                    .map_err(|_| ContractError::InvalidVaultCreationFee{ amount: Default::default(), expected: Default::default() })?;
+                    .map_err(|_| ContractError::InvalidVaultCreationFee {
+                        amount: Default::default(),
+                        expected: Default::default(),
+                    })?;
 
                 messages.append(&mut mint_lp_token_msg(
                     liquidity_asset.clone(),
@@ -211,14 +269,20 @@ pub fn execute(
                 // return based on a share of the total pool
                 let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
                 let total_deposits = config
-                    .vault_creation_fee.info.clone()
+                    .vault_creation_fee
+                    .info
+                    .clone()
                     .query_pool(&deps.querier, deps.api, env.contract.address.clone())?
-                    .checked_sub(collected_protocol_fees.amount).unwrap()
-                    .checked_sub(deposit_amount).unwrap();
+                    .checked_sub(collected_protocol_fees.amount)
+                    .unwrap()
+                    .checked_sub(deposit_amount)
+                    .unwrap();
 
                 Uint128::zero()
-                    .checked_mul(total_share).unwrap()
-                    .checked_div(total_deposits).unwrap()
+                    .checked_mul(total_share)
+                    .unwrap()
+                    .checked_div(total_deposits)
+                    .unwrap()
             };
 
             // mint LP token to sender
@@ -229,12 +293,13 @@ pub fn execute(
                 lp_amount,
             )?);
 
-            Ok(Response::new()
-                .add_messages(messages)
-                .add_attributes(vec![("method", "deposit"), ("amount", &Uint128::zero().to_string())]))
-
-        },
-        ExecuteMsg::Withdraw { } => {
+            Ok(Response::new().add_messages(messages).add_attributes(vec![
+                ("method", "deposit"),
+                ("amount", &Uint128::zero().to_string()),
+            ]))
+        }
+        ExecuteMsg::Withdraw {} => {
+            todo!();
             // validate that the asset sent is the token factory LP token
             let config = MANAGER_CONFIG.load(deps.storage)?;
             let lp_token_denom = match config.vault_creation_fee.info {
@@ -247,8 +312,9 @@ pub fn execute(
             }
 
             withdraw(deps, env, info.sender.into_string(), info.funds[0].amount)
-        },
+        }
         ExecuteMsg::Receive(msg) => {
+            todo!();
             // callback can only be called by liquidity token
             let config = MANAGER_CONFIG.load(deps.storage)?;
 
@@ -264,24 +330,34 @@ pub fn execute(
             match from_binary(&msg.msg)? {
                 Cw20HookMsg::Withdraw {} => withdraw(deps, env, msg.sender, msg.amount),
             }
-        },
+        }
         ExecuteMsg::Callback(msg) => {
+            todo!();
             callback(deps, env, info, msg)
-        },
+        }
         ExecuteMsg::FlashLoan { assets, msgs } => {
-
-
-            Ok(Response::default()) },
-        ExecuteMsg::NextLoan { initiator, source_vault_asset_info, payload, to_loan, loaned_assets } => {
-
-
-            Ok(Response::default()) },
-        ExecuteMsg::CompleteLoan { initiator, loaned_assets } => {
-
-            Ok(Response::default()) }
+            todo!();
+            Ok(Response::default())
+        }
+        ExecuteMsg::NextLoan {
+            initiator,
+            source_vault_asset_info,
+            payload,
+            to_loan,
+            loaned_assets,
+        } => {
+            todo!();
+            Ok(Response::default())
+        }
+        ExecuteMsg::CompleteLoan {
+            initiator,
+            loaned_assets,
+        } => {
+            todo!();
+            Ok(Response::default())
+        }
     }
 }
-
 
 pub fn complete_loan(
     deps: DepsMut,
@@ -329,7 +405,8 @@ pub fn complete_loan(
 
             let profit_amount = final_amount
                 .checked_sub(payback_amount.payback_amount.amount.clone())
-                .map_err(|_| ContractError::Unauthorized {}).unwrap();
+                .map_err(|_| ContractError::Unauthorized {})
+                .unwrap();
 
             let mut response_messages: Vec<CosmosMsg> = vec![];
             let payback_loan_msg: StdResult<CosmosMsg> = match loaned_asset.info.clone() {
@@ -381,7 +458,6 @@ pub fn complete_loan(
         .add_messages(messages.concat())
         .add_attributes(vec![("method", "complete_loan")]))
 }
-
 
 #[allow(clippy::too_many_arguments)]
 pub fn next_loan(
@@ -456,7 +532,6 @@ pub fn next_loan(
         .add_messages(messages)
         .add_attributes(vec![("method", "next_loan")]))
 }
-
 
 pub fn flash_loan(
     deps: DepsMut,
@@ -546,7 +621,6 @@ pub fn flash_loan(
     ]))
 }
 
-
 pub fn callback(
     deps: DepsMut,
     env: Env,
@@ -565,7 +639,6 @@ pub fn callback(
         } => after_trade(deps, env, old_balance, loan_amount),
     }
 }
-
 
 pub fn after_trade(
     deps: DepsMut,
@@ -599,25 +672,34 @@ pub fn after_trade(
     let burn_fee = config.vault_creation_fee.amount;
 
     let required_amount = old_balance
-        .checked_add(protocol_fee).unwrap()
-        .checked_add(flash_loan_fee).unwrap()
-        .checked_add(burn_fee).unwrap();
+        .checked_add(protocol_fee)
+        .unwrap()
+        .checked_add(flash_loan_fee)
+        .unwrap()
+        .checked_add(burn_fee)
+        .unwrap();
 
     if required_amount > new_balance {
         return Err(ContractError::Unauthorized {});
     }
 
     let profit = new_balance
-        .checked_sub(old_balance).unwrap()
-        .checked_sub(protocol_fee).unwrap()
-        .checked_sub(flash_loan_fee).unwrap()
-        .checked_sub(burn_fee).unwrap();
+        .checked_sub(old_balance)
+        .unwrap()
+        .checked_sub(protocol_fee)
+        .unwrap()
+        .checked_sub(flash_loan_fee)
+        .unwrap()
+        .checked_sub(burn_fee)
+        .unwrap();
 
     // store fees
     store_fee(deps.storage, COLLECTED_PROTOCOL_FEES, protocol_fee).unwrap();
 
     // deduct loan counter
-    LOAN_COUNTER.update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1))).unwrap();
+    LOAN_COUNTER
+        .update::<_, StdError>(deps.storage, |c| Ok(c.saturating_sub(1)))
+        .unwrap();
 
     let mut response = Response::new();
     if !burn_fee.is_zero() {
@@ -640,7 +722,6 @@ pub fn after_trade(
     ]))
 }
 
-
 /// Stores a fee in the given fees_storage_item
 pub fn store_fee(
     storage: &mut dyn Storage,
@@ -652,7 +733,6 @@ pub fn store_fee(
         Ok(fees)
     })
 }
-
 
 pub fn withdraw(
     deps: DepsMut,
@@ -688,7 +768,8 @@ pub fn withdraw(
             balance.balance
         }
     } // deduct protocol fees
-        .checked_sub(collected_protocol_fees.amount).unwrap();
+        .checked_sub(collected_protocol_fees.amount)
+        .unwrap();
 
     let liquidity_asset = match config.vault_creation_fee.info.clone() {
         AssetInfo::Token { contract_addr } => contract_addr,
@@ -727,7 +808,6 @@ pub fn withdraw(
     ]))
 }
 
-
 /// Creates the Burn LP message
 #[allow(unused_variables)]
 fn burn_lp_asset_msg(
@@ -764,10 +844,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
 }
 
-
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use white_whale::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
@@ -782,45 +861,9 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
-    if storage_version <= Version::parse("1.0.9")? {
-        // do some migration
-
-        const VAULTSV109: Map<&[u8], Addr> = Map::new("vaults");
-
-        // There are less than 10 vaults in each network at this point
-        let vaults_v109 = VAULTSV109
-            .range(deps.storage, None, None, Order::Ascending)
-            .take(10)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        vaults_v109
-            .into_iter()
-            .try_for_each(|(key, vault_addr)| -> Result<(), StdError> {
-                // All the vaults created so far are using native tokens
-                // try to parse reference as a denom value
-                let asset_info = AssetInfo::NativeToken {
-                    denom: String::from_utf8(key.clone())?,
-                };
-
-                VAULTS.save(deps.storage, &key, &Vault{
-                    asset_info,
-                    asset_info_reference: vec![],
-                    lp_asset: AssetInfo::NativeToken { denom: "".to_string() },
-                    fees: VaultFee {
-                        protocol_fee: Fee { share: Default::default() },
-                        flash_loan_fee: Fee { share: Default::default() },
-                        burn_fee: Fee { share: Default::default() },
-                    },
-                })?;
-
-                Ok(())
-            })?;
-    }
-
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
-
 
 /// Creates the Mint LP message
 #[allow(unused_variables)]

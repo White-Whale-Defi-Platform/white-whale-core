@@ -482,7 +482,7 @@ pub fn instantiate_fees(
 }
 
 /// Creates a new LP token for this pool
-pub fn  create_lp_token(
+pub fn create_lp_token(
     deps: DepsMut,
     env: &Env,
     msg: &InstantiateMsg,

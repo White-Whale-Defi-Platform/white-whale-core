@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 use white_whale::pool_network::asset::AssetInfo;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
-    Std(#[from] cosmwasm_std::StdError),
+    Std(#[from] StdError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
@@ -28,8 +28,13 @@ pub enum ContractError {
 
     #[error("Invalid vault creation fee paid. Received {amount}, expected {expected}")]
     InvalidVaultCreationFee { amount: Uint128, expected: Uint128 },
-}
 
+    #[error("The token factory feature is not enabled")]
+    TokenFactoryNotEnabled {},
+
+    #[error("Invalid LpTokenType")]
+    InvalidLpTokenType {},
+}
 
 impl From<semver::Error> for ContractError {
     fn from(err: semver::Error) -> Self {

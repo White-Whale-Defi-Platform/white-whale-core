@@ -1,18 +1,17 @@
-use crate::fee_distributor::Epoch;
+use crate::fee::Fee;
 use crate::pool_network::asset::{Asset, AssetInfo};
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Uint128};
-use crate::fee::VaultFee;
 use crate::vault_network::vault;
-
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, StdError, StdResult, Uint128};
+use std::fmt::{Display, Formatter};
 
 /// The instantiation message
 #[cw_serde]
 pub struct InstantiateMsg {
     /// The owner of the manager
     pub owner: String,
-    /// The code ID for the liquidity token contract in case the token manager is not used
-    pub token_id: u64,
+    /// The type of LP token to use, whether a cw20 token or a token factory token
+    pub lp_token_type: LpTokenType,
     /// The address where fees get collected
     pub fee_collector_addr: String,
     pub vault_creation_fee: Asset,
@@ -21,7 +20,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub struct ManagerConfig {
     pub owner: Addr,
-    pub token_id: u64,
+    pub lp_token_type: LpTokenType,
     pub fee_collector_addr: Addr,
     pub vault_creation_fee: Asset,
     /// If flash-loans are enabled
@@ -44,22 +43,41 @@ pub struct Vault {
     pub fees: VaultFee,
 }
 
+#[cw_serde]
+pub enum LpTokenType {
+    Cw20(u64),
+    TokenFactory,
+}
+
+impl LpTokenType {
+    pub fn get_cw20_code_id(&self) -> StdResult<u64> {
+        match self {
+            LpTokenType::TokenFactory => Err(StdError::generic_err("Not a cw20 token")),
+            LpTokenType::Cw20(code_id) => Ok(*code_id),
+        }
+    }
+}
+
+impl Display for LpTokenType {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 /// The execution message
 #[cw_serde]
 pub enum ExecuteMsg {
     // MANAGER MESSAGES
-
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
     /// for and the fees
     CreateVault {
         asset_info: AssetInfo,
         fees: VaultFee,
-        /// If true, the vault will use the token manager to create the LP token. If false, it will
-        /// use a cw20 token instead.
-        token_factory_lp: bool,
     },
     /// Removes a vault given its [AssetInfo]
-    RemoveVault { asset_info: AssetInfo },
+    RemoveVault {
+        asset_info: AssetInfo,
+    },
     /// Updates a vault config
     UpdateVault {
         vault_asset_info: AssetInfo,
@@ -74,7 +92,6 @@ pub enum ExecuteMsg {
     },
 
     // VAULT MESSAGES
-
     /// Deposits a given asset into the vault manager.
     Deposit {
         asset: Asset,
@@ -85,7 +102,6 @@ pub enum ExecuteMsg {
     Callback(CallbackMsg),
 
     // ROUTER MESSAGES
-
     /// Retrieves the desired `assets` and runs the `msgs`, paying the required amount back the vaults
     /// after running the messages, and returning the profit to the sender.
     FlashLoan {
@@ -118,11 +134,9 @@ pub enum ExecuteMsg {
     },
 }
 
-
 /// The migrate message
 #[cw_serde]
 pub struct MigrateMsg {}
-
 
 /// The query message
 #[cw_serde]
@@ -155,7 +169,6 @@ pub enum QueryMsg {
     GetPaybackAmount { asset: Asset },
 }
 
-
 /// Response for the vaults query
 #[cw_serde]
 pub struct VaultsResponse {
@@ -184,7 +197,6 @@ pub struct Cw20ReceiveMsg {
     pub msg: Binary,
 }
 
-
 #[cw_serde]
 pub struct ProtocolFeesResponse {
     pub fees: Asset,
@@ -200,4 +212,29 @@ pub struct PaybackAmountResponse {
     pub flash_loan_fee: Asset,
     /// The amount of fee to be burned
     pub burn_fee: Asset,
+}
+
+#[cw_serde]
+pub struct VaultFee {
+    pub protocol_fee: Fee,
+    pub flash_loan_fee: Fee,
+}
+
+impl VaultFee {
+    /// Checks that the given [VaultFee] is valid, i.e. the fees provided are valid, and they don't
+    /// exceed 100% together
+    pub fn is_valid(&self) -> StdResult<()> {
+        self.protocol_fee.is_valid()?;
+        self.flash_loan_fee.is_valid()?;
+
+        if self
+            .protocol_fee
+            .share
+            .checked_add(self.flash_loan_fee.share)?
+            >= Decimal::percent(100)
+        {
+            return Err(StdError::generic_err("Invalid fees"));
+        }
+        Ok(())
+    }
 }

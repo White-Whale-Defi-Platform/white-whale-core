@@ -1,8 +1,8 @@
 pub mod contract;
 mod error;
+mod manager;
+mod router;
 pub mod state;
 mod vault;
-mod router;
-mod manager;
 
 pub use crate::error::ContractError;
