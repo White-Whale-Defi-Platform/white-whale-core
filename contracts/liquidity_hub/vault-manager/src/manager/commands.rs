@@ -63,7 +63,6 @@ pub fn create_vault(
             asset_info_reference,
             &Vault {
                 asset_info,
-                asset_info_reference: asset_info_reference.to_vec(),
                 lp_asset: lp_asset.clone(),
                 fees,
             },
@@ -104,7 +103,6 @@ pub fn create_vault(
             asset_info_reference,
             &Vault {
                 asset_info,
-                asset_info_reference: asset_info_reference.to_vec(),
                 lp_asset: lp_asset.clone(),
                 fees,
             },

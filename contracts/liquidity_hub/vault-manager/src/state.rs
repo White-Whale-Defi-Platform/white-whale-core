@@ -1,7 +1,10 @@
-use cosmwasm_std::{Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::Asset;
 use white_whale::vault_manager::{ManagerConfig, Vault};
+
+pub const OWNER: Item<Addr> = Item::new("owner");
+pub const PROPOSED_OWNER: Item<Addr> = Item::new("proposed_owner");
 
 pub const MANAGER_CONFIG: Item<ManagerConfig> = Item::new("manager_config");
 pub const VAULTS: Map<&[u8], Vault> = Map::new("vaults");

@@ -1,20 +1,20 @@
-use cosmwasm_std::{
-    Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, from_binary, MessageInfo,
-    OverflowError, Response, StdError, StdResult, Storage, to_binary, Uint128, WasmMsg,
-};
 use cosmwasm_std::coins;
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, OverflowError, Response, StdError, StdResult, Storage, Uint128, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use cw20::{AllowanceResponse, BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw_storage_plus::Item;
 use semver::Version;
 
 use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{
-    Asset, AssetInfo, get_total_share, MINIMUM_LIQUIDITY_AMOUNT,
-};
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
+use white_whale::pool_network::asset::{
+    get_total_share, Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT,
+};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
@@ -28,7 +28,7 @@ use white_whale::vault_manager::{
 use crate::error::ContractError;
 use crate::manager;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, VAULTS,
+    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER, VAULTS,
 };
 
 // version info for migration info
@@ -52,7 +52,6 @@ pub fn instantiate(
     }
 
     let manager_config = ManagerConfig {
-        owner: deps.api.addr_validate(&msg.owner)?,
         lp_token_type: msg.lp_token_type,
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         vault_creation_fee: msg.vault_creation_fee,
@@ -62,9 +61,12 @@ pub fn instantiate(
     };
     MANAGER_CONFIG.save(deps.storage, &manager_config)?;
 
+    //todo ownership proposal stuff to change ownership of the contract
+    OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
+
     Ok(Response::default().add_attributes(vec![
         ("method", "instantiate".to_string()),
-        ("owner", manager_config.owner.into_string()),
+        ("owner", msg.owner),
         ("lp_token_type", manager_config.lp_token_type.to_string()),
         (
             "fee_collector_addr",
@@ -128,23 +130,32 @@ pub fn execute(
             Ok(Response::new().add_attribute("method", "update_vault_config"))
         }
         ExecuteMsg::UpdateManagerConfig {
-            owner,
             fee_collector_addr,
-            token_id,
+            vault_creation_fee,
+            cw20_lp_code_id,
+            flash_loan_enabled,
+            deposit_enabled,
+            withdraw_enabled,
         } => {
-            todo!();
+            let owner = OWNER.load(deps.storage)?;
+
+            // verify owner
+            if owner != info.sender {
+                return Err(ContractError::Unauthorized {});
+            }
+
             let new_config =
                 MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
-                    if let Some(new_owner) = owner {
-                        config.owner = deps.api.addr_validate(&new_owner)?;
-                    };
-
                     if let Some(new_fee_collector_addr) = fee_collector_addr {
                         config.fee_collector_addr =
                             deps.api.addr_validate(&new_fee_collector_addr)?;
                     }
 
-                    if let Some(new_token_id) = token_id {
+                    if let Some(vault_creation_fee) = vault_creation_fee {
+                        config.vault_creation_fee = vault_creation_fee;
+                    }
+
+                    if let Some(new_token_id) = cw20_lp_code_id {
                         match config.lp_token_type {
                             LpTokenType::Cw20(_) => {
                                 config.lp_token_type = LpTokenType::Cw20(new_token_id);
@@ -155,17 +166,38 @@ pub fn execute(
                         }
                     }
 
+                    if let Some(flash_loan_enabled) = flash_loan_enabled {
+                        config.flash_loan_enabled = flash_loan_enabled;
+                    }
+
+                    if let Some(deposit_enabled) = deposit_enabled {
+                        config.deposit_enabled = deposit_enabled;
+                    }
+
+                    if let Some(withdraw_enabled) = withdraw_enabled {
+                        config.withdraw_enabled = withdraw_enabled;
+                    }
+
                     Ok(config)
                 })?;
 
-            Ok(Response::new().add_attributes(vec![
-                ("method", "update_config"),
-                ("owner", &new_config.owner.into_string()),
+            Ok(Response::default().add_attributes(vec![
+                ("method", "update_manager_config"),
                 (
                     "fee_collector_addr",
                     &new_config.fee_collector_addr.into_string(),
                 ),
                 ("lp_token_type", &new_config.lp_token_type.to_string()),
+                (
+                    "vault_creation_fee",
+                    &new_config.vault_creation_fee.to_string(),
+                ),
+                (
+                    "flash_loan_enabled",
+                    &new_config.flash_loan_enabled.to_string(),
+                ),
+                ("deposit_enabled", &new_config.deposit_enabled.to_string()),
+                ("withdraw_enabled", &new_config.withdraw_enabled.to_string()),
             ]))
         }
         ExecuteMsg::Deposit { asset } => {
@@ -220,7 +252,7 @@ pub fn execute(
                         })?,
                         funds: vec![],
                     }
-                        .into(),
+                    .into(),
                 )
             }
 
@@ -414,7 +446,7 @@ pub fn complete_loan(
                     to_address: vault,
                     amount: coins(payback_amount.payback_amount.amount.u128(), denom),
                 }
-                    .into()),
+                .into()),
                 AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
                     contract_addr,
                     funds: vec![],
@@ -423,7 +455,7 @@ pub fn complete_loan(
                         amount: payback_amount.payback_amount.amount,
                     })?,
                 }
-                    .into()),
+                .into()),
             };
 
             response_messages.push(payback_loan_msg?);
@@ -435,7 +467,7 @@ pub fn complete_loan(
                         to_address: initiator.clone().into_string(),
                         amount: coins(profit_amount.u128(), denom),
                     }
-                        .into()),
+                    .into()),
                     AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
                         contract_addr,
                         funds: vec![],
@@ -444,7 +476,7 @@ pub fn complete_loan(
                             amount: profit_amount,
                         })?,
                     }
-                        .into()),
+                    .into()),
                 };
 
                 response_messages.push(profit_payback_msg?);
@@ -508,7 +540,7 @@ pub fn next_loan(
                     })?,
                 })?,
             }
-                .into()]
+            .into()]
         }
         None => {
             payload.push(
@@ -521,7 +553,7 @@ pub fn next_loan(
                         loaned_assets,
                     })?,
                 }
-                    .into(),
+                .into(),
             );
 
             payload
@@ -582,7 +614,7 @@ pub fn flash_loan(
             })?,
             funds: vec![],
         }
-            .into();
+        .into();
         messages.push(loan_msg);
     };
 
@@ -599,7 +631,7 @@ pub fn flash_loan(
             msg,
             funds: callback_funds,
         }
-            .into(),
+        .into(),
     );
 
     // call after trade msg
@@ -612,7 +644,7 @@ pub fn flash_loan(
             }))?,
             funds: vec![],
         }
-            .into(),
+        .into(),
     );
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
@@ -768,8 +800,8 @@ pub fn withdraw(
             balance.balance
         }
     } // deduct protocol fees
-        .checked_sub(collected_protocol_fees.amount)
-        .unwrap();
+    .checked_sub(collected_protocol_fees.amount)
+    .unwrap();
 
     let liquidity_asset = match config.vault_creation_fee.info.clone() {
         AssetInfo::Token { contract_addr } => contract_addr,
@@ -787,7 +819,7 @@ pub fn withdraw(
                 to_address: sender.into_string(),
                 amount: coins(withdraw_amount.u128(), denom),
             }
-                .into(),
+            .into(),
             AssetInfo::Token { contract_addr } => WasmMsg::Execute {
                 contract_addr,
                 msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -796,7 +828,7 @@ pub fn withdraw(
                 })?,
                 funds: vec![],
             }
-                .into(),
+            .into(),
         },
         burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), amount)?,
     ];

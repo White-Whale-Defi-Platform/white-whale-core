@@ -19,9 +19,11 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct ManagerConfig {
-    pub owner: Addr,
+    /// The type of LP token to use, whether a cw20 token or a token factory token
     pub lp_token_type: LpTokenType,
+    /// The fee collector contract address
     pub fee_collector_addr: Addr,
+    /// The fee to create a new vault
     pub vault_creation_fee: Asset,
     /// If flash-loans are enabled
     pub flash_loan_enabled: bool,
@@ -35,11 +37,9 @@ pub struct ManagerConfig {
 pub struct Vault {
     /// The asset info the vault manages
     pub asset_info: AssetInfo,
-    /// The asset info refenrece //TODO maybe this can be removed
-    pub asset_info_reference: Vec<u8>,
     /// The LP asset
     pub lp_asset: AssetInfo,
-    /// The fees associated with a vault
+    /// The fees associated with the vault
     pub fees: VaultFee,
 }
 
@@ -86,9 +86,12 @@ pub enum ExecuteMsg {
     /// Updates the configuration of the vault manager.
     /// If a field is not specified, it will not be modified.
     UpdateManagerConfig {
-        owner: Option<String>,
         fee_collector_addr: Option<String>,
-        token_id: Option<u64>,
+        vault_creation_fee: Option<Asset>,
+        cw20_lp_code_id: Option<u64>,
+        flash_loan_enabled: Option<bool>,
+        deposit_enabled: Option<bool>,
+        withdraw_enabled: Option<bool>,
     },
 
     // VAULT MESSAGES
