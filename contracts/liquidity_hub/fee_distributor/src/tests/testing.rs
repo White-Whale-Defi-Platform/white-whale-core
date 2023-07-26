@@ -5,7 +5,7 @@ use white_whale::fee_distributor::Config;
 
 use crate::tests::robot::TestingRobot;
 use crate::ContractError;
-use white_whale::fee_distributor::EpochConfig;
+use white_whale::epoch_manager::EpochConfig;
 use white_whale::pool_network::asset::AssetInfo;
 
 #[test]

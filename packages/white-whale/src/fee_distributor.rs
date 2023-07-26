@@ -1,3 +1,4 @@
+use crate::epoch_manager::epoch_manager::EpochConfig;
 use crate::pool_network::asset::{Asset, AssetInfo};
 use crate::whale_lair::GlobalIndex;
 use cosmwasm_schema::{cw_serde, QueryResponses};
@@ -38,24 +39,6 @@ impl Display for Epoch {
             f,
             "Epoch {{ id: {}, start_time: {}, total: {:?}, available: {:?}, claimed: {:?} }}",
             self.id, self.start_time, self.total, self.available, self.claimed
-        )
-    }
-}
-
-#[cw_serde]
-pub struct EpochConfig {
-    /// The duration of an epoch in nanoseconds.
-    pub duration: Uint64,
-    /// Timestamp for the first epoch, in nanoseconds.
-    pub genesis_epoch: Uint64,
-}
-
-impl Display for EpochConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "EpochConfig {{ epoch_duration: {}, genesis_epoch: {}, }}",
-            self.duration, self.genesis_epoch
         )
     }
 }

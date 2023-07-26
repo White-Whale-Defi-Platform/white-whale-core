@@ -1,3 +1,4 @@
+pub mod epoch_manager;
 pub mod fee;
 pub mod fee_collector;
 pub mod fee_distributor;
