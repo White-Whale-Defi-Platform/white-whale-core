@@ -23,7 +23,7 @@ pub enum ContractError {
         current_version: Version,
     },
 
-    #[error("Vault doesn't exist given the vault address provided")]
+    #[error("Vault doesn't exist")]
     NonExistentVault {},
 
     #[error("Invalid vault creation fee paid. Received {amount}, expected {expected}")]

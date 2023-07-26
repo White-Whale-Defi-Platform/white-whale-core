@@ -9,7 +9,7 @@ use cw20::{AllowanceResponse, BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw_storage_plus::Item;
 use semver::Version;
 
-use white_whale::fee::Fee;
+use white_whale::common::validate_owner;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{
@@ -22,7 +22,7 @@ use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{
     CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LpTokenType, ManagerConfig, MigrateMsg,
-    PaybackAmountResponse, QueryMsg, VaultFee,
+    PaybackAmountResponse, QueryMsg,
 };
 
 use crate::error::ContractError;
@@ -65,7 +65,7 @@ pub fn instantiate(
     OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
 
     Ok(Response::default().add_attributes(vec![
-        ("method", "instantiate".to_string()),
+        ("action", "instantiate".to_string()),
         ("owner", msg.owner),
         ("lp_token_type", manager_config.lp_token_type.to_string()),
         (
@@ -100,34 +100,24 @@ pub fn execute(
 
             Ok(Response::new().add_attributes(vec![("method", "remove_vault")]))
         }
-        ExecuteMsg::UpdateVault {
+        ExecuteMsg::UpdateVaultFees {
             vault_asset_info,
-            params,
+            vault_fee,
         } => {
-            todo!();
+            validate_owner(deps.storage, OWNER, info.sender)?;
+
             let mut vault = VAULTS
                 .may_load(deps.storage, vault_asset_info.get_reference())?
-                .unwrap();
+                .ok_or(ContractError::NonExistentVault {})?;
 
-            vault.fees = VaultFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                flash_loan_fee: Fee {
-                    share: Default::default(),
-                },
-            };
+            vault_fee.is_valid()?;
+            vault.fees = vault_fee.clone();
 
-            vault.fees = VaultFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                flash_loan_fee: Fee {
-                    share: Default::default(),
-                },
-            };
-
-            Ok(Response::new().add_attribute("method", "update_vault_config"))
+            Ok(Response::default().add_attributes(vec![
+                ("action", "update_vault_fees".to_string()),
+                ("vault_asset_info", vault_asset_info.to_string()),
+                ("vault_fee", vault_fee.to_string()),
+            ]))
         }
         ExecuteMsg::UpdateManagerConfig {
             fee_collector_addr,
@@ -137,12 +127,7 @@ pub fn execute(
             deposit_enabled,
             withdraw_enabled,
         } => {
-            let owner = OWNER.load(deps.storage)?;
-
-            // verify owner
-            if owner != info.sender {
-                return Err(ContractError::Unauthorized {});
-            }
+            validate_owner(deps.storage, OWNER, info.sender)?;
 
             let new_config =
                 MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {

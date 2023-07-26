@@ -79,9 +79,9 @@ pub enum ExecuteMsg {
         asset_info: AssetInfo,
     },
     /// Updates a vault config
-    UpdateVault {
+    UpdateVaultFees {
         vault_asset_info: AssetInfo,
-        params: vault::UpdateConfigParams,
+        vault_fee: VaultFee,
     },
     /// Updates the configuration of the vault manager.
     /// If a field is not specified, it will not be modified.
@@ -239,5 +239,15 @@ impl VaultFee {
             return Err(StdError::generic_err("Invalid fees"));
         }
         Ok(())
+    }
+}
+
+impl Display for VaultFee {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "protocol_fee: {}, flash_loan_fee: {}",
+            self.protocol_fee, self.flash_loan_fee
+        )
     }
 }

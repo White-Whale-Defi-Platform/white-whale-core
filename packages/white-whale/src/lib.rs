@@ -1,3 +1,4 @@
+pub mod common;
 pub mod epoch_manager;
 pub mod constants;
 pub mod fee;

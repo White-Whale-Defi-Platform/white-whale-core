@@ -133,5 +133,5 @@ pub fn create_vault(
 
     Ok(Response::default()
         .add_message(message)
-        .add_attributes(vec![("method", "create_vault")]))
+        .add_attributes(vec![("action", "create_vault")]))
 }

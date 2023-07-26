@@ -24,6 +24,7 @@ cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 cosmwasm-schema.workspace = true
+cw-storage-plus.workspace = true
 cw20.workspace = true
 cw2.workspace = true
 protobuf.workspace = true
