@@ -123,7 +123,7 @@ pub fn deposit(
         let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
         let total_deposits = config
             .asset_info
-            .query_pool(&deps.querier, deps.api, env.contract.address.clone())?
+            .query_balance(&deps.querier, deps.api, env.contract.address.clone())?
             .checked_sub(collected_protocol_fees.amount)?
             .checked_sub(deposit_amount)?;
 

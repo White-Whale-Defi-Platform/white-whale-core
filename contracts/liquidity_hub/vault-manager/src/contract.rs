@@ -5,7 +5,6 @@ use cosmwasm_std::{
     MessageInfo, OverflowError, Response, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
-use cw20::{AllowanceResponse, BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 use cw_storage_plus::Item;
 use semver::Version;
 
@@ -186,7 +185,6 @@ pub fn execute(
             ]))
         }
         ExecuteMsg::Deposit { asset } => {
-            todo!();
             let config = MANAGER_CONFIG.load(deps.storage)?;
 
             // check that deposits are enabled
@@ -200,8 +198,12 @@ pub fn execute(
                 return Err(ContractError::Unauthorized {});
             }
 
-            // check that user sent assets they said they did
-            let sent_funds = match config.vault_creation_fee.info.clone() {
+            let vault = VAULTS
+                .may_load(deps.storage, asset.info.get_reference())?
+                .ok_or(ContractError::NonExistentVault {})?;
+
+            // check that user sent the assets it claims to have sent
+            let sent_funds = match vault.asset_info.clone() {
                 AssetInfo::NativeToken { denom } => info
                     .funds
                     .iter()
@@ -209,7 +211,7 @@ pub fn execute(
                     .map(|c| c.amount)
                     .sum::<Uint128>(),
                 AssetInfo::Token { contract_addr } => {
-                    let allowance: AllowanceResponse = deps.querier.query_wasm_smart(
+                    let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
                         contract_addr,
                         &cw20::Cw20QueryMsg::Allowance {
                             owner: info.sender.clone().into_string(),
@@ -220,20 +222,24 @@ pub fn execute(
                     allowance.allowance
                 }
             };
+
             if sent_funds != asset.amount.clone() {
-                return Err(ContractError::Unauthorized {});
+                return Err(ContractError::FundsMismatch {
+                    sent: sent_funds,
+                    wanted: asset.amount,
+                });
             }
 
             let mut messages: Vec<CosmosMsg> = vec![];
             // add cw20 transfer message if needed
-            if let AssetInfo::Token { contract_addr } = config.vault_creation_fee.info.clone() {
+            if let AssetInfo::Token { contract_addr } = vault.asset_info.clone() {
                 messages.push(
                     WasmMsg::Execute {
                         contract_addr,
-                        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                             owner: info.sender.clone().into_string(),
                             recipient: env.contract.address.clone().into_string(),
-                            amount: Uint128::new(213),
+                            amount: asset.amount.clone(),
                         })?,
                         funds: vec![],
                     }
@@ -241,14 +247,9 @@ pub fn execute(
                 )
             }
 
-            let liquidity_asset = match config.vault_creation_fee.info.clone() {
-                AssetInfo::Token { contract_addr } => contract_addr,
-                AssetInfo::NativeToken { denom } => denom,
-            };
-
             // mint LP token for the sender
-            let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
 
+            let total_share = get_total_share(&deps.as_ref(), vault.lp_asset.clone().to_string())?;
             let lp_amount = if total_share.is_zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                 // depositor preventing small liquidity providers from joining the vault
@@ -256,13 +257,12 @@ pub fn execute(
                     .amount
                     .clone()
                     .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                    .map_err(|_| ContractError::InvalidVaultCreationFee {
-                        amount: Default::default(),
-                        expected: Default::default(),
+                    .map_err(|_| {
+                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
                     })?;
 
                 messages.append(&mut mint_lp_token_msg(
-                    liquidity_asset.clone(),
+                    vault.lp_asset.clone().to_string(),
                     env.contract.address.to_string(),
                     env.contract.address.to_string(),
                     MINIMUM_LIQUIDITY_AMOUNT,
@@ -270,7 +270,9 @@ pub fn execute(
 
                 // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
                 if share.is_zero() {
-                    return Err(ContractError::Unauthorized {});
+                    return Err(ContractError::InvalidInitialLiquidityAmount(
+                        MINIMUM_LIQUIDITY_AMOUNT,
+                    ));
                 }
 
                 share
@@ -278,42 +280,36 @@ pub fn execute(
                 // If the asset is native token, the balance has already increased in the vault
                 // To calculate it properly we should subtract user deposit from the vault.
                 // If the asset is a cw20 token, the balance has not changed yet so we don't need to subtract it
-                let deposit_amount = match config.vault_creation_fee.info.clone() {
-                    AssetInfo::NativeToken { .. } => Uint128::zero(),
+                let deposit_amount = match vault.asset_info.clone() {
+                    AssetInfo::NativeToken { .. } => asset.amount.clone(),
                     AssetInfo::Token { .. } => Uint128::zero(),
                 };
 
-                // return based on a share of the total pool
-                let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
-                let total_deposits = config
-                    .vault_creation_fee
+                // return based on a share of the total vault manager
+                let total_deposits = asset
                     .info
                     .clone()
-                    .query_pool(&deps.querier, deps.api, env.contract.address.clone())?
-                    .checked_sub(collected_protocol_fees.amount)
-                    .unwrap()
-                    .checked_sub(deposit_amount)
-                    .unwrap();
+                    .query_balance(&deps.querier, deps.api, env.contract.address.clone())?
+                    .checked_sub(deposit_amount)?;
 
-                Uint128::zero()
-                    .checked_mul(total_share)
-                    .unwrap()
-                    .checked_div(total_deposits)
-                    .unwrap()
+                asset
+                    .amount
+                    .clone()
+                    .checked_mul(total_share)?
+                    .checked_div(total_deposits)?
             };
 
             // mint LP token to sender
             messages.append(&mut mint_lp_token_msg(
-                liquidity_asset,
+                vault.lp_asset.clone().to_string(),
                 info.sender.into_string(),
                 env.contract.address.to_string(),
                 lp_amount,
             )?);
 
-            Ok(Response::new().add_messages(messages).add_attributes(vec![
-                ("method", "deposit"),
-                ("amount", &Uint128::zero().to_string()),
-            ]))
+            Ok(Response::default()
+                .add_messages(messages)
+                .add_attributes(vec![("action", "deposit"), ("asset", &asset.to_string())]))
         }
         ExecuteMsg::Withdraw {} => {
             todo!();
@@ -577,9 +573,9 @@ pub fn flash_loan(
                 .amount
         }
         AssetInfo::Token { contract_addr } => {
-            let resp: BalanceResponse = deps.querier.query_wasm_smart(
+            let resp: cw20::BalanceResponse = deps.querier.query_wasm_smart(
                 contract_addr,
-                &Cw20QueryMsg::Balance {
+                &cw20::Cw20QueryMsg::Balance {
                     address: env.contract.address.clone().into_string(),
                 },
             )?;
@@ -593,7 +589,7 @@ pub fn flash_loan(
     if let AssetInfo::Token { contract_addr } = config.vault_creation_fee.info.clone() {
         let loan_msg = WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.clone().into_string(),
                 amount,
             })?,
@@ -673,9 +669,9 @@ pub fn after_trade(
                 .amount
         }
         AssetInfo::Token { contract_addr } => {
-            let res: BalanceResponse = deps.querier.query_wasm_smart(
+            let res: cw20::BalanceResponse = deps.querier.query_wasm_smart(
                 contract_addr,
-                &Cw20QueryMsg::Balance {
+                &cw20::Cw20QueryMsg::Balance {
                     address: env.contract.address.into_string(),
                 },
             )?;
@@ -776,9 +772,9 @@ pub fn withdraw(
                 .amount
         }
         AssetInfo::Token { contract_addr } => {
-            let balance: BalanceResponse = deps.querier.query_wasm_smart(
+            let balance: cw20::BalanceResponse = deps.querier.query_wasm_smart(
                 contract_addr,
-                &Cw20QueryMsg::Balance {
+                &cw20::Cw20QueryMsg::Balance {
                     address: env.contract.address.clone().into_string(),
                 },
             )?;
@@ -807,7 +803,7 @@ pub fn withdraw(
             .into(),
             AssetInfo::Token { contract_addr } => WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                     recipient: sender.into_string(),
                     amount: withdraw_amount,
                 })?,
@@ -844,14 +840,14 @@ fn burn_lp_asset_msg(
     } else {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_asset,
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            msg: to_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
             funds: vec![],
         }))
     }
     #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+        msg: to_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
         funds: vec![],
     }))
 }
@@ -912,7 +908,7 @@ fn mint_lp_token_msg(
     } else {
         Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_asset,
-            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+            msg: to_binary(&cw20::Cw20ExecuteMsg::Mint { recipient, amount })?,
             funds: vec![],
         })])
     }
@@ -920,7 +916,7 @@ fn mint_lp_token_msg(
     #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+        msg: to_binary(&cw20::Cw20ExecuteMsg::Mint { recipient, amount })?,
         funds: vec![],
     })])
 }

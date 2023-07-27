@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, Uint128};
+use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 use white_whale::pool_network::asset::AssetInfo;
@@ -13,6 +13,9 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("mismatch of sent {sent} but specified deposit amount of {wanted}")]
+    FundsMismatch { sent: Uint128, wanted: Uint128 },
 
     #[error("The asset \"{asset_info}\" already has a vault")]
     ExistingVault { asset_info: AssetInfo },
@@ -34,6 +37,15 @@ pub enum ContractError {
 
     #[error("Invalid LpTokenType")]
     InvalidLpTokenType {},
+
+    #[error("Initial liquidity amount must be over {0}")]
+    InvalidInitialLiquidityAmount(Uint128),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
+
+    #[error("{0}")]
+    DivideByZeroError(#[from] DivideByZeroError),
 }
 
 impl From<semver::Error> for ContractError {

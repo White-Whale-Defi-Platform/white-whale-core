@@ -181,7 +181,8 @@ pub fn execute_swap_operations(
 
     // Execute minimum amount assertion
     if let Some(minimum_receive) = minimum_receive {
-        let receiver_balance = target_asset_info.query_pool(&deps.querier, deps.api, to.clone())?;
+        let receiver_balance =
+            target_asset_info.query_balance(&deps.querier, deps.api, to.clone())?;
 
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
@@ -205,7 +206,7 @@ fn assert_minimum_receive(
     minimum_receive: Uint128,
     receiver: Addr,
 ) -> Result<Response, ContractError> {
-    let receiver_balance = asset_info.query_pool(&deps.querier, deps.api, receiver)?;
+    let receiver_balance = asset_info.query_balance(&deps.querier, deps.api, receiver)?;
     let swap_amount = receiver_balance.checked_sub(prev_balance)?;
 
     if swap_amount < minimum_receive {

@@ -170,21 +170,17 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
-    pub fn query_pool(
+    pub fn query_balance(
         &self,
         querier: &QuerierWrapper,
         api: &dyn Api,
-        pool_addr: Addr,
+        addr: Addr,
     ) -> StdResult<Uint128> {
         match self {
-            AssetInfo::Token { contract_addr, .. } => query_token_balance(
-                querier,
-                api.addr_validate(contract_addr.as_str())?,
-                pool_addr,
-            ),
-            AssetInfo::NativeToken { denom, .. } => {
-                query_balance(querier, pool_addr, denom.to_string())
+            AssetInfo::Token { contract_addr, .. } => {
+                query_token_balance(querier, api.addr_validate(contract_addr.as_str())?, addr)
             }
+            AssetInfo::NativeToken { denom, .. } => query_balance(querier, addr, denom.to_string()),
         }
     }
 
@@ -471,11 +467,11 @@ impl PairInfoRaw {
         let info_1: AssetInfo = self.asset_infos[1].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_0.query_balance(querier, api, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, api, contract_addr)?,
+                amount: info_1.query_balance(querier, api, contract_addr)?,
                 info: info_1,
             },
         ])
@@ -603,15 +599,15 @@ impl TrioInfoRaw {
         let info_2: AssetInfo = self.asset_infos[2].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_0.query_balance(querier, api, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_1.query_balance(querier, api, contract_addr.clone())?,
                 info: info_1,
             },
             Asset {
-                amount: info_2.query_pool(querier, api, contract_addr)?,
+                amount: info_2.query_balance(querier, api, contract_addr)?,
                 info: info_2,
             },
         ])

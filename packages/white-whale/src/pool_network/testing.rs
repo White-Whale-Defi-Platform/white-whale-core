@@ -139,7 +139,7 @@ fn test_asset_info() {
 
     assert_eq!(
         token_info
-            .query_pool(
+            .query_balance(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
                 Addr::unchecked(MOCK_CONTRACT_ADDR),
@@ -149,7 +149,7 @@ fn test_asset_info() {
     );
     assert_eq!(
         native_token_info
-            .query_pool(
+            .query_balance(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
                 Addr::unchecked(MOCK_CONTRACT_ADDR),
