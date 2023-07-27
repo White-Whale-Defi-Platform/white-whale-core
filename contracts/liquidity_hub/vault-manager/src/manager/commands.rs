@@ -1,16 +1,17 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut,
-    Env, MessageInfo, Response, StdError, WasmMsg,
+    attr, instantiate2_address, to_binary, Api, Attribute, Binary, CodeInfoResponse, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
 };
 use cw20::MinterResponse;
 
+use white_whale::common::validate_owner;
 use white_whale::constants::LP_SYMBOL;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::state::{MANAGER_CONFIG, VAULTS};
+use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
 use crate::ContractError;
 
 /// Creates a new vault
@@ -134,4 +135,95 @@ pub fn create_vault(
     Ok(Response::default()
         .add_message(message)
         .add_attributes(vec![("action", "create_vault")]))
+}
+
+/// Updates the manager config
+pub fn update_manager_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    fee_collector_addr: Option<String>,
+    vault_creation_fee: Option<Asset>,
+    cw20_lp_code_id: Option<u64>,
+    flash_loan_enabled: Option<bool>,
+    deposit_enabled: Option<bool>,
+    withdraw_enabled: Option<bool>,
+) -> Result<Response, ContractError> {
+    validate_owner(deps.storage, OWNER, info.sender)?;
+
+    let new_config = MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
+        if let Some(new_fee_collector_addr) = fee_collector_addr {
+            config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
+        }
+
+        if let Some(vault_creation_fee) = vault_creation_fee {
+            config.vault_creation_fee = vault_creation_fee;
+        }
+
+        if let Some(new_token_id) = cw20_lp_code_id {
+            match config.lp_token_type {
+                LpTokenType::Cw20(_) => {
+                    config.lp_token_type = LpTokenType::Cw20(new_token_id);
+                }
+                LpTokenType::TokenFactory => {
+                    return Err(ContractError::InvalidLpTokenType {});
+                }
+            }
+        }
+
+        if let Some(flash_loan_enabled) = flash_loan_enabled {
+            config.flash_loan_enabled = flash_loan_enabled;
+        }
+
+        if let Some(deposit_enabled) = deposit_enabled {
+            config.deposit_enabled = deposit_enabled;
+        }
+
+        if let Some(withdraw_enabled) = withdraw_enabled {
+            config.withdraw_enabled = withdraw_enabled;
+        }
+
+        Ok(config)
+    })?;
+
+    Ok(Response::default().add_attributes(vec![
+        ("method", "update_manager_config"),
+        (
+            "fee_collector_addr",
+            &new_config.fee_collector_addr.into_string(),
+        ),
+        ("lp_token_type", &new_config.lp_token_type.to_string()),
+        (
+            "vault_creation_fee",
+            &new_config.vault_creation_fee.to_string(),
+        ),
+        (
+            "flash_loan_enabled",
+            &new_config.flash_loan_enabled.to_string(),
+        ),
+        ("deposit_enabled", &new_config.deposit_enabled.to_string()),
+        ("withdraw_enabled", &new_config.withdraw_enabled.to_string()),
+    ]))
+}
+
+/// Updates the fees for the vault of the given asset
+pub fn update_vault_fees(
+    deps: DepsMut,
+    info: MessageInfo,
+    vault_asset_info: AssetInfo,
+    vault_fee: VaultFee,
+) -> Result<Response, ContractError> {
+    validate_owner(deps.storage, OWNER, info.sender)?;
+
+    let mut vault = VAULTS
+        .may_load(deps.storage, vault_asset_info.get_reference())?
+        .ok_or(ContractError::NonExistentVault {})?;
+
+    vault_fee.is_valid()?;
+    vault.fees = vault_fee.clone();
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", "update_vault_fees".to_string()),
+        ("vault_asset_info", vault_asset_info.to_string()),
+        ("vault_fee", vault_fee.to_string()),
+    ]))
 }

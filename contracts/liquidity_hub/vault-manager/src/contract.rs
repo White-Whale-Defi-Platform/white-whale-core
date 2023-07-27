@@ -1,34 +1,31 @@
 use cosmwasm_std::coins;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, OverflowError, Response, StdError, StdResult, Storage, Uint128, WasmMsg,
+    to_binary, Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo,
+    OverflowError, Response, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_storage_plus::Item;
 use semver::Version;
+use white_whale::lp_common;
 
-use white_whale::common::validate_owner;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{
-    get_total_share, Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT,
-};
+use white_whale::pool_network::asset::{get_total_share, Asset, AssetInfo};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
-use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{
-    CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, LpTokenType, ManagerConfig, MigrateMsg,
-    PaybackAmountResponse, QueryMsg,
+    CallbackMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg, PaybackAmountResponse,
+    QueryMsg,
 };
 
 use crate::error::ContractError;
-use crate::manager;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER, VAULTS,
+    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER,
 };
+use crate::{manager, vault};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "ww-vault-manager";
@@ -102,22 +99,7 @@ pub fn execute(
         ExecuteMsg::UpdateVaultFees {
             vault_asset_info,
             vault_fee,
-        } => {
-            validate_owner(deps.storage, OWNER, info.sender)?;
-
-            let mut vault = VAULTS
-                .may_load(deps.storage, vault_asset_info.get_reference())?
-                .ok_or(ContractError::NonExistentVault {})?;
-
-            vault_fee.is_valid()?;
-            vault.fees = vault_fee.clone();
-
-            Ok(Response::default().add_attributes(vec![
-                ("action", "update_vault_fees".to_string()),
-                ("vault_asset_info", vault_asset_info.to_string()),
-                ("vault_fee", vault_fee.to_string()),
-            ]))
-        }
+        } => manager::commands::update_vault_fees(deps, info, vault_asset_info, vault_fee),
         ExecuteMsg::UpdateManagerConfig {
             fee_collector_addr,
             vault_creation_fee,
@@ -125,192 +107,17 @@ pub fn execute(
             flash_loan_enabled,
             deposit_enabled,
             withdraw_enabled,
-        } => {
-            validate_owner(deps.storage, OWNER, info.sender)?;
-
-            let new_config =
-                MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
-                    if let Some(new_fee_collector_addr) = fee_collector_addr {
-                        config.fee_collector_addr =
-                            deps.api.addr_validate(&new_fee_collector_addr)?;
-                    }
-
-                    if let Some(vault_creation_fee) = vault_creation_fee {
-                        config.vault_creation_fee = vault_creation_fee;
-                    }
-
-                    if let Some(new_token_id) = cw20_lp_code_id {
-                        match config.lp_token_type {
-                            LpTokenType::Cw20(_) => {
-                                config.lp_token_type = LpTokenType::Cw20(new_token_id);
-                            }
-                            LpTokenType::TokenFactory => {
-                                return Err(ContractError::InvalidLpTokenType {});
-                            }
-                        }
-                    }
-
-                    if let Some(flash_loan_enabled) = flash_loan_enabled {
-                        config.flash_loan_enabled = flash_loan_enabled;
-                    }
-
-                    if let Some(deposit_enabled) = deposit_enabled {
-                        config.deposit_enabled = deposit_enabled;
-                    }
-
-                    if let Some(withdraw_enabled) = withdraw_enabled {
-                        config.withdraw_enabled = withdraw_enabled;
-                    }
-
-                    Ok(config)
-                })?;
-
-            Ok(Response::default().add_attributes(vec![
-                ("method", "update_manager_config"),
-                (
-                    "fee_collector_addr",
-                    &new_config.fee_collector_addr.into_string(),
-                ),
-                ("lp_token_type", &new_config.lp_token_type.to_string()),
-                (
-                    "vault_creation_fee",
-                    &new_config.vault_creation_fee.to_string(),
-                ),
-                (
-                    "flash_loan_enabled",
-                    &new_config.flash_loan_enabled.to_string(),
-                ),
-                ("deposit_enabled", &new_config.deposit_enabled.to_string()),
-                ("withdraw_enabled", &new_config.withdraw_enabled.to_string()),
-            ]))
-        }
-        ExecuteMsg::Deposit { asset } => {
-            let config = MANAGER_CONFIG.load(deps.storage)?;
-
-            // check that deposits are enabled
-            if !config.deposit_enabled {
-                return Err(ContractError::Unauthorized {});
-            }
-
-            // check that we are not currently in a flash-loan
-            if LOAN_COUNTER.load(deps.storage)? != 0 {
-                // more than 0 loans is being performed currently
-                return Err(ContractError::Unauthorized {});
-            }
-
-            let vault = VAULTS
-                .may_load(deps.storage, asset.info.get_reference())?
-                .ok_or(ContractError::NonExistentVault {})?;
-
-            // check that user sent the assets it claims to have sent
-            let sent_funds = match vault.asset_info.clone() {
-                AssetInfo::NativeToken { denom } => info
-                    .funds
-                    .iter()
-                    .filter(|c| c.denom == denom)
-                    .map(|c| c.amount)
-                    .sum::<Uint128>(),
-                AssetInfo::Token { contract_addr } => {
-                    let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
-                        contract_addr,
-                        &cw20::Cw20QueryMsg::Allowance {
-                            owner: info.sender.clone().into_string(),
-                            spender: env.contract.address.clone().into_string(),
-                        },
-                    )?;
-
-                    allowance.allowance
-                }
-            };
-
-            if sent_funds != asset.amount.clone() {
-                return Err(ContractError::FundsMismatch {
-                    sent: sent_funds,
-                    wanted: asset.amount,
-                });
-            }
-
-            let mut messages: Vec<CosmosMsg> = vec![];
-            // add cw20 transfer message if needed
-            if let AssetInfo::Token { contract_addr } = vault.asset_info.clone() {
-                messages.push(
-                    WasmMsg::Execute {
-                        contract_addr,
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
-                            owner: info.sender.clone().into_string(),
-                            recipient: env.contract.address.clone().into_string(),
-                            amount: asset.amount.clone(),
-                        })?,
-                        funds: vec![],
-                    }
-                    .into(),
-                )
-            }
-
-            // mint LP token for the sender
-
-            let total_share = get_total_share(&deps.as_ref(), vault.lp_asset.clone().to_string())?;
-            let lp_amount = if total_share.is_zero() {
-                // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
-                // depositor preventing small liquidity providers from joining the vault
-                let share = asset
-                    .amount
-                    .clone()
-                    .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                    .map_err(|_| {
-                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
-                    })?;
-
-                messages.append(&mut mint_lp_token_msg(
-                    vault.lp_asset.clone().to_string(),
-                    env.contract.address.to_string(),
-                    env.contract.address.to_string(),
-                    MINIMUM_LIQUIDITY_AMOUNT,
-                )?);
-
-                // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
-                if share.is_zero() {
-                    return Err(ContractError::InvalidInitialLiquidityAmount(
-                        MINIMUM_LIQUIDITY_AMOUNT,
-                    ));
-                }
-
-                share
-            } else {
-                // If the asset is native token, the balance has already increased in the vault
-                // To calculate it properly we should subtract user deposit from the vault.
-                // If the asset is a cw20 token, the balance has not changed yet so we don't need to subtract it
-                let deposit_amount = match vault.asset_info.clone() {
-                    AssetInfo::NativeToken { .. } => asset.amount.clone(),
-                    AssetInfo::Token { .. } => Uint128::zero(),
-                };
-
-                // return based on a share of the total vault manager
-                let total_deposits = asset
-                    .info
-                    .clone()
-                    .query_balance(&deps.querier, deps.api, env.contract.address.clone())?
-                    .checked_sub(deposit_amount)?;
-
-                asset
-                    .amount
-                    .clone()
-                    .checked_mul(total_share)?
-                    .checked_div(total_deposits)?
-            };
-
-            // mint LP token to sender
-            messages.append(&mut mint_lp_token_msg(
-                vault.lp_asset.clone().to_string(),
-                info.sender.into_string(),
-                env.contract.address.to_string(),
-                lp_amount,
-            )?);
-
-            Ok(Response::default()
-                .add_messages(messages)
-                .add_attributes(vec![("action", "deposit"), ("asset", &asset.to_string())]))
-        }
+        } => manager::commands::update_manager_config(
+            deps,
+            info,
+            fee_collector_addr,
+            vault_creation_fee,
+            cw20_lp_code_id,
+            flash_loan_enabled,
+            deposit_enabled,
+            withdraw_enabled,
+        ),
+        ExecuteMsg::Deposit { asset } => vault::commands::deposit(&deps, &env, &info, &asset),
         ExecuteMsg::Withdraw {} => {
             todo!();
             // validate that the asset sent is the token factory LP token
@@ -811,7 +618,7 @@ pub fn withdraw(
             }
             .into(),
         },
-        burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), amount)?,
+        lp_common::burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), amount)?,
     ];
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
@@ -819,37 +626,6 @@ pub fn withdraw(
         ("lp_amount", &amount.to_string()),
         ("asset_amount", &withdraw_amount.to_string()),
     ]))
-}
-
-/// Creates the Burn LP message
-#[allow(unused_variables)]
-fn burn_lp_asset_msg(
-    liquidity_asset: String,
-    sender: String,
-    amount: Uint128,
-) -> Result<CosmosMsg, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-    if is_factory_token(liquidity_asset.as_str()) {
-        Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
-            sender,
-            amount: Some(Coin {
-                denom: liquidity_asset,
-                amount: amount.to_string(),
-            }),
-        }))
-    } else {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: liquidity_asset,
-            msg: to_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
-            funds: vec![],
-        }))
-    }
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: liquidity_asset,
-        msg: to_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
-        funds: vec![],
-    }))
 }
 
 #[entry_point]
@@ -876,47 +652,4 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
-}
-
-/// Creates the Mint LP message
-#[allow(unused_variables)]
-fn mint_lp_token_msg(
-    liquidity_asset: String,
-    recipient: String,
-    sender: String,
-    amount: Uint128,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-    if is_factory_token(liquidity_asset.as_str()) {
-        let mut messages = vec![];
-        messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
-            sender: sender.clone(),
-            amount: Some(Coin {
-                denom: liquidity_asset.clone(),
-                amount: amount.to_string(),
-            }),
-        }));
-
-        if sender != recipient {
-            messages.push(CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
-                to_address: recipient,
-                amount: coins(amount.u128(), liquidity_asset.as_str()),
-            }));
-        }
-
-        Ok(messages)
-    } else {
-        Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: liquidity_asset,
-            msg: to_binary(&cw20::Cw20ExecuteMsg::Mint { recipient, amount })?,
-            funds: vec![],
-        })])
-    }
-
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
-    Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: liquidity_asset,
-        msg: to_binary(&cw20::Cw20ExecuteMsg::Mint { recipient, amount })?,
-        funds: vec![],
-    })])
 }
