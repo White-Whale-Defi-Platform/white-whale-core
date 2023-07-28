@@ -3,6 +3,7 @@ use crate::pool_network::asset::{Asset, AssetInfo};
 use crate::vault_network::vault;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, StdError, StdResult, Uint128};
+use cw_storage_plus::UniqueIndex;
 use std::fmt::{Display, Formatter};
 
 /// The instantiation message

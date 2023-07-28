@@ -1,6 +1,6 @@
 pub mod common;
-pub mod epoch_manager;
 pub mod constants;
+pub mod epoch_manager;
 pub mod fee;
 pub mod fee_collector;
 pub mod fee_distributor;

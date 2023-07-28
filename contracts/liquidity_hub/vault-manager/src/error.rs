@@ -1,6 +1,8 @@
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
+use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
+
 use white_whale::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
@@ -46,6 +48,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),
+
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 }
 
 impl From<semver::Error> for ContractError {

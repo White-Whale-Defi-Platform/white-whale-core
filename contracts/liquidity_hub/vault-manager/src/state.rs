@@ -1,5 +1,8 @@
+use std::string::ToString;
+
 use cosmwasm_std::{Addr, Order, StdResult, Storage};
-use cw_storage_plus::{Bound, Item, Map};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
+
 use white_whale::pool_network::asset::Asset;
 use white_whale::vault_manager::{ManagerConfig, Vault};
 
@@ -7,7 +10,25 @@ pub const OWNER: Item<Addr> = Item::new("owner");
 pub const PROPOSED_OWNER: Item<Addr> = Item::new("proposed_owner");
 
 pub const MANAGER_CONFIG: Item<ManagerConfig> = Item::new("manager_config");
-pub const VAULTS: Map<&[u8], Vault> = Map::new("vaults");
+// pub const VAULTS: Map<&[u8], Vault> = Map::new("vaults");
+pub const VAULTS: IndexedMap<&[u8], Vault, VaultIndexes> = IndexedMap::new(
+    "vaults",
+    VaultIndexes {
+        lp_asset: UniqueIndex::new(|v| v.lp_asset.to_string(), "vaults__lp_asset"),
+    },
+);
+
+pub struct VaultIndexes<'a> {
+    pub lp_asset: UniqueIndex<'a, String, Vault, &'a [u8]>,
+}
+
+impl<'a> IndexList<Vault> for VaultIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Vault>> + '_> {
+        let v: Vec<&dyn Index<Vault>> = vec![&self.lp_asset];
+        Box::new(v.into_iter())
+    }
+}
+
 // Fees that have been accrued by the vaults
 pub const COLLECTED_PROTOCOL_FEES: Item<Asset> = Item::new("collected_protocol_fees");
 // Fees that have been burned by the vault since the vault's inception

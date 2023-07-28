@@ -1,10 +1,15 @@
-use crate::state::{LOAN_COUNTER, MANAGER_CONFIG, VAULTS};
+use crate::state::{COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, VAULTS};
 use crate::ContractError;
-use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
+use cosmwasm_std::{
+    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
+    WasmMsg,
+};
+use white_whale::lp_common;
 use white_whale::pool_network::asset::{
     get_total_share, Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT,
 };
 use white_whale::traits::AssetReference;
+use white_whale::vault_manager::Vault;
 
 /// Deposits an asset into the vault
 pub fn deposit(
@@ -128,7 +133,7 @@ pub fn deposit(
     // mint LP token to sender
     messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
         vault.lp_asset.clone().to_string(),
-        info.sender.into_string(),
+        info.sender.clone().into_string(),
         env.contract.address.to_string(),
         lp_amount,
     )?);
@@ -136,4 +141,83 @@ pub fn deposit(
     Ok(Response::default()
         .add_messages(messages)
         .add_attributes(vec![("action", "deposit"), ("asset", &asset.to_string())]))
+}
+
+/// Withdraws an asset from the given vault.
+pub fn withdraw(
+    deps: DepsMut,
+    env: Env,
+    sender: String,
+    lp_amount: Uint128,
+    vault: Vault,
+) -> Result<Response, ContractError> {
+    let config = MANAGER_CONFIG.load(deps.storage)?;
+
+    // check that withdrawals are enabled
+    if !config.withdraw_enabled {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // parse sender
+    let sender = deps.api.addr_validate(&sender)?;
+
+    // calculate the size of vault and the amount of assets to withdraw
+    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+
+    let total_asset_amount = match &vault.asset_info.clone() {
+        AssetInfo::NativeToken { denom } => {
+            deps.querier
+                .query_balance(env.contract.address.clone(), denom)?
+                .amount
+        }
+        AssetInfo::Token { contract_addr } => {
+            let balance: cw20::BalanceResponse = deps.querier.query_wasm_smart(
+                contract_addr,
+                &cw20::Cw20QueryMsg::Balance {
+                    address: env.contract.address.clone().into_string(),
+                },
+            )?;
+            balance.balance
+        }
+    } // deduct protocol fees
+    .checked_sub(collected_protocol_fees.amount)
+    .unwrap();
+
+    let liquidity_asset = match vault.lp_asset.clone() {
+        AssetInfo::Token { contract_addr } => contract_addr,
+        AssetInfo::NativeToken { denom } => denom,
+    };
+
+    let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
+
+    let withdraw_amount = Decimal::from_ratio(lp_amount, total_share) * total_asset_amount;
+
+    // create message to send back to user if cw20
+    let messages: Vec<CosmosMsg> = vec![
+        match vault.asset_info {
+            AssetInfo::NativeToken { denom } => BankMsg::Send {
+                to_address: sender.into_string(),
+                amount: coins(withdraw_amount.u128(), denom),
+            }
+            .into(),
+            AssetInfo::Token { contract_addr } => WasmMsg::Execute {
+                contract_addr,
+                msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                    recipient: sender.into_string(),
+                    amount: withdraw_amount,
+                })?,
+                funds: vec![],
+            }
+            .into(),
+        },
+        lp_common::burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), lp_amount)?,
+    ];
+
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_attributes(vec![
+            ("method", "withdraw"),
+            ("lp_amount", &lp_amount.to_string()),
+            ("asset_amount", &withdraw_amount.to_string()),
+        ]))
 }

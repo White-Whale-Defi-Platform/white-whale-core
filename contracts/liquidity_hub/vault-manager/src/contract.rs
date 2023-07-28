@@ -1,29 +1,29 @@
-use cosmwasm_std::coins;
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{coins, from_binary};
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo,
-    OverflowError, Response, StdError, StdResult, Storage, Uint128, WasmMsg,
+    to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, OverflowError,
+    Response, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_storage_plus::Item;
+use cw_utils::one_coin;
 use semver::Version;
-use white_whale::lp_common;
 
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{get_total_share, Asset, AssetInfo};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 use white_whale::vault_manager::{
-    CallbackMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg, PaybackAmountResponse,
-    QueryMsg,
+    CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg,
+    PaybackAmountResponse, QueryMsg,
 };
 
 use crate::error::ContractError;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER,
+    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER, VAULTS,
 };
 use crate::{manager, vault};
 
@@ -88,11 +88,11 @@ pub fn execute(
         }
         ExecuteMsg::RemoveVault { asset_info } => {
             todo!();
-            if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
-                return Err(ContractError::NonExistentVault {});
-            }
-
-            VAULTS.remove(deps.storage, asset_info.get_reference());
+            // if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
+            //     return Err(ContractError::NonExistentVault {});
+            // }
+            //
+            // VAULTS.remove(deps.storage, asset_info.get_reference());
 
             Ok(Response::new().add_attributes(vec![("method", "remove_vault")]))
         }
@@ -119,7 +119,18 @@ pub fn execute(
         ),
         ExecuteMsg::Deposit { asset } => vault::commands::deposit(&deps, &env, &info, &asset),
         ExecuteMsg::Withdraw {} => {
-            todo!();
+            let lp_asset = AssetInfo::NativeToken {
+                denom: one_coin(&info)?.denom,
+            };
+
+            // check if the vault exists
+            let vault = VAULTS
+                .idx
+                .lp_asset
+                .item(deps.storage, lp_asset.to_string())?
+                .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
+                .1;
+
             // validate that the asset sent is the token factory LP token
             let config = MANAGER_CONFIG.load(deps.storage)?;
             let lp_token_denom = match config.vault_creation_fee.info {
@@ -131,7 +142,13 @@ pub fn execute(
                 return Err(ContractError::Unauthorized {});
             }
 
-            withdraw(deps, env, info.sender.into_string(), info.funds[0].amount)
+            vault::commands::withdraw(
+                deps,
+                env,
+                info.sender.into_string(),
+                info.funds[0].amount,
+                vault,
+            )
         }
         ExecuteMsg::Receive(msg) => {
             todo!();
@@ -147,9 +164,13 @@ pub fn execute(
                 return Err(ContractError::Unauthorized {});
             }
 
-            match from_binary(&msg.msg)? {
-                Cw20HookMsg::Withdraw {} => withdraw(deps, env, msg.sender, msg.amount),
-            }
+            // match from_binary(&msg.msg)? {
+            //     Cw20HookMsg::Withdraw {} => {
+            //         vault::commands::withdraw(deps, env, msg.sender, msg.amount)
+            //     }
+            // }
+
+            Ok(Response::default())
         }
         ExecuteMsg::Callback(msg) => {
             todo!();
@@ -552,80 +573,6 @@ pub fn store_fee(
         fees.amount = fees.amount.checked_add(fee)?;
         Ok(fees)
     })
-}
-
-pub fn withdraw(
-    deps: DepsMut,
-    env: Env,
-    sender: String,
-    amount: Uint128,
-) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
-
-    // check that withdrawals are enabled
-    if !config.withdraw_enabled {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // parse sender
-    let sender = deps.api.addr_validate(&sender)?;
-
-    // calculate the size of vault and the amount of assets to withdraw
-    let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
-    let total_asset_amount = match &config.vault_creation_fee.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            deps.querier
-                .query_balance(env.contract.address.clone(), denom)?
-                .amount
-        }
-        AssetInfo::Token { contract_addr } => {
-            let balance: cw20::BalanceResponse = deps.querier.query_wasm_smart(
-                contract_addr,
-                &cw20::Cw20QueryMsg::Balance {
-                    address: env.contract.address.clone().into_string(),
-                },
-            )?;
-            balance.balance
-        }
-    } // deduct protocol fees
-    .checked_sub(collected_protocol_fees.amount)
-    .unwrap();
-
-    let liquidity_asset = match config.vault_creation_fee.info.clone() {
-        AssetInfo::Token { contract_addr } => contract_addr,
-        AssetInfo::NativeToken { denom } => denom,
-    };
-
-    let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
-
-    let withdraw_amount = Decimal::from_ratio(amount, total_share) * total_asset_amount;
-
-    // create message to send back to user if cw20
-    let messages: Vec<CosmosMsg> = vec![
-        match config.vault_creation_fee.info {
-            AssetInfo::NativeToken { denom } => BankMsg::Send {
-                to_address: sender.into_string(),
-                amount: coins(withdraw_amount.u128(), denom),
-            }
-            .into(),
-            AssetInfo::Token { contract_addr } => WasmMsg::Execute {
-                contract_addr,
-                msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                    recipient: sender.into_string(),
-                    amount: withdraw_amount,
-                })?,
-                funds: vec![],
-            }
-            .into(),
-        },
-        lp_common::burn_lp_asset_msg(liquidity_asset, env.contract.address.to_string(), amount)?,
-    ];
-
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("method", "withdraw"),
-        ("lp_amount", &amount.to_string()),
-        ("asset_amount", &withdraw_amount.to_string()),
-    ]))
 }
 
 #[entry_point]

@@ -37,4 +37,4 @@ cw-utils.workspace = true
 
 
 [dev-dependencies]
-cw-multi-test = "0.16.2"
+cw-multi-test.workspace = true
