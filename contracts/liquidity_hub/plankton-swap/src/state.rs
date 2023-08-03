@@ -2,6 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Api, Order, StdResult, Storage, Addr};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairType, AssetInfo};
+use white_whale::pool_network::pair::FeatureToggle;
 use white_whale::pool_network::router::SwapOperation;
 
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
@@ -136,6 +137,8 @@ pub struct Config{
     pub swap_enabled: bool,
     // Whether or not deposits are enabled for this pool
     pub deposit_enabled: bool,
+
+    pub feature_toggle: FeatureToggle,
 
 
 }

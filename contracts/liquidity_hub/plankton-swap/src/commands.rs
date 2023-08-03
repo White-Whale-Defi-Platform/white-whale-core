@@ -116,6 +116,7 @@ pub fn create_pair(
         return Err(ContractError::ExistingPair {});
     }
 
+    // TODO: may no longer be needed as we dont use the reply pattern for pair info anymore
     TMP_PAIR_INFO.save(
         deps.storage,
         &TmpPairInfo {
@@ -136,7 +137,6 @@ pub fn create_pair(
     //   found struct `std::vec::Vec<AssetInfo>`
     // Now instead of sending a SubMsg to create the pair we can just call the instantiate function for an LP token
     // and save the info in PAIRS using pairkey as the key
-
     let asset_labels: Result<Vec<String>, _> = asset_infos_vec
         .iter()
         .map(|asset| asset.clone().get_label(&deps.as_ref()))
@@ -214,4 +214,249 @@ pub fn create_pair(
             ("pair_type", pair_type.get_label()),
         ])
         .add_message(message))
+}
+
+// After writing create_pair I see this can get quite verbose so attempting to
+// break it down into smaller modules which house some things like swap, liquidity etc
+mod swap {
+    // Stuff like Swap, Swap through router and any other stuff related to swapping
+}
+
+mod liquidity {
+    use cosmwasm_std::{Decimal, Uint128};
+    use white_whale::pool_network::asset::Asset;
+
+    // ProvideLiquidity works based on two patterns so far and eventually 3.
+    // Constant Product which is used for 2 assets
+    // StableSwap which is used for 3 assets
+    // Eventually concentrated liquidity will be offered but this can be assume to all be done in a well documented module we call into
+    use super::*;
+
+    pub fn provide_liquidity(
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        assets: Vec<Asset>,
+        slippage_tolerance: Option<Decimal>,
+        receiver: Option<String>,
+    ) -> Result<Response, ContractError> {
+        let config = MANAGER_CONFIG.load(deps.storage)?;
+        // check if the deposit feature is enabled
+        if !config.feature_toggle.deposits_enabled {
+            return Err(ContractError::OperationDisabled(
+                "provide_liquidity".to_string(),
+            ));
+        }
+
+        let (assets_vec, pools, deposits, pair_info) = match assets {
+            // For TWO assets we use the constant product logic
+            NAssets::TWO(assets) => {
+                let pair_key = get_pair_key_from_assets(&assets, &deps)?;
+                let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+
+                let mut pools: [Asset; 2] = [
+                    Asset {
+                        info: assets[0].clone(),
+                        amount: assets[0].query_pool(
+                            &deps.querier,
+                            deps.api,
+                            env.contract.address,
+                        )?,
+                    },
+                    Asset {
+                        info: assets[1].clone(),
+                        amount: assets[1].query_pool(
+                            &deps.querier,
+                            deps.api,
+                            env.contract.address,
+                        )?,
+                    },
+                ];
+                let deposits: [Uint128; 2] = [
+                    assets
+                        .iter()
+                        .find(|a| a.info.equal(&pools[0].info))
+                        .map(|a| a.amount)
+                        .expect("Wrong asset info is given"),
+                    assets
+                        .iter()
+                        .find(|a| a.info.equal(&pools[1].info))
+                        .map(|a| a.amount)
+                        .expect("Wrong asset info is given"),
+                ];
+
+                (
+                    assets.to_vec(),
+                    pools.to_vec(),
+                    deposits.to_vec(),
+                    pair_info,
+                )
+            }
+            // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
+            NAssets::THREE(assets) | NAssets::N(assets) => {
+                let pair_key = get_pair_key_from_assets(&assets, &deps)?;
+                let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+
+                let mut pools: [Asset; 3] = [
+                    Asset {
+                        info: assets[0].clone(),
+                        amount: assets[0].query_pool(
+                            &deps.querier,
+                            deps.api,
+                            env.contract.address,
+                        )?,
+                    },
+                    Asset {
+                        info: assets[1].clone(),
+                        amount: assets[1].query_pool(
+                            &deps.querier,
+                            deps.api,
+                            env.contract.address,
+                        )?,
+                    },
+                    Asset {
+                        info: assets[2].clone(),
+                        amount: assets[2].query_pool(
+                            &deps.querier,
+                            deps.api,
+                            env.contract.address,
+                        )?,
+                    },
+                ];
+                let deposits: [Uint128; 3] = [
+                    assets
+                        .iter()
+                        .find(|a| a.info.equal(&pools[0].info))
+                        .map(|a| a.amount)
+                        .expect("Wrong asset info is given"),
+                    assets
+                        .iter()
+                        .find(|a| a.info.equal(&pools[1].info))
+                        .map(|a| a.amount)
+                        .expect("Wrong asset info is given"),
+                ];
+
+                (
+                    assets.to_vec(),
+                    pools.to_vec(),
+                    deposits.to_vec(),
+                    pair_info,
+                )
+            }
+        };
+
+        for asset in assets_vec.iter() {
+            asset.assert_sent_native_token_balance(&info)?;
+        }
+
+        if deposits.iter().any(|&deposit| deposit.is_zero()) {
+            return Err(ContractError::InvalidZeroAmount {});
+        }
+
+        let mut messages: Vec<CosmosMsg> = vec![];
+        for (i, pool) in pools.iter_mut().enumerate() {
+            // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
+            if let AssetInfo::Token { contract_addr, .. } = &pool.info {
+                messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount: deposits[i],
+                    })?,
+                    funds: vec![],
+                }));
+            } else {
+                // If the asset is native token, balance is already increased
+                // To calculate it properly we should subtract user deposit from the pool
+                pool.amount = pool.amount.checked_sub(deposits[i])?;
+            }
+        }
+
+        // deduct protocol fee from pools
+        let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+        for pool in pools.iter_mut() {
+            let protocol_fee =
+                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+        }
+
+        let liquidity_token = match pair_info.liquidity_token {
+            AssetInfoRaw::Token { contract_addr } => {
+                deps.api.addr_humanize(&contract_addr)?.to_string()
+            }
+            AssetInfoRaw::NativeToken { denom } => denom,
+        };
+
+        // Compute share and other logic based on the number of assets
+        // ...
+
+        // mint LP token to sender
+        let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
+        messages.append(&mut mint_lp_token_msg(
+            liquidity_token,
+            receiver.clone(),
+            env.contract.address.to_string(),
+            share,
+        )?);
+
+        Ok(Response::new().add_messages(messages).add_attributes(vec![
+            ("action", "provide_liquidity"),
+            ("sender", info.sender.as_str()),
+            ("receiver", receiver.as_str()),
+            (
+                "assets",
+                &assets_vec
+                    .iter()
+                    .map(|asset| asset.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            ),
+            ("share", &share.to_string()),
+        ]))
+    }
+
+    fn get_pair_key_from_assets(
+        assets: &[AssetInfo],
+        deps: &DepsMut<'_>,
+    ) -> Result<Vec<u8>, ContractError> {
+        let raw_infos: Vec<AssetInfoRaw> = assets
+            .iter()
+            .map(|asset| asset.to_raw(deps.api))
+            .collect::<Result<_, _>>()?;
+        let pair_key = pair_key(&raw_infos);
+        let pair_info: PairInfo = PAIRS.load(deps.storage, &pair_key)?;
+        Ok(pair_key)
+    }
+
+    fn get_pools_and_deposits(
+        assets: &[AssetInfo],
+        deps: &DepsMut,
+        env: &Env,
+    ) -> Result<(Vec<Asset>, Vec<Uint128>), ContractError> {
+        let mut pools = Vec::new();
+        let mut deposits = Vec::new();
+    
+        for asset in assets.iter() {
+            let amount = asset.query_pool(&deps.querier, deps.api, env.contract.address)?;
+            pools.push(Asset {
+                info: asset.clone(),
+                amount,
+            });
+            deposits.push(
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&pools.last().unwrap().info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+            );
+        }
+    
+        Ok((pools, deposits))
+    }
+
+}
+
+mod ownership {
+    // Stuff like ProposeNewOwner, TransferOwnership, AcceptOwnership
 }

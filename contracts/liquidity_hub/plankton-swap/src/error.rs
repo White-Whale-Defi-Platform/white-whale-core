@@ -22,4 +22,7 @@ pub enum ContractError {
 
     #[error("Pair already exist")]
     ExistingPair {},
+
+    #[error("Operation disabled, {0}")]
+    OperationDisabled(String),
 }
