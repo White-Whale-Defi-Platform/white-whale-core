@@ -224,13 +224,119 @@ mod swap {
 
 mod liquidity {
     use cosmwasm_std::{Decimal, Uint128};
+    use cw20::Cw20ExecuteMsg;
     use white_whale::pool_network::asset::Asset;
+
+    use crate::state::COLLECTABLE_PROTOCOL_FEES;
 
     // ProvideLiquidity works based on two patterns so far and eventually 3.
     // Constant Product which is used for 2 assets
     // StableSwap which is used for 3 assets
     // Eventually concentrated liquidity will be offered but this can be assume to all be done in a well documented module we call into
     use super::*;
+
+    fn get_pair_key_from_assets(
+        assets: &[AssetInfo],
+        deps: &DepsMut<'_>,
+    ) -> Result<Vec<u8>, ContractError> {
+        let raw_infos: Vec<AssetInfoRaw> = assets
+            .iter()
+            .map(|asset| asset.to_raw(deps.api))
+            .collect::<Result<_, _>>()?;
+        let pair_key = pair_key(&raw_infos);
+        let pair_info: PairInfo = PAIRS.load(deps.storage, &pair_key)?;
+        Ok(pair_key)
+    }
+
+    fn get_pools_and_deposits(
+        assets: &[Asset],
+        deps: &DepsMut,
+        env: &Env,
+    ) -> Result<(Vec<Asset>, Vec<Uint128>), ContractError> {
+        let mut pools = Vec::new();
+        let mut deposits = Vec::new();
+
+        for asset in assets.iter() {
+            let amount =
+                asset
+                    .info
+                    .query_pool(&deps.querier, deps.api, env.contract.address.clone())?;
+            pools.push(Asset {
+                info: asset.info.clone(),
+                amount,
+            });
+            deposits.push(
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&pools.last().unwrap().info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+            );
+        }
+
+        Ok((pools, deposits))
+    }
+
+    /// Gets the protocol fee amount for the given asset_id
+    pub fn get_protocol_fee_for_asset(
+        collected_protocol_fees: Vec<Asset>,
+        asset_id: String,
+    ) -> Uint128 {
+        let protocol_fee_asset = collected_protocol_fees
+            .iter()
+            .find(|&protocol_fee_asset| protocol_fee_asset.clone().get_id() == asset_id.clone())
+            .cloned();
+
+        // get the protocol fee for the given pool_asset
+        if let Some(protocol_fee_asset) = protocol_fee_asset {
+            protocol_fee_asset.amount
+        } else {
+            Uint128::zero()
+        }
+    }
+
+    /// Creates the Mint LP message
+    #[allow(unused_variables)]
+    fn mint_lp_token_msg(
+        liquidity_token: String,
+        recipient: String,
+        sender: String,
+        amount: Uint128,
+    ) -> Result<Vec<CosmosMsg>, ContractError> {
+        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+        if is_factory_token(liquidity_token.as_str()) {
+            let mut messages = vec![];
+            messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
+                sender: sender.clone(),
+                amount: Some(Coin {
+                    denom: liquidity_token.clone(),
+                    amount: amount.to_string(),
+                }),
+            }));
+
+            if sender != recipient {
+                messages.push(CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
+                    to_address: recipient,
+                    amount: coins(amount.u128(), liquidity_token.as_str()),
+                }));
+            }
+
+            Ok(messages)
+        } else {
+            Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: liquidity_token,
+                msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+                funds: vec![],
+            })])
+        }
+
+        #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+        Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: liquidity_token,
+            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+            funds: vec![],
+        })])
+    }
 
     pub fn provide_liquidity(
         deps: DepsMut,
@@ -248,27 +354,32 @@ mod liquidity {
             ));
         }
 
-        let (assets_vec, pools, deposits, pair_info) = match assets {
+        let asset_infos = assets
+            .iter()
+            .map(|asset| asset.info.clone())
+            .collect::<Vec<_>>();
+
+        let (assets_vec, mut pools, deposits, pair_info) = match assets {
             // For TWO assets we use the constant product logic
-            NAssets::TWO(assets) => {
-                let pair_key = get_pair_key_from_assets(&assets, &deps)?;
+            assets if assets.len() == 2 => {
+                let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
                 let mut pools: [Asset; 2] = [
                     Asset {
-                        info: assets[0].clone(),
-                        amount: assets[0].query_pool(
+                        info: asset_infos[0].clone(),
+                        amount: asset_infos[0].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address,
+                            env.contract.address.clone(),
                         )?,
                     },
                     Asset {
-                        info: assets[1].clone(),
-                        amount: assets[1].query_pool(
+                        info: asset_infos[1].clone(),
+                        amount: asset_infos[1].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address,
+                            env.contract.address.clone(),
                         )?,
                     },
                 ];
@@ -293,37 +404,37 @@ mod liquidity {
                 )
             }
             // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-            NAssets::THREE(assets) | NAssets::N(assets) => {
-                let pair_key = get_pair_key_from_assets(&assets, &deps)?;
+            assets if assets.len() == 3 => {
+                let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
                 let mut pools: [Asset; 3] = [
                     Asset {
-                        info: assets[0].clone(),
-                        amount: assets[0].query_pool(
+                        info: asset_infos[0].clone(),
+                        amount: asset_infos[0].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address,
+                            env.contract.address.clone(),
                         )?,
                     },
                     Asset {
-                        info: assets[1].clone(),
-                        amount: assets[1].query_pool(
+                        info: asset_infos[1].clone(),
+                        amount: asset_infos[1].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address,
+                            env.contract.address.clone(),
                         )?,
                     },
                     Asset {
-                        info: assets[2].clone(),
-                        amount: assets[2].query_pool(
+                        info: asset_infos[2].clone(),
+                        amount: asset_infos[2].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address,
+                            env.contract.address.clone(),
                         )?,
                     },
                 ];
-                let deposits: [Uint128; 3] = [
+                let deposits: Vec<Uint128> = vec![
                     assets
                         .iter()
                         .find(|a| a.info.equal(&pools[0].info))
@@ -343,6 +454,11 @@ mod liquidity {
                     pair_info,
                 )
             }
+            _ => {
+                return Err(ContractError::TooManyAssets {
+                    assets_provided: assets.len(),
+                })
+            }
         };
 
         for asset in assets_vec.iter() {
@@ -361,7 +477,7 @@ mod liquidity {
                     contract_addr: contract_addr.to_string(),
                     msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                         owner: info.sender.to_string(),
-                        recipient: env.contract.address.to_string(),
+                        recipient: env.contract.address.clone().to_string(),
                         amount: deposits[i],
                     })?,
                     funds: vec![],
@@ -369,26 +485,28 @@ mod liquidity {
             } else {
                 // If the asset is native token, balance is already increased
                 // To calculate it properly we should subtract user deposit from the pool
-                pool.amount = pool.amount.checked_sub(deposits[i])?;
+                pool.amount = pool.amount.checked_sub(deposits[i]).unwrap();
             }
         }
 
         // deduct protocol fee from pools
-        let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
+        let collected_protocol_fees =
+            COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
         for pool in pools.iter_mut() {
             let protocol_fee =
                 get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
-            pool.amount = pool.amount.checked_sub(protocol_fee)?;
+            pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
         }
 
         let liquidity_token = match pair_info.liquidity_token {
-            AssetInfoRaw::Token { contract_addr } => {
-                deps.api.addr_humanize(&contract_addr)?.to_string()
+            AssetInfo::Token { contract_addr } => {
+                deps.api.addr_validate(&contract_addr)?.to_string()
             }
-            AssetInfoRaw::NativeToken { denom } => denom,
+            AssetInfo::NativeToken { denom } => denom,
         };
 
         // Compute share and other logic based on the number of assets
+        let share = Uint128::zero();
         // ...
 
         // mint LP token to sender
@@ -415,46 +533,6 @@ mod liquidity {
             ("share", &share.to_string()),
         ]))
     }
-
-    fn get_pair_key_from_assets(
-        assets: &[AssetInfo],
-        deps: &DepsMut<'_>,
-    ) -> Result<Vec<u8>, ContractError> {
-        let raw_infos: Vec<AssetInfoRaw> = assets
-            .iter()
-            .map(|asset| asset.to_raw(deps.api))
-            .collect::<Result<_, _>>()?;
-        let pair_key = pair_key(&raw_infos);
-        let pair_info: PairInfo = PAIRS.load(deps.storage, &pair_key)?;
-        Ok(pair_key)
-    }
-
-    fn get_pools_and_deposits(
-        assets: &[AssetInfo],
-        deps: &DepsMut,
-        env: &Env,
-    ) -> Result<(Vec<Asset>, Vec<Uint128>), ContractError> {
-        let mut pools = Vec::new();
-        let mut deposits = Vec::new();
-    
-        for asset in assets.iter() {
-            let amount = asset.query_pool(&deps.querier, deps.api, env.contract.address)?;
-            pools.push(Asset {
-                info: asset.clone(),
-                amount,
-            });
-            deposits.push(
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools.last().unwrap().info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-            );
-        }
-    
-        Ok((pools, deposits))
-    }
-
 }
 
 mod ownership {

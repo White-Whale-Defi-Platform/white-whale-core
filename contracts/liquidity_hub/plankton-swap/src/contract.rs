@@ -3,9 +3,9 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 // use cw2::set_contract_version;
 
+use crate::commands;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::commands as commands;
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:plankton-swap";

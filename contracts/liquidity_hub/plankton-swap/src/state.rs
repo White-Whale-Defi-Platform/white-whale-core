@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Api, Order, StdResult, Storage, Addr};
+use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairType, AssetInfo};
+use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::FeatureToggle;
 use white_whale::pool_network::router::SwapOperation;
 
@@ -9,11 +9,14 @@ use white_whale::pool_network::router::SwapOperation;
 pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
 // Used for PAIRS
 pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
-        let mut asset_infos = asset_infos.to_vec();
-        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-    
-        asset_infos.iter().flat_map(|info| info.as_bytes().to_vec()).collect()
-    }
+    let mut asset_infos = asset_infos.to_vec();
+    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+
+    asset_infos
+        .iter()
+        .flat_map(|info| info.as_bytes().to_vec())
+        .collect()
+}
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
 
@@ -46,7 +49,7 @@ pub enum NAssets {
 pub enum NDecimals {
     TWO([u8; 2]),
     THREE([u8; 3]),
-    N(Vec<u8>)
+    N(Vec<u8>),
 }
 
 // Use above enums to enable a somewhat dynamic PairInfo which can support a normal 2 asset or a 3 pair. The design can be expanded to N types
@@ -58,7 +61,7 @@ pub struct TmpPairInfo {
     pub pair_type: PairType,
 }
 pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");
-// Store PairInfo to N 
+// Store PairInfo to N
 // We define a custom struct for which allows for dynamic but defined pairs
 #[cw_serde]
 pub struct NPairInfo {
@@ -67,8 +70,6 @@ pub struct NPairInfo {
     pub asset_decimals: NDecimals,
     pub pair_type: PairType,
 }
-
-
 
 // // We could store trios separate to pairs but if we use trio key properly theres no need really
 // pub const TRIOS: Map<&[u8], TrioInfoRaw> = Map::new("trio_info");
@@ -125,10 +126,10 @@ fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
 }
 
 #[cw_serde]
-pub struct Config{
+pub struct Config {
     pub fee_collector_addr: Addr,
     pub owner: Addr,
-    // The code ID for the pair and tokens 
+    // The code ID for the pair and tokens
     pub pair_code_id: u64,
     pub token_code_id: u64,
     // We must set a creation fee on instantiation to prevent spamming of pools
@@ -139,6 +140,4 @@ pub struct Config{
     pub deposit_enabled: bool,
 
     pub feature_toggle: FeatureToggle,
-
-
 }
