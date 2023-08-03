@@ -133,11 +133,7 @@ pub struct Config {
     pub pair_code_id: u64,
     pub token_code_id: u64,
     // We must set a creation fee on instantiation to prevent spamming of pools
-    pub pool_creation_fee: Asset,
-    // Whether or not swaps are enabled for this pool
-    pub swap_enabled: bool,
-    // Whether or not deposits are enabled for this pool
-    pub deposit_enabled: bool,
-
+    pub pool_creation_fee: Vec<Asset>,
+    //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
 }

@@ -5,3 +5,7 @@ pub mod msg;
 pub mod state;
 pub mod token;
 pub use crate::error::ContractError;
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tests;
