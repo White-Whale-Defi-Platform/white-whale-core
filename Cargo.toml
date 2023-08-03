@@ -10,6 +10,7 @@ members = [
 	"contracts/liquidity_hub/vault-network/*",
 	"contracts/liquidity_hub/plankton-swap",
 	"contracts/liquidity_hub/epoch-manager",
+	"contracts/liquidity_hub/vault-manager",
 ]
 
 [workspace.package]
