@@ -44,6 +44,18 @@ pub fn execute(
             pair_type,
             token_factory_lp,
         ),
+        ExecuteMsg::ProvideLiquidity {
+            assets,
+            slippage_tolerance,
+            receiver,
+        } => commands::liquidity::provide_liquidity(
+            deps,
+            env,
+            info,
+            assets,
+            slippage_tolerance,
+            receiver,
+        ),
     }
 }
 

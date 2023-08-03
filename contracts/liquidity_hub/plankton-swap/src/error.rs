@@ -1,5 +1,5 @@
 use crate::commands::MAX_ASSETS_PER_POOL;
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -27,4 +27,10 @@ pub enum ContractError {
 
     #[error("Invalid zero amount")]
     InvalidZeroAmount {},
+
+    #[error("Initial liquidity amount must be over {0}")]
+    InvalidInitialLiquidityAmount(Uint128),
+
+    #[error("Failed to compute the LP share with the given deposit")]
+    LiquidityShareComputation {},
 }

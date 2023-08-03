@@ -1,5 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use white_whale::pool_network::{asset::PairType, pair::PoolFee};
+use cosmwasm_std::Decimal;
+use white_whale::pool_network::{
+    asset::{Asset, PairType},
+    pair::PoolFee,
+};
 
 use crate::state::NAssets;
 
@@ -14,6 +18,12 @@ pub enum ExecuteMsg {
         pool_fees: PoolFee,
         pair_type: PairType,
         token_factory_lp: bool,
+    },
+    /// Provides liquidity to the pool
+    ProvideLiquidity {
+        assets: Vec<Asset>,
+        slippage_tolerance: Option<Decimal>,
+        receiver: Option<String>,
     },
 }
 

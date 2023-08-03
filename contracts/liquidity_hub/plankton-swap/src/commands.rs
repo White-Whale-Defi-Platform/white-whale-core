@@ -218,14 +218,17 @@ pub fn create_pair(
 
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
-mod swap {
+pub mod swap {
     // Stuff like Swap, Swap through router and any other stuff related to swapping
 }
 
-mod liquidity {
+pub mod liquidity {
     use cosmwasm_std::{Decimal, Uint128};
     use cw20::Cw20ExecuteMsg;
-    use white_whale::pool_network::asset::Asset;
+    use white_whale::pool_network::{
+        asset::{get_total_share, Asset, MINIMUM_LIQUIDITY_AMOUNT},
+        U256,
+    };
 
     use crate::state::COLLECTABLE_PROTOCOL_FEES;
 
@@ -508,6 +511,66 @@ mod liquidity {
         // Compute share and other logic based on the number of assets
         let share = Uint128::zero();
         // ...
+        let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
+
+        let share = match pair_info.pair_type {
+            PairType::ConstantProduct => {
+                let share = if total_share == Uint128::zero() {
+                    // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                    // depositor preventing small liquidity providers from joining the pool
+                    let share = Uint128::new(
+                        (U256::from(deposits[0].u128())
+                            .checked_mul(U256::from(deposits[1].u128()))
+                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+                        .integer_sqrt()
+                        .as_u128(),
+                    )
+                    .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
+                    .map_err(|_| {
+                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
+                    })?;
+
+                    messages.append(&mut mint_lp_token_msg(
+                        liquidity_token.clone(),
+                        env.contract.address.to_string(),
+                        env.contract.address.to_string(),
+                        share,
+                    )?);
+
+                    share
+                } else {
+                    let share = {
+                        let numerator = U256::from(deposits[0].u128())
+                            .checked_mul(U256::from(total_share.u128()))
+                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
+
+                        let denominator = U256::from(pools[0].amount.u128());
+
+                        let result = numerator
+                            .checked_div(denominator)
+                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
+
+                        Uint128::from(result.as_u128())
+                    };
+
+                    messages.append(&mut mint_lp_token_msg(
+                        liquidity_token.clone(),
+                        env.contract.address.to_string(),
+                        env.contract.address.to_string(),
+                        share,
+                    )?);
+
+                    share
+                };
+                share
+            }
+            PairType::StableSwap { amp } => {
+                let share = Uint128::one();
+                // TODO: Handle stableswap
+
+                share
+            }
+        };
 
         // mint LP token to sender
         let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
@@ -535,6 +598,6 @@ mod liquidity {
     }
 }
 
-mod ownership {
+pub mod ownership {
     // Stuff like ProposeNewOwner, TransferOwnership, AcceptOwnership
 }
