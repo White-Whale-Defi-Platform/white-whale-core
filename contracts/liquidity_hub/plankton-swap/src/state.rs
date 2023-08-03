@@ -1,18 +1,18 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Api, Order, StdResult, Storage};
+use cosmwasm_std::{Api, Order, StdResult, Storage, Addr};
 use cw_storage_plus::{Bound, Item, Map};
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType, AssetInfo};
 use white_whale::pool_network::router::SwapOperation;
 
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
 pub const PAIRS: Map<&[u8], PairInfo> = Map::new("pair_info");
 // Used for PAIRS
-pub fn pair_key(asset_infos: &[AssetInfoRaw; 2]) -> Vec<u8> {
-    let mut asset_infos = asset_infos.to_vec();
-    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-
-    [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat()
-}
+pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
+        let mut asset_infos = asset_infos.to_vec();
+        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+    
+        asset_infos.iter().flat_map(|info| info.as_bytes().to_vec()).collect()
+    }
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
 
@@ -21,6 +21,7 @@ pub const PAIR_INFO: Map<&str, Item<PairInfo>> = Map::new("pair_info");
 pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Asset>> = Map::new("collected_protocol_fees");
 pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
+pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
@@ -33,17 +34,18 @@ pub enum Fee {
 
 #[cw_serde]
 pub enum NAssets {
-    TWO([AssetInfoRaw; 2]),
-    THREE([AssetInfoRaw; 3]),
+    TWO([AssetInfo; 2]),
+    THREE([AssetInfo; 3]),
     // N Assets is also possible where N is the number of assets in the pool
     // Note Vec with an unbounded size, we need to have extra parsing on this one to eventually store [AssetInfoRaw; N]
-    N(Vec<AssetInfoRaw>),
+    N(Vec<AssetInfo>),
 }
 
 #[cw_serde]
 pub enum NDecimals {
     TWO([u8; 2]),
     THREE([u8; 3]),
+    N(Vec<u8>)
 }
 
 // Use above enums to enable a somewhat dynamic PairInfo which can support a normal 2 asset or a 3 pair. The design can be expanded to N types
@@ -107,4 +109,21 @@ fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
         v.push(1);
         v
     })
+}
+
+#[cw_serde]
+pub struct Config{
+    pub fee_collector_addr: Addr,
+    pub owner: Addr,
+    // The code ID for the pair and tokens 
+    pub pair_code_id: u64,
+    pub token_code_id: u64,
+    // We must set a creation fee on instantiation to prevent spamming of pools
+    pub pool_creation_fee: Asset,
+    // Whether or not swaps are enabled for this pool
+    pub swap_enabled: bool,
+    // Whether or not deposits are enabled for this pool
+    pub deposit_enabled: bool,
+
+
 }

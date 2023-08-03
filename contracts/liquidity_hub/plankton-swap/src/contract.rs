@@ -5,7 +5,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult}
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-
+use crate::commands as commands;
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:plankton-swap";
@@ -29,7 +29,22 @@ pub fn execute(
     _info: MessageInfo,
     _msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    unimplemented!()
+    match msg {
+        ExecuteMsg::CreatePair {
+            asset_infos,
+            pool_fees,
+            pair_type,
+            token_factory_lp,
+        } => commands::create_pair(
+            deps,
+            env,
+            info,
+            asset_infos,
+            pool_fees,
+            pair_type,
+            token_factory_lp,
+        ),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
