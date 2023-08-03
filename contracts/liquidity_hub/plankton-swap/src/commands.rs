@@ -1,38 +1,62 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg,
+    attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
 };
+use cw20::MinterResponse;
 use white_whale::pool_network::{
     asset::{AssetInfo, AssetInfoRaw, PairType},
-    pair::PoolFee,
+    pair::{FeatureToggle, PoolFee},
 };
 
+use crate::token::InstantiateMsg as TokenInstantiateMsg;
 use crate::{
-    state::{pair_key, Config, NAssets, TmpPairInfo, MANAGER_CONFIG, PAIRS, TMP_PAIR_INFO},
+    state::{
+        pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
+        PAIRS, TMP_PAIR_INFO,
+    },
     ContractError,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-use white_whale::pool_network::pair::{
-    FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg,
-};
-/// Creates a Pair, we want this to be dynamic such that we can use this one entrypoint to
-/// create a pair with 2 assets, 3 assets or eventually N. For N we enforce 4 as max for now and we want use
+pub const LP_SYMBOL: &str = "uLP";
+
+/// Creates a liquidity pool pair with 2, 3, or N assets. The function dynamically handles different numbers of assets,
+/// allowing for the creation of pairs with varying configurations. The maximum number of assets per pool is defined by
+/// the constant `MAX_ASSETS_PER_POOL`.
+///
+/// # Example
 ///
 /// ```rust
-/// #[cw_serde]
-// pub enum NAssets {
-//     TWO([AssetInfoRaw; 2]),
-//     THREE([AssetInfoRaw; 3]),
-//     // N Assets is also possible where N is the number of assets in the pool
-//     // Note Vec with an unbounded size, we need to have extra parsing on this one to eventually store [AssetInfoRaw; N]
-//     N(Vec<AssetInfoRaw>),
-// }
-
-// #[cw_serde]
-// pub enum NDecimals {
-//     TWO([u8; 2]),
-//     THREE([u8; 3]),
-// }
+/// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_binary};
+/// # use white_whale::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
+/// # use white_whale::fee::Fee;
+/// # use plankton_swap::state::{NAssets};
+/// # use plankton_swap::error::ContractError;
+/// # use plankton_swap::commands::MAX_ASSETS_PER_POOL;
+/// # use plankton_swap::commands::create_pair;
+/// # use std::convert::TryInto;
+/// #
+/// # fn example(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+/// let asset_infos = NAssets::TWO([
+///     AssetInfo::NativeToken { denom: "uatom".into() },
+///     AssetInfo::NativeToken { denom: "uscrt".into() },
+/// ]);
+/// let pool_fees = PoolFee {
+///     protocol_fee: Fee {
+///         share: Decimal::percent(5u64),
+///     },
+///     swap_fee: Fee {
+///         share: Decimal::percent(7u64),
+///     },
+///     burn_fee: Fee {
+///         share: Decimal::zero(),
+///     },
+/// };
+/// let pair_type = PairType::ConstantProduct;
+/// let token_factory_lp = false;
 ///
+/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, token_factory_lp)?;
+/// # Ok(response)
+/// # }
 /// ```
 pub fn create_pair(
     deps: DepsMut,
@@ -77,7 +101,7 @@ pub fn create_pair(
 
     if asset_infos_vec
         .iter()
-        .any(|&asset| asset_infos_vec.iter().filter(|&&a| a == asset).count() > 1)
+        .any(|asset| asset_infos_vec.iter().filter(|&a| a == asset).count() > 1)
     {
         return Err(ContractError::SameAsset {});
     }
@@ -95,7 +119,7 @@ pub fn create_pair(
     TMP_PAIR_INFO.save(
         deps.storage,
         &TmpPairInfo {
-            pair_key,
+            pair_key: pair_key.clone(),
             asset_infos: NAssets::N(asset_infos_vec.clone()),
             asset_decimals: crate::state::NDecimals::N(asset_decimals_vec.clone()),
             pair_type: pair_type.clone(),
@@ -105,14 +129,83 @@ pub fn create_pair(
     // prepare labels for creating the pair token with a meaningful name
     let pair_label = asset_infos_vec
         .iter()
-        .map(|asset| asset.get_label(&deps.as_ref()))
+        .map(|asset| asset.to_owned().get_label(&deps.as_ref()))
         .collect::<Result<Vec<_>, _>>()?
         .join("-");
     // Convert asset_infos_vec into the type [AssetInfo; 2] to avoid the error expected array `[AssetInfo; 2]`
     //   found struct `std::vec::Vec<AssetInfo>`
-    // Generalize this to N too, do we need to update pair ? to handle N assets, is there a trio pair? If so then yes
-    let thevec: [AssetInfo; 2] = [asset_infos_vec[0].clone(), asset_infos_vec[1].clone()];
-    let thedecimals: [u8; 2] = [asset_decimals_vec[0].clone(), asset_decimals_vec[1].clone()];
+    // Now instead of sending a SubMsg to create the pair we can just call the instantiate function for an LP token
+    // and save the info in PAIRS using pairkey as the key
+
+    let asset_labels: Result<Vec<String>, _> = asset_infos_vec
+        .iter()
+        .map(|asset| asset.clone().get_label(&deps.as_ref()))
+        .collect();
+
+    let asset_label = asset_labels?.join("-"); // Handle the error if needed
+    let lp_token_name = format!("{}-LP", asset_label);
+    // TODO: Add this
+    // helpers::create_lp_token(deps, &env, &msg, &lp_token_name);
+
+    let mut attributes = Vec::<Attribute>::new();
+
+    // Create the LP token using instantiate2
+    let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+    let code_id = config.token_code_id;
+    let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
+    let seed = format!(
+        "{}{}{}",
+        asset_label,
+        info.sender.into_string(),
+        env.block.height
+    );
+    let salt = Binary::from(seed.as_bytes());
+
+    let pool_lp_address = deps.api.addr_humanize(
+        &instantiate2_address(&checksum, &creator, &salt)
+            .map_err(|e| StdError::generic_err(e.to_string()))?,
+    )?;
+
+    let lp_asset = AssetInfo::Token {
+        contract_addr: pool_lp_address.into_string(),
+    };
+
+    // Now, after generating an address using instantiate 2 we can save this into PAIRS
+    // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
+    PAIRS.save(
+        deps.storage,
+        &pair_key,
+        &PairInfo {
+            asset_infos: NAssets::N(asset_infos_vec.clone()),
+            pair_type: pair_type.clone(),
+            liquidity_token: lp_asset.clone(),
+            asset_decimals: NDecimals::N(asset_decimals_vec.clone()),
+        },
+    )?;
+
+    attributes.push(attr("lp_asset", lp_asset.to_string()));
+
+    let lp_token_name = format!("{asset_label}-LP");
+
+    let message = CosmosMsg::Wasm(WasmMsg::Instantiate2 {
+        admin: None,
+        code_id,
+        label: lp_token_name.to_owned(),
+        msg: to_binary(&TokenInstantiateMsg {
+            name: lp_token_name,
+            symbol: LP_SYMBOL.to_string(),
+            decimals: 6,
+            initial_balances: vec![],
+            mint: Some(MinterResponse {
+                minter: env.contract.address.to_string(),
+                cap: None,
+            }),
+        })?,
+        funds: vec![],
+        salt,
+    });
+
+    // TODO: We need to store the lp addr before exiting
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
@@ -120,24 +213,5 @@ pub fn create_pair(
             ("pair_label", pair_label.as_str()),
             ("pair_type", pair_type.get_label()),
         ])
-        .add_submessage(SubMsg {
-            id: 1u64,
-            gas_limit: None,
-            msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
-                code_id: config.pair_code_id,
-                funds: info.funds,
-                admin: Some(env.contract.address.to_string()),
-                label: pair_label,
-                msg: to_binary(&PairInstantiateMsg {
-                    asset_infos: thevec,
-                    token_code_id: config.token_code_id,
-                    asset_decimals: thedecimals,
-                    pool_fees,
-                    fee_collector_addr: config.fee_collector_addr.to_string(),
-                    pair_type,
-                    token_factory_lp,
-                })?,
-            }),
-            reply_on: ReplyOn::Success,
-        }))
+        .add_message(message))
 }

@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Api, Order, StdResult, Storage, Addr};
 use cw_storage_plus::{Bound, Item, Map};
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType, AssetInfo};
+use white_whale::pool_network::asset::{Asset, AssetInfoRaw, PairInfo, PairType, AssetInfo};
 use white_whale::pool_network::router::SwapOperation;
 
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
-pub const PAIRS: Map<&[u8], PairInfo> = Map::new("pair_info");
+pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
 // Used for PAIRS
 pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
         let mut asset_infos = asset_infos.to_vec();
@@ -57,6 +57,18 @@ pub struct TmpPairInfo {
     pub pair_type: PairType,
 }
 pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");
+// Store PairInfo to N 
+// We define a custom struct for which allows for dynamic but defined pairs
+#[cw_serde]
+pub struct NPairInfo {
+    pub asset_infos: NAssets,
+    pub liquidity_token: AssetInfo,
+    pub asset_decimals: NDecimals,
+    pub pair_type: PairType,
+}
+
+
+
 // // We could store trios separate to pairs but if we use trio key properly theres no need really
 // pub const TRIOS: Map<&[u8], TrioInfoRaw> = Map::new("trio_info");
 /// Used for TRIOS or to just store a trio in PAIRS, takes a vec of 3 asset infos and returns a Vec<u8> of the asset infos sorted by their byte representation
@@ -81,7 +93,7 @@ pub fn read_pairs(
     _api: &dyn Api,
     start_after: Option<[AssetInfoRaw; 2]>,
     limit: Option<u32>,
-) -> StdResult<Vec<PairInfo>> {
+) -> StdResult<Vec<NPairInfo>> {
     // Note PairInfo may need to be refactored to handle the 2or3 design
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
@@ -93,7 +105,7 @@ pub fn read_pairs(
             let (_, v) = item?;
             Ok(v)
         })
-        .collect::<StdResult<Vec<PairInfo>>>()
+        .collect::<StdResult<Vec<NPairInfo>>>()
 }
 
 // this will set the first key after the provided key, by appending a 1 byte
