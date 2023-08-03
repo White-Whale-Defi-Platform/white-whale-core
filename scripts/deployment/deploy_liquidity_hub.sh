@@ -132,12 +132,13 @@ function init_whale_lair() {
   grace_period="21" #default value is 21 epochs
   distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
   epoch_duration="86400000000000"      #default value is 1 day, in nanoseconds
-  genesis_epoch="16740564423000000000" #fill with desired unix time, in nanoseconds
+  genesis_epoch="1689865200000000000" #fill with desired unix time, in nanoseconds
   epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
 
   init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period":
   "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
 
+  #todo fix this message here, it's broken
   # Instantiate the contract
   code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
   $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
@@ -254,6 +255,8 @@ function init_vault_factory() {
 
   # Prepare the instantiation message
   vault_id=$(jq -r '.contracts[] | select (.wasm == "vault.wasm") | .code_id' $output_file)
+  token_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $output_file)
+  fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
 
   init='{"owner": "'$deployer_address'", "vault_id": '"$vault_id"', "token_id": '"$token_code_id"', "fee_collector_addr": '"$fee_collector_addr"'}'
 
@@ -303,7 +306,10 @@ function init_vault_network() {
 function init_liquidity_hub() {
   echo -e "\nInitializing the Liquidity Hub on $CHAIN_ID..."
   init_pool_network
+  init_whale_lair
+  init_fee_distributor
   init_vault_network
+  init_incentive_factory
 }
 
 function deploy() {
@@ -331,10 +337,12 @@ function deploy() {
     ;;
   fee-distributor)
     init_fee_distributor
-    # TODO add case for whale lair
     ;;
   incentive-factory)
     init_incentive_factory
+    ;;
+  whale-lair)
+    init_whale_lair
     ;;
   frontend-helper)
     init_frontend_helper

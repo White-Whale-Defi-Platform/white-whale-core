@@ -47,6 +47,7 @@ mod tests {
             &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
             &[],
         )
@@ -126,6 +127,7 @@ mod tests {
             &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
             &[],
         )

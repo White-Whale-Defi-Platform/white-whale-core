@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
-use white_whale::fee_distributor::EpochConfig;
+use white_whale::epoch_manager::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::contract::instantiate;

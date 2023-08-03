@@ -2,7 +2,7 @@ mod callback;
 mod collect_protocol_fee;
 mod deposit;
 mod flash_loan;
-mod receive;
+pub(crate) mod receive;
 mod update_config;
 
 pub use callback::callback;

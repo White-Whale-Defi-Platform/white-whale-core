@@ -6,6 +6,7 @@
     "asset_info",
     "fee_collector_addr",
     "owner",
+    "token_factory_lp",
     "token_id",
     "vault_fees"
   ],
@@ -25,6 +26,10 @@
     "owner": {
       "description": "The owner of the contract.",
       "type": "string"
+    },
+    "token_factory_lp": {
+      "description": "If true, the vault will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
+      "type": "boolean"
     },
     "token_id": {
       "description": "The code ID of the liquidity token to instantiate",

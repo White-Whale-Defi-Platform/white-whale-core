@@ -30,7 +30,9 @@ mod test {
 
         let config = Config {
             owner: mock_creator().sender,
-            liquidity_token: Addr::unchecked("lp_token"),
+            lp_asset: AssetInfo::Token {
+                contract_addr: "lp_token".to_string(),
+            },
             asset_info: AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },

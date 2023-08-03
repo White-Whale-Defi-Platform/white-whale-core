@@ -53,7 +53,7 @@ mod test {
             denom: "uluna".to_string(),
         };
 
-        let (mut deps, env) = mock_instantiate(1, asset);
+        let (mut deps, env) = mock_instantiate(1, asset, false);
 
         // inject protocol fees
         COLLECTED_PROTOCOL_FEES
@@ -91,6 +91,7 @@ mod test {
             AssetInfo::NativeToken {
                 denom: "uluna".to_string(),
             },
+            false,
         );
 
         let res = execute(
@@ -115,7 +116,7 @@ mod test {
             denom: "uluna".to_string(),
         };
 
-        let (mut deps, env) = mock_instantiate(1, asset.clone());
+        let (mut deps, env) = mock_instantiate(1, asset.clone(), false);
 
         // inject protocol fees
         COLLECTED_PROTOCOL_FEES

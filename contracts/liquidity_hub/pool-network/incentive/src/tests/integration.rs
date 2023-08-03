@@ -3884,14 +3884,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
-                // she should have 0 since she closed her position in epoch 26
-                assert_eq!(
-                    result.unwrap().rewards,
-                    vec![Asset {
-                        info: flow_asset_2.clone(),
-                        amount: Uint128::zero(),
-                    },]
-                );
+                // she should have none since she closed her position in epoch 26
+                assert_eq!(result.unwrap().rewards, vec![]);
             },
         )
         .query_rewards(
@@ -3930,14 +3924,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
             incentive_addr.clone().into_inner(),
             carol.clone(),
             |result| {
-                // she should have 0 since she closed her position in epoch 26
-                assert_eq!(
-                    result.unwrap().rewards,
-                    vec![Asset {
-                        info: flow_asset_2.clone(),
-                        amount: Uint128::zero(),
-                    },]
-                );
+                // she should have none since she closed her position in epoch 26
+                assert_eq!(result.unwrap().rewards, vec![]);
             },
         )
         .query_rewards(
@@ -4313,7 +4301,7 @@ fn open_expand_position_with_optional_receiver() {
         })
         .query_rewards(incentive_addr.clone().into_inner(), alice.clone(), |result| {
             // Alice should have 0, as she didn't open any position for herself but for Bob
-            assert_eq!(result.unwrap().rewards[0].amount, Uint128::zero());
+            assert_eq!(result.unwrap().rewards.len(), 0usize);
         })
         .create_epochs_on_fee_distributor_without_snapshot_on_incentive(3u64)
         .claim(
@@ -4333,4 +4321,361 @@ fn open_expand_position_with_optional_receiver() {
         .query_incentive_global_weight(incentive_addr.clone().into_inner(), 100u64, |result| {
             assert_eq!(result.unwrap_err().to_string().rsplit_once(": ").unwrap().1, (ContractError::GlobalWeightSnapshotNotTakenForEpoch { epoch: 100u64 }).to_string());
         });
+}
+
+#[test]
+fn close_position_if_empty_rewards() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(100_000_000_000u128, "uwhale".to_string()),
+        coin(100_000_000_000u128, "usdc".to_string()),
+        coin(100_000_000_000u128, "ampWHALE".to_string()),
+    ]);
+    let alice = suite.creator();
+    let bob = suite.senders[1].clone();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee();
+
+    let incentive_asset = AssetInfo::Token {
+        contract_addr: suite.cw20_tokens.first().unwrap().to_string(),
+    };
+
+    let incentive_asset_addr = suite.cw20_tokens.first().unwrap().clone();
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+
+    let flow_asset_1 = AssetInfo::NativeToken {
+        denom: "ampWHALE".to_string(),
+    };
+
+    suite
+        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(incentive_asset.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        });
+
+    // alice creates a flow
+    let time = Timestamp::from_seconds(1684766796u64);
+    suite.set_time(time);
+
+    let current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    let alice_ampWHALE_funds = RefCell::new(Uint128::zero());
+    let bob_ampWHALE_funds = RefCell::new(Uint128::zero());
+    let carol_ampWHALE_funds = RefCell::new(Uint128::zero());
+
+    suite
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,                                    //epoch 11
+            current_epoch.clone().into_inner() + 10, // epoch 21
+            Curve::Linear,
+            Asset {
+                info: flow_asset_1.clone(),
+                amount: Uint128::new(1_000u128),
+            },
+            &vec![coin(1_000u128, "ampWHALE"), coin(1_000u128, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flows(incentive_addr.clone().into_inner(), |result| {
+            let flows = result.unwrap();
+            println!("flows created:: {:?}", flows);
+            assert_eq!(flows.len(), 1);
+            assert_eq!(flows[0].clone().flow_asset.amount, Uint128::new(1_000u128));
+        })
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(rewards_share.share, Decimal256::zero()); // alice has not bonded anything yet, for the current epoch she has 0 share
+            },
+        );
+
+    // alice bonds 1, unbonding 1 day
+    // bob bonds 2k, unbonding in 1 day
+    // carol bonds 3k, unbonding in 1 day
+
+    let alice_position_1 = incentive::OpenPosition {
+        amount: Uint128::new(1u128),
+        unbonding_duration: 86400u64,
+    };
+    let bob_position = incentive::OpenPosition {
+        amount: Uint128::new(2_000u128),
+        unbonding_duration: 86400u64,
+    };
+    let carol_position = incentive::OpenPosition {
+        amount: Uint128::new(3_000u128),
+        unbonding_duration: 86400u64,
+    };
+
+    // current epoch is 11
+
+    suite
+        .increase_allowance(
+            alice.clone(),
+            incentive_asset_addr.clone(),
+            Uint128::new(2_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .increase_allowance(
+            bob.clone(),
+            incentive_asset_addr.clone(),
+            Uint128::new(2_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .increase_allowance(
+            carol.clone(),
+            incentive_asset_addr.clone(),
+            Uint128::new(3_000u128),
+            incentive_addr.clone().into_inner(),
+        )
+        .open_incentive_position(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration,
+            None,
+            vec![coin(1u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .open_incentive_position(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            bob_position.amount,
+            bob_position.unbonding_duration,
+            None,
+            vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .open_incentive_position(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            carol_position.amount,
+            carol_position.unbonding_duration,
+            None,
+            vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(1u128),
+                        unbonding_duration: alice_position_1.unbonding_duration,
+                        weight: Uint128::new(1u128),
+                    }
+                );
+            },
+        )
+        .query_positions(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            assert_eq!(
+                result.unwrap().positions.first().unwrap(),
+                &incentive::QueryPosition::OpenPosition {
+                    amount: Uint128::new(2_000u128),
+                    unbonding_duration: bob_position.unbonding_duration,
+                    weight: Uint128::new(2_000u128),
+                }
+            );
+        })
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(3_000u128),
+                        unbonding_duration: carol_position.unbonding_duration,
+                        weight: Uint128::new(3_000u128),
+                    }
+                );
+            },
+        );
+
+    // everybody locked tokens at the 11th epoch, so their first rewards will start at the 12th epoch!
+
+    // move time 15 days, it means the first flow is already over
+    let time = suite.get_time();
+    suite.set_time(time.plus_seconds(1296000u64));
+    suite.create_epochs_on_fee_distributor(15, vec![incentive_addr.clone().into_inner()]);
+
+    // current epoch is 26
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
+    // lets query rewards and claim with alice and bob, carol will claim at the end all at once
+    suite
+        .query_current_epoch_rewards_share(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                let rewards_share = result.unwrap();
+                assert_eq!(
+                    rewards_share,
+                    RewardsShareResponse {
+                        address: alice.clone(),
+                        global_weight: Uint128::new(5001u128),
+                        address_weight: Uint128::new(1u128),
+                        share: Decimal256::from_ratio(Uint128::new(1u128), Uint128::new(5001u128)),
+                        epoch_id: 26u64,
+                    }
+                );
+            },
+        )
+        // since alice locked such a small amount, she will get 0 rewards, so an empty vector
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                assert_eq!(result.unwrap().rewards, vec![]);
+            },
+        )
+        .query_rewards(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            assert_eq!(
+                result.unwrap().rewards,
+                vec![Asset {
+                    info: flow_asset_1.clone(),
+                    amount: Uint128::new(351u128),
+                },]
+            );
+        })
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: flow_asset_1.clone(),
+                        amount: Uint128::new(531u128),
+                    },]
+                );
+            },
+        )
+        .query_funds(alice.clone(), flow_asset_1.clone(), |result| {
+            *alice_ampWHALE_funds.borrow_mut() = result;
+        })
+        .query_funds(bob.clone(), flow_asset_1.clone(), |result| {
+            *bob_ampWHALE_funds.borrow_mut() = result;
+        })
+        .query_funds(carol.clone(), flow_asset_1.clone(), |result| {
+            *carol_ampWHALE_funds.borrow_mut() = result;
+        })
+        .claim(
+            incentive_addr.clone().into_inner(),
+            alice.clone(),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_funds(alice.clone(), flow_asset_1.clone(), |result| {
+            println!("query alice funds again {}", result);
+
+            assert_eq!(
+                result,
+                alice_ampWHALE_funds
+                    .clone()
+                    .into_inner()
+                    .checked_add(Uint128::new(0u128))
+                    .unwrap(),
+            );
+        })
+        .claim(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            result.unwrap();
+        })
+        .query_funds(bob.clone(), flow_asset_1.clone(), |result| {
+            println!("query bob funds again {}", result);
+
+            assert_eq!(
+                result,
+                bob_ampWHALE_funds
+                    .clone()
+                    .into_inner()
+                    .checked_add(Uint128::new(351u128))
+                    .unwrap(),
+            );
+        });
+
+    suite.query_flow(incentive_addr.clone().into_inner(), 1u64, |result| {
+        let flow_response = result.unwrap();
+        assert_eq!(
+            flow_response.unwrap().flow.unwrap().claimed_amount,
+            Uint128::new(351u128)
+        );
+    });
+
+    suite
+        .query_rewards(incentive_addr.clone().into_inner(), bob.clone(), |result| {
+            assert_eq!(result.unwrap().rewards, vec![]);
+        })
+        .query_rewards(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().rewards,
+                    vec![Asset {
+                        info: flow_asset_1.clone(),
+                        amount: Uint128::new(531u128),
+                    },]
+                );
+            },
+        );
+
+    suite
+        .close_incentive_position(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            carol_position.unbonding_duration,
+            |result| {
+                // trying to close the position with pending rewards should fail
+                println!("carol close position result {:?}", result);
+
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::PendingRewards {} => {}
+                    _ => panic!("Wrong error type, should return ContractError::PendingRewards"),
+                }
+            },
+        )
+        .close_incentive_position(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            carol_position.unbonding_duration,
+            |result| {
+                println!("alice close position result {:?}", result);
+                result.unwrap();
+            },
+        )
+        .close_incentive_position(
+            bob.clone(),
+            incentive_addr.clone().into_inner(),
+            carol_position.unbonding_duration,
+            |result| {
+                result.unwrap();
+            },
+        );
 }

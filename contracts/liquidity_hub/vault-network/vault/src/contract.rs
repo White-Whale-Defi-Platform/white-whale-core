@@ -1,14 +1,14 @@
 use cosmwasm_std::{
-    attr, entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-    StdError, SubMsg, WasmMsg,
+    attr, entry_point, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, ReplyOn,
+    Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::MinterResponse;
 use semver::Version;
 
-use white_whale::pool_network::asset::IBC_PREFIX;
 #[cfg(feature = "injective")]
 use white_whale::pool_network::asset::PEGGY_PREFIX;
+use white_whale::pool_network::asset::{has_factory_token, AssetInfo, IBC_PREFIX};
 use white_whale::vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
@@ -22,6 +22,14 @@ use crate::{
     state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG, LOAN_COUNTER},
 };
 
+use crate::execute::receive::withdraw::withdraw;
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+use cosmwasm_std::CosmosMsg;
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
+
 const CONTRACT_NAME: &str = "white_whale-vault";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -34,6 +42,12 @@ pub fn instantiate(
 ) -> Result<Response, VaultError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    if has_factory_token(&[msg.asset_info.clone()])
+        && msg.vault_fees.burn_fee.share > Decimal::zero()
+    {
+        return Err(VaultError::TokenFactoryAssetBurnDisabled {});
+    }
+
     // check the fees are valid
     msg.vault_fees.is_valid()?;
 
@@ -41,7 +55,9 @@ pub fn instantiate(
         owner: deps.api.addr_validate(&msg.owner)?,
         asset_info: msg.asset_info.clone(),
         // we patch this in the INSTANTIATE_LP_TOKEN_REPLY
-        liquidity_token: Addr::unchecked(""),
+        lp_asset: AssetInfo::NativeToken {
+            denom: "".to_string(),
+        },
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         fees: msg.vault_fees,
 
@@ -50,60 +66,6 @@ pub fn instantiate(
         withdraw_enabled: true,
     };
     CONFIG.save(deps.storage, &config)?;
-
-    let asset_label: String = msg.asset_info.clone().get_label(&deps.as_ref())?;
-
-    // cw20 asset symbols are 3-12 characters,
-    // so we take the first 8 characters of the symbol and append "uLP-" to it
-    let mut lp_symbol = format!("uLP-{}", asset_label.chars().take(8).collect::<String>());
-
-    // in case it's an ibc token, strip away everything from the '/' in 'ibc/'. The resulting
-    // lp_symbol would be uLP-ibc in that case.
-    if asset_label.starts_with(IBC_PREFIX) {
-        lp_symbol = lp_symbol.splitn(2, '/').collect::<Vec<_>>()[0].to_string();
-    }
-
-    #[cfg(feature = "injective")]
-    {
-        // in case it is an Ethereum bridged (peggy) asset on Injective, strip away everything from
-        // the "0x" in 'peggy0x...'. The resulting lp_symbol would be uLP-peggy in that case.
-        if asset_label.starts_with(PEGGY_PREFIX) {
-            lp_symbol = lp_symbol.splitn(2, "0x").collect::<Vec<_>>()[0].to_string();
-        }
-    }
-
-    let lp_label = format!(
-        "WW Vault {} LP token",
-        msg.asset_info
-            .clone()
-            .get_label(&deps.as_ref())?
-            .chars()
-            .take(32)
-            .collect::<String>()
-    );
-
-    let lp_instantiate_msg = SubMsg {
-        id: INSTANTIATE_LP_TOKEN_REPLY_ID,
-        gas_limit: None,
-        reply_on: cosmwasm_std::ReplyOn::Success,
-        msg: WasmMsg::Instantiate {
-            admin: None,
-            code_id: msg.token_id,
-            msg: to_binary(&white_whale::pool_network::token::InstantiateMsg {
-                name: lp_label.clone(),
-                symbol: lp_symbol,
-                decimals: 6,
-                initial_balances: vec![],
-                mint: Some(MinterResponse {
-                    minter: env.contract.address.to_string(),
-                    cap: None,
-                }),
-            })?,
-            funds: vec![],
-            label: lp_label,
-        }
-        .into(),
-    };
 
     // initialize fees in state
     initialize_fee(
@@ -116,14 +78,89 @@ pub fn instantiate(
         ALL_TIME_COLLECTED_PROTOCOL_FEES,
         msg.asset_info.clone(),
     )?;
-    initialize_fee(deps.storage, ALL_TIME_BURNED_FEES, msg.asset_info)?;
+    initialize_fee(deps.storage, ALL_TIME_BURNED_FEES, msg.asset_info.clone())?;
 
     // set loan counter to zero
     LOAN_COUNTER.save(deps.storage, &0)?;
 
-    Ok(Response::new()
-        .add_attributes(vec![attr("method", "instantiate")])
-        .add_submessage(lp_instantiate_msg))
+    let response = Response::default().add_attributes(vec![attr("method", "instantiate")]);
+    // create LP asset
+    if msg.token_factory_lp {
+        const LP_SYMBOL: &str = "uLP";
+        // create native LP token
+        CONFIG.update(deps.storage, |mut config| -> StdResult<_> {
+            let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
+            config.lp_asset = AssetInfo::NativeToken { denom };
+
+            Ok(config)
+        })?;
+
+        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+        return Ok(
+            response.add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
+                sender: env.contract.address.to_string(),
+                subdenom: LP_SYMBOL.to_string(),
+            })),
+        );
+        #[allow(unreachable_code)]
+        Err(VaultError::TokenFactoryNotEnabled {})
+    } else {
+        let asset_label: String = msg.asset_info.clone().get_label(&deps.as_ref())?;
+
+        // cw20 asset symbols are 3-12 characters,
+        // so we take the first 8 characters of the symbol and append "uLP-" to it
+        let mut lp_symbol = format!("uLP-{}", asset_label.chars().take(8).collect::<String>());
+
+        // in case it's an ibc token, strip away everything from the '/' in 'ibc/'. The resulting
+        // lp_symbol would be uLP-ibc in that case.
+        if asset_label.starts_with(IBC_PREFIX) {
+            lp_symbol = lp_symbol.splitn(2, '/').collect::<Vec<_>>()[0].to_string();
+        }
+
+        #[cfg(feature = "injective")]
+        {
+            // in case it is an Ethereum bridged (peggy) asset on Injective, strip away everything from
+            // the "0x" in 'peggy0x...'. The resulting lp_symbol would be uLP-peggy in that case.
+            if asset_label.starts_with(PEGGY_PREFIX) {
+                lp_symbol = lp_symbol.splitn(2, "0x").collect::<Vec<_>>()[0].to_string();
+            }
+        }
+
+        let lp_label = format!(
+            "WW Vault {} LP token",
+            msg.asset_info
+                .clone()
+                .get_label(&deps.as_ref())?
+                .chars()
+                .take(32)
+                .collect::<String>()
+        );
+
+        let lp_instantiate_msg = SubMsg {
+            id: INSTANTIATE_LP_TOKEN_REPLY_ID,
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+            msg: WasmMsg::Instantiate {
+                admin: None,
+                code_id: msg.token_id,
+                msg: to_binary(&white_whale::pool_network::token::InstantiateMsg {
+                    name: lp_label.clone(),
+                    symbol: lp_symbol,
+                    decimals: 6,
+                    initial_balances: vec![],
+                    mint: Some(MinterResponse {
+                        minter: env.contract.address.to_string(),
+                        cap: None,
+                    }),
+                })?,
+                funds: vec![],
+                label: lp_label,
+            }
+            .into(),
+        };
+
+        Ok(response.add_submessage(lp_instantiate_msg))
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -136,6 +173,20 @@ pub fn execute(
     match msg {
         ExecuteMsg::UpdateConfig(params) => update_config(deps, info, params),
         ExecuteMsg::Deposit { amount } => deposit(deps, env, info, amount),
+        ExecuteMsg::Withdraw {} => {
+            // validate that the asset sent is the token factory LP token
+            let config = CONFIG.load(deps.storage)?;
+            let lp_token_denom = match config.lp_asset {
+                AssetInfo::Token { .. } => String::new(),
+                AssetInfo::NativeToken { denom } => denom,
+            };
+
+            if info.funds.len() != 1 || info.funds[0].denom != lp_token_denom {
+                return Err(VaultError::AssetMismatch {});
+            }
+
+            withdraw(deps, env, info.sender.into_string(), info.funds[0].amount)
+        }
         ExecuteMsg::FlashLoan { amount, msg } => flash_loan(deps, env, info, amount, msg),
         ExecuteMsg::CollectProtocolFees {} => collect_protocol_fees(deps),
         ExecuteMsg::Receive(msg) => receive(deps, env, info, msg),
@@ -173,6 +224,13 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
             .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?
     {
         migrations::migrate_to_v120(deps.branch())?;
+    }
+
+    if storage_version
+        < Version::parse("1.3.0")
+            .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?
+    {
+        migrations::migrate_to_v130(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

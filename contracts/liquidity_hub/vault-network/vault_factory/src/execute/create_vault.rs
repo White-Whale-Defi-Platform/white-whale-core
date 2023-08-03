@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::fee::VaultFee;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault::InstantiateMsg;
@@ -13,8 +13,10 @@ use crate::{
 pub fn create_vault(
     deps: DepsMut,
     env: Env,
+    info: MessageInfo,
     asset_info: AssetInfo,
     fees: VaultFee,
+    token_factory_lp: bool,
 ) -> StdResult<Response> {
     // check that owner is creating vault
     let config = CONFIG.load(deps.storage)?;
@@ -41,8 +43,9 @@ pub fn create_vault(
                 token_id: config.token_id,
                 fee_collector_addr: config.fee_collector_addr.into_string(),
                 vault_fees: fees,
+                token_factory_lp,
             })?,
-            funds: vec![],
+            funds: info.funds,
             label: format!(
                 "White Whale {} Vault",
                 asset_info.clone().get_label(&deps.as_ref())?
@@ -96,6 +99,7 @@ mod tests {
             white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
         );
 
@@ -115,7 +119,53 @@ mod tests {
                             asset_info,
                             token_id: 6,
                             vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string()
+                            fee_collector_addr: "fee_collector".to_string(),
+                            token_factory_lp: false,
+                        })
+                        .unwrap(),
+                        funds: vec![],
+                        label: "White Whale uluna Vault".to_string()
+                    }
+                    .into()
+                })
+        )
+    }
+
+    #[test]
+    fn can_create_vault_w_token_factory_lp() {
+        let asset_info = AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        };
+
+        // create a vault
+        let (res, _, env) = mock_execute(
+            5,
+            6,
+            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+                asset_info: asset_info.clone(),
+                fees: get_fees(),
+                token_factory_lp: true,
+            },
+        );
+
+        assert_eq!(
+            res.unwrap(),
+            Response::new()
+                .add_attribute("method", "create_vault")
+                .add_submessage(SubMsg {
+                    id: INSTANTIATE_VAULT_REPLY_ID,
+                    reply_on: ReplyOn::Success,
+                    gas_limit: None,
+                    msg: WasmMsg::Instantiate {
+                        admin: Some(env.contract.address.to_string()),
+                        code_id: 5,
+                        msg: to_binary(&white_whale::vault_network::vault::InstantiateMsg {
+                            owner: env.contract.address.to_string(),
+                            asset_info,
+                            token_id: 6,
+                            vault_fees: get_fees(),
+                            fee_collector_addr: "fee_collector".to_string(),
+                            token_factory_lp: true,
                         })
                         .unwrap(),
                         funds: vec![],
@@ -144,6 +194,7 @@ mod tests {
             white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info,
                 fees: get_fees(),
+                token_factory_lp: false,
             },
         );
 
@@ -169,6 +220,7 @@ mod tests {
             &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
             &[],
         )
@@ -192,6 +244,7 @@ mod tests {
             &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info,
                 fees: get_fees(),
+                token_factory_lp: false,
             },
             &[],
         );
@@ -231,6 +284,7 @@ mod tests {
                         share: Decimal::zero(),
                     },
                 },
+                token_factory_lp: false,
             },
         );
         assert_eq!(
@@ -260,6 +314,7 @@ mod tests {
                         share: Decimal::zero(),
                     },
                 },
+                token_factory_lp: false,
             },
         );
         assert_eq!(
@@ -284,6 +339,7 @@ mod tests {
             white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
         );
 
@@ -303,7 +359,8 @@ mod tests {
                             asset_info,
                             token_id: 6,
                             vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string()
+                            fee_collector_addr: "fee_collector".to_string(),
+                            token_factory_lp: false,
                         })
                         .unwrap(),
                         funds: vec![],
@@ -328,6 +385,7 @@ mod tests {
             white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
+                token_factory_lp: false,
             },
         );
 
@@ -347,7 +405,8 @@ mod tests {
                             asset_info,
                             token_id: 6,
                             vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string()
+                            fee_collector_addr: "fee_collector".to_string(),
+                            token_factory_lp: false,
                         })
                         .unwrap(),
                         funds: vec![],

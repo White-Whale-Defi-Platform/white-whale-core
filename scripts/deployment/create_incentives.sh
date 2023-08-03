@@ -50,8 +50,10 @@ function create_incentives() {
 
     incentive_contract=$($BINARY tx wasm execute $incentive_factory_addr "$MSG" $TXFLAG --from $deployer_address | jq -r '.logs[].events[] | select(.type == "instantiate") | .attributes[] | select(.key == "_contract_address") | .value')
 
-    # Append incentive_contract to output file
-    append_incentive_contract_to_output $pool $(echo "$pool_label" | sed 's/ pair//') $incentive_contract
+    if [ -n "$incentive_contract" ]; then
+      # Append incentive_contract to output file
+      append_incentive_contract_to_output $pool $(echo "$pool_label" | sed 's/ pair//') $incentive_contract
+    fi
 
     sleep $tx_delay
   done

@@ -69,6 +69,7 @@ mod tests {
                 &ExecuteMsg::CreateVault {
                     asset_info: asset_info.clone(),
                     fees: get_fees(),
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -111,6 +112,7 @@ mod tests {
                     &ExecuteMsg::CreateVault {
                         asset_info: asset_info.clone(),
                         fees: get_fees().clone(),
+                        token_factory_lp: false,
                     },
                     &[],
                 )

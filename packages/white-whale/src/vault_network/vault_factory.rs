@@ -25,6 +25,9 @@ pub enum ExecuteMsg {
     CreateVault {
         asset_info: AssetInfo,
         fees: VaultFee,
+        /// If true, the vault will use the token factory to create the LP token. If false, it will
+        /// use a cw20 token instead.
+        token_factory_lp: bool,
     },
     /// Migrates vaults to the given code_id. If a [vault_addr] is provided, then migrates only that
     /// vault.

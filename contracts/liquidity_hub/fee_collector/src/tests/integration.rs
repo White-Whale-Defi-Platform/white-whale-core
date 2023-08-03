@@ -7,6 +7,7 @@ use cosmwasm_std::{
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
+use white_whale::epoch_manager::EpochConfig;
 use white_whale::fee::{Fee, VaultFee};
 use white_whale::fee_collector::ExecuteMsg::{
     AggregateFees, CollectFees, ForwardFees, UpdateConfig,
@@ -15,7 +16,7 @@ use white_whale::fee_collector::{
     Contract, ContractType, FactoryType, FeesFor, InstantiateMsg, QueryMsg,
 };
 use white_whale::fee_distributor::ExecuteMsg::NewEpoch;
-use white_whale::fee_distributor::{ClaimableEpochsResponse, Epoch, EpochConfig, EpochResponse};
+use white_whale::fee_distributor::{ClaimableEpochsResponse, Epoch, EpochResponse};
 use white_whale::pool_network::asset::AssetInfo::NativeToken;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::factory::ExecuteMsg::{AddNativeTokenDecimals, CreatePair};
@@ -1928,6 +1929,7 @@ fn collect_fees_for_vault() {
                             share: Decimal::zero(),
                         },
                     },
+                    token_factory_lp: false,
                 },
                 &[],
             )
@@ -2294,6 +2296,7 @@ fn aggregate_fees_for_vault() {
                             share: Decimal::zero(),
                         },
                     },
+                    token_factory_lp: false,
                 },
                 &[],
             )

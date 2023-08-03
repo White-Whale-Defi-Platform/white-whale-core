@@ -1,6 +1,8 @@
 use cosmwasm_std::{DepsMut, Reply, Response, StdError, StdResult};
 use protobuf::Message;
 
+use white_whale::pool_network::asset::AssetInfo;
+
 use crate::{response::MsgInstantiateContractResponse, state::CONFIG};
 
 pub fn lp_instantiate(deps: DepsMut, msg: Reply) -> StdResult<Response> {
@@ -26,7 +28,9 @@ pub fn lp_instantiate(deps: DepsMut, msg: Reply) -> StdResult<Response> {
     let token_address = deps.api.addr_validate(&res.contract_address)?;
 
     CONFIG.update::<_, StdError>(deps.storage, |mut config| {
-        config.liquidity_token = token_address.clone();
+        config.lp_asset = AssetInfo::Token {
+            contract_addr: token_address.clone().into_string(),
+        };
 
         Ok(config)
     })?;

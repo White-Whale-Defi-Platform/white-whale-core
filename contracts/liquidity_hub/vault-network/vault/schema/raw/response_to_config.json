@@ -8,7 +8,7 @@
     "fee_collector_addr",
     "fees",
     "flash_loan_enabled",
-    "liquidity_token",
+    "lp_asset",
     "owner",
     "withdraw_enabled"
   ],
@@ -45,11 +45,11 @@
       "description": "If flash-loans are enabled",
       "type": "boolean"
     },
-    "liquidity_token": {
-      "description": "The address of the liquidity token",
+    "lp_asset": {
+      "description": "The LP asset",
       "allOf": [
         {
-          "$ref": "#/definitions/Addr"
+          "$ref": "#/definitions/AssetInfo"
         }
       ]
     },
