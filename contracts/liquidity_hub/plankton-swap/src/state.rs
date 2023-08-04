@@ -2,7 +2,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
-use white_whale::pool_network::pair::FeatureToggle;
+use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
 use white_whale::pool_network::router::SwapOperation;
 
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
@@ -17,6 +17,14 @@ pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
         .flat_map(|info| info.as_bytes().to_vec())
         .collect()
 }
+pub fn get_decimals(pair_info: &NPairInfo) -> Vec<u8> {
+    match &pair_info.asset_decimals {
+        NDecimals::TWO(arr) => arr.to_vec(),
+        NDecimals::THREE(arr) => arr.to_vec(),
+        NDecimals::N(vec) => vec.clone(),
+    }
+}
+
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
 
@@ -69,6 +77,7 @@ pub struct NPairInfo {
     pub liquidity_token: AssetInfo,
     pub asset_decimals: NDecimals,
     pub pair_type: PairType,
+    pub pool_fees: PoolFee,
 }
 
 // // We could store trios separate to pairs but if we use trio key properly theres no need really

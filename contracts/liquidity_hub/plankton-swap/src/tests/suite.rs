@@ -8,7 +8,7 @@ use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use white_whale::{
     fee::Fee,
     pool_network::{
-        asset::{AssetInfo, PairType},
+        asset::{AssetInfo, PairType, Asset},
         pair::PoolFee,
     },
 };
@@ -157,6 +157,19 @@ impl Suite {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+        };
+
+        let res = self
+            .app
+            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[])?;
+        Ok(res)
+    }
+
+    pub(crate) fn add_liquidity(&mut self, sender: Addr, vec: Vec<Asset>) -> AnyResult<AppResponse> {
+        let msg = ExecuteMsg::ProvideLiquidity {
+            assets: vec,
+            slippage_tolerance: None,
+            receiver: None,
         };
 
         let res = self
