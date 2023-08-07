@@ -27,8 +27,12 @@ incremental = false
 overflow-checks = true
 
 [features]
+# for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+injective = ["white-whale/injective"]
+token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -38,6 +42,8 @@ optimize = """docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   cosmwasm/rust-optimizer:0.12.10
 """
+
+
 
 [dependencies]
 cosmwasm-schema.workspace = true 

@@ -57,6 +57,16 @@ pub enum ContractError {
     #[error("An overflow occurred when attempting to construct a decimal")]
     DecimalOverflow {},
 
+    #[error("A balance greater than zero is required by the factory to verify the asset")]
+    InvalidVerificationBalance {},
+
+
+    #[error("Burn fee is not allowed when using factory tokens")]
+    TokenFactoryAssetBurnDisabled {},
+
+    #[error("The token factory feature is not enabled")]
+    TokenFactoryNotEnabled {},
+
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 

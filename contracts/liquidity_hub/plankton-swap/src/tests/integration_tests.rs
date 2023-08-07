@@ -11,17 +11,21 @@ fn north_star() {
     let mut app = App::default();
 
     let mut suite = SuiteBuilder::new()
-        .with_native_balances("uusd", vec![("addr0000", 1000000)])
+        .with_native_balances("uusd", vec![("addr0000", 1000001),("admin", 1000001)])
+        .with_native_balances("fable", vec![("addr0000", 1000001),("admin", 1000001)])
         .with_cw20_balances(vec![("addr0000", 1000000)])
         .build();
+
+  
+
+    suite.add_native_token_decimals(Addr::unchecked("admin"), "uusd".to_string(), 6u8).unwrap();
+    suite.add_native_token_decimals(Addr::unchecked("admin"), "fable".to_string(), 6u8).unwrap();
 
     let asset_infos = vec![
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
         },
-        AssetInfo::Token {
-            contract_addr: "addr0000".to_string(),
-        },
+        AssetInfo::NativeToken { denom: "fable".to_string() }
     ];
     let res = suite
         .create_constant_product_pool(Addr::unchecked("addr0000"), asset_infos)
@@ -40,8 +44,8 @@ fn north_star() {
                 amount: Uint128::from(1000000u128),
             },
             Asset{
-                info: AssetInfo::Token {
-                    contract_addr: "addr0000".to_string(),
+                info:AssetInfo::NativeToken {
+                    denom: "fable".to_string(),
                 },
                 amount: Uint128::from(1000000u128),
             }],

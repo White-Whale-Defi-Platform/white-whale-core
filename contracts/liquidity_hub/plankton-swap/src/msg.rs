@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Decimal;
 use white_whale::pool_network::{
     asset::{Asset, PairType},
-    pair::PoolFee,
+    pair::PoolFee, factory::NativeTokenDecimalsResponse,
 };
 
 use crate::state::NAssets;
@@ -31,8 +31,14 @@ pub enum ExecuteMsg {
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
+    /// Adds native token info to the contract so it can instantiate pair contracts that include it
+    AddNativeTokenDecimals { denom: String, decimals: u8 },
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    /// Retrieves the decimals for the given native or ibc denom.
+    #[returns(NativeTokenDecimalsResponse)]
+    NativeTokenDecimals { denom: String },
+}

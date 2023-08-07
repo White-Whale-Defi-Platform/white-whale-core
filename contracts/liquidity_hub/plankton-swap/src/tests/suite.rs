@@ -124,22 +124,22 @@ impl SuiteBuilder {
 
 pub struct Suite {
     pub app: App,
-    pool_manager_addr: Addr,
+    pub pool_manager_addr: Addr,
 }
 
 impl Suite {
     pub fn create_constant_product_pool(
         &mut self,
         sender: Addr,
-        asset_infos: Vec<AssetInfo>,
+        asset_infos_array: Vec<AssetInfo>,
     ) -> AnyResult<AppResponse> {
         // Convert the Vec<AssetInfo> into a [AssetInfo; 2]
         let mut asset_infos_array = [
             AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-            AssetInfo::Token {
-                contract_addr: "addr0000".to_string(),
+            AssetInfo::NativeToken {
+                denom: "fable".to_string(),
             },
         ];
         let msg = ExecuteMsg::CreatePair {
@@ -176,5 +176,17 @@ impl Suite {
             .app
             .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[])?;
         Ok(res)
+    }
+
+    pub(crate) fn add_native_token_decimals(&mut self, sender: Addr, denom:String, decimals: u8) -> AnyResult<AppResponse>{
+       let msg = ExecuteMsg::AddNativeTokenDecimals { denom: denom.clone(), decimals };
+       let res = self
+           .app
+           .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[Coin{
+                denom: denom.to_string(),
+                amount: Uint128::from(1u128),
+              }])
+           .unwrap();
+         Ok(res)
     }
 }

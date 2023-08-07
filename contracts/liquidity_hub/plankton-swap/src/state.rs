@@ -35,6 +35,16 @@ pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 
+// key : asset info / value: decimals
+pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");
+pub fn add_allow_native_token(
+    storage: &mut dyn Storage,
+    denom: String,
+    decimals: u8,
+) -> StdResult<()> {
+    ALLOW_NATIVE_TOKENS.save(storage, denom.as_bytes(), &decimals)
+}
+
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
 pub enum Fee {
@@ -138,8 +148,7 @@ fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
 pub struct Config {
     pub fee_collector_addr: Addr,
     pub owner: Addr,
-    // The code ID for the pair and tokens
-    pub pair_code_id: u64,
+    // The code ID for CW20
     pub token_code_id: u64,
     // We must set a creation fee on instantiation to prevent spamming of pools
     pub pool_creation_fee: Vec<Asset>,

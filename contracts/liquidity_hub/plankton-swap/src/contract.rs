@@ -1,10 +1,10 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use white_whale::pool_network::pair::FeatureToggle;
 // use cw2::set_contract_version;
 
-use crate::commands;
+use crate::{commands, queries};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{Config, MANAGER_CONFIG};
@@ -25,7 +25,6 @@ pub fn instantiate(
     let config: Config = Config {
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         owner: deps.api.addr_validate(&msg.owner)?,
-        pair_code_id: msg.pair_code_id,
         token_code_id: msg.token_code_id,
         // We must set a creation fee on instantiation to prevent spamming of pools
         pool_creation_fee: msg.pool_creation_fee,
@@ -74,12 +73,19 @@ pub fn execute(
             slippage_tolerance,
             receiver,
         ),
+        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
+            commands::add_native_token_decimals(deps, env, denom, decimals)
+        }
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+    match _msg {
+        QueryMsg::NativeTokenDecimals { denom } => {
+            to_binary(&queries::query_native_token_decimal(_deps, denom)?)
+        }
+    }
 }
 
 #[cfg(test)]
