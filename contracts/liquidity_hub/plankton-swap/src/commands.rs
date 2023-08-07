@@ -236,32 +236,30 @@ pub mod swap {
     use cosmwasm_std::Decimal;
     use white_whale::pool_network::asset::Asset;
 
-    use crate::state::get_decimals;
+    use crate::{helpers, state::get_decimals};
 
     // Stuff like Swap, Swap through router and any other stuff related to swapping
     use super::*;
 
     pub fn swap(
         deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    sender: Addr,
-    offer_asset: Asset,
-    ask_asset: Asset,
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    to: Option<Addr>,
+        env: Env,
+        info: MessageInfo,
+        sender: Addr,
+        offer_asset: Asset,
+        ask_asset: Asset,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<Addr>,
     ) -> Result<Response, ContractError> {
         let config = MANAGER_CONFIG.load(deps.storage)?;
         // check if the deposit feature is enabled
         if !config.feature_toggle.deposits_enabled {
-            return Err(ContractError::OperationDisabled(
-                "swap".to_string(),
-            ));
+            return Err(ContractError::OperationDisabled("swap".to_string()));
         }
 
         offer_asset.assert_sent_native_token_balance(&info)?;
-        
+
         let asset_infos = [offer_asset.info.clone(), ask_asset.info.clone()];
         let assets = [offer_asset.clone(), ask_asset.clone()];
         // Load assets, pools and pair info
@@ -290,16 +288,15 @@ pub mod swap {
                     },
                 ];
 
-                (
-                    assets.to_vec(),
-                    pools.to_vec(),
-                    pair_info,
-                )
+                (assets.to_vec(), pools.to_vec(), pair_info)
             }
             // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
             assets if assets.len() == 3 => {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+                // TODO: this is fucked, rework later after constant product working 
+                let asset_infos = [offer_asset.info.clone(), ask_asset.info.clone(), ask_asset.info.clone()];
+                let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset.clone()];
 
                 let mut pools: [Asset; 3] = [
                     Asset {
@@ -328,11 +325,7 @@ pub mod swap {
                     },
                 ];
 
-                (
-                    assets.to_vec(),
-                    pools.to_vec(),
-                    pair_info,
-                )
+                (assets.to_vec(), pools.to_vec(), pair_info)
             }
             _ => {
                 return Err(ContractError::TooManyAssets {
@@ -341,14 +334,14 @@ pub mod swap {
             }
         };
         // determine what's the offer and ask pool based on the offer_asset
-    let offer_pool: Asset;
-    let ask_pool: Asset;
-    let offer_decimal: u8;
-    let ask_decimal: u8;
-    let decimals = get_decimals(&pair_info);
+        let offer_pool: Asset;
+        let ask_pool: Asset;
+        let offer_decimal: u8;
+        let ask_decimal: u8;
+        let decimals = get_decimals(&pair_info);
 
         // We now have the pools and pair info; we can now calculate the swap
-        // Verify the pool 
+        // Verify the pool
         if offer_asset.info.equal(&pools[0].info) {
             offer_pool = pools[0].clone();
             ask_pool = pools[1].clone();
@@ -357,13 +350,12 @@ pub mod swap {
         } else if offer_asset.info.equal(&pools[1].info) {
             offer_pool = pools[1].clone();
             ask_pool = pools[0].clone();
-    
+
             offer_decimal = decimals[1];
             ask_decimal = decimals[0];
         } else {
             return Err(ContractError::AssetMismatch {});
         }
-    
 
         let mut attributes = vec![
             ("action", "swap"),
@@ -377,54 +369,66 @@ pub mod swap {
         // TODO: Add the swap logic here
         let offer_amount = offer_asset.amount;
         let pool_fees = pair_info.pool_fees;
-    
-        // let swap_computation = helpers::compute_swap(
-        //     offer_pool.amount,
-        //     ask_pool.amount,
-        //     offer_amount,
-        //     pool_fees,
-        //     &pair_info.pair_type,
-        //     offer_decimal,
-        //     ask_decimal,
-        // )?;
-        
-    
+
+        let swap_computation = helpers::compute_swap(
+            offer_pool.amount,
+            ask_pool.amount,
+            offer_amount,
+            pool_fees,
+            &pair_info.pair_type,
+            offer_decimal,
+            ask_decimal,
+        )?;
+
         let return_asset = Asset {
             info: ask_pool.info.clone(),
             amount: swap_computation.return_amount,
         };
 
-        // Here; add the swap messages 
+        // Assert spread and other operations
+        // check max spread limit if exist
+        helpers::assert_max_spread(
+            belief_price,
+            max_spread,
+            offer_asset.clone(),
+            return_asset.clone(),
+            swap_computation.spread_amount,
+            offer_decimal,
+            ask_decimal,
+        )?;
 
-        // TODO: Store the fees 
+        // TODO; add the swap messages
+        if !swap_computation.return_amount.is_zero() {
+            messages.push(return_asset.into_msg(receiver.clone())?);
+        }
 
-
+        // TODO: Store the fees
 
         // 1. send collateral token from the contract to a user
-    // 2. stores the protocol fees
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("action", "swap"),
-        ("sender", sender.as_str()),
-        ("receiver", receiver.as_str()),
-        ("offer_asset", &offer_asset.info.to_string()),
-        ("ask_asset", &ask_pool.info.to_string()),
-        ("offer_amount", &offer_amount.to_string()),
-        ("return_amount", &swap_computation.return_amount.to_string()),
-        ("spread_amount", &swap_computation.spread_amount.to_string()),
-        (
-            "swap_fee_amount",
-            &swap_computation.swap_fee_amount.to_string(),
-        ),
-        (
-            "protocol_fee_amount",
-            &swap_computation.protocol_fee_amount.to_string(),
-        ),
-        (
-            "burn_fee_amount",
-            &swap_computation.burn_fee_amount.to_string(),
-        ),
-        ("swap_type", pair_info.pair_type.get_label()),
-    ]))
+        // 2. stores the protocol fees
+        Ok(Response::new().add_messages(messages).add_attributes(vec![
+            ("action", "swap"),
+            ("sender", sender.as_str()),
+            ("receiver", receiver.as_str()),
+            ("offer_asset", &offer_asset.info.to_string()),
+            ("ask_asset", &ask_pool.info.to_string()),
+            ("offer_amount", &offer_amount.to_string()),
+            ("return_amount", &swap_computation.return_amount.to_string()),
+            ("spread_amount", &swap_computation.spread_amount.to_string()),
+            (
+                "swap_fee_amount",
+                &swap_computation.swap_fee_amount.to_string(),
+            ),
+            (
+                "protocol_fee_amount",
+                &swap_computation.protocol_fee_amount.to_string(),
+            ),
+            (
+                "burn_fee_amount",
+                &swap_computation.burn_fee_amount.to_string(),
+            ),
+            ("swap_type", pair_info.pair_type.get_label()),
+        ]))
     }
 }
 
@@ -443,7 +447,6 @@ pub mod liquidity {
     // StableSwap which is used for 3 assets
     // Eventually concentrated liquidity will be offered but this can be assume to all be done in a well documented module we call into
     use super::*;
-
 
     fn get_pools_and_deposits(
         assets: &[Asset],
