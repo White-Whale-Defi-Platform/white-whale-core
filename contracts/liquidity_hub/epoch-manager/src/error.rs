@@ -14,6 +14,9 @@ pub enum ContractError {
     #[error("{0}")]
     HookError(#[from] HookError),
 
+    #[error("The epoch id has overflowed.")]
+    EpochOverflow,
+
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
@@ -24,7 +27,7 @@ pub enum ContractError {
     },
 
     #[error("The current epoch epoch has not expired yet.")]
-    CurrentEpochNotExpired {},
+    CurrentEpochNotExpired,
 }
 
 impl From<semver::Error> for ContractError {
