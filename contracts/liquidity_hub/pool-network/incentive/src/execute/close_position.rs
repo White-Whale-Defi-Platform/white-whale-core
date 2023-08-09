@@ -74,14 +74,14 @@ pub fn close_position(
 
     // reduce the global weight
     GLOBAL_WEIGHT.update::<_, StdError>(deps.storage, |global_weight| {
-        Ok(global_weight.checked_sub(weight_to_reduce)?)
+        Ok(global_weight.saturating_sub(weight_to_reduce))
     })?;
 
     // reduce the weight for the user
     let mut user_weight = ADDRESS_WEIGHT
         .may_load(deps.storage, info.sender.clone())?
         .unwrap_or_default();
-    user_weight = user_weight.checked_sub(weight_to_reduce)?;
+    user_weight = user_weight.saturating_sub(weight_to_reduce);
     ADDRESS_WEIGHT.save(deps.storage, info.sender.clone(), &user_weight)?;
 
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
