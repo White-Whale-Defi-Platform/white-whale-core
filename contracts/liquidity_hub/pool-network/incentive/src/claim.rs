@@ -33,7 +33,7 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
     let mut last_epoch_user_weight_update: EpochId = 0u64;
     let mut last_user_weight_seen: Uint128 = Uint128::zero();
     //let mut last_user_weight_seen: (EpochId, Uint128) = (064, Uint128::zero());
-    for mut flow in flows.iter_mut() {
+    for flow in flows.iter_mut() {
         // check if flow already ended and if everything has been claimed for that flow.
         if current_epoch > flow.end_epoch && flow.claimed_amount == flow.flow_asset.amount {
             // if so, skip flow.

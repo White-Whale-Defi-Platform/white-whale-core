@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
 
-use white_whale::epoch_manager::EpochConfig;
+use white_whale::epoch_manager::epoch_manager::EpochConfig;
 use white_whale::fee::{Fee, VaultFee};
 use white_whale::fee_collector::ExecuteMsg::{
     AggregateFees, CollectFees, ForwardFees, UpdateConfig,

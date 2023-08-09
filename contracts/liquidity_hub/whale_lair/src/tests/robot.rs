@@ -1,7 +1,7 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
-use white_whale::epoch_manager::EpochConfig;
+use white_whale::epoch_manager::epoch_manager::EpochConfig;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::whale_lair::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,

@@ -42,7 +42,7 @@ white-whale.workspace = true
 cosmwasm-schema.workspace = true
 
 [dev-dependencies]
-cw-multi-test = "0.15.1"
+cw-multi-test.workspace = true
 terraswap-router = { path = "../pool-network/terraswap_router" }
 terraswap-factory = { path = "../pool-network/terraswap_factory" }
 terraswap-pair = { path = "../pool-network/terraswap_pair" }
@@ -52,4 +52,4 @@ fee_distributor = { path = "../fee_distributor" }
 whale-lair = { path = "../whale_lair" }
 vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
 vault = { version = "1.0.0", path = "../vault-network/vault" }
-cw20 = { version = "0.15.1" }
+cw20.workspace = true

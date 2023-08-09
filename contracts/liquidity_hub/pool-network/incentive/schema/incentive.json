@@ -372,9 +372,14 @@
       },
       "Curve": {
         "description": "The type of distribution curve to exist.",
-        "type": "string",
-        "enum": [
-          "linear"
+        "oneOf": [
+          {
+            "description": "A linear curve that releases assets as we approach the end of the flow period.",
+            "type": "string",
+            "enum": [
+              "linear"
+            ]
+          }
         ]
       },
       "Uint128": {
@@ -769,9 +774,14 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "type": "string",
-          "enum": [
-            "linear"
+          "oneOf": [
+            {
+              "description": "A linear curve that releases assets as we approach the end of the flow period.",
+              "type": "string",
+              "enum": [
+                "linear"
+              ]
+            }
           ]
         },
         "Flow": {
@@ -941,9 +951,14 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "type": "string",
-          "enum": [
-            "linear"
+          "oneOf": [
+            {
+              "description": "A linear curve that releases assets as we approach the end of the flow period.",
+              "type": "string",
+              "enum": [
+                "linear"
+              ]
+            }
           ]
         },
         "Flow": {

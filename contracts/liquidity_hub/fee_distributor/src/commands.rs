@@ -2,7 +2,7 @@ use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
     SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
-use white_whale::epoch_manager::EpochConfig;
+use white_whale::epoch_manager::epoch_manager::EpochConfig;
 
 use white_whale::fee_distributor::Epoch;
 use white_whale::pool_network::asset;
