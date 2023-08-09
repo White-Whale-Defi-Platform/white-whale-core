@@ -11,18 +11,18 @@ pub fn add_hook(
     deps: DepsMut,
     info: MessageInfo,
     api: &dyn Api,
-    contract_addr: &String,
+    contract_addr: &str,
 ) -> Result<Response, ContractError> {
-    Ok(HOOKS.execute_add_hook(&ADMIN, deps, info, api.addr_validate(&contract_addr)?)?)
+    Ok(HOOKS.execute_add_hook(&ADMIN, deps, info, api.addr_validate(contract_addr)?)?)
 }
 
 pub(crate) fn remove_hook(
     deps: DepsMut,
     info: MessageInfo,
     api: &dyn Api,
-    contract_addr: &String,
+    contract_addr: &str,
 ) -> Result<Response, ContractError> {
-    Ok(HOOKS.execute_remove_hook(&ADMIN, deps, info, api.addr_validate(&contract_addr)?)?)
+    Ok(HOOKS.execute_remove_hook(&ADMIN, deps, info, api.addr_validate(contract_addr)?)?)
 }
 
 /// Creates a new epoch.
@@ -54,7 +54,6 @@ pub fn create_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> 
         EpochChangedHookMsg {
             current_epoch: current_epoch.clone(),
         }
-        .clone()
         .into_cosmos_msg(hook)
         .map(SubMsg::new)
     })?;
@@ -93,9 +92,7 @@ pub fn update_config(
         ("owner", owner.unwrap_or_else(|| info.sender.to_string())),
         (
             "epoch_config",
-            epoch_config
-                .unwrap_or_else(|| config.epoch_config)
-                .to_string(),
+            epoch_config.unwrap_or(config.epoch_config).to_string(),
         ),
     ]))
 }

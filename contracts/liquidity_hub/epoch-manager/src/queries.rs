@@ -17,16 +17,16 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
 /// Queries the current epoch. Returns an [EpochResponse].
 pub(crate) fn query_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
-    Ok(EPOCH
+    EPOCH
         .load(deps.storage)
-        .map(|epoch| epoch.to_epoch_response())?)
+        .map(|epoch| epoch.to_epoch_response())
 }
 
 /// Queries the current epoch. Returns an [EpochResponse].
 pub(crate) fn query_epoch(deps: Deps, id: u64) -> StdResult<EpochResponse> {
     let current_epoch = EPOCH.load(deps.storage)?;
 
-    return if current_epoch.id == id {
+    if current_epoch.id == id {
         Ok(current_epoch.to_epoch_response())
     } else {
         let epoch_difference = current_epoch.id.saturating_sub(id);
@@ -38,5 +38,5 @@ pub(crate) fn query_epoch(deps: Deps, id: u64) -> StdResult<EpochResponse> {
             ),
         };
         Ok(epoch.to_epoch_response())
-    };
+    }
 }
