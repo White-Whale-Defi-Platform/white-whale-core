@@ -856,7 +856,6 @@ while getopts $optstring arg; do
       tx_delay=0.5
     else
       echo "This kind of testing is supported on local chains only"
-      exit 1
       tx_delay=8
     fi
     ;;

@@ -22,6 +22,7 @@ publish = false
 [workspace.dependencies]
 cosmwasm-schema = "1.1.4"
 cosmwasm-std = { version = "1.1.4", features = ["iterator"] }
+terra-cosmwasm = "2.2.0"
 cw2 = "1.0.1"
 cw20 = "1.0.1"
 cw20-base = { version = "1.1.0", features = ["library"] }

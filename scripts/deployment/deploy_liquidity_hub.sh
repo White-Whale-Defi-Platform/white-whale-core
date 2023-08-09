@@ -37,8 +37,10 @@ function store_artifact_on_chain() {
   local version="${version//\"/}"
 
   local res=$($BINARY tx wasm store $artifact $TXFLAG --from $deployer)
+  echo $res
   local code_id=$(echo $res | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value')
 
+  echo "code id: $code_id"
   # Download the wasm binary from the chain and compare it to the original one
   echo -e "Verifying integrity of wasm artifact on chain...\n"
   $BINARY query wasm code $code_id --node $RPC downloaded_wasm.wasm >/dev/null 2>&1
@@ -97,6 +99,7 @@ function init_fee_distributor() {
   echo -e "\nInitializing the Fee Distributor..."
 
   whale_denom=$(extract_ibc_denom "$CHAIN_ID")
+  whale_denom=uluna
 
   # Prepare the instantiation message
   bonding_contract_addr=$(jq '.contracts[] | select (.wasm == "whale_lair.wasm") | .contract_address' $output_file)
@@ -130,7 +133,7 @@ function init_whale_lair() {
 
   bonding_assets=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
   grace_period="21" #default value is 21 epochs
-  distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
+  distribution_asset='{"native_token":{"denom":"uluna"}}'
   epoch_duration="86400000000000"      #default value is 1 day, in nanoseconds
   genesis_epoch="1689865200000000000" #fill with desired unix time, in nanoseconds
   epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
@@ -138,6 +141,7 @@ function init_whale_lair() {
   init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period":
   "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
 
+  echo $init
   #todo fix this message here, it's broken
   # Instantiate the contract
   code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
@@ -159,6 +163,7 @@ function init_incentive_factory() {
   fee_distributor_addr=$(jq '.contracts[] | select (.wasm == "fee_distributor.wasm") | .contract_address' $output_file)
   fee_collector_addr=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
   whale_denom=$(extract_ibc_denom "$CHAIN_ID")
+  whale_denom=uluna
   create_flow_fee='{"amount": "1000000000", "info": {"native_token":{"denom":"'$whale_denom'"}}}'
   max_concurrent_flows=5          #we start with 5 concurrent flows
   max_flow_epoch_buffer=14        #default value is 14 epochs
@@ -305,8 +310,8 @@ function init_vault_network() {
 
 function init_liquidity_hub() {
   echo -e "\nInitializing the Liquidity Hub on $CHAIN_ID..."
-  init_pool_network
-  init_whale_lair
+  #init_pool_network
+  #init_whale_lair
   init_fee_distributor
   init_vault_network
   init_incentive_factory

@@ -34,6 +34,10 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/terra.env)
     ;;
 
+  terra-classic-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/terra-classic.env)
+    ;;
+
   archway-testnet)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/archway.env)
     ;;
