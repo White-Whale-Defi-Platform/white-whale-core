@@ -34,6 +34,6 @@ thiserror.workspace = true
 white-whale.workspace = true
 
 [dev-dependencies]
-cosmwasm-schema = "1.1.4"
-cw-multi-test = "0.15.1"
+cosmwasm-schema.workspace = true
+cw-multi-test.workspace = true
 fee_collector = { path = "../../fee_collector" }
