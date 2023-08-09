@@ -1,7 +1,6 @@
+use osmosis_std_derive::CosmwasmExt;
 use std::convert::TryFrom;
 use std::convert::TryInto;
-
-use osmosis_std_derive::CosmwasmExt;
 
 // see https://github.com/notional-labs/wasmd/blob/v0.30.0-sdk469.4/proto/cosmwasm/tokenfactory/v1beta1/tx.proto
 
