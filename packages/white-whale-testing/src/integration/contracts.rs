@@ -1,7 +1,8 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::Empty;
 use cw_multi_test::{App, Contract, ContractWrapper};
 
-pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+pub fn whale_lair_contract() -> Box<dyn Contract<TerraQuery>> {
     let contract = ContractWrapper::new(
         whale_lair::contract::execute,
         whale_lair::contract::instantiate,

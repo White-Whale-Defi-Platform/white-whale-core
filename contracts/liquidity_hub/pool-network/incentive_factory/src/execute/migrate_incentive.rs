@@ -1,10 +1,12 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Order, Response, StdResult, WasmMsg};
 
 use crate::error::ContractError;
 use crate::state::INCENTIVE_MAPPINGS;
 
+
 pub fn migrate_incentives(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     incentive_address: Option<String>,
     code_id: u64,
 ) -> Result<Response, ContractError> {
@@ -107,7 +109,7 @@ mod tests {
                 code_id: 456,
             },
         )
-        .unwrap();
+            .unwrap();
 
         let expected_attributes = vec![
             attr("method", "migrate_incentives"),
@@ -158,7 +160,7 @@ mod tests {
                 code_id: 456,
             },
         )
-        .unwrap();
+            .unwrap();
 
         let expected_attributes = vec![
             attr("method", "migrate_incentives"),

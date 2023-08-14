@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, Order, StdResult, Storage};
 use cw_storage_plus::Bound;
 use white_whale::pool_network::{
@@ -9,7 +10,7 @@ use crate::state::INCENTIVE_MAPPINGS;
 
 /// Queries all the pairs created by the factory
 pub fn get_incentives(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_after: Option<AssetInfo>,
     limit: Option<u32>,
 ) -> StdResult<IncentivesResponse> {

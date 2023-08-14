@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Response, WasmMsg};
 
 use white_whale::vault_network::vault::MigrateMsg;
@@ -6,7 +7,7 @@ use crate::err::StdResult;
 use crate::state::read_vaults;
 
 pub fn migrate_vaults(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     vault_addr: Option<String>,
     vault_code_id: u64,
 ) -> StdResult<Response> {

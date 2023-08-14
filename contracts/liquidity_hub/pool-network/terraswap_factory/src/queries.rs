@@ -1,6 +1,7 @@
 use crate::state::{
     pair_key, read_pairs, read_trios, trio_key, Config, ALLOW_NATIVE_TOKENS, CONFIG, PAIRS, TRIOS,
 };
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, StdResult};
 use white_whale::pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw, TrioInfo, TrioInfoRaw};
 use white_whale::pool_network::factory::{
@@ -8,7 +9,7 @@ use white_whale::pool_network::factory::{
 };
 
 /// Queries [Config]
-pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+pub fn query_config(deps: Deps<TerraQuery>) -> StdResult<ConfigResponse> {
     let config: Config = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&config.owner)?.to_string(),
@@ -22,7 +23,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 }
 
 /// Queries info about a given Pair
-pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
+pub fn query_pair(deps: Deps<TerraQuery>, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo> {
     let pair_key = pair_key(&[
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,
@@ -33,7 +34,7 @@ pub fn query_pair(deps: Deps, asset_infos: [AssetInfo; 2]) -> StdResult<PairInfo
 
 /// Queries all the pairs created by the factory
 pub fn query_pairs(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_after: Option<[AssetInfo; 2]>,
     limit: Option<u32>,
 ) -> StdResult<PairsResponse> {
@@ -53,7 +54,7 @@ pub fn query_pairs(
 }
 
 /// Queries info about a given Trio
-pub fn query_trio(deps: Deps, asset_infos: [AssetInfo; 3]) -> StdResult<TrioInfo> {
+pub fn query_trio(deps: Deps<TerraQuery>, asset_infos: [AssetInfo; 3]) -> StdResult<TrioInfo> {
     let trio_key = trio_key(&[
         asset_infos[0].to_raw(deps.api)?,
         asset_infos[1].to_raw(deps.api)?,
@@ -65,7 +66,7 @@ pub fn query_trio(deps: Deps, asset_infos: [AssetInfo; 3]) -> StdResult<TrioInfo
 
 /// Queries all the trios created by the factory
 pub fn query_trios(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_after: Option<[AssetInfo; 3]>,
     limit: Option<u32>,
 ) -> StdResult<TriosResponse> {
@@ -87,7 +88,7 @@ pub fn query_trios(
 
 /// Query the native token decimals
 pub fn query_native_token_decimal(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     denom: String,
 ) -> StdResult<NativeTokenDecimalsResponse> {
     let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;

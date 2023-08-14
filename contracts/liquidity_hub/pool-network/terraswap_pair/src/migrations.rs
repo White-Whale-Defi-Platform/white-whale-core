@@ -1,4 +1,6 @@
 #![cfg(not(tarpaulin_include))]
+
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 #[cfg(not(feature = "injective"))]
 use cosmwasm_std::Uint128;
@@ -24,7 +26,7 @@ use crate::state::{ALL_TIME_BURNED_FEES, CONFIG};
 /// [`PairInfoRaw`], [`PairInfo`]
 /// as identified by commit c8d8462c6933b93245acdc8abbe303287fdc1951 which changed the structs to use
 /// cw-serde's snake_case
-pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v110(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     // represent the old struct states
     // so we can deserialize from contract state
     // these are from commit 76f91fdb780677bcabfee631de6f9b973a36025f
@@ -75,7 +77,7 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
 }
 
 #[cfg(not(feature = "injective"))]
-pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v120(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     struct ConfigV110 {
         pub owner: Addr,
@@ -128,7 +130,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
 /// Migrate to the StableSwap deployment
 ///
 /// Default to a ConstantProduct pool
-pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v130(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     pub struct PairInfoRawV120 {
         pub asset_infos: [AssetInfoRaw; 2],

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -24,7 +25,7 @@ pub const DEFAULT_FLOW_DURATION: u64 = 14u64;
 /// Opens a flow to incentivize liquidity providers
 #[allow(clippy::too_many_arguments)]
 pub fn open_flow(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     start_epoch: Option<u64>,

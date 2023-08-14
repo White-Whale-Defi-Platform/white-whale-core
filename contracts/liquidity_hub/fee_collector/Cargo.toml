@@ -40,6 +40,7 @@ serde.workspace = true
 thiserror.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true
+classic-bindings.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

@@ -1,18 +1,19 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
-    Storage, SubMsg, Uint128, Uint256, WasmMsg,
+    Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult, Storage,
+    SubMsg, to_binary, Uint128, Uint256, WasmMsg,
 };
+#[cfg(any(
+feature = "token_factory",
+feature = "osmosis_token_factory",
+feature = "injective"
+))]
+use cosmwasm_std::CosmosMsg;
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
-use cosmwasm_std::CosmosMsg;
-use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
+use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, is_factory_token};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
@@ -130,6 +131,7 @@ pub struct OfferAmountComputation {
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
 }
+
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 3],
@@ -212,13 +214,13 @@ pub fn instantiate_fees(
 }
 
 /// Gets the total supply of the given liquidity token
-pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
+pub fn get_total_share(deps: &Deps<TerraQuery>, liquidity_token: String) -> StdResult<Uint128> {
     #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
     ))]
-    let total_share = if is_factory_token(liquidity_token.as_str()) {
+        let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
         deps.querier.query_supply(&liquidity_token)?.amount
     } else {
@@ -226,18 +228,18 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
             &deps.querier,
             deps.api.addr_validate(liquidity_token.as_str())?,
         )?
-        .total_supply
+            .total_supply
     };
     #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
+    not(feature = "token_factory"),
+    not(feature = "osmosis_token_factory"),
+    not(feature = "injective")
     ))]
-    let total_share = query_token_info(
+        let total_share = query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_token.as_str())?,
     )?
-    .total_supply;
+        .total_supply;
 
     Ok(total_share)
 }
@@ -253,7 +255,7 @@ pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
 
 /// Creates a new LP token for this pool
 pub fn create_lp_token(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: &Env,
     msg: &InstantiateMsg,
     lp_token_name: &String,
@@ -268,9 +270,9 @@ pub fn create_lp_token(
         })?;
 
         #[cfg(any(
-            feature = "token_factory",
-            feature = "osmosis_token_factory",
-            feature = "injective"
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
         ))]
         return Ok(
             Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
@@ -301,7 +303,7 @@ pub fn create_lp_token(
                 funds: vec![],
                 label: lp_token_name.to_owned(),
             }
-            .into(),
+                .into(),
             gas_limit: None,
             id: INSTANTIATE_REPLY_ID,
             reply_on: ReplyOn::Success,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
@@ -21,7 +22,7 @@ use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
 
 pub fn withdraw(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     sender: String,
     amount: Uint128,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Response, StdError, Uint128};
 
 use crate::error::ContractError;
@@ -5,7 +6,7 @@ use crate::helpers;
 use crate::state::{GLOBAL_WEIGHT, GLOBAL_WEIGHT_SNAPSHOT};
 
 /// Takes a global weight snapshot based on the current epoch
-pub fn take_global_weight_snapshot(deps: DepsMut) -> Result<Response, ContractError> {
+pub fn take_global_weight_snapshot(deps: DepsMut<TerraQuery>) -> Result<Response, ContractError> {
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
 
     let global_weight_snapshot = GLOBAL_WEIGHT_SNAPSHOT.may_load(deps.storage, current_epoch)?;

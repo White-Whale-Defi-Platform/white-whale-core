@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, Order, StdError, StdResult};
 
 use white_whale::pool_network::incentive::Flow;
@@ -7,7 +8,7 @@ use crate::state::FLOWS;
 
 /// Retrieves all the current flows that exist.
 pub fn get_flows(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_epoch: Option<u64>,
     end_epoch: Option<u64>,
 ) -> Result<Vec<Flow>, StdError> {

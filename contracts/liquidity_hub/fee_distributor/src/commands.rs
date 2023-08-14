@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
     SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
@@ -15,7 +16,7 @@ use crate::state::{get_current_epoch, query_claimable, CONFIG, EPOCHS, LAST_CLAI
 use crate::ContractError;
 
 /// Creates a new epoch, forwarding available tokens from epochs that are past the grace period.
-pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+pub fn create_new_epoch(deps: DepsMut<TerraQuery>, env: Env) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = get_current_epoch(deps.as_ref())?.epoch;
     if env
@@ -75,7 +76,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
 }
 
 /// Claims pending rewards for the sender.
-pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn claim(deps: DepsMut<TerraQuery>, info: MessageInfo) -> Result<Response, ContractError> {
     // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
     let config = CONFIG.load(deps.storage)?;
 
@@ -160,7 +161,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
     // send funds to the user
     let mut messages = vec![];
     for fee in claimable_fees {
-        messages.push(fee.into_msg(info.sender.clone())?);
+        messages.push(fee.into_msg(&deps.querier, info.sender.clone())?);
     }
 
     Ok(Response::new()
@@ -171,7 +172,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 /// Updates the [Config] of the contract
 #[allow(clippy::too_many_arguments)]
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     owner: Option<String>,
     bonding_contract_addr: Option<String>,

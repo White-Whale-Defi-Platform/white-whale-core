@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Binary, Deps};
 
 use white_whale::pool_network::asset::AssetInfo;
@@ -6,7 +7,7 @@ use white_whale::vault_network::vault_factory::{VaultInfo, VaultsResponse};
 use crate::state::read_vaults;
 use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
 
-pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
+pub fn get_vault(deps: Deps<TerraQuery>, asset_info: AssetInfo) -> StdResult<Binary> {
     let vault_option = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
     if let Some((vault_addr, _)) = vault_option {
         return Ok(to_binary(&vault_addr)?);
@@ -16,7 +17,7 @@ pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
 }
 
 pub fn get_vaults(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     start_after: Option<Vec<u8>>,
     limit: Option<u32>,
 ) -> StdResult<Binary> {

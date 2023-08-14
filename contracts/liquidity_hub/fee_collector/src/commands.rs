@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut, Env,
     MessageInfo, QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
@@ -19,7 +20,19 @@ use crate::ContractError;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
-pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response, ContractError> {
+pub fn collect_fees(
+    deps: DepsMut<TerraQuery>,
+    info: MessageInfo,
+    env: Env,
+    collect_fees_for: FeesFor,
+) -> Result<Response, ContractError> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    // only the owner or the contract itself can aggregate the fees
+    if info.sender != config.owner && info.sender != env.contract.address {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
     match collect_fees_for {
@@ -65,7 +78,7 @@ fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> Std
 
 /// Builds the messages to collect the fees for the given factory's children.
 fn collect_fees_for_factory(
-    deps: &DepsMut,
+    deps: &DepsMut<TerraQuery>,
     factory: &Addr,
     factory_type: FactoryType,
 ) -> StdResult<Vec<CosmosMsg>> {
@@ -112,7 +125,7 @@ fn collect_fees_for_factory(
 }
 
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     owner: Option<String>,
     pool_router: Option<String>,
@@ -158,7 +171,8 @@ pub fn update_config(
 
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
-    mut deps: DepsMut,
+    mut deps: DepsMut<TerraQuery>,
+    info: MessageInfo,
     env: Env,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
@@ -316,7 +330,7 @@ pub fn aggregate_fees(
 
 /// Forwards the fees to the fee distributor.
 pub fn forward_fees(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     env: Env,
     epoch: Epoch,

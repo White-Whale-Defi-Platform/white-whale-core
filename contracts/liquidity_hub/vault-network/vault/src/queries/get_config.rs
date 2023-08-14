@@ -1,9 +1,10 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Binary, Deps};
 
 use crate::error::VaultError;
 use crate::state::CONFIG;
 
-pub fn get_config(deps: Deps) -> Result<Binary, VaultError> {
+pub fn get_config(deps: Deps<TerraQuery>) -> Result<Binary, VaultError> {
     Ok(to_binary(&CONFIG.load(deps.storage)?)?)
 }
 

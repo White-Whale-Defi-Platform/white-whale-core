@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Decimal256, Deps, Uint128, Uint256};
 
 use white_whale::pool_network::{asset::Asset, incentive::RewardsResponse};
@@ -9,7 +10,10 @@ use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST
 
 #[allow(unused_assignments)]
 /// Gets the rewards for the given address. Returns a [RewardsResponse] struct.
-pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, ContractError> {
+pub fn get_rewards(
+    deps: Deps<TerraQuery>,
+    address: String,
+) -> Result<RewardsResponse, ContractError> {
     let address = deps.api.addr_validate(&address)?;
     let current_epoch = helpers::get_current_epoch(deps)?;
     let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;

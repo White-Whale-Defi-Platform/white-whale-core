@@ -1,5 +1,6 @@
 #![cfg(not(tarpaulin_include))]
 
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64,
@@ -17,7 +18,7 @@ use crate::state::{get_claimable_epochs, CONFIG, EPOCHS};
 
 /// Migrates state from the first iteration, v0.8.* to v0.9.0, which includes the global index in
 /// the Epoch. This was done to fix bonding issues.
-pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v090(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     #[derive(Default)]
     pub struct EpochV08 {
@@ -68,7 +69,7 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
 }
 
 /// Fixes the broken state for Epochs created prior to the v0.9.0 migration.
-pub fn migrate_to_v091(deps: DepsMut) -> Result<Vec<CosmosMsg>, StdError> {
+pub fn migrate_to_v091(deps: DepsMut<TerraQuery>) -> Result<Vec<CosmosMsg>, StdError> {
     let claimable_epochs = get_claimable_epochs(deps.as_ref())?;
 
     // 14 June 2023 16:00:00 UTC
@@ -99,7 +100,7 @@ pub fn migrate_to_v091(deps: DepsMut) -> Result<Vec<CosmosMsg>, StdError> {
     let mut messages = vec![];
 
     for fee in total_fees {
-        messages.push(fee.into_msg(fee_collector_addr.clone())?);
+        messages.push(fee.into_msg(&deps.querier, fee_collector_addr.clone())?);
     }
 
     Ok(messages)

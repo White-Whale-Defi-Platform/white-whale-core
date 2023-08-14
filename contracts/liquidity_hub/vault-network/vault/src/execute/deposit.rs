@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",
@@ -30,7 +31,7 @@ use crate::{
 };
 
 pub fn deposit(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     amount: Uint128,

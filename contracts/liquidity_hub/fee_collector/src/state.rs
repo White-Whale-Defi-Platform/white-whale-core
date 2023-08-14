@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
 use white_whale::fee_collector::Config;
@@ -8,7 +9,10 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");
 pub const TMP_EPOCH: Item<Epoch> = Item::new("tmp_epoch");
 
-pub fn store_temporal_asset_info(deps: DepsMut, asset_info: AssetInfo) -> StdResult<()> {
+pub fn store_temporal_asset_info(
+    deps: DepsMut<TerraQuery>,
+    asset_info: AssetInfo,
+) -> StdResult<()> {
     let key = asset_info
         .clone()
         .get_label(&deps.as_ref())
@@ -17,7 +21,7 @@ pub fn store_temporal_asset_info(deps: DepsMut, asset_info: AssetInfo) -> StdRes
     TMP_ASSET_INFOS.save(deps.storage, key, &asset_info)
 }
 
-pub fn read_temporal_asset_infos(deps: &mut DepsMut) -> StdResult<Vec<AssetInfo>> {
+pub fn read_temporal_asset_infos(deps: &mut DepsMut<TerraQuery>) -> StdResult<Vec<AssetInfo>> {
     let mut asset_infos = vec![];
     for item in TMP_ASSET_INFOS.range(deps.storage, None, None, Order::Ascending) {
         let (_, asset_info) = item?;

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Response};
 use white_whale::pool_network::asset::Asset;
 
@@ -5,7 +6,7 @@ use crate::{error::ContractError, state::CONFIG};
 
 #[allow(clippy::too_many_arguments)]
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     fee_distributor_addr: Option<String>,

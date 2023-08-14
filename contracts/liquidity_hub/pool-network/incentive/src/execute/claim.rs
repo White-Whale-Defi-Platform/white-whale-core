@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::error::ContractError;
@@ -5,7 +6,7 @@ use crate::helpers;
 use crate::state::GLOBAL_WEIGHT_SNAPSHOT;
 
 /// Claim available rewards for the user.
-pub fn claim(mut deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn claim(mut deps: DepsMut<TerraQuery>, info: MessageInfo) -> Result<Response, ContractError> {
     // check what's the last global weight epoch, and snapshot it if it's not already done
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
 

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
@@ -15,7 +16,7 @@ use white_whale::pool_network::router::SwapOperation;
 /// Execute swap operation
 /// swap all offer asset to ask asset
 pub fn execute_swap_operation(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     operation: SwapOperation,
@@ -68,7 +69,7 @@ pub fn execute_swap_operation(
 }
 
 pub fn asset_into_swap_msg(
-    _deps: Deps,
+    _deps: Deps<TerraQuery>,
     pair_contract: Addr,
     offer_asset: Asset,
     max_spread: Option<Decimal>,

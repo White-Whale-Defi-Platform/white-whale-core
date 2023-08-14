@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::pool_network::asset::AssetInfo;
 
@@ -9,7 +10,7 @@ use crate::{
 
 /// Creates a new incentive contract.
 pub fn create_incentive(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     lp_asset: AssetInfo,
 ) -> Result<Response, ContractError> {

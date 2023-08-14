@@ -1,4 +1,6 @@
 #![cfg(not(tarpaulin_include))]
+
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, StdError};
 use cw_storage_plus::Item;
@@ -8,7 +10,7 @@ use crate::state::CONFIG;
 
 /// Migrates state from v1.0.5 and lower to v1.1.0, which includes different contract addresses
 /// in the Config.
-pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v110(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     struct ConfigV105 {
         pub owner: Addr,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Decimal, DepsMut, MessageInfo, Response};
 
 use white_whale::pool_network::asset::has_factory_token;
@@ -6,7 +7,7 @@ use white_whale::vault_network::vault::UpdateConfigParams;
 use crate::{error::VaultError, state::CONFIG};
 
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     params: UpdateConfigParams,
 ) -> Result<Response, VaultError> {

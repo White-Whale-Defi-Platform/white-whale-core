@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError};
 
 use white_whale::pool_network::incentive::{ClosedPosition, OpenPosition};
@@ -13,7 +14,7 @@ use crate::{
 
 /// Closes the position for the user with the given unbonding_duration.
 pub fn close_position(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     unbonding_duration: u64,

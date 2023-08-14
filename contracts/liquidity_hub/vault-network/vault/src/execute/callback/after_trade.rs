@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -9,7 +10,7 @@ use crate::{
 };
 
 pub fn after_trade(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     old_balance: Uint128,
     loan_amount: Uint128,
@@ -80,7 +81,7 @@ pub fn after_trade(
 
         store_fee(deps.storage, ALL_TIME_BURNED_FEES, burn_fee)?;
 
-        response = response.add_message(burn_asset.into_burn_msg()?);
+        response = response.add_message(burn_asset.into_burn_msg(&deps.querier)?);
     }
 
     Ok(response.add_attributes(vec![

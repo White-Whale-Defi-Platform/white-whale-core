@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, Order, StdError, StdResult};
 
 use white_whale::pool_network::incentive::{Flow, FlowIdentifier, FlowResponse};
@@ -7,7 +8,7 @@ use crate::state::FLOWS;
 
 /// Gets a flow given the [FlowIdentifier].
 pub fn get_flow(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     flow_identifier: FlowIdentifier,
     start_epoch: Option<u64>,
     end_epoch: Option<u64>,
