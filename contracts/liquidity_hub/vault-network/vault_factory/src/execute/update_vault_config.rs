@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{wasm_execute, DepsMut, Response};
 
 use white_whale::vault_network::vault::UpdateConfigParams;
@@ -5,7 +6,7 @@ use white_whale::vault_network::vault::UpdateConfigParams;
 use crate::err::StdResult;
 
 pub fn update_vault_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     vault_addr: String,
     params: UpdateConfigParams,
 ) -> StdResult<Response> {

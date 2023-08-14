@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::coins;
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
@@ -18,7 +19,7 @@ use crate::{
 };
 
 pub fn deposit(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     amount: Uint128,

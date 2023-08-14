@@ -1,9 +1,10 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, DepsMut, MessageInfo, Response, WasmMsg};
 
 use crate::{error::ContractError, state::CONFIG};
 
 pub fn migrate_incentive(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     incentive_address: String,
     code_id: Option<u64>,

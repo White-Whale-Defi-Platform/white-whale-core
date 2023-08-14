@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use white_whale::pool_network::incentive::OpenPosition;
@@ -13,7 +14,7 @@ use crate::{
 
 /// Opens a position for the user with the given unbonding_duration.
 pub fn open_position(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     amount: Uint128,

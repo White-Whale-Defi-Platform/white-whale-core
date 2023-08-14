@@ -1,4 +1,5 @@
 use crate::state::Config;
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, CanonicalAddr, DepsMut, Order, StdError, Uint128};
 use cw_storage_plus::{Item, Map};
@@ -10,7 +11,7 @@ use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 /// [`PairInfoRaw`], [`PairInfo`], [`AssetInfoRaw`], [`AssetRaw`], [`TmpPairInfo`]
 /// as identified by commit c8d8462c6933b93245acdc8abbe303287fdc1951 which changed the structs to use
 /// cw-serde's snake_case
-pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v110(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     // represent the old struct states
     // so we can deserialize from contract state
     // these are from commit 76f91fdb780677bcabfee631de6f9b973a36025f
@@ -84,7 +85,7 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
 }
 
 /// Migrate state of the factory for the StableSwap deployment
-pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v120(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     // migrate the TmpPairInfo struct changed in c9395c4f9d2a7b163056db0de33ab9066090969d
     // add the pair_type to it
     // we create a struct to represent the existing state, deserialize it, and serialize it to the new struct state

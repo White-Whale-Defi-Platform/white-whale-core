@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
 use cw_storage_plus::{Item, Map};
 
@@ -9,7 +10,7 @@ pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch"
 pub const EPOCHS: Map<&[u8], Epoch> = Map::new("epochs");
 
 /// Returns the current epoch, which is the last on the EPOCHS map.
-pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
+pub fn get_current_epoch(deps: Deps<TerraQuery>) -> StdResult<EpochResponse> {
     let option = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
         .next();
@@ -23,7 +24,7 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
 }
 
 /// Returns the [Epoch] with the given id.
-pub fn get_epoch(deps: Deps, id: Uint64) -> StdResult<EpochResponse> {
+pub fn get_epoch(deps: Deps<TerraQuery>, id: Uint64) -> StdResult<EpochResponse> {
     let option = EPOCHS.may_load(deps.storage, &id.to_be_bytes())?;
 
     let epoch = match option {
@@ -36,7 +37,7 @@ pub fn get_epoch(deps: Deps, id: Uint64) -> StdResult<EpochResponse> {
 
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
 /// a new epoch is created.
-pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
+pub fn get_expiring_epoch(deps: Deps<TerraQuery>) -> StdResult<Option<Epoch>> {
     let grace_period = CONFIG.load(deps.storage)?.grace_period;
 
     // last epochs within the grace period
@@ -61,7 +62,7 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
 
 /// Returns the epochs that are within the grace period, i.e. the ones which fees can still be claimed.
 /// The result is ordered by epoch id, descending. Thus, the first element is the current epoch.
-pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
+pub fn get_claimable_epochs(deps: Deps<TerraQuery>) -> StdResult<ClaimableEpochsResponse> {
     let grace_period = CONFIG.load(deps.storage)?.grace_period;
 
     let epochs = EPOCHS
@@ -77,7 +78,10 @@ pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
 }
 
 /// Returns the epochs that can be claimed by the given address.
-pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsResponse> {
+pub fn query_claimable(
+    deps: Deps<TerraQuery>,
+    address: &Addr,
+) -> StdResult<ClaimableEpochsResponse> {
     let mut claimable_epochs = get_claimable_epochs(deps)?.epochs;
     let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, address)?;
 

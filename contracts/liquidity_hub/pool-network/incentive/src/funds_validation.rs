@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Deps, Env, MessageInfo, Uint128, WasmMsg};
 use cw_utils::PaymentError;
 use white_whale::pool_network::asset::AssetInfo;
@@ -13,7 +14,7 @@ use crate::error::ContractError;
 /// Returns the [`WasmMsg`] that will transfer the specified `amount` of the
 /// `lp_token` to the contract.
 pub fn validate_funds_sent(
-    deps: &Deps,
+    deps: &Deps<TerraQuery>,
     env: Env,
     lp_token: AssetInfo,
     info: MessageInfo,

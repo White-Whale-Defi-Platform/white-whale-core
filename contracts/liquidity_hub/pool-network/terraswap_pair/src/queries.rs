@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
@@ -19,7 +20,7 @@ use crate::math::Decimal256Helper;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, PAIR_INFO};
 
 /// Queries the [PairInfo] of the pool
-pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
+pub fn query_pair_info(deps: Deps<TerraQuery>) -> Result<PairInfo, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let pair_info = pair_info.to_normal(deps.api)?;
 
@@ -27,7 +28,7 @@ pub fn query_pair_info(deps: Deps) -> Result<PairInfo, ContractError> {
 }
 
 /// Queries the Pool info, i.e. Assets and total share
-pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
+pub fn query_pool(deps: Deps<TerraQuery>) -> Result<PoolResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&pair_info.contract_addr)?;
 
@@ -66,7 +67,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
 
 /// Queries a swap simulation. Used to know how much the target asset will be returned for the source token
 pub fn query_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_asset: Asset,
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info = PAIR_INFO.load(deps.storage)?;
@@ -135,7 +136,7 @@ pub fn query_simulation(
 /// Queries a swap reverse simulation. Used to derive the number of source tokens returned for
 /// the number of target tokens.
 pub fn query_reverse_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     ask_asset: Asset,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info: PairInfoRaw = PAIR_INFO.load(deps.storage)?;
@@ -260,14 +261,14 @@ pub fn query_reverse_simulation(
 }
 
 /// Queries the [Config], which contains the owner, pool_fees and feature_toggle
-pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
+pub fn query_config(deps: Deps<TerraQuery>) -> Result<ConfigResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
 }
 
 /// Queries the fees on the pool for the given fees_storage_item
 pub fn query_fees(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     asset_id: Option<String>,
     all_time: Option<bool>,
     fees_storage_item: Item<Vec<Asset>>,

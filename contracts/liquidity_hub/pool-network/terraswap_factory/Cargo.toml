@@ -43,3 +43,4 @@ thiserror.workspace = true
 semver.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true
+classic-bindings.workspace = true

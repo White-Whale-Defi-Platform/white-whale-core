@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Response};
 
 use white_whale::pool_network::asset::AssetInfo;
@@ -6,7 +7,7 @@ use crate::asset::AssetReference;
 use crate::err::{StdResult, VaultFactoryError};
 use crate::state::VAULTS;
 
-pub fn remove_vault(deps: DepsMut, asset_info: AssetInfo) -> StdResult<Response> {
+pub fn remove_vault(deps: DepsMut<TerraQuery>, asset_info: AssetInfo) -> StdResult<Response> {
     if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
         return Err(VaultFactoryError::NonExistentVault {});
     }

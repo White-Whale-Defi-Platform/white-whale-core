@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
 
 use white_whale::fee_collector::{Config, ContractType, FactoryType, FeesFor};
@@ -11,13 +12,17 @@ use white_whale::vault_network::vault_factory::VaultsResponse;
 use crate::state::CONFIG;
 
 /// Queries the [Config], which contains the owner address
-pub fn query_config(deps: Deps) -> StdResult<Config> {
+pub fn query_config(deps: Deps<TerraQuery>) -> StdResult<Config> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
 }
 
 /// Queries the fees in [Asset] for contracts or Factories defined by [FeesFor]
-pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdResult<Vec<Asset>> {
+pub fn query_fees(
+    deps: Deps<TerraQuery>,
+    query_fees_for: FeesFor,
+    all_time: bool,
+) -> StdResult<Vec<Asset>> {
     let mut fees: Vec<Asset> = Vec::new();
 
     match query_fees_for {
@@ -70,7 +75,11 @@ pub fn query_fees(deps: Deps, query_fees_for: FeesFor, all_time: bool) -> StdRes
 }
 
 /// Queries the fees for a given vault
-fn query_fees_for_vault(deps: &Deps, vault: String, all_time: bool) -> StdResult<Asset> {
+fn query_fees_for_vault(
+    deps: &Deps<TerraQuery>,
+    vault: String,
+    all_time: bool,
+) -> StdResult<Asset> {
     let fees = deps
         .querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -85,7 +94,11 @@ fn query_fees_for_vault(deps: &Deps, vault: String, all_time: bool) -> StdResult
 }
 
 /// Queries the fees for a given pair
-fn query_fees_for_pair(deps: &Deps, pair: String, all_time: bool) -> StdResult<Vec<Asset>> {
+fn query_fees_for_pair(
+    deps: &Deps<TerraQuery>,
+    pair: String,
+    all_time: bool,
+) -> StdResult<Vec<Asset>> {
     let fees = deps
         .querier
         .query::<ProtocolPairFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -102,7 +115,7 @@ fn query_fees_for_pair(deps: &Deps, pair: String, all_time: bool) -> StdResult<V
 
 /// Queries the fees collected by the children of the given factory
 fn query_fees_for_factory(
-    deps: &Deps,
+    deps: &Deps<TerraQuery>,
     factory: &Addr,
     factory_type: FactoryType,
     all_time: bool,

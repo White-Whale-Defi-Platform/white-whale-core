@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{from_binary, DepsMut, Reply, Response};
 use protobuf::Message;
 
@@ -11,7 +12,10 @@ pub const CREATE_INCENTIVE_REPLY_ID: u64 = 1;
 /// Triggered after a new incentive contract is created.
 ///
 /// Triggered to allow us to register the new contract in state.
-pub fn create_incentive_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
+pub fn create_incentive_reply(
+    deps: DepsMut<TerraQuery>,
+    msg: Reply,
+) -> Result<Response, ContractError> {
     let res: MsgInstantiateContractResponse = Message::parse_from_bytes(
         msg.result
             .into_result()

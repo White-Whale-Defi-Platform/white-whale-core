@@ -44,6 +44,7 @@ thiserror.workspace = true
 protobuf.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true
+classic-bindings.workspace = true
 
 [dev-dependencies]
 proptest = "1.0.0"

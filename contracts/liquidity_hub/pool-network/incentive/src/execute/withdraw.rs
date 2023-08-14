@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128};
 use white_whale::pool_network::asset::Asset;
 
@@ -7,7 +8,11 @@ use crate::{
 };
 
 /// Withdraws LP tokens from the contract.
-pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn withdraw(
+    deps: DepsMut<TerraQuery>,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     // counter of how many LP tokens we must return to use and the weight to remove
     let mut return_token_count = Uint128::zero();
 
@@ -48,7 +53,7 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
                 ("action", "withdraw".to_string()),
                 ("return_asset", return_asset.to_string()),
             ])
-            .add_message(return_asset.into_msg(info.sender)?));
+            .add_message(return_asset.into_msg(&deps.querier, info.sender)?));
     }
 
     // there was no positions we closed

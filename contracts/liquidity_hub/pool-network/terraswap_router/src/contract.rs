@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::collections::HashMap;
 
 #[cfg(not(feature = "library"))]
@@ -29,7 +30,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
@@ -48,7 +49,7 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -112,7 +113,7 @@ fn optional_addr_validate(
 }
 
 pub fn receive_cw20(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     _info: MessageInfo,
     cw20_msg: Cw20ReceiveMsg,
@@ -138,7 +139,7 @@ pub fn receive_cw20(
 }
 
 pub fn execute_swap_operations(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     sender: Addr,
     operations: Vec<SwapOperation>,
@@ -199,7 +200,7 @@ pub fn execute_swap_operations(
 }
 
 fn assert_minimum_receive(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     asset_info: AssetInfo,
     prev_balance: Uint128,
     minimum_receive: Uint128,
@@ -219,7 +220,7 @@ fn assert_minimum_receive(
 }
 
 fn add_swap_routes(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     sender: Addr,
     swap_routes: Vec<SwapRoute>,
@@ -266,7 +267,7 @@ fn add_swap_routes(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
         QueryMsg::SimulateSwapOperations {
@@ -295,7 +296,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     }
 }
 
-pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
+pub fn query_config(deps: Deps<TerraQuery>) -> Result<ConfigResponse, ContractError> {
     let state = CONFIG.load(deps.storage)?;
     let resp = ConfigResponse {
         terraswap_factory: deps
@@ -308,7 +309,7 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
 }
 
 fn simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
@@ -353,7 +354,7 @@ fn simulate_swap_operations(
 }
 
 fn reverse_simulate_swap_operations(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     ask_amount: Uint128,
     operations: Vec<SwapOperation>,
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
@@ -388,7 +389,7 @@ fn reverse_simulate_swap_operations(
 }
 
 fn reverse_simulate_return_amount(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     factory: Addr,
     ask_amount: Uint128,
     offer_asset_info: AssetInfo,
@@ -414,7 +415,7 @@ fn reverse_simulate_return_amount(
 
 // get_swap_routes which only takes deps: Deps as input
 // the function will read from SWAP_ROUTES and return all swpa routes in a vec
-fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractError> {
+fn get_swap_routes(deps: Deps<TerraQuery>) -> Result<Vec<SwapRouteResponse>, ContractError> {
     let swap_routes: Vec<SwapRouteResponse> = SWAP_ROUTES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|item| {
@@ -436,7 +437,7 @@ fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractError> 
 }
 
 fn get_swap_route(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_asset_info: AssetInfo,
     ask_asset_info: AssetInfo,
 ) -> Result<Vec<SwapOperation>, ContractError> {
@@ -532,7 +533,11 @@ fn test_invalid_operations() {
 
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> Result<Response, ContractError> {
     use white_whale::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

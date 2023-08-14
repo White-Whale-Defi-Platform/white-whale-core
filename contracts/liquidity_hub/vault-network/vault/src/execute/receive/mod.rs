@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response};
 
 use white_whale::pool_network::asset::AssetInfo;
@@ -10,7 +11,7 @@ pub mod withdraw;
 
 /// Handles receiving CW20 messages
 pub fn receive(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: Cw20ReceiveMsg,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, StdResult};
 use cw_storage_plus::Item;
 
@@ -14,7 +15,7 @@ use crate::stableswap_math::curve::StableSwap;
 use crate::state::{get_fees_for_asset, COLLECTED_PROTOCOL_FEES, CONFIG, TRIO_INFO};
 
 /// Queries the [TrioInfo] of the pool
-pub fn query_trio_info(deps: Deps) -> Result<TrioInfo, ContractError> {
+pub fn query_trio_info(deps: Deps<TerraQuery>) -> Result<TrioInfo, ContractError> {
     let trio_info: TrioInfoRaw = TRIO_INFO.load(deps.storage)?;
     let trio_info = trio_info.to_normal(deps.api)?;
 
@@ -22,7 +23,7 @@ pub fn query_trio_info(deps: Deps) -> Result<TrioInfo, ContractError> {
 }
 
 /// Queries the Pool info, i.e. Assets and total share
-pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
+pub fn query_pool(deps: Deps<TerraQuery>) -> Result<PoolResponse, ContractError> {
     let trio_info: TrioInfoRaw = TRIO_INFO.load(deps.storage)?;
     let contract_addr = deps.api.addr_humanize(&trio_info.contract_addr)?;
 
@@ -61,7 +62,7 @@ pub fn query_pool(deps: Deps) -> Result<PoolResponse, ContractError> {
 
 /// Queries a swap simulation. Used to know how much the target asset will be returned for the source token
 pub fn query_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     offer_asset: Asset,
     ask_asset: Asset,
     current_block: u64,
@@ -160,7 +161,7 @@ pub fn query_simulation(
 /// Queries a swap reverse simulation. Used to derive the number of source tokens returned for
 /// the number of target tokens.
 pub fn query_reverse_simulation(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     ask_asset: Asset,
     offer_asset: Asset,
     current_block: u64,
@@ -257,14 +258,14 @@ pub fn query_reverse_simulation(
 }
 
 /// Queries the [Config], which contains the owner, pool_fees and feature_toggle
-pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
+pub fn query_config(deps: Deps<TerraQuery>) -> Result<ConfigResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
 }
 
 /// Queries the fees on the pool for the given fees_storage_item
 pub fn query_fees(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     asset_id: Option<String>,
     all_time: Option<bool>,
     fees_storage_item: Item<Vec<Asset>>,

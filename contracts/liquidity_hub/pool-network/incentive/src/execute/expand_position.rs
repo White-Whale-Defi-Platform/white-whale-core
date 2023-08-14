@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use crate::state::ADDRESS_WEIGHT_HISTORY;
@@ -11,7 +12,7 @@ use crate::{
 
 /// Expands a position a user already has by adding more funds to it.
 pub fn expand_position(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     amount: Uint128,

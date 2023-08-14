@@ -1,4 +1,5 @@
 use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
+use classic_bindings::TerraQuery;
 
 use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
@@ -25,7 +26,7 @@ use crate::state::{
 
 /// Updates the contract's [Config]
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
@@ -64,7 +65,7 @@ pub fn update_config(
 
 /// Updates a pair config
 pub fn update_pair_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     pair_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
@@ -87,7 +88,7 @@ pub fn update_pair_config(
 
 /// Creates a Pair
 pub fn create_pair(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     asset_infos: [AssetInfo; 2],
@@ -179,7 +180,7 @@ pub fn create_pair(
 
 /// Updates a trio config
 pub fn update_trio_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     trio_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
@@ -204,7 +205,7 @@ pub fn update_trio_config(
 
 /// Creates a Trio
 pub fn create_trio(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     asset_infos: [AssetInfo; 3],
@@ -310,7 +311,7 @@ pub fn create_trio(
 }
 
 pub fn remove_pair(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     asset_infos: [AssetInfo; 2],
 ) -> Result<Response, ContractError> {
@@ -338,7 +339,7 @@ pub fn remove_pair(
 }
 
 pub fn remove_trio(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     asset_infos: [AssetInfo; 3],
 ) -> Result<Response, ContractError> {
@@ -368,7 +369,7 @@ pub fn remove_trio(
 
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     denom: String,
     decimals: u8,
@@ -389,7 +390,7 @@ pub fn add_native_token_decimals(
 
 /// Migrates a pair.
 pub fn execute_migrate_pair(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     contract: String,
     code_id: Option<u64>,
 ) -> Result<Response, ContractError> {
@@ -415,7 +416,7 @@ pub fn execute_migrate_pair(
 
 /// Migrates a trio.
 pub fn execute_migrate_trio(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     contract: String,
     code_id: Option<u64>,
 ) -> Result<Response, ContractError> {

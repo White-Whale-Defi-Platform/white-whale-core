@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Binary, Deps, StdError};
 use cw_storage_plus::Item;
 
@@ -8,7 +9,7 @@ use crate::error::VaultError;
 
 /// Queries fees on the pool
 pub fn get_fees(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     all_time: bool,
     all_time_fees_storage_item: Item<Asset>,
     fees_storage_item: Option<Item<Asset>>,

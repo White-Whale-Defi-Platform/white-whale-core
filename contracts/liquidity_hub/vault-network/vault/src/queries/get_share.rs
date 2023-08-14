@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 
@@ -7,7 +8,7 @@ use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::state::CONFIG;
 
-pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultError> {
+pub fn get_share(deps: Deps<TerraQuery>, env: Env, amount: Uint128) -> Result<Binary, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     let liquidity_asset = match config.lp_asset.clone() {

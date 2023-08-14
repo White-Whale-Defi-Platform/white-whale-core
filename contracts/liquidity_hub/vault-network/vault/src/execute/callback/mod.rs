@@ -1,6 +1,7 @@
 mod after_trade;
 
 pub use after_trade::after_trade;
+use classic_bindings::TerraQuery;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 use white_whale::vault_network::vault::CallbackMsg;
@@ -8,7 +9,7 @@ use white_whale::vault_network::vault::CallbackMsg;
 use crate::error::VaultError;
 
 pub fn callback(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: CallbackMsg,

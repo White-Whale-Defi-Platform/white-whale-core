@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 use std::ops::Mul;
 
@@ -483,7 +484,7 @@ pub fn instantiate_fees(
 
 /// Creates a new LP token for this pool
 pub fn create_lp_token(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: &Env,
     msg: &InstantiateMsg,
     lp_token_name: &String,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 
 use cosmwasm_schema::cw_serde;
@@ -285,7 +286,7 @@ pub fn instantiate_fees(
 }
 
 /// Gets the total supply of the given liquidity token
-pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
+pub fn get_total_share(deps: &Deps<TerraQuery>, liquidity_token: String) -> StdResult<Uint128> {
     #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
     let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
@@ -318,7 +319,7 @@ pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
 
 /// Creates a new LP token for this pool
 pub fn create_lp_token(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: &Env,
     msg: &InstantiateMsg,
     lp_token_name: &String,

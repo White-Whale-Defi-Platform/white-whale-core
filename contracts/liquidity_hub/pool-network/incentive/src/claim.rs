@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, BankMsg, Coin, CosmosMsg, Decimal256, DepsMut, MessageInfo, StdError, Uint128,
     Uint256, WasmMsg,
@@ -12,7 +13,10 @@ use crate::{error::ContractError, helpers, state::FLOWS};
 
 #[allow(unused_assignments)]
 /// Performs the claim function, returning all the [`CosmosMsg`]'s to run.
-pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, ContractError> {
+pub fn claim(
+    deps: &mut DepsMut<TerraQuery>,
+    info: &MessageInfo,
+) -> Result<Vec<CosmosMsg>, ContractError> {
     let address = info.sender.clone();
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
     let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;

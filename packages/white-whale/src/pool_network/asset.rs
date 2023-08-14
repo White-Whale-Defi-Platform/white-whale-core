@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+use classic_bindings::{TerraQuerier, TerraQuery};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
-    QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    coins, to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, Deps,
+    MessageInfo, QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -27,6 +28,9 @@ const PEGGY_ADDR_SIZE: usize = 47usize;
 #[cfg(feature = "injective")]
 const PEGGY_ADDR_TAKE: usize = 3usize;
 
+/// Decimal points
+const DECIMAL_FRACTION: Uint128 = Uint128::new(1_000_000_000_000_000_000u128);
+
 #[cw_serde]
 pub struct Asset {
     pub info: AssetInfo,
@@ -44,7 +48,11 @@ impl Asset {
         self.info.is_native_token()
     }
 
-    pub fn into_msg(self, recipient: Addr) -> StdResult<CosmosMsg> {
+    pub fn into_msg(
+        self,
+        querier: &QuerierWrapper<TerraQuery>,
+        recipient: Addr,
+    ) -> StdResult<CosmosMsg> {
         let amount = self.amount;
 
         match &self.info {
@@ -56,21 +64,23 @@ impl Asset {
                 })?,
                 funds: vec![],
             })),
-            AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Bank(BankMsg::Send {
+            AssetInfo::NativeToken { .. } => Ok(CosmosMsg::Bank(BankMsg::Send {
                 to_address: recipient.to_string(),
-                amount: vec![Coin {
-                    amount: self.amount,
-                    denom: denom.to_string(),
-                }],
+                amount: vec![self.deduct_tax(querier)?],
             })),
         }
     }
 
-    pub fn into_submsg(self, recipient: Addr) -> StdResult<SubMsg> {
-        Ok(SubMsg::new(self.into_msg(recipient)?))
+    pub fn into_submsg(
+        self,
+        querier: &QuerierWrapper<TerraQuery>,
+        recipient: Addr,
+    ) -> StdResult<SubMsg> {
+        Ok(SubMsg::new(self.into_msg(querier, recipient)?))
     }
 
-    pub fn into_burn_msg(self) -> StdResult<CosmosMsg> {
+    pub fn into_burn_msg(self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<CosmosMsg> {
+        let amount = self.amount.checked_sub(self.compute_tax(querier)?)?;
         let burn_msg = match self.info {
             AssetInfo::Token { contract_addr } => CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr,
@@ -80,7 +90,7 @@ impl Asset {
                 funds: vec![],
             }),
             AssetInfo::NativeToken { denom } => CosmosMsg::Bank(BankMsg::Burn {
-                amount: coins(self.amount.u128(), denom),
+                amount: coins(amount.u128(), denom),
             }),
         };
 
@@ -132,6 +142,51 @@ impl Asset {
             AssetInfo::NativeToken { denom } => denom,
         }
     }
+
+    /// Calculates and returns a tax for a chain's native token. For other tokens it returns zero.
+    /// ## Params
+    /// * **self** is the type of the caller object.
+    ///
+    /// * **querier** is an object of type [`QuerierWrapper`]
+    pub fn compute_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Uint128> {
+        let amount = self.amount;
+        if let AssetInfo::NativeToken { denom } = &self.info {
+            // https://terra-classic-lcd.publicnode.com/cosmos/params/v1beta1/params?subspace=treasury&key=TaxPolicy
+            let querier = TerraQuerier::new(querier);
+            let tax_rate: Decimal = querier.query_tax_rate()?.rate;
+            let tax_cap: Uint128 = querier.query_tax_cap(denom)?.cap;
+
+            // let tax_rate: Decimal = Decimal::from_str("0.005")?;
+            // let tax_cap: Uint128 = Uint128::MAX;
+
+            Ok(std::cmp::min(
+                (amount.checked_sub(amount.multiply_ratio(
+                    DECIMAL_FRACTION,
+                    DECIMAL_FRACTION * tax_rate + DECIMAL_FRACTION,
+                )))?,
+                tax_cap,
+            ))
+        } else {
+            Ok(Uint128::zero())
+        }
+    }
+
+    /// Calculates and returns a deducted tax for transferring the native token from the chain. For other tokens it returns an [`Err`].
+    /// ## Params
+    /// * **self** is the type of the caller object.
+    ///
+    /// * **querier** is an object of type [`QuerierWrapper`]
+    pub fn deduct_tax(&self, querier: &QuerierWrapper<TerraQuery>) -> StdResult<Coin> {
+        let amount = self.amount;
+        if let AssetInfo::NativeToken { denom } = &self.info {
+            Ok(Coin {
+                denom: denom.to_string(),
+                amount: amount.checked_sub(self.compute_tax(querier)?)?,
+            })
+        } else {
+            Err(StdError::generic_err("cannot deduct tax from token asset"))
+        }
+    }
 }
 
 /// AssetInfo contract_addr is usually passed from the cw20 hook
@@ -172,7 +227,7 @@ impl AssetInfo {
     }
     pub fn query_pool(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<TerraQuery>,
         api: &dyn Api,
         pool_addr: Addr,
     ) -> StdResult<Uint128> {
@@ -207,7 +262,11 @@ impl AssetInfo {
         }
     }
 
-    pub fn query_decimals(&self, account_addr: Addr, querier: &QuerierWrapper) -> StdResult<u8> {
+    pub fn query_decimals(
+        &self,
+        account_addr: Addr,
+        querier: &QuerierWrapper<TerraQuery>,
+    ) -> StdResult<u8> {
         match self {
             AssetInfo::NativeToken { denom } => {
                 query_native_decimals(querier, account_addr, denom.to_string())
@@ -220,7 +279,7 @@ impl AssetInfo {
     }
 
     /// Gets an asset label, used by the factory to create pool pairs and lp tokens with custom names
-    pub fn get_label(self, deps: &Deps) -> StdResult<String> {
+    pub fn get_label(self, deps: &Deps<TerraQuery>) -> StdResult<String> {
         match self {
             AssetInfo::Token { contract_addr } => Ok(query_token_info(
                 &deps.querier,
@@ -463,7 +522,7 @@ impl PairInfoRaw {
 
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<TerraQuery>,
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 2]> {
@@ -594,7 +653,7 @@ impl TrioInfoRaw {
 
     pub fn query_pools(
         &self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<TerraQuery>,
         api: &dyn Api,
         contract_addr: Addr,
     ) -> StdResult<[Asset; 3]> {
@@ -619,7 +678,7 @@ impl TrioInfoRaw {
 }
 
 /// Gets the total supply of the given liquidity asset
-pub fn get_total_share(deps: &Deps, liquidity_asset: String) -> StdResult<Uint128> {
+pub fn get_total_share(deps: &Deps<TerraQuery>, liquidity_asset: String) -> StdResult<Uint128> {
     #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
     let total_share = if is_factory_token(liquidity_asset.as_str()) {
         //bank query total

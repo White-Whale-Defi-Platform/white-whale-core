@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{attr, CosmosMsg, DepsMut, Response, Uint128};
 use white_whale::pool_network::asset::Asset;
 
@@ -7,7 +8,7 @@ use crate::{
 };
 
 /// Collects all protocol fees accrued by the vault
-pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, VaultError> {
+pub fn collect_protocol_fees(deps: DepsMut<TerraQuery>) -> Result<Response, VaultError> {
     let config = CONFIG.load(deps.storage)?;
 
     // get the collected protocol fees so far
@@ -24,7 +25,11 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, VaultError> {
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
     if protocol_fees.amount != Uint128::zero() {
-        messages.push(protocol_fees.clone().into_msg(config.fee_collector_addr)?);
+        messages.push(
+            protocol_fees
+                .clone()
+                .into_msg(&deps.querier, config.fee_collector_addr)?,
+        );
     }
 
     Ok(Response::new()

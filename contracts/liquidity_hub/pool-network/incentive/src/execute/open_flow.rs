@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -22,7 +23,7 @@ const MIN_FLOW_AMOUNT: Uint128 = Uint128::new(1_000u128);
 
 /// Opens a flow to incentivize liquidity providers
 pub fn open_flow(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     start_epoch: Option<u64>,

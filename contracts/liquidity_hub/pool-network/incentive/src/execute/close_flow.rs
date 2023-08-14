@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
 };
@@ -11,7 +12,7 @@ use crate::{
 
 /// Closes the flow with the given id and return the unclaimed assets to the flow creator
 pub fn close_flow(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     flow_id: u64,
 ) -> Result<Response, ContractError> {

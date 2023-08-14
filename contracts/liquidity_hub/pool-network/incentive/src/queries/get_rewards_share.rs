@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Addr, Decimal256, Deps, Uint128};
 
 use white_whale::pool_network::incentive::RewardsShareResponse;
@@ -9,7 +10,10 @@ use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT};
 #[allow(unused_assignments)]
 /// Gets the global weight for the current epoch. Returns a [GlobalWeightResponse] struct or an error
 /// if no global weight snapshot has been taken for the current epoch.
-pub fn get_rewards_share(deps: Deps, address: Addr) -> Result<RewardsShareResponse, ContractError> {
+pub fn get_rewards_share(
+    deps: Deps<TerraQuery>,
+    address: Addr,
+) -> Result<RewardsShareResponse, ContractError> {
     let mut last_epoch_user_weight_update: EpochId = 0u64;
     let mut last_user_weight_seen: Uint128 = Uint128::zero();
     let earliest_available_weight_for_user =

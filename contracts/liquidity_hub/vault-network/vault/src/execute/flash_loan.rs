@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
     StdError, Uint128, WasmMsg,
@@ -12,7 +13,7 @@ use crate::{
 };
 
 pub fn flash_loan(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     amount: Uint128,

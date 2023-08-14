@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::fee::VaultFee;
 use white_whale::pool_network::asset::AssetInfo;
@@ -11,7 +12,7 @@ use crate::{
 };
 
 pub fn create_vault(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     asset_info: AssetInfo,

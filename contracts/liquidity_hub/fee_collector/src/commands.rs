@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
     QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
@@ -19,7 +20,7 @@ use crate::ContractError;
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
 pub fn collect_fees(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     env: Env,
     collect_fees_for: FeesFor,
@@ -76,7 +77,7 @@ fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> Std
 
 /// Builds the messages to collect the fees for the given factory's children.
 fn collect_fees_for_factory(
-    deps: &DepsMut,
+    deps: &DepsMut<TerraQuery>,
     factory: &Addr,
     factory_type: FactoryType,
 ) -> StdResult<Vec<CosmosMsg>> {
@@ -123,7 +124,7 @@ fn collect_fees_for_factory(
 }
 
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     owner: Option<String>,
     pool_router: Option<String>,
@@ -169,7 +170,7 @@ pub fn update_config(
 
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
-    mut deps: DepsMut,
+    mut deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     env: Env,
     ask_asset_info: AssetInfo,
@@ -330,7 +331,7 @@ pub fn aggregate_fees(
 
 /// Forwards the fees to the fee distributor.
 pub fn forward_fees(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     env: Env,
     epoch: Epoch,

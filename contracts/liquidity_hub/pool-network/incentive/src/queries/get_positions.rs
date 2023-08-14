@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, Env};
 use white_whale::pool_network::incentive::{PositionsResponse, QueryPosition};
 
@@ -9,7 +10,7 @@ use crate::{
 
 /// Gets the positions for the given address. Returns a [PositionsResponse] struct.
 pub fn get_positions(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     env: Env,
     address: String,
 ) -> Result<PositionsResponse, ContractError> {
