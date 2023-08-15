@@ -71,13 +71,11 @@ pub enum ExecuteMsg {
         /// If unspecified, the `max_unbonding_duration` will not change.
         max_unbonding_duration: Option<u64>,
     },
-    MigrateIncentive {
-        /// The address of the incentive contract
-        incentive_address: String,
+    MigrateIncentives {
+        /// The address of the incentive contract. If unspecified, will migrate all incentive contracts.
+        incentive_address: Option<String>,
         /// The new code ID to migrate the incentive contract to.
-        ///
-        /// If unspecified, will default to the incentive factory's configured incentive code ID.
-        code_id: Option<u64>,
+        code_id: u64,
     },
 }
 
