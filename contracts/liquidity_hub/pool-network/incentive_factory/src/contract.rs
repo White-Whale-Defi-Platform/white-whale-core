@@ -121,10 +121,10 @@ pub fn execute(
             min_unbonding_duration,
             max_unbonding_duration,
         ),
-        ExecuteMsg::MigrateIncentive {
+        ExecuteMsg::MigrateIncentives {
             incentive_address,
             code_id,
-        } => execute::migrate_incentive(deps, info, incentive_address, code_id),
+        } => execute::migrate_incentives(deps, incentive_address, code_id),
     }
 }
 

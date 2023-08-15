@@ -1,6 +1,6 @@
 [package]
 name = "incentive-factory"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 edition.workspace = true
 description = "The incentive factory to create all incentives"
