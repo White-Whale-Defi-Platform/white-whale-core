@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
 use white_whale::epoch_manager::epoch_manager::EpochConfig;
 use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochResponse};
@@ -16,7 +17,7 @@ pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
 
 /// Validates that the asset sent on the message matches the asset provided and is whitelisted for bonding.
 pub fn validate_funds(
-    deps: &DepsMut,
+    deps: &DepsMut<TerraQuery>,
     info: &MessageInfo,
     asset: &Asset,
     denom: String,
@@ -42,7 +43,10 @@ pub fn validate_funds(
 }
 
 /// if user has unclaimed rewards, fail with an exception prompting them to claim
-pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
+pub fn validate_claimed(
+    deps: &DepsMut<TerraQuery>,
+    info: &MessageInfo,
+) -> Result<(), ContractError> {
     // Query fee distributor
     // if user has unclaimed rewards, fail with an exception prompting them to claim
     let config = CONFIG.load(deps.storage)?;
@@ -66,7 +70,10 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
-pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
+pub fn validate_bonding_for_current_epoch(
+    deps: &DepsMut<TerraQuery>,
+    env: &Env,
+) -> Result<(), ContractError> {
     // Query current epoch on fee distributor
     let config = CONFIG.load(deps.storage)?;
     let fee_distributor = config.fee_distributor_addr;

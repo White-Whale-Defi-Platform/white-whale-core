@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Uint256, WasmMsg,
 };
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::helpers::{get_flow_asset_amount_at_epoch, get_flow_current_end_epoch};
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};
@@ -193,29 +193,12 @@ pub fn claim(
             flow.claimed_amount = flow.claimed_amount.checked_add(user_reward_at_epoch)?;
 
             // construct transfer message for user
-            match &flow.flow_asset.info {
-                AssetInfo::NativeToken { denom } => messages.push(
-                    BankMsg::Send {
-                        to_address: address.clone().into_string(),
-                        amount: vec![Coin {
-                            amount: user_reward_at_epoch,
-                            denom: denom.to_owned(),
-                        }],
-                    }
-                    .into(),
-                ),
-                AssetInfo::Token { contract_addr } => messages.push(
-                    WasmMsg::Execute {
-                        contract_addr: contract_addr.to_owned(),
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                            recipient: address.clone().into_string(),
-                            amount: user_reward_at_epoch,
-                        })?,
-                        funds: vec![],
-                    }
-                    .into(),
-                ),
-            }
+            let user_reward_asset = Asset {
+                info: flow.flow_asset.info.clone(),
+                amount: user_reward_at_epoch,
+            };
+
+            messages.push(user_reward_asset.into_msg(&deps.querier, address.clone())?);
         }
 
         // save current flow state

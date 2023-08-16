@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use std::collections::HashSet;
 
 use cosmwasm_std::{
@@ -19,12 +20,12 @@ use crate::helpers;
 use crate::state::{get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, UNBOND};
 
 /// Queries the current configuration of the contract.
-pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
+pub(crate) fn query_config(deps: Deps<TerraQuery>) -> StdResult<Config> {
     CONFIG.load(deps.storage)
 }
 
 /// Queries the current bonded amount of the given address.
-pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
+pub(crate) fn query_bonded(deps: Deps<TerraQuery>, address: String) -> StdResult<BondedResponse> {
     let address = deps.api.addr_validate(&address)?;
 
     let bonds: Vec<Bond> = BOND
@@ -81,7 +82,7 @@ pub const DEFAULT_PAGE_LIMIT: u8 = 10u8;
 
 /// Queries the current unbonding amount of the given address.
 pub(crate) fn query_unbonding(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     address: String,
     denom: String,
     start_after: Option<u64>,
@@ -123,7 +124,7 @@ fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
 /// Queries the amount of unbonding tokens of the specified address that have passed the
 /// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     timestamp: Timestamp,
     address: String,
     denom: String,
@@ -149,7 +150,7 @@ pub(crate) fn query_withdrawable(
 
 /// Queries the current weight of the given address.
 pub(crate) fn query_weight(
-    deps: Deps,
+    deps: Deps<TerraQuery>,
     timestamp: Timestamp,
     address: String,
     global_index: Option<GlobalIndex>,
@@ -228,7 +229,7 @@ pub(crate) fn query_weight(
 }
 
 /// Queries the total amount of assets that have been bonded to the contract.
-pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
+pub fn query_total_bonded(deps: Deps<TerraQuery>) -> StdResult<BondedResponse> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     Ok(BondedResponse {
         total_bonded: global_index.bonded_amount,
@@ -238,7 +239,7 @@ pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
 }
 
 /// Queries the global index
-pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
+pub fn query_global_index(deps: Deps<TerraQuery>) -> StdResult<GlobalIndex> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     Ok(global_index)
 }

@@ -1727,6 +1727,7 @@ name = "whale-lair"
 version = "0.9.1"
 dependencies = [
  "anyhow",
+ "classic-bindings",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",

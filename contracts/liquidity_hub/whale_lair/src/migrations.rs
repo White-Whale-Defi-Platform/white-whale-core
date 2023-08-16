@@ -1,12 +1,14 @@
 #![cfg(not(tarpaulin_include))]
+
 use crate::state::CONFIG;
+use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, Uint64};
 use cw_storage_plus::Item;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::Config;
 
-pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v090(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     pub struct ConfigV080 {
         /// Owner of the contract.
