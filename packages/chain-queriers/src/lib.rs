@@ -1,3 +1,2 @@
 #[cfg(not(target_arch = "wasm32"))]
-pub mod integration;
-
+pub mod test_helpers;
