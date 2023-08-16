@@ -102,6 +102,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chain-queriers"
+version = "1.0.0"
+dependencies = [
+ "classic-bindings",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1732,6 +1744,7 @@ dependencies = [
 name = "white-whale"
 version = "1.1.1"
 dependencies = [
+ "chain-queriers",
  "classic-bindings",
  "cosmwasm-schema",
  "cosmwasm-std",
