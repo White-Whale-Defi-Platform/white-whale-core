@@ -1,6 +1,7 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult,
-    Timestamp, Uint128, Uint64,
+    Addr, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult, Timestamp, Uint128,
+    Uint64,
 };
 use white_whale::pool_network::asset;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -14,7 +15,7 @@ use crate::{helpers, ContractError};
 
 /// Bonds the provided asset.
 pub(crate) fn bond(
-    mut deps: DepsMut,
+    mut deps: DepsMut<TerraQuery>,
     timestamp: Timestamp,
     info: MessageInfo,
     env: Env,
@@ -71,7 +72,7 @@ pub(crate) fn bond(
 
 /// Unbonds the provided amount of tokens
 pub(crate) fn unbond(
-    mut deps: DepsMut,
+    mut deps: DepsMut<TerraQuery>,
     timestamp: Timestamp,
     info: MessageInfo,
     env: Env,
@@ -139,7 +140,7 @@ pub(crate) fn unbond(
 
 /// Withdraws the rewards for the provided address
 pub(crate) fn withdraw(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     timestamp: Timestamp,
     address: Addr,
     denom: String,
@@ -171,16 +172,15 @@ pub(crate) fn withdraw(
         }
     }
 
-    let refund_msg = CosmosMsg::Bank(BankMsg::Send {
-        to_address: address.to_string(),
-        amount: vec![Coin {
+    let refund_asset = Asset {
+        info: AssetInfo::NativeToken {
             denom: denom.clone(),
-            amount: refund_amount,
-        }],
-    });
+        },
+        amount: refund_amount,
+    };
 
     Ok(Response::default()
-        .add_message(refund_msg)
+        .add_message(refund_asset.into_msg(&deps.querier, address.clone())?)
         .add_attributes(vec![
             ("action", "withdraw".to_string()),
             ("address", address.to_string()),
@@ -191,7 +191,7 @@ pub(crate) fn withdraw(
 
 /// Updates the configuration of the contract
 pub(crate) fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     owner: Option<String>,
     unbonding_period: Option<Uint64>,

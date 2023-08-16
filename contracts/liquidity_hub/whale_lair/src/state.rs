@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Timestamp, Uint128};
 use cw_storage_plus::{Item, Map};
 
@@ -16,7 +17,7 @@ pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
 
 /// Updates the local weight of the given address.
 pub fn update_local_weight(
-    deps: &mut DepsMut,
+    deps: &mut DepsMut<TerraQuery>,
     address: Addr,
     timestamp: Timestamp,
     mut bond: Bond,
@@ -45,7 +46,7 @@ pub fn update_local_weight(
 
 /// Updates the global weight of the contract.
 pub fn update_global_weight(
-    deps: &mut DepsMut,
+    deps: &mut DepsMut<TerraQuery>,
     timestamp: Timestamp,
     mut global_index: GlobalIndex,
 ) -> Result<GlobalIndex, ContractError> {

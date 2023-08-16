@@ -1,10 +1,11 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
-    StdError, Uint128, WasmMsg,
+    to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response, StdError,
+    Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
-use white_whale::pool_network::asset::AssetInfo;
+
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::{
@@ -66,9 +67,14 @@ pub fn flash_loan(
     };
 
     // get funds to send to callback (if native token then send in the callback msg)
+    let callback_asset = Asset {
+        info: config.asset_info.clone(),
+        amount,
+    };
+
     let callback_funds = match config.asset_info {
         AssetInfo::Token { .. } => vec![],
-        AssetInfo::NativeToken { denom } => coins(amount.u128(), denom),
+        AssetInfo::NativeToken { .. } => vec![callback_asset.deduct_tax(&deps.querier)?],
     };
 
     // add callback msg to messages
@@ -107,6 +113,7 @@ mod test {
         testing::{mock_dependencies, mock_dependencies_with_balance, mock_env},
         to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
     };
+
     use white_whale::pool_network::asset::AssetInfo;
     use white_whale::vault_network::vault::Config;
 
@@ -240,7 +247,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: mock_creator().sender.into_string(),
                         msg: callback_msg,
-                        funds: coins(5_000, "uluna")
+                        funds: coins(5_000, "uluna"),
                     },
                     WasmMsg::Execute {
                         contract_addr: env.contract.address.into_string(),
@@ -248,11 +255,11 @@ mod test {
                         msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::Callback(
                             white_whale::vault_network::vault::CallbackMsg::AfterTrade {
                                 old_balance: Uint128::new(10_000),
-                                loan_amount: Uint128::new(5_000)
+                                loan_amount: Uint128::new(5_000),
                             }
                         ))
-                        .unwrap()
-                    }
+                        .unwrap(),
+                    },
                 ])
         );
     }
@@ -316,14 +323,14 @@ mod test {
                         funds: vec![],
                         msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                             recipient: mock_creator().sender.into_string(),
-                            amount: Uint128::new(5_000)
+                            amount: Uint128::new(5_000),
                         })
-                        .unwrap()
+                        .unwrap(),
                     },
                     WasmMsg::Execute {
                         contract_addr: mock_creator().sender.into_string(),
                         msg: callback_msg,
-                        funds: vec![]
+                        funds: vec![],
                     },
                     WasmMsg::Execute {
                         contract_addr: env.contract.address.into_string(),
@@ -331,11 +338,11 @@ mod test {
                         msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::Callback(
                             white_whale::vault_network::vault::CallbackMsg::AfterTrade {
                                 old_balance: Uint128::new(10_000),
-                                loan_amount: Uint128::new(5_000)
+                                loan_amount: Uint128::new(5_000),
                             }
                         ))
-                        .unwrap()
-                    }
+                        .unwrap(),
+                    },
                 ])
         );
     }

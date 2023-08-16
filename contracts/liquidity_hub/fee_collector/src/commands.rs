@@ -1,13 +1,13 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    to_binary, Addr, BalanceResponse, BankQuery, CosmosMsg, DepsMut, Env, MessageInfo,
     QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
 use white_whale::fee_collector::{Config, ContractType, ExecuteMsg, FactoryType, FeesFor};
 use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::factory::{PairsResponse, QueryMsg};
 use white_whale::pool_network::router;
 use white_whale::pool_network::router::SwapOperation;
@@ -292,6 +292,11 @@ pub fn aggregate_fees(
                             to: None,
                         })?;
 
+                    let offer_asset = Asset {
+                        info: offer_asset_info.clone(),
+                        amount: balance,
+                    };
+
                     match offer_asset_info.clone() {
                         AssetInfo::Token { contract_addr } => {
                             aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -304,13 +309,10 @@ pub fn aggregate_fees(
                                 })?,
                             }));
                         }
-                        AssetInfo::NativeToken { denom } => {
+                        AssetInfo::NativeToken { .. } => {
                             aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                                 contract_addr: config.pool_router.to_string(),
-                                funds: vec![Coin {
-                                    denom,
-                                    amount: balance,
-                                }],
+                                funds: vec![offer_asset.deduct_tax(&deps.querier)?],
                                 msg: execute_swap_operations_msg,
                             }));
                         }
