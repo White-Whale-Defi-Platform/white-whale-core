@@ -191,7 +191,7 @@ fn test_asset() {
     assert_eq!(
         token_asset
             .clone()
-            .into_msg(Addr::unchecked("addr0000"))
+            .into_msg(&deps.as_ref().querier, Addr::unchecked("addr0000"))
             .unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
@@ -206,7 +206,7 @@ fn test_asset() {
 
     assert_eq!(
         token_asset
-            .into_submsg(deps.querier, Addr::unchecked("addr0000"))
+            .into_submsg(&deps.as_ref().querier, Addr::unchecked("addr0000"))
             .unwrap(),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
@@ -221,7 +221,7 @@ fn test_asset() {
 
     assert_eq!(
         native_token_asset
-            .into_msg(deps.querier.terra_querier, Addr::unchecked("addr0000"))
+            .into_msg(&deps.as_ref().querier, Addr::unchecked("addr0000"))
             .unwrap(),
         CosmosMsg::Bank(BankMsg::Send {
             to_address: "addr0000".to_string(),

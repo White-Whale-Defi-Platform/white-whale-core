@@ -8,7 +8,7 @@ use chain_queriers::test_helpers::classic_querier::{TerraQuerier, err_unsupporte
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, QuerierWrapper,
+    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -23,19 +23,15 @@ use crate::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as Tr
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier<TerraQuery>, TerraQuery> {
-    let custom_querier: WasmMockQuerier<TerraQuery> =
+) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier, TerraQuery> {
+    let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
-
-    let terra_wrapper: TerraQuerier = TerraQuerier::default();
-    
 
     OwnedDeps {
         storage: MockStorage::default(),
         api: MockApi::default(),
         querier: custom_querier,
         custom_query_type: PhantomData::<TerraQuery>,
-        terra_wrapper: QuerierWrapper::new(terra_wrapper),
     }
 }
 
