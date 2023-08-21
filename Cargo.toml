@@ -5,10 +5,10 @@ members = [
 	"contracts/liquidity_hub/pool-network/*",
 	"contracts/liquidity_hub/fee_collector",
 	"contracts/liquidity_hub/fee_distributor",
-	"contracts/liquidity_hub/fee-distributor-mock",
+	#"contracts/liquidity_hub/fee-distributor-mock",
 	"contracts/liquidity_hub/whale_lair",
 	"contracts/liquidity_hub/vault-network/*",
-	"contracts/liquidity_hub/epoch-manager",
+	#"contracts/liquidity_hub/epoch-manager",
 ]
 
 [workspace.package]

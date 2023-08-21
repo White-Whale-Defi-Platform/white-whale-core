@@ -40,7 +40,7 @@ migaloo)
 injective)
   flag="-injective"
   ;;
-chihuahua | comdex | orai | sei) ;;
+chihuahua | comdex | orai | sei | terra-classic) ;;
 
 \*)
   echo "Network $chain not defined"

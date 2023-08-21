@@ -286,21 +286,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw-controllers"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5d8edce4b78785f36413f67387e4be7d0cb7d032b5d4164bcc024f9c3f3f2ea"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "cw-multi-test"
 version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -500,23 +485,6 @@ dependencies = [
  "sec1",
  "subtle",
  "zeroize",
-]
-
-[[package]]
-name = "epoch-manager"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-controllers",
- "cw-multi-test",
- "cw-storage-plus",
- "cw2",
- "schemars",
- "semver",
- "serde",
- "thiserror",
- "white-whale",
 ]
 
 [[package]]
