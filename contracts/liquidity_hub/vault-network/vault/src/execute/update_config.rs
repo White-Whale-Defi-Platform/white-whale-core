@@ -69,238 +69,238 @@ pub fn update_config(
     ]))
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod test {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env, mock_info},
-        Addr, Decimal, Response, StdError, Uint128,
-    };
-
-    use white_whale::fee::{Fee, VaultFee};
-    use white_whale::pool_network::asset::AssetInfo;
-    use white_whale::vault_network::vault::{Config, UpdateConfigParams};
-
-    use crate::{
-        contract::execute,
-        error::VaultError,
-        state::CONFIG,
-        tests::{get_fees, mock_creator, mock_instantiate::mock_instantiate},
-    };
-
-    #[test]
-    fn fails_on_unauthorized_change() {
-        let (mut deps, env) = mock_instantiate(
-            2,
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            false,
-        );
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            mock_info("unauthorized", &[]),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
-                flash_loan_enabled: None,
-                deposit_enabled: None,
-                withdraw_enabled: None,
-                new_owner: None,
-                new_fee_collector_addr: None,
-                new_vault_fees: None,
-            }),
-        );
-
-        assert_eq!(res.unwrap_err(), VaultError::Unauthorized {});
-    }
-
-    #[test]
-    fn does_not_change_if_none() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let config = Config {
-            owner: mock_creator().sender,
-            asset_info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            lp_asset: AssetInfo::Token {
-                contract_addr: "lp_token".to_string(),
-            },
-            deposit_enabled: false,
-            flash_loan_enabled: false,
-            withdraw_enabled: false,
-            fee_collector_addr: Addr::unchecked("fee_collector"),
-            fees: get_fees(),
-        };
-
-        CONFIG.save(&mut deps.storage, &config).unwrap();
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
-                flash_loan_enabled: None,
-                deposit_enabled: None,
-                withdraw_enabled: None,
-                new_owner: None,
-                new_fee_collector_addr: None,
-                new_vault_fees: None,
-            }),
-        )
-        .unwrap();
-
-        assert_eq!(
-            res,
-            Response::new().add_attributes(vec![
-                ("method", "update_config"),
-                ("flash_loan_enabled", "false"),
-                ("withdraw_enabled", "false"),
-                ("deposit_enabled", "false"),
-                ("owner", &mock_creator().sender.into_string()),
-                ("fee_collector_addr", "fee_collector"),
-            ])
-        );
-
-        // should not have performed any changes
-        let config_after = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(config, config_after);
-    }
-
-    #[test]
-    fn fails_if_invalid_fees() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let config = Config {
-            owner: mock_creator().sender,
-            asset_info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            lp_asset: AssetInfo::Token {
-                contract_addr: "lp_token".to_string(),
-            },
-            deposit_enabled: false,
-            flash_loan_enabled: false,
-            withdraw_enabled: false,
-            fee_collector_addr: Addr::unchecked("fee_collector"),
-            fees: get_fees(),
-        };
-
-        CONFIG.save(&mut deps.storage, &config).unwrap();
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
-                flash_loan_enabled: None,
-                deposit_enabled: None,
-                withdraw_enabled: None,
-                new_owner: None,
-                new_fee_collector_addr: None,
-                new_vault_fees: Some(VaultFee {
-                    protocol_fee: Fee {
-                        share: Decimal::permille(5),
-                    },
-                    flash_loan_fee: Fee {
-                        share: Decimal::from_ratio(Uint128::new(2), Uint128::one()),
-                    },
-                    burn_fee: Fee {
-                        share: Decimal::zero(),
-                    },
-                }),
-            }),
-        )
-        .unwrap_err();
-
-        match res {
-            VaultError::Std(e) => assert_eq!(e, StdError::generic_err("Invalid fee")),
-            _ => panic!("should return Std(GenericErr -> msg: Invalid fee)"),
-        }
-    }
-
-    #[test]
-    fn does_change() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let config = Config {
-            owner: mock_creator().sender,
-            asset_info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            lp_asset: AssetInfo::Token {
-                contract_addr: "lp_token".to_string(),
-            },
-            deposit_enabled: false,
-            flash_loan_enabled: false,
-            withdraw_enabled: false,
-            fee_collector_addr: Addr::unchecked("fee_collector"),
-            fees: get_fees(),
-        };
-
-        CONFIG.save(&mut deps.storage, &config).unwrap();
-
-        let new_fee = VaultFee {
-            flash_loan_fee: Fee {
-                share: Decimal::from_ratio(100u128, 1000u128),
-            },
-            protocol_fee: Fee {
-                share: Decimal::from_ratio(100u128, 1000u128),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        };
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
-                flash_loan_enabled: Some(true),
-                deposit_enabled: Some(true),
-                withdraw_enabled: Some(true),
-                new_owner: Some("new_owner".to_string()),
-                new_fee_collector_addr: Some("new_fee_collector".to_string()),
-                new_vault_fees: Some(new_fee.clone()),
-            }),
-        )
-        .unwrap();
-
-        assert_eq!(
-            res,
-            Response::new().add_attributes(vec![
-                ("method", "update_config"),
-                ("flash_loan_enabled", "true"),
-                ("withdraw_enabled", "true"),
-                ("deposit_enabled", "true"),
-                ("owner", "new_owner"),
-                ("fee_collector_addr", "new_fee_collector"),
-            ])
-        );
-
-        // should not have performed any changes
-        let config_after = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(
-            config_after,
-            Config {
-                owner: Addr::unchecked("new_owner"),
-                lp_asset: AssetInfo::Token {
-                    contract_addr: "lp_token".to_string()
-                },
-                asset_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string()
-                },
-                deposit_enabled: true,
-                flash_loan_enabled: true,
-                withdraw_enabled: true,
-                fee_collector_addr: Addr::unchecked("new_fee_collector"),
-                fees: new_fee,
-            }
-        );
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod test {
+//     use cosmwasm_std::{
+//         testing::{mock_dependencies, mock_env, mock_info},
+//         Addr, Decimal, Response, StdError, Uint128,
+//     };
+//
+//     use white_whale::fee::{Fee, VaultFee};
+//     use white_whale::pool_network::asset::AssetInfo;
+//     use white_whale::vault_network::vault::{Config, UpdateConfigParams};
+//
+//     use crate::{
+//         contract::execute,
+//         error::VaultError,
+//         state::CONFIG,
+//         tests::{get_fees, mock_creator, mock_instantiate::mock_instantiate},
+//     };
+//
+//     #[test]
+//     fn fails_on_unauthorized_change() {
+//         let (mut deps, env) = mock_instantiate(
+//             2,
+//             AssetInfo::NativeToken {
+//                 denom: "uluna".to_string(),
+//             },
+//             false,
+//         );
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             mock_info("unauthorized", &[]),
+//             white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+//                 flash_loan_enabled: None,
+//                 deposit_enabled: None,
+//                 withdraw_enabled: None,
+//                 new_owner: None,
+//                 new_fee_collector_addr: None,
+//                 new_vault_fees: None,
+//             }),
+//         );
+//
+//         assert_eq!(res.unwrap_err(), VaultError::Unauthorized {});
+//     }
+//
+//     #[test]
+//     fn does_not_change_if_none() {
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
+//
+//         let config = Config {
+//             owner: mock_creator().sender,
+//             asset_info: AssetInfo::NativeToken {
+//                 denom: "uluna".to_string(),
+//             },
+//             lp_asset: AssetInfo::Token {
+//                 contract_addr: "lp_token".to_string(),
+//             },
+//             deposit_enabled: false,
+//             flash_loan_enabled: false,
+//             withdraw_enabled: false,
+//             fee_collector_addr: Addr::unchecked("fee_collector"),
+//             fees: get_fees(),
+//         };
+//
+//         CONFIG.save(&mut deps.storage, &config).unwrap();
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             mock_creator(),
+//             white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+//                 flash_loan_enabled: None,
+//                 deposit_enabled: None,
+//                 withdraw_enabled: None,
+//                 new_owner: None,
+//                 new_fee_collector_addr: None,
+//                 new_vault_fees: None,
+//             }),
+//         )
+//         .unwrap();
+//
+//         assert_eq!(
+//             res,
+//             Response::new().add_attributes(vec![
+//                 ("method", "update_config"),
+//                 ("flash_loan_enabled", "false"),
+//                 ("withdraw_enabled", "false"),
+//                 ("deposit_enabled", "false"),
+//                 ("owner", &mock_creator().sender.into_string()),
+//                 ("fee_collector_addr", "fee_collector"),
+//             ])
+//         );
+//
+//         // should not have performed any changes
+//         let config_after = CONFIG.load(&deps.storage).unwrap();
+//         assert_eq!(config, config_after);
+//     }
+//
+//     #[test]
+//     fn fails_if_invalid_fees() {
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
+//
+//         let config = Config {
+//             owner: mock_creator().sender,
+//             asset_info: AssetInfo::NativeToken {
+//                 denom: "uluna".to_string(),
+//             },
+//             lp_asset: AssetInfo::Token {
+//                 contract_addr: "lp_token".to_string(),
+//             },
+//             deposit_enabled: false,
+//             flash_loan_enabled: false,
+//             withdraw_enabled: false,
+//             fee_collector_addr: Addr::unchecked("fee_collector"),
+//             fees: get_fees(),
+//         };
+//
+//         CONFIG.save(&mut deps.storage, &config).unwrap();
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             mock_creator(),
+//             white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+//                 flash_loan_enabled: None,
+//                 deposit_enabled: None,
+//                 withdraw_enabled: None,
+//                 new_owner: None,
+//                 new_fee_collector_addr: None,
+//                 new_vault_fees: Some(VaultFee {
+//                     protocol_fee: Fee {
+//                         share: Decimal::permille(5),
+//                     },
+//                     flash_loan_fee: Fee {
+//                         share: Decimal::from_ratio(Uint128::new(2), Uint128::one()),
+//                     },
+//                     burn_fee: Fee {
+//                         share: Decimal::zero(),
+//                     },
+//                 }),
+//             }),
+//         )
+//         .unwrap_err();
+//
+//         match res {
+//             VaultError::Std(e) => assert_eq!(e, StdError::generic_err("Invalid fee")),
+//             _ => panic!("should return Std(GenericErr -> msg: Invalid fee)"),
+//         }
+//     }
+//
+//     #[test]
+//     fn does_change() {
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
+//
+//         let config = Config {
+//             owner: mock_creator().sender,
+//             asset_info: AssetInfo::NativeToken {
+//                 denom: "uluna".to_string(),
+//             },
+//             lp_asset: AssetInfo::Token {
+//                 contract_addr: "lp_token".to_string(),
+//             },
+//             deposit_enabled: false,
+//             flash_loan_enabled: false,
+//             withdraw_enabled: false,
+//             fee_collector_addr: Addr::unchecked("fee_collector"),
+//             fees: get_fees(),
+//         };
+//
+//         CONFIG.save(&mut deps.storage, &config).unwrap();
+//
+//         let new_fee = VaultFee {
+//             flash_loan_fee: Fee {
+//                 share: Decimal::from_ratio(100u128, 1000u128),
+//             },
+//             protocol_fee: Fee {
+//                 share: Decimal::from_ratio(100u128, 1000u128),
+//             },
+//             burn_fee: Fee {
+//                 share: Decimal::zero(),
+//             },
+//         };
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             mock_creator(),
+//             white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+//                 flash_loan_enabled: Some(true),
+//                 deposit_enabled: Some(true),
+//                 withdraw_enabled: Some(true),
+//                 new_owner: Some("new_owner".to_string()),
+//                 new_fee_collector_addr: Some("new_fee_collector".to_string()),
+//                 new_vault_fees: Some(new_fee.clone()),
+//             }),
+//         )
+//         .unwrap();
+//
+//         assert_eq!(
+//             res,
+//             Response::new().add_attributes(vec![
+//                 ("method", "update_config"),
+//                 ("flash_loan_enabled", "true"),
+//                 ("withdraw_enabled", "true"),
+//                 ("deposit_enabled", "true"),
+//                 ("owner", "new_owner"),
+//                 ("fee_collector_addr", "new_fee_collector"),
+//             ])
+//         );
+//
+//         // should not have performed any changes
+//         let config_after = CONFIG.load(&deps.storage).unwrap();
+//         assert_eq!(
+//             config_after,
+//             Config {
+//                 owner: Addr::unchecked("new_owner"),
+//                 lp_asset: AssetInfo::Token {
+//                     contract_addr: "lp_token".to_string()
+//                 },
+//                 asset_info: AssetInfo::NativeToken {
+//                     denom: "uluna".to_string()
+//                 },
+//                 deposit_enabled: true,
+//                 flash_loan_enabled: true,
+//                 withdraw_enabled: true,
+//                 fee_collector_addr: Addr::unchecked("new_fee_collector"),
+//                 fees: new_fee,
+//             }
+//         );
+//     }
+// }

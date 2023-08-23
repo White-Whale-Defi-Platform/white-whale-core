@@ -32,4 +32,4 @@ osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 classic-bindings.workspace = true
-chain-queriers.workspace = true
+#chain-queriers.workspace = true

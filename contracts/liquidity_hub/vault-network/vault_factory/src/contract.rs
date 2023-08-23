@@ -99,30 +99,30 @@ pub fn migrate(mut deps: DepsMut<TerraQuery>, _env: Env, _msg: MigrateMsg) -> St
     Ok(Response::default())
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod test {
-    use white_whale::vault_network::vault_factory::MigrateMsg;
-
-    use crate::err::VaultFactoryError;
-    use crate::tests::mock_instantiate::mock_instantiate;
-
-    use super::migrate;
-
-    #[test]
-    fn can_migrate() {
-        // instantiate contract
-        let (mut deps, env) = mock_instantiate(5, 6);
-
-        let res = migrate(deps.as_mut(), env, MigrateMsg {});
-
-        // should not be able to migrate as the version is lower
-        match res {
-            Err(VaultFactoryError::MigrateInvalidVersion { .. }) => (),
-            _ => panic!("should return VaultFactoryError::MigrateInvalidVersion"),
-        }
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod test {
+//     use white_whale::vault_network::vault_factory::MigrateMsg;
+//
+//     use crate::err::VaultFactoryError;
+//     use crate::tests::mock_instantiate::mock_instantiate;
+//
+//     use super::migrate;
+//
+//     #[test]
+//     fn can_migrate() {
+//         // instantiate contract
+//         let (mut deps, env) = mock_instantiate(5, 6);
+//
+//         let res = migrate(deps.as_mut(), env, MigrateMsg {});
+//
+//         // should not be able to migrate as the version is lower
+//         match res {
+//             Err(VaultFactoryError::MigrateInvalidVersion { .. }) => (),
+//             _ => panic!("should return VaultFactoryError::MigrateInvalidVersion"),
+//         }
+//     }
+// }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {

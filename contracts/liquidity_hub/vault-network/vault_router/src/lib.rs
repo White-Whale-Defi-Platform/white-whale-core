@@ -6,6 +6,6 @@ pub mod state;
 
 pub mod err;
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod tests;
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod tests;

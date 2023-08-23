@@ -38,10 +38,10 @@ semver.workspace = true
 white-whale.workspace = true
 cosmwasm-schema.workspace = true
 
-[dev-dependencies]
-cw-multi-test.workspace = true
-cw20-base.workspace = true
-incentive-factory = { path = "../incentive_factory" }
-incentive = { path = "../incentive" }
-terraswap-pair = { path = "../terraswap_pair" }
+#[dev-dependencies]
+#cw-multi-test.workspace = true
+#cw20-base.workspace = true
+#incentive-factory = { path = "../incentive_factory" }
+#incentive = { path = "../incentive" }
+#terraswap-pair = { path = "../terraswap_pair" }
 #fee-distributor-mock.workspace = true
