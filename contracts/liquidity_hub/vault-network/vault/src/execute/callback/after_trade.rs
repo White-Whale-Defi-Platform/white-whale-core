@@ -94,6 +94,7 @@ pub fn after_trade(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         coins,

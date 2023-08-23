@@ -41,6 +41,7 @@ pub fn collect_protocol_fees(deps: DepsMut<TerraQuery>) -> Result<Response, Vaul
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{attr, coins, BankMsg, Response, StdError, Uint128};
     use white_whale::pool_network::asset::{Asset, AssetInfo};

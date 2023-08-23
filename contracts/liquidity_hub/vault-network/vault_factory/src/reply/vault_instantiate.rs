@@ -46,6 +46,7 @@ pub fn vault_instantiate(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Resp
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env},

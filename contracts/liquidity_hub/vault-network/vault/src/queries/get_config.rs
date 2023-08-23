@@ -9,6 +9,7 @@ pub fn get_config(deps: Deps<TerraQuery>) -> Result<Binary, VaultError> {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         from_binary,

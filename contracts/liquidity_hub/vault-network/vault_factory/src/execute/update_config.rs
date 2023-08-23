@@ -46,6 +46,7 @@ pub fn update_config(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_info, Addr, Response};
     use white_whale::vault_network::vault_factory::{Config, ExecuteMsg, QueryMsg};

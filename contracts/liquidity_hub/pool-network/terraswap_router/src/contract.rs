@@ -487,6 +487,7 @@ fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> 
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn test_invalid_operations() {
     // empty error
     assert!(assert_operations(&[]).is_err());

@@ -211,6 +211,7 @@ fn mint_lp_token_msg(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         coins,

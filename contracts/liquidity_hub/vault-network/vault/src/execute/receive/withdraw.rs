@@ -134,6 +134,7 @@ fn burn_lp_asset_msg(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{
         coins,

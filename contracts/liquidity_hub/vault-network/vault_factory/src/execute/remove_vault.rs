@@ -18,6 +18,7 @@ pub fn remove_vault(deps: DepsMut<TerraQuery>, asset_info: AssetInfo) -> StdResu
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{testing::mock_info, Attribute};
     use cw_multi_test::Executor;

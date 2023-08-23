@@ -74,6 +74,7 @@ pub fn flash_loan(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{
         coins, from_binary, to_binary, Attribute, BankMsg, CosmosMsg, Event, Response, Uint128,

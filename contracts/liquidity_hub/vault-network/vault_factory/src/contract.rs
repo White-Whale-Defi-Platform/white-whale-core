@@ -100,6 +100,7 @@ pub fn migrate(mut deps: DepsMut<TerraQuery>, _env: Env, _msg: MigrateMsg) -> St
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use white_whale::vault_network::vault_factory::MigrateMsg;
 

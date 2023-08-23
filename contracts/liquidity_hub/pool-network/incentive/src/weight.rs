@@ -51,6 +51,7 @@ pub fn calculate_weight(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::Uint128;
 

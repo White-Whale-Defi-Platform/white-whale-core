@@ -8,4 +8,5 @@ mod response;
 
 mod migrations;
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod testing;
