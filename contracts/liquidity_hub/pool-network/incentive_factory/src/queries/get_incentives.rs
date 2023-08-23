@@ -56,6 +56,7 @@ fn calc_range_start(start_after: Option<AssetInfoRaw>) -> Option<Vec<u8>> {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{
         testing::mock_dependencies, to_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,

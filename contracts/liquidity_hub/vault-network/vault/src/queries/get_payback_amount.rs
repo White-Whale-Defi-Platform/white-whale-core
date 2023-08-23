@@ -28,6 +28,7 @@ pub fn get_payback_amount(deps: Deps<TerraQuery>, amount: Uint128) -> Result<Bin
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use crate::contract::query;
     use crate::state::CONFIG;

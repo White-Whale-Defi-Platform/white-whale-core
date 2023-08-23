@@ -105,6 +105,7 @@ pub fn update_config(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     // create test to check the update_config function works properly
 

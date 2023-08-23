@@ -10,6 +10,7 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::Addr;
     use white_whale::vault_network::vault_router::{Config, QueryMsg};

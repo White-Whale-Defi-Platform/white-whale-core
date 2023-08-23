@@ -110,6 +110,7 @@ pub fn complete_loan(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{coin, coins, Uint128};
     use cw_multi_test::Executor;

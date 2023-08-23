@@ -45,6 +45,7 @@ pub fn get_share(deps: Deps<TerraQuery>, env: Env, amount: Uint128) -> Result<Bi
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{coins, from_binary, testing::mock_env, Addr, Uint128};
 

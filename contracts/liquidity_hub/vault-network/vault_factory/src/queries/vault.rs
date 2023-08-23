@@ -26,6 +26,7 @@ pub fn get_vaults(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cw_multi_test::Executor;
     use white_whale::pool_network::asset::AssetInfo;

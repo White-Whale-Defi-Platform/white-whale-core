@@ -26,6 +26,7 @@ pub fn get_fees(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         from_binary,

@@ -70,6 +70,7 @@ pub fn update_config(
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod test {
     use cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info},

@@ -48,6 +48,7 @@ fn migrate_vault_msg(vault_addr: Addr, code_id: u64) -> StdResult<CosmosMsg> {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{testing::mock_info, Attribute};
 
