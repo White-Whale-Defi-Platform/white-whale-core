@@ -1,11 +1,10 @@
 [workspace]
 
 members = [
-	"packages/*",
+	"packages/white-whale",
 	"contracts/liquidity_hub/pool-network/*",
 	"contracts/liquidity_hub/fee_collector",
 	"contracts/liquidity_hub/fee_distributor",
-	#"contracts/liquidity_hub/fee-distributor-mock",
 	"contracts/liquidity_hub/whale_lair",
 	"contracts/liquidity_hub/vault-network/*",
 	#"contracts/liquidity_hub/epoch-manager",
@@ -36,19 +35,19 @@ osmosis-std-derive = "0.15.3"
 prost = {version = "0.11.9", default-features = false, features = ["prost-derive"]}
 prost-types = {version = "0.11.9", default-features = false}
 white-whale = { path = "./packages/white-whale" }
-white-whale-testing = { path = "./packages/white-whale-testing" }
 cw-multi-test = { version = "0.16.5" }
 uint = "0.9.5"
 integer-sqrt = "0.1.5"
 anyhow = { version = "1.0.71"}
 cw-controllers = "1.1.0"
 classic-bindings = "0.2.0"
+getrandom = { version = "0.2.7", features = ["js"] }
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
 fee_collector = { path = "./contracts/liquidity_hub/fee_collector" }
 fee_distributor = { path = "./contracts/liquidity_hub/fee_distributor" }
-fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock" }
+#fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock" }
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 chain-queriers = { path = "./packages/chain-queriers" }

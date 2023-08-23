@@ -16,6 +16,7 @@ pub mod trio;
 #[cfg(test)]
 mod testing;
 
+#[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mock_querier;
 
