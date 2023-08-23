@@ -75,10 +75,14 @@ pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> Result<Response
 
         // if not zero, it means there were fees aggregated
         if !token_balance.is_zero() {
-            let fees = vec![Asset {
+            let mut asset = Asset {
                 info: asset_info,
                 amount: token_balance,
-            }];
+            };
+            // deduct tax
+            asset.amount = asset.deduct_tax(&deps.querier)?.amount;
+
+            let fees = vec![asset];
 
             epoch.total = fees.clone();
             epoch.available = fees.clone();
