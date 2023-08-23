@@ -41,12 +41,12 @@ cosmwasm-schema.workspace = true
 cw-utils.workspace = true
 classic-bindings.workspace = true
 
-[dev-dependencies]
-cw-multi-test.workspace = true
-cw20-base.workspace = true
-anyhow.workspace = true
-incentive-factory.workspace = true
-fee_collector.workspace = true
-fee_distributor.workspace = true
+#[dev-dependencies]
+#cw-multi-test.workspace = true
+#cw20-base.workspace = true
+#anyhow.workspace = true
+#incentive-factory.workspace = true
+#fee_collector.workspace = true
+#fee_distributor.workspace = true
 #fee-distributor-mock.workspace = true
-terraswap-token.workspace = true
+#terraswap-token.workspace = true

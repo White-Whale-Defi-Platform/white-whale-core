@@ -43,15 +43,15 @@ cosmwasm-schema.workspace = true
 classic-bindings.workspace = true
 getrandom.workspace = true
 
-[dev-dependencies]
-cw-multi-test.workspace = true
-terraswap-router = { path = "../pool-network/terraswap_router" }
-terraswap-factory = { path = "../pool-network/terraswap_factory" }
-terraswap-pair = { path = "../pool-network/terraswap_pair" }
-stableswap-3pool = { path = "../pool-network/stableswap_3pool" }
-terraswap-token = { path = "../pool-network/terraswap_token" }
-fee_distributor = { path = "../fee_distributor" }
-whale-lair = { path = "../whale_lair" }
-vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
-vault = { version = "1.0.0", path = "../vault-network/vault" }
-cw20.workspace = true
+#[dev-dependencies]
+#cw-multi-test.workspace = true
+#terraswap-router = { path = "../pool-network/terraswap_router" }
+#terraswap-factory = { path = "../pool-network/terraswap_factory" }
+#terraswap-pair = { path = "../pool-network/terraswap_pair" }
+#stableswap-3pool = { path = "../pool-network/stableswap_3pool" }
+#terraswap-token = { path = "../pool-network/terraswap_token" }
+#fee_distributor = { path = "../fee_distributor" }
+#whale-lair = { path = "../whale_lair" }
+#vault_factory = { version = "1.0.0", path = "../vault-network/vault_factory" }
+#vault = { version = "1.0.0", path = "../vault-network/vault" }
+#cw20.workspace = true

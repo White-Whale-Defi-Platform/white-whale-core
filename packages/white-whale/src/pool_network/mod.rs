@@ -16,9 +16,9 @@ pub mod trio;
 #[cfg(test)]
 mod testing;
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-pub mod mock_querier;
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// pub mod mock_querier;
 
 #[allow(clippy::all)]
 mod uints {

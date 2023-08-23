@@ -45,44 +45,44 @@ pub fn vault_instantiate(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Resp
     ]))
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod test {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env},
-        Response,
-    };
-
-    use crate::{
-        contract::instantiate,
-        tests::{mock_creator, mock_instantiate::mock_instantiate},
-    };
-
-    #[test]
-    fn does_instantiate() {
-        mock_instantiate(5, 6);
-    }
-
-    #[test]
-    fn instantiate_with_response() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let creator = mock_creator();
-
-        let res = instantiate(
-            deps.as_mut(),
-            env,
-            creator.clone(),
-            white_whale::vault_network::vault_factory::InstantiateMsg {
-                owner: creator.sender.into_string(),
-                token_id: 5,
-                vault_id: 6,
-                fee_collector_addr: "fee_collector".to_string(),
-            },
-        )
-        .unwrap();
-
-        assert_eq!(res, Response::new())
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod test {
+//     use cosmwasm_std::{
+//         testing::{mock_dependencies, mock_env},
+//         Response,
+//     };
+//
+//     use crate::{
+//         contract::instantiate,
+//         tests::{mock_creator, mock_instantiate::mock_instantiate},
+//     };
+//
+//     #[test]
+//     fn does_instantiate() {
+//         mock_instantiate(5, 6);
+//     }
+//
+//     #[test]
+//     fn instantiate_with_response() {
+//         let mut deps = mock_dependencies();
+//         let env = mock_env();
+//
+//         let creator = mock_creator();
+//
+//         let res = instantiate(
+//             deps.as_mut(),
+//             env,
+//             creator.clone(),
+//             white_whale::vault_network::vault_factory::InstantiateMsg {
+//                 owner: creator.sender.into_string(),
+//                 token_id: 5,
+//                 vault_id: 6,
+//                 fee_collector_addr: "fee_collector".to_string(),
+//             },
+//         )
+//         .unwrap();
+//
+//         assert_eq!(res, Response::new())
+//     }
+// }

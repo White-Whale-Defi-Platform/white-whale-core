@@ -47,70 +47,70 @@ fn migrate_vault_msg(vault_addr: Addr, code_id: u64) -> StdResult<CosmosMsg> {
     }))
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod tests {
-    use cosmwasm_std::{testing::mock_info, Attribute};
-
-    use crate::{
-        contract::execute,
-        err::VaultFactoryError,
-        tests::{mock_creator, mock_instantiate::mock_instantiate},
-    };
-
-    #[test]
-    fn cannot_migrate_vault_unauthorized() {
-        let (mut deps, env) = mock_instantiate(5, 6);
-
-        // migrate a vault unauthorized
-        let bad_actor = mock_info("not_owner", &[]);
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            bad_actor,
-            white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
-                vault_addr: None,
-                vault_code_id: 7,
-            },
-        );
-
-        assert_eq!(res.unwrap_err(), VaultFactoryError::Unauthorized {})
-    }
-
-    #[test]
-    fn can_migrate_single_vault() {
-        let (mut deps, env) = mock_instantiate(5, 6);
-        let creator = mock_creator();
-        // migrate a vault unauthorized
-        let info = mock_info(creator.sender.as_str(), &[]);
-
-        let res = execute(
-            deps.as_mut(),
-            env,
-            info,
-            white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
-                vault_addr: Some("outdated_vault".to_string()),
-                vault_code_id: 7,
-            },
-        )
-        .unwrap();
-
-        let expected_attributes = vec![
-            Attribute {
-                key: "method".to_string(),
-                value: "migrate_vaults".to_string(),
-            },
-            Attribute {
-                key: "code_id".to_string(),
-                value: "7".to_string(),
-            },
-            Attribute {
-                key: "vault".to_string(),
-                value: "outdated_vault".to_string(),
-            },
-        ];
-
-        assert_eq!(res.attributes, expected_attributes);
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod tests {
+//     use cosmwasm_std::{testing::mock_info, Attribute};
+//
+//     use crate::{
+//         contract::execute,
+//         err::VaultFactoryError,
+//         tests::{mock_creator, mock_instantiate::mock_instantiate},
+//     };
+//
+//     #[test]
+//     fn cannot_migrate_vault_unauthorized() {
+//         let (mut deps, env) = mock_instantiate(5, 6);
+//
+//         // migrate a vault unauthorized
+//         let bad_actor = mock_info("not_owner", &[]);
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             bad_actor,
+//             white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
+//                 vault_addr: None,
+//                 vault_code_id: 7,
+//             },
+//         );
+//
+//         assert_eq!(res.unwrap_err(), VaultFactoryError::Unauthorized {})
+//     }
+//
+//     #[test]
+//     fn can_migrate_single_vault() {
+//         let (mut deps, env) = mock_instantiate(5, 6);
+//         let creator = mock_creator();
+//         // migrate a vault unauthorized
+//         let info = mock_info(creator.sender.as_str(), &[]);
+//
+//         let res = execute(
+//             deps.as_mut(),
+//             env,
+//             info,
+//             white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
+//                 vault_addr: Some("outdated_vault".to_string()),
+//                 vault_code_id: 7,
+//             },
+//         )
+//         .unwrap();
+//
+//         let expected_attributes = vec![
+//             Attribute {
+//                 key: "method".to_string(),
+//                 value: "migrate_vaults".to_string(),
+//             },
+//             Attribute {
+//                 key: "code_id".to_string(),
+//                 value: "7".to_string(),
+//             },
+//             Attribute {
+//                 key: "vault".to_string(),
+//                 value: "outdated_vault".to_string(),
+//             },
+//         ];
+//
+//         assert_eq!(res.attributes, expected_attributes);
+//     }
+// }

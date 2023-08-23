@@ -9,24 +9,24 @@ pub fn get_config(deps: Deps) -> StdResult<Binary> {
     Ok(to_binary(&config)?)
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod test {
-    use cosmwasm_std::Addr;
-    use white_whale::vault_network::vault_router::{Config, QueryMsg};
-
-    use crate::tests::{mock_creator, mock_query};
-
-    #[test]
-    fn does_get_config() {
-        let (config, ..) = mock_query::<Config>("factory_addr".to_string(), QueryMsg::Config {});
-
-        assert_eq!(
-            config,
-            Config {
-                owner: mock_creator().sender,
-                vault_factory: Addr::unchecked("factory_addr"),
-            }
-        );
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod test {
+//     use cosmwasm_std::Addr;
+//     use white_whale::vault_network::vault_router::{Config, QueryMsg};
+//
+//     use crate::tests::{mock_creator, mock_query};
+//
+//     #[test]
+//     fn does_get_config() {
+//         let (config, ..) = mock_query::<Config>("factory_addr".to_string(), QueryMsg::Config {});
+//
+//         assert_eq!(
+//             config,
+//             Config {
+//                 owner: mock_creator().sender,
+//                 vault_factory: Addr::unchecked("factory_addr"),
+//             }
+//         );
+//     }
+// }

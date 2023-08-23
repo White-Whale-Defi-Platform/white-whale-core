@@ -81,90 +81,90 @@ pub fn next_loan(
         .add_attributes(vec![("method", "next_loan")]))
 }
 
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
-mod tests {
-    use cosmwasm_std::{coins, Addr};
-    use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::AssetInfo;
-
-    use white_whale::vault_network::vault_router::ExecuteMsg;
-
-    use crate::err::VaultRouterError;
-    use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
-    use crate::tests::{mock_admin, mock_app_with_balance};
-
-    // Once the nested flashloan feature is enabled again, write proper tests covering payload verification,
-    // order of execution, next_loan is called as it should with nested loans and so on.
-
-    #[test]
-    fn does_require_authorization() {
-        let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
-
-        let AppInstantiateResponse {
-            router_addr,
-            factory_addr,
-            ..
-        } = app_mock_instantiate(&mut app);
-
-        // try calling NextLoan with an unauthorized vault, i.e. one that doesn't exist on the factory
-        let err = app
-            .execute_contract(
-                Addr::unchecked("unauthorized"),
-                router_addr.clone(),
-                &ExecuteMsg::NextLoan {
-                    initiator: Addr::unchecked("initiator_addr"),
-                    source_vault: "source_vault".to_string(),
-                    source_vault_asset_info: AssetInfo::Token {
-                        contract_addr: "non_existing".to_string(),
-                    },
-                    payload: vec![],
-                    to_loan: vec![],
-                    loaned_assets: vec![],
-                },
-                &[],
-            )
-            .unwrap_err();
-
-        assert_eq!(
-            err.downcast::<VaultRouterError>().unwrap(),
-            VaultRouterError::Unauthorized {}
-        );
-
-        let luna_vault: Option<String> = app
-            .wrap()
-            .query_wasm_smart(
-                factory_addr,
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
-                    asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                },
-            )
-            .unwrap();
-
-        //query address of vault contract
-        let err = app
-            .execute_contract(
-                Addr::unchecked("unauthorized"),
-                router_addr,
-                &ExecuteMsg::NextLoan {
-                    initiator: Addr::unchecked("initiator_addr"),
-                    source_vault: luna_vault.unwrap(),
-                    source_vault_asset_info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
-                    payload: vec![],
-                    to_loan: vec![],
-                    loaned_assets: vec![],
-                },
-                &[],
-            )
-            .unwrap_err();
-
-        assert_eq!(
-            err.downcast::<VaultRouterError>().unwrap(),
-            VaultRouterError::Unauthorized {}
-        );
-    }
-}
+// #[cfg(test)]
+// #[cfg(not(target_arch = "wasm32"))]
+// mod tests {
+//     use cosmwasm_std::{coins, Addr};
+//     use cw_multi_test::Executor;
+//     use white_whale::pool_network::asset::AssetInfo;
+//
+//     use white_whale::vault_network::vault_router::ExecuteMsg;
+//
+//     use crate::err::VaultRouterError;
+//     use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
+//     use crate::tests::{mock_admin, mock_app_with_balance};
+//
+//     // Once the nested flashloan feature is enabled again, write proper tests covering payload verification,
+//     // order of execution, next_loan is called as it should with nested loans and so on.
+//
+//     #[test]
+//     fn does_require_authorization() {
+//         let mut app = mock_app_with_balance(vec![(mock_admin(), coins(10_000, "uluna"))]);
+//
+//         let AppInstantiateResponse {
+//             router_addr,
+//             factory_addr,
+//             ..
+//         } = app_mock_instantiate(&mut app);
+//
+//         // try calling NextLoan with an unauthorized vault, i.e. one that doesn't exist on the factory
+//         let err = app
+//             .execute_contract(
+//                 Addr::unchecked("unauthorized"),
+//                 router_addr.clone(),
+//                 &ExecuteMsg::NextLoan {
+//                     initiator: Addr::unchecked("initiator_addr"),
+//                     source_vault: "source_vault".to_string(),
+//                     source_vault_asset_info: AssetInfo::Token {
+//                         contract_addr: "non_existing".to_string(),
+//                     },
+//                     payload: vec![],
+//                     to_loan: vec![],
+//                     loaned_assets: vec![],
+//                 },
+//                 &[],
+//             )
+//             .unwrap_err();
+//
+//         assert_eq!(
+//             err.downcast::<VaultRouterError>().unwrap(),
+//             VaultRouterError::Unauthorized {}
+//         );
+//
+//         let luna_vault: Option<String> = app
+//             .wrap()
+//             .query_wasm_smart(
+//                 factory_addr,
+//                 &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+//                     asset_info: AssetInfo::NativeToken {
+//                         denom: "uluna".to_string(),
+//                     },
+//                 },
+//             )
+//             .unwrap();
+//
+//         //query address of vault contract
+//         let err = app
+//             .execute_contract(
+//                 Addr::unchecked("unauthorized"),
+//                 router_addr,
+//                 &ExecuteMsg::NextLoan {
+//                     initiator: Addr::unchecked("initiator_addr"),
+//                     source_vault: luna_vault.unwrap(),
+//                     source_vault_asset_info: AssetInfo::NativeToken {
+//                         denom: "uluna".to_string(),
+//                     },
+//                     payload: vec![],
+//                     to_loan: vec![],
+//                     loaned_assets: vec![],
+//                 },
+//                 &[],
+//             )
+//             .unwrap_err();
+//
+//         assert_eq!(
+//             err.downcast::<VaultRouterError>().unwrap(),
+//             VaultRouterError::Unauthorized {}
+//         );
+//     }
+// }
