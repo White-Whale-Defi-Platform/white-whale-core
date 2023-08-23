@@ -1,17 +1,17 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, to_binary, WasmMsg,
 };
-
-use crate::state::{Config, CONFIG};
-
-use crate::error::ContractError;
 use cw20::Cw20ExecuteMsg;
+
 use white_whale::pool_network;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
 use white_whale::pool_network::pair::ExecuteMsg as PairExecuteMsg;
 use white_whale::pool_network::querier::{query_balance, query_pair_info, query_token_balance};
 use white_whale::pool_network::router::SwapOperation;
+
+use crate::error::ContractError;
+use crate::state::{Config, CONFIG};
 
 /// Execute swap operation
 /// swap all offer asset to ask asset
@@ -68,26 +68,31 @@ pub fn execute_swap_operation(
 }
 
 pub fn asset_into_swap_msg(
-    _deps: Deps<TerraQuery>,
+    deps: Deps<TerraQuery>,
     pair_contract: Addr,
-    offer_asset: Asset,
+    mut offer_asset: Asset,
     max_spread: Option<Decimal>,
     to: Option<String>,
 ) -> Result<CosmosMsg, ContractError> {
     match offer_asset.info.clone() {
-        AssetInfo::NativeToken { denom } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: pair_contract.to_string(),
-            funds: vec![Coin {
-                denom,
-                amount: offer_asset.amount,
-            }],
-            msg: to_binary(&PairExecuteMsg::Swap {
-                offer_asset,
-                belief_price: None,
-                max_spread,
-                to,
-            })?,
-        })),
+        AssetInfo::NativeToken { denom } => {
+            // deduct tax
+            offer_asset.amount = offer_asset.deduct_tax(&deps.querier)?.amount;
+
+            Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: pair_contract.to_string(),
+                funds: vec![Coin {
+                    denom,
+                    amount: offer_asset.amount,
+                }],
+                msg: to_binary(&PairExecuteMsg::Swap {
+                    offer_asset,
+                    belief_price: None,
+                    max_spread,
+                    to,
+                })?,
+            }))
+        }
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,
             funds: vec![],
