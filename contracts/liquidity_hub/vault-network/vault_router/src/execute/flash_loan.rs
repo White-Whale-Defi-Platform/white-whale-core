@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
 
 use white_whale::pool_network::asset::Asset;
@@ -12,7 +13,7 @@ use crate::{
 /// running the messages the user wants, and finally returning the assets to the
 /// vault.
 pub fn flash_loan(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     assets: Vec<Asset>,
     msgs: Vec<CosmosMsg>,

@@ -1,6 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, to_binary, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
