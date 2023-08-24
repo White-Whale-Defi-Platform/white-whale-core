@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
@@ -7,7 +8,7 @@ use white_whale::vault_network::vault::PaybackAmountResponse;
 use crate::err::{StdResult, VaultRouterError};
 
 pub fn complete_loan(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     initiator: Addr,
@@ -59,43 +60,24 @@ pub fn complete_loan(
                 })?;
 
             let mut response_messages: Vec<CosmosMsg> = vec![];
-            let payback_loan_msg: StdResult<CosmosMsg> = match loaned_asset.info.clone() {
-                AssetInfo::NativeToken { denom } => Ok(BankMsg::Send {
-                    to_address: vault,
-                    amount: coins(payback_amount.payback_amount.u128(), denom),
-                }
-                .into()),
-                AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
-                    contract_addr,
-                    funds: vec![],
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                        recipient: vault,
-                        amount: payback_amount.payback_amount,
-                    })?,
-                }
-                .into()),
+            let payback_loan_asset = Asset {
+                info: loaned_asset.info.clone(),
+                amount: payback_amount.payback_amount,
             };
+
+            let payback_loan_msg =
+                payback_loan_asset.into_msg(&deps.querier, deps.api.addr_validate(&vault)?);
 
             response_messages.push(payback_loan_msg?);
 
             // add profit message if non-zero profit
             if !profit_amount.is_zero() {
-                let profit_payback_msg: StdResult<CosmosMsg> = match loaned_asset.info {
-                    AssetInfo::NativeToken { denom } => Ok(BankMsg::Send {
-                        to_address: initiator.clone().into_string(),
-                        amount: coins(profit_amount.u128(), denom),
-                    }
-                    .into()),
-                    AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
-                        contract_addr,
-                        funds: vec![],
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                            recipient: initiator.clone().into_string(),
-                            amount: profit_amount,
-                        })?,
-                    }
-                    .into()),
+                let profit_asset = Asset {
+                    info: loaned_asset.info.clone(),
+                    amount: profit_amount.clone(),
                 };
+
+                let profit_payback_msg = profit_asset.into_msg(&deps.querier, initiator.clone());
 
                 response_messages.push(profit_payback_msg?);
             }

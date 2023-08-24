@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
@@ -8,7 +9,7 @@ use crate::state::CONFIG;
 
 #[allow(clippy::too_many_arguments)]
 pub fn next_loan(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     mut payload: Vec<CosmosMsg>,

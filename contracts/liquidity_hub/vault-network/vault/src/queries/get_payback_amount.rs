@@ -1,5 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, Binary, Deps, Uint128, Uint256};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_network::vault::PaybackAmountResponse;
 
 use crate::error::VaultError;
@@ -14,13 +15,21 @@ pub fn get_payback_amount(deps: Deps<TerraQuery>, amount: Uint128) -> Result<Bin
         Uint128::try_from(config.fees.flash_loan_fee.compute(Uint256::from(amount)))?;
     let burn_fee = Uint128::try_from(config.fees.burn_fee.compute(Uint256::from(amount)))?;
 
-    let required_amount = amount
+    let mut required_amount = amount
         .checked_add(protocol_fee)?
         .checked_add(flash_loan_fee)?
         .checked_add(burn_fee)?;
 
+    let mut payback_asset = Asset {
+        info: config.asset_info.clone(),
+        amount: required_amount,
+    };
+
+    let burn_tax = payback_asset.compute_tax(&deps.querier)?;
+    payback_asset.amount = payback_asset.amount.checked_add(burn_tax)?;
+
     Ok(to_binary(&PaybackAmountResponse {
-        payback_amount: required_amount,
+        payback_amount: payback_asset.amount,
         protocol_fee,
         flash_loan_fee,
         burn_fee,

@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, MessageInfo, Response};
 
 use crate::{
@@ -6,7 +7,7 @@ use crate::{
 };
 
 pub fn update_config(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     new_owner: Option<String>,
     new_vault_factory_addr: Option<String>,
