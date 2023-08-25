@@ -51,18 +51,31 @@ pub fn complete_loan(
                 }
             };
 
-            let profit_amount = final_amount
-                .checked_sub(payback_amount.payback_amount)
-                .map_err(|_| VaultRouterError::NegativeProfit {
+            // add the tax to the payback amount, since it is deducted when doing the transfer.
+            // notice that the payback_amount contains the tax the vault paid when sending the asset
+            // to the router.
+            let payback_loan_asset = Asset {
+                info: loaned_asset.info.clone(),
+                amount: payback_amount.payback_amount,
+            };
+            // this tax is for the router to send the assets back to the vault, so the vault gets
+            // the asset taken + tax it paid to send the asset over to the router
+            let tax = payback_loan_asset.compute_tax(&deps.querier)?;
+
+            let payback_amount = payback_loan_asset.amount.checked_add(tax)?;
+
+            let profit_amount = final_amount.checked_sub(payback_amount).map_err(|_| {
+                VaultRouterError::NegativeProfit {
                     input: loaned_asset.clone(),
                     output_amount: final_amount,
-                    required_amount: payback_amount.payback_amount,
-                })?;
+                    required_amount: payback_amount,
+                }
+            })?;
 
             let mut response_messages: Vec<CosmosMsg> = vec![];
             let payback_loan_asset = Asset {
                 info: loaned_asset.info.clone(),
-                amount: payback_amount.payback_amount,
+                amount: payback_amount,
             };
 
             let payback_loan_msg =

@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{OverflowError, Uint128};
 use semver::Version;
 use thiserror::Error;
 use white_whale::pool_network::asset::Asset;
@@ -12,6 +12,9 @@ pub enum VaultRouterError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 
     #[error("Unauthorized")]
     Unauthorized {},
