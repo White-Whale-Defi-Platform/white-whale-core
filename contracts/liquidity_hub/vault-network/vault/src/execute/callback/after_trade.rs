@@ -46,10 +46,17 @@ pub fn after_trade(
     )?;
     let burn_fee = Uint128::try_from(config.fees.burn_fee.compute(Uint256::from(loan_amount)))?;
 
+    let loaned_asset = Asset {
+        info: config.asset_info.clone(),
+        amount: old_balance,
+    };
+    let tax = loaned_asset.compute_tax(&deps.querier)?;
+
     let required_amount = old_balance
         .checked_add(protocol_fee)?
         .checked_add(flash_loan_fee)?
-        .checked_add(burn_fee)?;
+        .checked_add(burn_fee)?
+        .checked_add(tax)?;
 
     if required_amount > new_balance {
         return Err(VaultError::NegativeProfit {
@@ -60,10 +67,10 @@ pub fn after_trade(
     }
 
     let profit = new_balance
-        .checked_sub(old_balance)?
-        .checked_sub(protocol_fee)?
-        .checked_sub(flash_loan_fee)?
-        .checked_sub(burn_fee)?;
+        .saturating_sub(old_balance)
+        .saturating_sub(protocol_fee)
+        .saturating_sub(flash_loan_fee)
+        .saturating_sub(burn_fee);
 
     // store fees
     store_fee(deps.storage, COLLECTED_PROTOCOL_FEES, protocol_fee)?;
