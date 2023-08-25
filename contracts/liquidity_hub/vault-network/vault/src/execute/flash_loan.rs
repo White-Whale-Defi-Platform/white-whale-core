@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response, StdError,
-    Uint128, WasmMsg,
+    to_binary, Binary, Coin, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
+    StdError, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -74,7 +74,14 @@ pub fn flash_loan(
 
     let callback_funds = match config.asset_info {
         AssetInfo::Token { .. } => vec![],
-        AssetInfo::NativeToken { .. } => vec![callback_asset.deduct_tax(&deps.querier)?],
+        AssetInfo::NativeToken { denom } => {
+            // add the tax that is going to be taken away when sending the flashloan to the caller contract
+            let tax = callback_asset.compute_tax(&deps.querier)?;
+            vec![Coin {
+                denom,
+                amount: callback_asset.amount.checked_add(tax)?,
+            }]
+        }
     };
 
     // add callback msg to messages
