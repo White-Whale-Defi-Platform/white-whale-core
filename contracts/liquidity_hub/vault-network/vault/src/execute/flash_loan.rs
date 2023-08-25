@@ -77,6 +77,7 @@ pub fn flash_loan(
         AssetInfo::NativeToken { denom } => {
             // add the tax that is going to be taken away when sending the flashloan to the caller contract
             let tax = callback_asset.compute_tax(&deps.querier)?;
+
             vec![Coin {
                 denom,
                 amount: callback_asset.amount.checked_add(tax)?,
