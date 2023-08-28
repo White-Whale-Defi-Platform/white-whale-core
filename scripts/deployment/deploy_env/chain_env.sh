@@ -34,6 +34,16 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/terra.env)
     ;;
 
+  terra-classic)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/terra-classic.env)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_terra_classic.env)
+    ;;
+
+  terra-classic-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/terra-classic.env)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_terra_classic.env)
+    ;;
+
   archway-testnet)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/archway.env)
     ;;
@@ -89,7 +99,7 @@ function init_chain_env() {
     ;;
   esac
 
-  if [[ $chain != "chihuahua" && $chain != "injective" && $chain != "injective-testnet" && $chain != "migaloo" && $chain != "migaloo-testnet" ]]; then
+  if [[ $chain != "chihuahua" && $chain != "injective" && $chain != "injective-testnet" && $chain != "migaloo" && $chain != "migaloo-testnet" && $chain != "terra-classic" && $chain != "terra-classic-testnet" ]]; then
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/base.env)
   fi
 }
