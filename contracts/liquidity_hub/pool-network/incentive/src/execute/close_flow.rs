@@ -1,4 +1,6 @@
 use classic_bindings::TerraQuery;
+
+use white_whale::pool_network::asset::Asset;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
 };
@@ -42,25 +44,13 @@ pub fn close_flow(
         return Err(ContractError::UnauthorizedFlowClose { flow_identifier });
     }
 
-    let amount_to_return = flow.flow_asset.amount.saturating_sub(flow.claimed_amount);
-
     // return the flow assets available, i.e. the ones that haven't been claimed
-    let messages: Vec<CosmosMsg> = vec![match flow.flow_asset.info {
-        AssetInfo::NativeToken { denom } => BankMsg::Send {
-            to_address: flow.flow_creator.clone().into_string(),
-            amount: coins(amount_to_return.u128(), denom),
-        }
-        .into(),
-        AssetInfo::Token { contract_addr } => WasmMsg::Execute {
-            contract_addr,
-            msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                recipient: flow.flow_creator.clone().into_string(),
-                amount: amount_to_return,
-            })?,
-            funds: vec![],
-        }
-        .into(),
-    }];
+    let amount_to_return = flow.flow_asset.amount.saturating_sub(flow.claimed_amount);
+    let refund_msg = Asset {
+        info: flow.flow_asset.info,
+        amount: amount_to_return,
+    }
+    .into_msg(&deps.querier, flow.flow_creator)?;
 
     // close the flow by removing it from storage
     FLOWS.remove(deps.storage, (flow.start_epoch, flow.flow_id));
@@ -70,5 +60,5 @@ pub fn close_flow(
             ("action", "close_flow".to_string()),
             ("flow_identifier", flow_identifier.to_string()),
         ])
-        .add_messages(messages))
+        .add_message(refund_msg))
 }

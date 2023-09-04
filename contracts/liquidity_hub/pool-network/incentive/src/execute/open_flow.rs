@@ -1,10 +1,10 @@
-use classic_bindings::TerraQuery;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError,
-    StdResult, Uint128, WasmMsg,
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult, Uint128,
+    WasmMsg,
 };
 
 use white_whale::pool_network::incentive::Flow;
@@ -52,6 +52,10 @@ pub fn open_flow(
     let mut messages: Vec<CosmosMsg> = vec![];
 
     let flow_fee = incentive_factory_config.create_flow_fee;
+
+    // compute lunc tax for flow_fee
+    let tax = flow_fee.clone().compute_tax(&deps.querier)?;
+
     // check the fee to create a flow is being paid
     match flow_fee.info.clone() {
         AssetInfo::NativeToken {
@@ -73,7 +77,10 @@ pub fn open_flow(
                 } => {
                     // if so, subtract the flow_fee from the flow_asset amount
                     if flow_fee_denom == flow_asset_denom {
-                        flow_asset.amount = flow_asset.amount.saturating_sub(flow_fee.amount);
+                        flow_asset.amount = flow_asset
+                            .amount
+                            .saturating_sub(flow_fee.amount)
+                            .saturating_sub(tax);
 
                         if flow_asset.amount < MIN_FLOW_AMOUNT {
                             return Err(ContractError::EmptyFlowAfterFee {
@@ -102,16 +109,17 @@ pub fn open_flow(
                             denom: flow_asset_denom,
                         } => {
                             if flow_fee_denom != flow_asset_denom {
-                                messages.push(
-                                    BankMsg::Send {
-                                        to_address: info.sender.clone().into_string(),
-                                        amount: vec![Coin {
-                                            amount: paid_amount - flow_fee.amount,
-                                            denom: flow_fee_denom.clone(),
-                                        }],
-                                    }
-                                    .into(),
-                                );
+                                let refund_asset = Asset {
+                                    info: flow_asset.info.clone(),
+                                    amount: (paid_amount - flow_fee.amount).saturating_sub(tax),
+                                };
+
+                                if refund_asset.amount > Uint128::zero() {
+                                    messages.push(
+                                        refund_asset
+                                            .into_msg(&deps.querier, info.sender.clone())?,
+                                    );
+                                }
                             }
                         }
                     }
@@ -119,19 +127,15 @@ pub fn open_flow(
             }
 
             // send fee to fee collector
-            messages.push(
-                BankMsg::Send {
-                    to_address: incentive_factory_config
-                        .fee_collector_addr
-                        .clone()
-                        .into_string(),
-                    amount: vec![Coin {
-                        amount: flow_fee.amount,
-                        denom: flow_fee_denom,
-                    }],
-                }
-                .into(),
-            );
+            let fee_asset = Asset {
+                info: flow_fee.info.clone(),
+                amount: flow_fee.amount,
+            };
+
+            messages.push(fee_asset.into_msg(
+                &deps.querier,
+                incentive_factory_config.fee_collector_addr.clone(),
+            )?);
         }
         AssetInfo::Token {
             contract_addr: flow_fee_contract_addr,
