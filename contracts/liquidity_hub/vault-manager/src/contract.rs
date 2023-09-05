@@ -151,26 +151,19 @@ pub fn execute(
             )
         }
         ExecuteMsg::Receive(msg) => {
-            todo!();
-            // callback can only be called by liquidity token
-            let config = MANAGER_CONFIG.load(deps.storage)?;
+            // check if it's a cw20 lp asset executing this callback
+            let vault = VAULTS
+                .idx
+                .lp_asset
+                .item(deps.storage, info.sender.to_string())?
+                .map_or_else(|| Err(ContractError::Unauthorized {}), Ok)?
+                .1;
 
-            let cw20_lp_token = match config.vault_creation_fee.info {
-                AssetInfo::Token { contract_addr } => contract_addr,
-                AssetInfo::NativeToken { .. } => return Err(ContractError::Unauthorized {}),
-            };
-
-            if info.sender != deps.api.addr_validate(cw20_lp_token.as_str())? {
-                return Err(ContractError::Unauthorized {});
+            match from_binary(&msg.msg)? {
+                Cw20HookMsg::Withdraw {} => {
+                    vault::commands::withdraw(deps, env, msg.sender, msg.amount, vault)
+                }
             }
-
-            // match from_binary(&msg.msg)? {
-            //     Cw20HookMsg::Withdraw {} => {
-            //         vault::commands::withdraw(deps, env, msg.sender, msg.amount)
-            //     }
-            // }
-
-            Ok(Response::default())
         }
         ExecuteMsg::Callback(msg) => {
             todo!();
