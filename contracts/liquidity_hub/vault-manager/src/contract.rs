@@ -87,14 +87,7 @@ pub fn execute(
             manager::commands::create_vault(deps, env, info, asset_info, fees)
         }
         ExecuteMsg::RemoveVault { asset_info } => {
-            todo!();
-            // if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
-            //     return Err(ContractError::NonExistentVault {});
-            // }
-            //
-            // VAULTS.remove(deps.storage, asset_info.get_reference());
-
-            Ok(Response::new().add_attributes(vec![("method", "remove_vault")]))
+            manager::commands::remove_vault(deps, info, asset_info)
         }
         ExecuteMsg::UpdateVaultFees {
             vault_asset_info,

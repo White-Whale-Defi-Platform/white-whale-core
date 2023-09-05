@@ -227,3 +227,22 @@ pub fn update_vault_fees(
         ("vault_fee", vault_fee.to_string()),
     ]))
 }
+
+pub fn remove_vault(
+    deps: DepsMut,
+    info: MessageInfo,
+    asset_info: AssetInfo,
+) -> Result<Response, ContractError> {
+    validate_owner(deps.storage, OWNER, info.sender)?;
+
+    if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
+        return Err(ContractError::NonExistentVault {});
+    }
+
+    VAULTS.remove(deps.storage, asset_info.get_reference())?;
+
+    Ok(Response::default().add_attributes(vec![
+        ("method", "remove_vault".to_string()),
+        ("asset_info", asset_info.to_string()),
+    ]))
+}
