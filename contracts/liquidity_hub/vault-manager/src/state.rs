@@ -1,9 +1,10 @@
 use std::string::ToString;
 
-use cosmwasm_std::{Addr, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, DepsMut, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
-use white_whale::pool_network::asset::Asset;
+use crate::ContractError;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_manager::{ManagerConfig, Vault};
 
 pub const OWNER: Item<Addr> = Item::new("owner");
@@ -59,11 +60,21 @@ pub fn read_vaults(
         .collect()
 }
 
-// this will set the first key after the provided key, by appending a 1 byte
+/// this will set the first key after the provided key, by appending a 1 byte
 fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
     start_after.map(|asset_info| {
         let mut v = asset_info;
         v.push(1);
         v
     })
+}
+
+/// Gets the vault given an asset info
+pub fn get_vault(deps: &DepsMut, lp_asset: AssetInfo) -> Result<Vault, ContractError> {
+    Ok(VAULTS
+        .idx
+        .lp_asset
+        .item(deps.storage, lp_asset.to_string())?
+        .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
+        .1)
 }

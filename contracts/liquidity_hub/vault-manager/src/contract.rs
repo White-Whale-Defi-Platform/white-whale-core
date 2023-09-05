@@ -1,5 +1,5 @@
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{coins, from_binary};
+use cosmwasm_std::coins;
+use cosmwasm_std::{entry_point, from_binary};
 use cosmwasm_std::{
     to_binary, Addr, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, OverflowError,
     Response, StdError, StdResult, Storage, Uint128, WasmMsg,
@@ -23,9 +23,9 @@ use white_whale::vault_manager::{
 
 use crate::error::ContractError;
 use crate::state::{
-    ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER, VAULTS,
+    get_vault, ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER,
 };
-use crate::{manager, vault};
+use crate::{manager, state, vault};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "ww-vault-manager";
@@ -117,12 +117,7 @@ pub fn execute(
             };
 
             // check if the vault exists
-            let vault = VAULTS
-                .idx
-                .lp_asset
-                .item(deps.storage, lp_asset.to_string())?
-                .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
-                .1;
+            let vault = get_vault(&deps, lp_asset)?;
 
             vault::commands::withdraw(
                 deps,
@@ -134,12 +129,11 @@ pub fn execute(
         }
         ExecuteMsg::Receive(msg) => {
             // check if it's a cw20 lp asset executing this callback
-            let vault = VAULTS
-                .idx
-                .lp_asset
-                .item(deps.storage, info.sender.to_string())?
-                .map_or_else(|| Err(ContractError::Unauthorized {}), Ok)?
-                .1;
+            let lp_asset = AssetInfo::Token {
+                contract_addr: info.sender.into_string(),
+            };
+
+            let vault = get_vault(&deps, lp_asset)?;
 
             match from_binary(&msg.msg)? {
                 Cw20HookMsg::Withdraw {} => {
