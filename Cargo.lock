@@ -567,6 +567,7 @@ checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
 name = "frontend-helper"
 version = "1.0.0"
 dependencies = [
+ "classic-bindings",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",

@@ -1,4 +1,7 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{to_binary, DepsMut, Env, Reply, Response, WasmMsg};
+
+use white_whale::pool_network::asset::Asset;
 use white_whale::pool_network::{
     asset::AssetInfo, frontend_helper::TempState, incentive::QueryPosition,
 };
@@ -14,7 +17,11 @@ pub const DEPOSIT_PAIR_REPLY_ID: u64 = 1;
 /// Triggered after a new deposit is made to a pair.
 ///
 /// Triggered to allow us to register the new contract in state.
-pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn deposit_pair(
+    deps: DepsMut<TerraQuery>,
+    env: Env,
+    msg: Reply,
+) -> Result<Response, ContractError> {
     msg.result
         .into_result()
         .map_err(|e| ContractError::DepositCallback { reason: e })?;
@@ -40,6 +47,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
                 lp_asset: pair_info.liquidity_token.clone(),
             },
         )?;
+
     // return an error if there was no incentive address
     let incentive_address = incentive_address.map_or_else(
         || {
@@ -53,10 +61,17 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
     // compute current LP token amount
     let mut messages = vec![];
     let mut funds = vec![];
-    let lp_amount = match pair_info.liquidity_token {
+    let lp_amount = match pair_info.liquidity_token.clone() {
         AssetInfo::NativeToken { denom } => {
             // ask the bank module
             let balance = deps.querier.query_balance(env.contract.address, denom)?;
+
+            // deduct tax
+            let asset = Asset {
+                info: pair_info.liquidity_token,
+                amount: balance.amount,
+            };
+            let balance = asset.deduct_tax(&deps.querier)?;
 
             // add the funds to the message
             funds.push(balance.clone());
@@ -97,10 +112,10 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         )?;
     let has_existing_position = positions.positions.into_iter().any(|position| {
         let QueryPosition::OpenPosition { unbonding_duration: position_unbonding_duration, .. } = position else {
-			return false;
-		};
+            return false;
+        };
 
-		unbonding_duration == position_unbonding_duration
+        unbonding_duration == position_unbonding_duration
     });
 
     Ok(Response::default()

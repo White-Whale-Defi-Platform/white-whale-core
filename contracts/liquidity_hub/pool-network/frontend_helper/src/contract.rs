@@ -1,8 +1,7 @@
+use classic_bindings::TerraQuery;
+use cosmwasm_std::{Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, to_binary, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg, WasmMsg,
-};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
@@ -14,6 +13,7 @@ use white_whale::traits::OptionDecimal;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
+use crate::helper::deduct_tax_vec;
 use crate::reply;
 use crate::reply::deposit_pair::DEPOSIT_PAIR_REPLY_ID;
 use crate::state::{CONFIG, TEMP_STATE};
@@ -24,7 +24,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -43,7 +43,7 @@ pub fn instantiate(
 
 #[entry_point]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -80,7 +80,7 @@ pub fn execute(
                         },
                     )?;
 
-                    if allowance.allowance != token_amount {
+                    if allowance.allowance < token_amount {
                         return Err(ContractError::MissingToken {
                             asset: Asset {
                                 info: AssetInfo::Token {
@@ -116,6 +116,23 @@ pub fn execute(
                 .collect::<Result<Vec<_>, _>>()?
                 .concat();
 
+            //deduct taxes from funds
+
+            let mut taxed_funds: Vec<Coin> = vec![];
+
+            for coin in info.funds.clone() {
+                let asset = Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: coin.denom,
+                    },
+                    amount: coin.amount,
+                };
+
+                taxed_funds.push(asset.deduct_tax(&deps.querier)?);
+            }
+
+            let taxed_assets = deduct_tax_vec(&deps.querier, &assets)?;
+
             // send request to deposit
             Ok(Response::default()
                 .add_attributes(vec![
@@ -133,14 +150,14 @@ pub fn execute(
                         contract_addr: pair_address,
                         msg: to_binary(
                             &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
-                                assets,
+                                assets: [taxed_assets[0].clone(), taxed_assets[1].clone()],
                                 slippage_tolerance,
                                 receiver: None,
                             },
                         )?,
-                        funds: info.funds,
+                        funds: taxed_funds,
                     }
-                    .into(),
+                        .into(),
                 }))
         }
         ExecuteMsg::UpdateConfig {
@@ -174,9 +191,47 @@ pub fn execute(
     }
 }
 
+#[cfg(test)]
+mod x {
+    use std::marker::PhantomData;
+    use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::{coin, coins, OwnedDeps, Uint128};
+    use white_whale::pool_network::asset::{Asset, AssetInfo};
+    use white_whale::pool_network::frontend_helper::ExecuteMsg;
+    use crate::contract::{execute, instantiate};
+    use crate::helpers::mock_dependencies;
+
+    #[test]
+    fn can_deposit() {
+        let mut deps = mock_dependencies();
+
+        deps.querier.set_bank_balances(&[coin(1000000000000000, "uluna"), coin(1000000000000000, "uwhale")]);
+
+        let msg = ExecuteMsg::Deposit {
+            pair_address: "pair_address".to_string(),
+            assets: [
+                Asset{ info: AssetInfo::NativeToken {denom: "uluna".to_string()}, amount: Uint128::new(100) },
+                Asset{ info: AssetInfo::NativeToken {denom: "uwhale".to_string()}, amount: Uint128::new(100) }
+            ],
+            slippage_tolerance: None,
+            unbonding_duration: 86400,
+        };
+
+
+        println!("{:?}", msg);
+
+        let env = mock_env();
+        let info = mock_info("addr0000", &[coin(100, "uluna"), coin(100, "uwhale")]);
+        let res = execute(deps.as_mut(), env, info, msg);
+
+        println!("{:?}", res);
+
+    }
+}
+
 /// Handles reply messages from submessages sent out by the frontend contract.
 #[entry_point]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         DEPOSIT_PAIR_REPLY_ID => reply::deposit_pair::deposit_pair(deps, env, msg),
         id => Err(ContractError::UnknownReplyId { id }),
@@ -184,7 +239,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&CONFIG.load(deps.storage)?)?),
     }
@@ -192,7 +247,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(
+    deps: DepsMut<TerraQuery>,
+    _env: Env,
+    _msg: MigrateMsg,
+) -> Result<Response, ContractError> {
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
