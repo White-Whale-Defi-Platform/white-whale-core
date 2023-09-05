@@ -124,17 +124,6 @@ pub fn execute(
                 .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
                 .1;
 
-            // validate that the asset sent is the token factory LP token
-            let config = MANAGER_CONFIG.load(deps.storage)?;
-            let lp_token_denom = match config.vault_creation_fee.info {
-                AssetInfo::Token { .. } => String::new(),
-                AssetInfo::NativeToken { denom } => denom,
-            };
-
-            if info.funds.len() != 1 || info.funds[0].denom != lp_token_denom {
-                return Err(ContractError::Unauthorized {});
-            }
-
             vault::commands::withdraw(
                 deps,
                 env,
