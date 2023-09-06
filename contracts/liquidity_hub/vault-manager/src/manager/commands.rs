@@ -1,23 +1,22 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Api, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+    Api, attr, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut, Env,
+    instantiate2_address, MessageInfo, Response, StdError, to_binary, WasmMsg,
 };
 use cw20::MinterResponse;
 
 use white_whale::common::validate_owner;
 use white_whale::constants::LP_SYMBOL;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
-
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::traits::AssetReference;
+use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
 use crate::ContractError;
+use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
 
 /// Creates a new vault
 pub fn create_vault(
@@ -36,7 +35,7 @@ pub fn create_vault(
     };
 
     // verify fee payment
-    let amount = cw_utils::must_pay(&info, denom.as_str()).unwrap();
+    let amount = cw_utils::must_pay(&info, denom.as_str())?;
     if amount != manager_config.vault_creation_fee.amount {
         return Err(ContractError::InvalidVaultCreationFee {
             amount,
@@ -140,7 +139,8 @@ pub fn create_vault(
 
     Ok(Response::default()
         .add_message(message)
-        .add_attributes(vec![("action", "create_vault")]))
+        .add_attribute("action", "create_vault".to_string())
+        .add_attributes(attributes))
 }
 
 /// Updates the manager config

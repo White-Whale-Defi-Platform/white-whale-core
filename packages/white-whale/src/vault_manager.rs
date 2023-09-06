@@ -58,12 +58,15 @@ impl LpTokenType {
         }
     }
 }
-
 impl Display for LpTokenType {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}", self)
+        match self {
+            LpTokenType::Cw20(value) => write!(f, "cw20({})", value),
+            LpTokenType::TokenFactory => write!(f, "token_factory"),
+        }
     }
 }
+
 
 /// The execution message
 #[cw_serde]
