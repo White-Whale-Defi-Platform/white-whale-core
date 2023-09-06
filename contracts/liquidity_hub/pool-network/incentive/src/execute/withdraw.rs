@@ -21,13 +21,14 @@ pub fn withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, 
                 let position = &closed_positions[i];
 
                 // if unbonding timestamp is in the past, it's possible to withdraw
-                if env.block.time.seconds() > position.unbonding_timestamp {
-                    // add return tokens to sum
-                    return_token_count = return_token_count.checked_add(position.amount)?;
+                // let people out of jail in this version, done for specific pools where liquidity is being transferred
+                //if env.block.time.seconds() > position.unbonding_timestamp {
+                // add return tokens to sum
+                return_token_count = return_token_count.checked_add(position.amount)?;
 
-                    // remove position
-                    closed_positions.remove(i);
-                }
+                // remove position
+                closed_positions.remove(i);
+                //}
             }
 
             Ok(closed_positions)
