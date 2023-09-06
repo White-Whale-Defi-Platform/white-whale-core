@@ -16,6 +16,9 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
+injective = ["white-whale/injective"]
+token_factory = ["white-whale/token_factory"]
+osmosis_token_factory = ["white-whale/osmosis_token_factory"]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports

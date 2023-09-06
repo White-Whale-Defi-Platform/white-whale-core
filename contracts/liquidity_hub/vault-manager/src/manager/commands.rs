@@ -11,6 +11,11 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
+#[cfg(feature = "token_factory")]
+use white_whale::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
+
 use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
 use crate::ContractError;
 
@@ -55,6 +60,9 @@ pub fn create_vault(
     let mut attributes = Vec::<Attribute>::new();
 
     let message = if manager_config.lp_token_type == LpTokenType::TokenFactory {
+        #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+        return Err(ContractError::TokenFactoryNotEnabled {});
+
         let lp_symbol = format!("{asset_label}.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };
@@ -72,12 +80,10 @@ pub fn create_vault(
         attributes.push(attr("lp_asset", lp_asset.to_string()));
 
         #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-        return Ok(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
+        Ok(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
             sender: env.contract.address.to_string(),
             subdenom: lp_symbol,
-        }));
-        #[allow(unreachable_code)]
-        Err(ContractError::TokenFactoryNotEnabled {})
+        }))
     } else {
         let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
         let code_id = manager_config.lp_token_type.get_cw20_code_id()?;
@@ -113,7 +119,7 @@ pub fn create_vault(
 
         let lp_token_name = format!("{asset_label}-LP");
 
-        Ok(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
+        Ok::<CosmosMsg, ContractError>(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
             admin: None,
             code_id,
             label: lp_token_name.to_owned(),
