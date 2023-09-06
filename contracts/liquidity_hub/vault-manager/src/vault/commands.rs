@@ -180,8 +180,7 @@ pub fn withdraw(
             balance.balance
         }
     } // deduct protocol fees
-    .checked_sub(collected_protocol_fees.amount)
-    .unwrap();
+    .checked_sub(collected_protocol_fees.amount)?;
 
     let liquidity_asset = match vault.lp_asset.clone() {
         AssetInfo::Token { contract_addr } => contract_addr,

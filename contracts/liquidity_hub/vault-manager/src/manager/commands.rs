@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    Api, attr, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut, Env,
-    instantiate2_address, MessageInfo, Response, StdError, to_binary, WasmMsg,
+    attr, instantiate2_address, to_binary, Api, Attribute, Binary, CodeInfoResponse, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
 };
 use cw20::MinterResponse;
 
@@ -15,8 +15,8 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::ContractError;
 use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
+use crate::ContractError;
 
 /// Creates a new vault
 pub fn create_vault(

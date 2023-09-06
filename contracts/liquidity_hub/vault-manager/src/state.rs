@@ -1,6 +1,6 @@
 use std::string::ToString;
 
-use cosmwasm_std::{Addr, DepsMut, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
 use crate::ContractError;
@@ -69,8 +69,8 @@ fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
     })
 }
 
-/// Gets the vault given an asset info
-pub fn get_vault(deps: &DepsMut, lp_asset: AssetInfo) -> Result<Vault, ContractError> {
+/// Gets the vault given an lp asset as [AssetInfo]
+pub fn get_vault(deps: &Deps, lp_asset: AssetInfo) -> Result<Vault, ContractError> {
     Ok(VAULTS
         .idx
         .lp_asset

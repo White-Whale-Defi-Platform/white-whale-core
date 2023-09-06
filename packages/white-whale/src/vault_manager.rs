@@ -67,7 +67,6 @@ impl Display for LpTokenType {
     }
 }
 
-
 /// The execution message
 #[cw_serde]
 pub enum ExecuteMsg {
@@ -153,7 +152,7 @@ pub enum QueryMsg {
     #[returns(ManagerConfig)]
     ManagerConfig {},
     /// Retrieves a vault given the asset_info.
-    #[returns(Option<Vault>)]
+    #[returns(VaultsResponse)]
     Vault { asset_info: AssetInfo },
     /// Retrieves the addresses for all the vaults.
     #[returns(VaultsResponse)]

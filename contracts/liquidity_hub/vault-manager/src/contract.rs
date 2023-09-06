@@ -9,13 +9,7 @@ use cw_storage_plus::Item;
 use cw_utils::one_coin;
 use semver::Version;
 
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-#[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 use white_whale::vault_manager::{
     CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg,
     PaybackAmountResponse, QueryMsg,
@@ -25,7 +19,7 @@ use crate::error::ContractError;
 use crate::state::{
     get_vault, ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER,
 };
-use crate::{manager, state, vault};
+use crate::{manager, queries, state, vault};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "ww-vault-manager";
@@ -59,6 +53,9 @@ pub fn instantiate(
 
     //todo ownership proposal stuff to change ownership of the contract
     OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
+
+    // set loan counter to zero
+    LOAN_COUNTER.save(deps.storage, &0)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
@@ -117,7 +114,7 @@ pub fn execute(
             };
 
             // check if the vault exists
-            let vault = get_vault(&deps, lp_asset)?;
+            let vault = get_vault(&deps.as_ref(), lp_asset)?;
 
             vault::commands::withdraw(
                 deps,
@@ -133,7 +130,7 @@ pub fn execute(
                 contract_addr: info.sender.into_string(),
             };
 
-            let vault = get_vault(&deps, lp_asset)?;
+            let vault = get_vault(&deps.as_ref(), lp_asset)?;
 
             match from_binary(&msg.msg)? {
                 Cw20HookMsg::Withdraw {} => {
@@ -545,8 +542,20 @@ pub fn store_fee(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::ManagerConfig {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
+        QueryMsg::Vault { asset_info } => Ok(to_binary(&queries::query_vault(deps, asset_info)?)?),
+        QueryMsg::Vaults { start_after, limit } => Ok(to_binary(&queries::query_vaults(
+            deps,
+            start_after,
+            limit,
+        )?)?),
+        QueryMsg::Share { .. } => Ok(to_binary(&"")?),
+        QueryMsg::ProtocolFees { .. } => Ok(to_binary(&"")?),
+        QueryMsg::BurnedFees { .. } => Ok(to_binary(&"")?),
+        QueryMsg::GetPaybackAmount { .. } => Ok(to_binary(&"")?),
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
