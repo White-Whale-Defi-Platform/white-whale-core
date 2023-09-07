@@ -394,7 +394,7 @@ pub fn flash_loan(
     };
 
     // get funds to send to callback (if native token then send in the callback msg)
-    let callback_funds = match config.vault_creation_fee.info.clone() {
+    let callback_funds = match config.vault_creation_fee.info {
         AssetInfo::Token { .. } => vec![],
         AssetInfo::NativeToken { denom } => coins(amount.u128(), denom),
     };
@@ -511,7 +511,7 @@ pub fn after_trade(
     let mut response = Response::new();
     if !burn_fee.is_zero() {
         let burn_asset = Asset {
-            info: config.vault_creation_fee.info.clone(),
+            info: config.vault_creation_fee.info,
             amount: burn_fee,
         };
 

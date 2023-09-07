@@ -43,6 +43,8 @@ pub fn create_vault(
         });
     }
 
+    //todo send vault creation fee to "fee collector"
+
     let binding = asset_info.clone();
     let asset_info_reference = binding.get_reference();
 

@@ -30,8 +30,10 @@ impl<'a> IndexList<Vault> for VaultIndexes<'a> {
     }
 }
 
+//todo remove, protocol fees are directly sent to the "fee collector"
 // Fees that have been accrued by the vaults
 pub const COLLECTED_PROTOCOL_FEES: Item<Asset> = Item::new("collected_protocol_fees");
+//todo remove
 // Fees that have been burned by the vault since the vault's inception
 pub const ALL_TIME_BURNED_FEES: Item<Asset> = Item::new("all_time_burned_fees");
 // A counter for how many active loans are being performed
