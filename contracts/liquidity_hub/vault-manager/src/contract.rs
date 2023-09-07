@@ -12,14 +12,14 @@ use semver::Version;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_manager::{
     CallbackMsg, Cw20HookMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg,
-    PaybackAmountResponse, QueryMsg,
+    PaybackAssetResponse, QueryMsg,
 };
 
 use crate::error::ContractError;
 use crate::state::{
     get_vault, ALL_TIME_BURNED_FEES, COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, OWNER,
 };
-use crate::{manager, queries, state, vault};
+use crate::{manager, queries, vault};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "ww-vault-manager";
@@ -44,7 +44,7 @@ pub fn instantiate(
     let manager_config = ManagerConfig {
         lp_token_type: msg.lp_token_type,
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
-        vault_creation_fee: msg.vault_creation_fee,
+        vault_creation_fee: msg.vault_creation_fee.clone(),
         flash_loan_enabled: true,
         deposit_enabled: true,
         withdraw_enabled: true,
@@ -114,7 +114,7 @@ pub fn execute(
             };
 
             // check if the vault exists
-            let vault = get_vault(&deps.as_ref(), lp_asset)?;
+            let vault = get_vault(&deps.as_ref(), &lp_asset)?;
 
             vault::commands::withdraw(
                 deps,
@@ -130,7 +130,7 @@ pub fn execute(
                 contract_addr: info.sender.into_string(),
             };
 
-            let vault = get_vault(&deps.as_ref(), lp_asset)?;
+            let vault = get_vault(&deps.as_ref(), &lp_asset)?;
 
             match from_binary(&msg.msg)? {
                 Cw20HookMsg::Withdraw {} => {
@@ -182,10 +182,10 @@ pub fn complete_loan(
     let messages: Vec<Vec<CosmosMsg>> = assets
         .into_iter()
         .map(|(vault, loaned_asset)| {
-            let payback_amount: PaybackAmountResponse = deps.querier.query_wasm_smart(
+            let payback_amount: PaybackAssetResponse = deps.querier.query_wasm_smart(
                 vault.clone(),
-                &white_whale::vault_network::vault::QueryMsg::GetPaybackAmount {
-                    amount: loaned_asset.amount,
+                &QueryMsg::PaybackAmount {
+                    asset: loaned_asset.clone(),
                 },
             )?;
 
@@ -211,7 +211,7 @@ pub fn complete_loan(
             };
 
             let profit_amount = final_amount
-                .checked_sub(payback_amount.payback_amount.amount.clone())
+                .checked_sub(payback_amount.payback_amount.clone())
                 .map_err(|_| ContractError::Unauthorized {})
                 .unwrap();
 
@@ -219,7 +219,7 @@ pub fn complete_loan(
             let payback_loan_msg: StdResult<CosmosMsg> = match loaned_asset.info.clone() {
                 AssetInfo::NativeToken { denom } => Ok(BankMsg::Send {
                     to_address: vault,
-                    amount: coins(payback_amount.payback_amount.amount.u128(), denom),
+                    amount: coins(payback_amount.payback_amount.u128(), denom),
                 }
                 .into()),
                 AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
@@ -227,7 +227,7 @@ pub fn complete_loan(
                     funds: vec![],
                     msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
                         recipient: vault,
-                        amount: payback_amount.payback_amount.amount,
+                        amount: payback_amount.payback_amount,
                     })?,
                 }
                 .into()),
@@ -237,24 +237,12 @@ pub fn complete_loan(
 
             // add profit message if non-zero profit
             if !profit_amount.is_zero() {
-                let profit_payback_msg: StdResult<CosmosMsg> = match loaned_asset.info {
-                    AssetInfo::NativeToken { denom } => Ok(BankMsg::Send {
-                        to_address: initiator.clone().into_string(),
-                        amount: coins(profit_amount.u128(), denom),
-                    }
-                    .into()),
-                    AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
-                        contract_addr,
-                        funds: vec![],
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                            recipient: initiator.clone().into_string(),
-                            amount: profit_amount,
-                        })?,
-                    }
-                    .into()),
+                let profit_payback_asset = Asset {
+                    info: loaned_asset.info.clone(),
+                    amount: profit_amount,
                 };
 
-                response_messages.push(profit_payback_msg?);
+                response_messages.push(profit_payback_asset.into_msg(initiator.clone())?);
             }
 
             Ok(response_messages)
@@ -551,10 +539,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             start_after,
             limit,
         )?)?),
-        QueryMsg::Share { .. } => Ok(to_binary(&"")?),
-        QueryMsg::ProtocolFees { .. } => Ok(to_binary(&"")?),
-        QueryMsg::BurnedFees { .. } => Ok(to_binary(&"")?),
-        QueryMsg::GetPaybackAmount { .. } => Ok(to_binary(&"")?),
+        QueryMsg::Share { lp_share } => Ok(to_binary(&queries::get_share(deps, env, lp_share)?)?),
+        QueryMsg::PaybackAmount { asset } => {
+            Ok(to_binary(&queries::get_payback_amount(deps, asset)?)?)
+        }
     }
 }
 

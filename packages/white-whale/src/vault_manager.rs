@@ -162,17 +162,11 @@ pub enum QueryMsg {
     },
 
     /// Retrieves the share of the assets stored in the vault that a given `lp_share` is entitled to.
-    #[returns(Asset)]
+    #[returns(ShareResponse)]
     Share { lp_share: Asset },
-    /// Retrieves the protocol fees that have been collected.
-    #[returns(ProtocolFeesResponse)]
-    ProtocolFees {},
-    /// Retrieves the fees that have been burned by the vault.
-    #[returns(ProtocolFeesResponse)]
-    BurnedFees {},
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
-    #[returns(PaybackAmountResponse)]
-    GetPaybackAmount { asset: Asset },
+    #[returns(PaybackAssetResponse)]
+    PaybackAmount { asset: Asset },
 }
 
 /// Response for the vaults query
@@ -204,20 +198,19 @@ pub struct Cw20ReceiveMsg {
 }
 
 #[cw_serde]
-pub struct ProtocolFeesResponse {
-    pub fees: Asset,
-}
-
-#[cw_serde]
-pub struct PaybackAmountResponse {
-    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`+ `burn_fee`.
-    pub payback_amount: Asset,
+pub struct PaybackAssetResponse {
+    pub asset_info: AssetInfo,
+    /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
+    pub payback_amount: Uint128,
     /// The amount of fee paid to the protocol
-    pub protocol_fee: Asset,
+    pub protocol_fee: Uint128,
     /// The amount of fee paid to vault holders
-    pub flash_loan_fee: Asset,
-    /// The amount of fee to be burned
-    pub burn_fee: Asset,
+    pub flash_loan_fee: Uint128,
+}
+#[cw_serde]
+pub struct ShareResponse {
+    /// The amount of assets that the given `lp_share` is entitled to.
+    pub share: Asset,
 }
 
 #[cw_serde]

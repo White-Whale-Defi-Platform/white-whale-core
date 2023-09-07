@@ -15,7 +15,7 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
+use crate::state::{COLLECTED_PROTOCOL_FEES, MANAGER_CONFIG, OWNER, VAULTS};
 use crate::ContractError;
 
 /// Creates a new vault
@@ -43,7 +43,8 @@ pub fn create_vault(
         });
     }
 
-    //todo send vault creation fee to "fee collector"
+    //todo send vault creation fee to "fee collector", i.e. with hook directly to the whale lair
+    // or whatever distributes the protocol fees
 
     let binding = asset_info.clone();
     let asset_info_reference = binding.get_reference();

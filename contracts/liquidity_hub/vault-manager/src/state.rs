@@ -30,7 +30,6 @@ impl<'a> IndexList<Vault> for VaultIndexes<'a> {
     }
 }
 
-//todo remove, protocol fees are directly sent to the "fee collector"
 // Fees that have been accrued by the vaults
 pub const COLLECTED_PROTOCOL_FEES: Item<Asset> = Item::new("collected_protocol_fees");
 //todo remove
@@ -72,7 +71,7 @@ fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
 }
 
 /// Gets the vault given an lp asset as [AssetInfo]
-pub fn get_vault(deps: &Deps, lp_asset: AssetInfo) -> Result<Vault, ContractError> {
+pub fn get_vault(deps: &Deps, lp_asset: &AssetInfo) -> Result<Vault, ContractError> {
     Ok(VAULTS
         .idx
         .lp_asset
