@@ -36,7 +36,7 @@ pub fn create_vault(
 
     // verify fee payment
     let amount = cw_utils::must_pay(&info, denom.as_str())?;
-    if amount != manager_config.vault_creation_fee.amount {
+    if amount < manager_config.vault_creation_fee.amount {
         return Err(ContractError::InvalidVaultCreationFee {
             amount,
             expected: manager_config.vault_creation_fee.amount,
@@ -64,7 +64,7 @@ pub fn create_vault(
         #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
         return Err(ContractError::TokenFactoryNotEnabled {});
 
-        let lp_symbol = format!("{asset_label}.{LP_SYMBOL}");
+        let lp_symbol = format!("{asset_label}.vault.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };
 
