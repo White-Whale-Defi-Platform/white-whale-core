@@ -21,8 +21,7 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::state::{PAIR_INFO};
-
+use crate::state::PAIR_INFO;
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 

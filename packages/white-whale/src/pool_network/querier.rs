@@ -5,12 +5,21 @@ use crate::pool_network::pair::{
 };
 use crate::pool_network::trio::QueryMsg as TrioQueryMsg;
 
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
     to_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,
     QueryRequest, StdResult, Uint128, WasmQuery,
 };
 
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
+
+#[cw_serde]
+#[derive(QueryResponses)]
+pub enum QueryMsg {
+    /// Retrieves the decimals for the given native or ibc denom.
+    #[returns(NativeTokenDecimalsResponse)]
+    NativeTokenDecimals { denom: String },
+}
 
 pub fn query_balance(
     querier: &QuerierWrapper,

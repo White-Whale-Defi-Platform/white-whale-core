@@ -8,7 +8,7 @@ use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
 use white_whale::{
     fee::Fee,
     pool_network::{
-        asset::{AssetInfo, PairType, Asset},
+        asset::{Asset, AssetInfo, PairType},
         pair::PoolFee,
     },
 };
@@ -165,7 +165,11 @@ impl Suite {
         Ok(res)
     }
 
-    pub(crate) fn add_liquidity(&mut self, sender: Addr, vec: Vec<Asset>) -> AnyResult<AppResponse> {
+    pub(crate) fn add_liquidity(
+        &mut self,
+        sender: Addr,
+        vec: Vec<Asset>,
+    ) -> AnyResult<AppResponse> {
         let msg = ExecuteMsg::ProvideLiquidity {
             assets: vec,
             slippage_tolerance: None,
@@ -178,15 +182,28 @@ impl Suite {
         Ok(res)
     }
 
-    pub(crate) fn add_native_token_decimals(&mut self, sender: Addr, denom:String, decimals: u8) -> AnyResult<AppResponse>{
-       let msg = ExecuteMsg::AddNativeTokenDecimals { denom: denom.clone(), decimals };
-       let res = self
-           .app
-           .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[Coin{
-                denom: denom.to_string(),
-                amount: Uint128::from(1u128),
-              }])
-           .unwrap();
-         Ok(res)
+    pub(crate) fn add_native_token_decimals(
+        &mut self,
+        sender: Addr,
+        denom: String,
+        decimals: u8,
+    ) -> AnyResult<AppResponse> {
+        let msg = ExecuteMsg::AddNativeTokenDecimals {
+            denom: denom.clone(),
+            decimals,
+        };
+        let res = self
+            .app
+            .execute_contract(
+                sender,
+                self.pool_manager_addr.clone(),
+                &msg,
+                &[Coin {
+                    denom: denom.to_string(),
+                    amount: Uint128::from(1u128),
+                }],
+            )
+            .unwrap();
+        Ok(res)
     }
 }

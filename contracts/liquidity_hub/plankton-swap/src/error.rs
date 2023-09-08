@@ -2,7 +2,8 @@ use crate::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
     CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
     OverflowError, StdError, Uint128,
-};use thiserror::Error;
+};
+use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -59,7 +60,6 @@ pub enum ContractError {
 
     #[error("A balance greater than zero is required by the factory to verify the asset")]
     InvalidVerificationBalance {},
-
 
     #[error("Burn fee is not allowed when using factory tokens")]
     TokenFactoryAssetBurnDisabled {},

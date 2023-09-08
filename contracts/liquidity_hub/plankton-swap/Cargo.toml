@@ -33,6 +33,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 injective = ["white-whale/injective"]
 token_factory = ["white-whale/token_factory"]
 osmosis_token_factory = ["white-whale/osmosis_token_factory"]
+
 # use library feature to disable all instantiate/execute/query exports
 library = []
 

@@ -1,8 +1,9 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Decimal;
 use white_whale::pool_network::{
-    asset::{Asset, PairType},
-    pair::PoolFee, factory::NativeTokenDecimalsResponse,
+    asset::{Asset, AssetInfo, PairType},
+    factory::NativeTokenDecimalsResponse,
+    pair::PoolFee,
 };
 
 use crate::state::NAssets;
@@ -31,8 +32,23 @@ pub enum ExecuteMsg {
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
+    /// Swap an offer asset to the other
+    Swap {
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<String>,
+    },
+    // /// Withdraws liquidity from the pool. Used only when the LP is a token factory token.
+    WithdrawLiquidity {
+        assets: Vec<Asset>,
+    },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals { denom: String, decimals: u8 },
+    AddNativeTokenDecimals {
+        denom: String,
+        decimals: u8,
+    },
 }
 
 #[cw_serde]

@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdResult, Storage};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
@@ -88,6 +88,34 @@ pub struct NPairInfo {
     pub asset_decimals: NDecimals,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
+}
+impl NPairInfo {
+    pub fn query_pools(
+        &self,
+        querier: &QuerierWrapper,
+        api: &dyn Api,
+        contract_addr: Addr,
+    ) -> StdResult<[Asset; 2]> {
+        match &self.asset_infos {
+            NAssets::TWO(assets) => {
+                // This is for two pools only
+                let info_0: AssetInfo = assets[0].clone();
+                let info_1: AssetInfo = assets[1].clone();
+                Ok([
+                    Asset {
+                        amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                        info: info_0,
+                    },
+                    Asset {
+                        amount: info_1.query_pool(querier, api, contract_addr)?,
+                        info: info_1,
+                    },
+                ])
+            }
+            NAssets::THREE(_) => todo!(),
+            NAssets::N(_) => todo!(),
+        }
+    }
 }
 
 // // We could store trios separate to pairs but if we use trio key properly theres no need really
