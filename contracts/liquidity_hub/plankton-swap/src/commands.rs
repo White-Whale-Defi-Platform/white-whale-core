@@ -94,6 +94,8 @@ pub fn create_pair(
     pair_type: PairType,
     token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
+    println!("create_pair");
+    println!("{}",env.contract.address);
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
     let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
@@ -125,6 +127,7 @@ pub fn create_pair(
             (assets, decimals)
         }
     };
+    println!("asset_infos_vec: {:?}", asset_infos_vec);
 
     if asset_infos_vec
         .iter()
@@ -188,6 +191,8 @@ pub fn create_pair(
         // Create the LP token using instantiate2
         let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
         let code_id = config.token_code_id;
+        println!("Before mint");
+
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
             "{}{}{}",
@@ -196,12 +201,16 @@ pub fn create_pair(
             env.block.height
         );
         let salt = Binary::from(seed.as_bytes());
-
-        let pool_lp_address = deps.api.addr_humanize(
+        println!("Before mint");
+        // let pool_lp_address = deps.api.addr_humanize(
+        //     &instantiate2_address(&checksum, &creator, &salt)
+        //         .map_err(|e| StdError::generic_err(e.to_string()))?,
+        // )?;
+        let pool_lp_address = Addr::unchecked(
             &instantiate2_address(&checksum, &creator, &salt)
-                .map_err(|e| StdError::generic_err(e.to_string()))?,
-        )?;
-
+                .map_err(|e| StdError::generic_err(e.to_string()))?
+                .to_string(),
+        );
         let lp_asset = AssetInfo::Token {
             contract_addr: pool_lp_address.into_string(),
         };
@@ -639,7 +648,7 @@ pub mod liquidity {
                 "provide_liquidity".to_string(),
             ));
         }
-
+        println!("provide_liquidity");
         let asset_infos = assets
             .iter()
             .map(|asset| asset.info.clone())
@@ -669,6 +678,7 @@ pub mod liquidity {
                         )?,
                     },
                 ];
+                println!("after here");
                 let deposits: [Uint128; 2] = [
                     assets
                         .iter()

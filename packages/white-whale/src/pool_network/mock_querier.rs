@@ -6,7 +6,7 @@ use std::panic;
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
+    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -321,6 +321,24 @@ impl WasmMockQuerier {
                 SystemResult::Ok(ContractResult::Ok(
                     to_binary(&contract_info_response).unwrap(),
                 ))
+            },
+            QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
+                let mut default = CodeInfoResponse::default();
+
+                match code_id {
+                    11 => {
+                        default.code_id = 67;
+                        default.creator = Addr::unchecked("creator").to_string();
+                        default.checksum = HexBinary::from_hex(
+                            "f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00",
+                        )
+                        .unwrap();
+                        SystemResult::Ok(to_binary(&default).into())
+                    }
+                    _ => {
+                        return SystemResult::Err(SystemError::Unknown {});
+                    }
+                }
             }
             _ => self.base.handle_query(request),
         }

@@ -7,6 +7,29 @@ To understand the framework better, please read the overview in the
 and dig into the [cosmwasm docs](https://www.cosmwasm.com).
 This assumes you understand the theory and just want to get coding.
 
+
+# Architecture 
+
+```mermaid
+graph LR 
+
+subgraph WHALE Dex 
+subgraph Pool Manager
+        Admin --> |Can Create| Pairs
+        Users --> |Can Create for X Fee| Pairs --> | Stored In| Contract
+        Contract --> |Deploys either a native or cw20 based| Liquidity_Token
+        Users --> |Can Provide Liquidity to | Contract --> |Mint to User| Liquidity_Token
+        Users --> |Can Withdraw Liquidity from | Contract --> |Burn provided | Liquidity_Token --> |Send refund assets to| Users
+
+
+        
+    end
+
+end
+
+```
+
+
 ## Creating a new repo from template
 
 Assuming you have a recent version of Rust and Cargo installed
