@@ -105,3 +105,39 @@ pub fn migrate_to_v091(deps: DepsMut<TerraQuery>) -> Result<Vec<CosmosMsg>, StdE
 
     Ok(messages)
 }
+
+pub(crate) fn migrate_to_v092(deps: DepsMut<TerraQuery>) -> Result<Vec<CosmosMsg>, StdError> {
+    let claimable_epochs = get_claimable_epochs(deps.as_ref())?;
+
+    // Forward first epoch, got broken due to early bonding
+    let mut faulty_epochs = claimable_epochs
+        .epochs
+        .into_iter()
+        .filter(|epoch| epoch.id == Uint64::one())
+        .collect::<Vec<Epoch>>();
+
+    let fee_collector_addr = CONFIG.load(deps.storage)?.fee_collector_addr;
+
+    // collect all available funds on faulty epochs and send them back to the fee collector, to be
+    // redistributed on the next (new) epoch
+
+    let mut total_fees: Vec<Asset> = vec![];
+    for epoch in faulty_epochs.iter_mut() {
+        total_fees = asset::aggregate_assets(total_fees, epoch.available.clone())?;
+
+        // set the available fees of this faulty epoch to zero
+        epoch.available = vec![];
+
+        // save the faulty epoch in the state
+        EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), epoch)?;
+    }
+
+    // create messages to send total_fees back to the fee collector
+    let mut messages = vec![];
+
+    for fee in total_fees {
+        messages.push(fee.into_msg(&deps.querier, fee_collector_addr.clone())?);
+    }
+
+    Ok(messages)
+}
