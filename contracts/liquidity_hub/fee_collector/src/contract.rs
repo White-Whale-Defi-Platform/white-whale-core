@@ -82,17 +82,19 @@ pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> Result<Response
             // deduct tax
             asset.amount = asset.deduct_tax(&deps.querier)?.amount;
 
-            let fees = vec![asset];
+            if !asset.amount.is_zero() {
+                let fees = vec![asset];
 
-            epoch.total = fees.clone();
-            epoch.available = fees.clone();
+                epoch.total = fees.clone();
+                epoch.available = fees.clone();
 
-            // send tokens to fee distributor
-            let config = CONFIG.load(deps.storage)?;
-            messages.push(CosmosMsg::Bank(BankMsg::Send {
-                to_address: config.fee_distributor.to_string(),
-                amount: fees.to_coins()?,
-            }));
+                // send tokens to fee distributor
+                let config = CONFIG.load(deps.storage)?;
+                messages.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: config.fee_distributor.to_string(),
+                    amount: fees.to_coins()?,
+                }));
+            }
         }
 
         TMP_EPOCH.remove(deps.storage);
