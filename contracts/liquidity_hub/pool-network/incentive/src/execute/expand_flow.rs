@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdResult, WasmMsg,
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, OverflowError, OverflowOperation,
+    Response, StdResult, Uint128, WasmMsg,
 };
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -89,17 +90,43 @@ pub fn expand_flow(
             return Err(ContractError::InvalidEndEpoch {});
         }
 
-        // expand amount and end_epoch for the flow
-        flow.flow_asset.amount = flow.flow_asset.amount.checked_add(flow_asset.amount)?;
+        // expand amount and end_epoch for the flow. The expansion happens from the next epoch.
+        let next_epoch = current_epoch.checked_add(1u64).map_or_else(
+            || {
+                Err(OverflowError {
+                    operation: OverflowOperation::Add,
+                    operand1: current_epoch.to_string(),
+                    operand2: 1u64.to_string(),
+                })
+            },
+            Ok,
+        )?;
+
+        if let Some(existing_amount) = flow.asset_history.get_mut(&next_epoch) {
+            *existing_amount = existing_amount.checked_add(flow_asset.amount)?;
+        } else {
+            flow.asset_history.insert(
+                next_epoch,
+                flow.flow_asset.amount.checked_add(flow_asset.amount)?,
+            );
+        }
+
         flow.end_epoch = end_epoch;
         FLOWS.save(deps.storage, (flow.start_epoch, flow.flow_id), &flow)?;
+
+        let total_flow_asset = flow
+            .asset_history
+            .values()
+            .copied()
+            .sum::<Uint128>()
+            .checked_add(flow.flow_asset.amount)?;
 
         Ok(Response::default().add_attributes(vec![
             ("action", "expand_flow".to_string()),
             ("flow_id", flow_id.to_string()),
             ("end_epoch", end_epoch.to_string()),
             ("expanding_flow_asset", flow_asset.to_string()),
-            ("total_flow_asset", flow.flow_asset.to_string()),
+            ("total_flow_asset", total_flow_asset.to_string()),
         ]))
     } else {
         Err(ContractError::NonExistentFlow {

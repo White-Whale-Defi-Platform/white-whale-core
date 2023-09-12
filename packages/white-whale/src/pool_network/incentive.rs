@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal256, Uint128};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 
 use crate::pool_network::asset::{Asset, AssetInfo};
@@ -105,6 +105,9 @@ pub struct Flow {
     pub end_epoch: u64,
     /// emitted tokens
     pub emitted_tokens: HashMap<u64, Uint128>,
+    /// A map containing the amount of tokens it was expanded to at a given epoch. This is used
+    /// to calculate the right amount of tokens to distribute at a given epoch when a flow is expanded.
+    pub asset_history: BTreeMap<u64, Uint128>,
 }
 
 /// Represents a position that accumulates flow rewards.

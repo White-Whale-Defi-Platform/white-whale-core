@@ -356,6 +356,7 @@ pub fn open_flow(
             start_epoch,
             end_epoch,
             emitted_tokens: HashMap::new(),
+            asset_history: Default::default(),
         },
     )?;
 
