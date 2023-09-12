@@ -5,6 +5,7 @@ use cosmwasm_std::{
 
 use white_whale::pool_network::asset::AssetInfo;
 
+use crate::helpers::get_flow_asset_amount_at_epoch;
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};
 use crate::{error::ContractError, helpers, state::FLOWS};
 
@@ -99,10 +100,11 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
                 previous_emission
             };
 
-            // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
-            let emission_per_epoch = flow
-                .flow_asset
-                .amount
+            // use the flow asset amount at the current epoch considering flow expansions
+            let flow_asset_amount = get_flow_asset_amount_at_epoch(flow, epoch_id);
+
+            // emission = (total_tokens_for_epoch_considering_expansion - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
+            let emission_per_epoch = flow_asset_amount
                 .saturating_sub(emitted_tokens)
                 .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
 

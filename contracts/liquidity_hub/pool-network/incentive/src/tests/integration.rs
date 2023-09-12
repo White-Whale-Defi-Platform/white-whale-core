@@ -327,6 +327,7 @@ fn try_open_more_flows_than_allowed() {
                 start_epoch: 1u64,
                 end_epoch: 10u64,
                 emitted_tokens: Default::default(),
+                asset_history: Default::default(),
             }
         );
         assert_eq!(
@@ -345,6 +346,7 @@ fn try_open_more_flows_than_allowed() {
                 start_epoch: 1u64,
                 end_epoch: 10u64,
                 emitted_tokens: Default::default(),
+                asset_history: Default::default(),
             }
         );
     });
@@ -667,6 +669,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -893,6 +896,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -1108,6 +1112,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         });
@@ -1284,6 +1289,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         });
@@ -1504,6 +1510,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -1755,6 +1762,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -1856,6 +1864,7 @@ fn close_native_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
             assert_eq!(
@@ -1874,6 +1883,7 @@ fn close_native_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         })
@@ -1948,6 +1958,7 @@ fn close_native_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         })
@@ -2053,6 +2064,7 @@ fn close_native_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         });
@@ -2159,6 +2171,7 @@ fn close_cw20_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
             assert_eq!(
@@ -2175,6 +2188,7 @@ fn close_cw20_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         })
@@ -2241,6 +2255,7 @@ fn close_cw20_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         })
@@ -2330,6 +2345,7 @@ fn close_cw20_token_flows() {
                     start_epoch: 1u64,
                     end_epoch: 10u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 }
             );
         });
@@ -4753,6 +4769,7 @@ fn open_expand_flow_with_native_token() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -4929,6 +4946,7 @@ fn open_expand_flow_with_native_token() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -4982,6 +5000,7 @@ fn open_expand_flow_with_native_token() {
                     start_epoch: 10u64,
                     end_epoch: 30u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -5068,6 +5087,7 @@ fn open_expand_flow_with_cw20_token() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -5203,6 +5223,7 @@ fn open_expand_flow_with_cw20_token() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })
@@ -5242,6 +5263,7 @@ fn open_expand_flow_with_cw20_token() {
                     start_epoch: 10u64,
                     end_epoch: 30u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         });
@@ -5327,6 +5349,7 @@ fn fail_expand_ended_flow() {
                     start_epoch: 10u64,
                     end_epoch: 19u64,
                     emitted_tokens: Default::default(),
+                    asset_history: Default::default(),
                 })
             );
         })

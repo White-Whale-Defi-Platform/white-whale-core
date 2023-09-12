@@ -58,3 +58,14 @@ pub fn delete_weight_history_for_user(
         });
     Ok(())
 }
+
+/// Gets the flow asset amount for a given epoch, taking into account the asset history, i.e. flow expansion.
+pub fn get_flow_asset_amount_at_epoch(flow: &Flow, epoch: u64) -> Uint128 {
+    let mut asset_amount = flow.flow_asset.amount;
+
+    if let Some((_, &change_amount)) = flow.asset_history.range(..=epoch).rev().next() {
+        asset_amount = change_amount;
+    }
+
+    asset_amount
+}
