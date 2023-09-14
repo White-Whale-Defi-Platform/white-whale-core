@@ -329,9 +329,7 @@ impl WasmMockQuerier {
                     11 => {
                         default.code_id = 67;
                         default.creator = Addr::unchecked("creator").to_string();
-                        default.checksum = HexBinary::from_hex(
-                            "f7bb7b18fb01bbf425cf4ed2cd4b7fb26a019a7fc75a4dc87e8a0b768c501f00",
-                        )
+                        default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
                         .unwrap();
                         SystemResult::Ok(to_binary(&default).into())
                     }

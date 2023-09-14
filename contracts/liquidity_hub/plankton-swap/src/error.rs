@@ -4,7 +4,7 @@ use cosmwasm_std::{
     OverflowError, StdError, Uint128,
 };
 use thiserror::Error;
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),

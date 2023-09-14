@@ -44,7 +44,7 @@ uint = "0.9.5"
 integer-sqrt = "0.1.5"
 anyhow = { version = "1.0.71"}
 cw-controllers = "1.1.0"
-
+sha256 = "1.4.0"
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
 fee_collector = { path = "./contracts/liquidity_hub/fee_collector" }
