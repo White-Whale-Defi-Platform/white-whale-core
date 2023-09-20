@@ -100,6 +100,7 @@
       "description": "Represents a flow.",
       "type": "object",
       "required": [
+        "asset_history",
         "claimed_amount",
         "curve",
         "emitted_tokens",
@@ -110,6 +111,25 @@
         "start_epoch"
       ],
       "properties": {
+        "asset_history": {
+          "description": "A map containing the amount of tokens it was expanded to at a given epoch. This is used to calculate the right amount of tokens to distribute at a given epoch when a flow is expanded.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": [
+              {
+                "$ref": "#/definitions/Uint128"
+              },
+              {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        },
         "claimed_amount": {
           "description": "The amount of the `flow_asset` that has been claimed so far.",
           "allOf": [
@@ -160,6 +180,13 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "flow_label": {
+          "description": "An alternative flow label.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "start_epoch": {
           "description": "The epoch at which the flow starts.",

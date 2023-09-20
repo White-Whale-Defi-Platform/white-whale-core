@@ -19,16 +19,19 @@ use crate::{
 };
 
 const MIN_FLOW_AMOUNT: Uint128 = Uint128::new(1_000u128);
+pub const DEFAULT_FLOW_DURATION: u64 = 14u64;
 
 /// Opens a flow to incentivize liquidity providers
+#[allow(clippy::too_many_arguments)]
 pub fn open_flow(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     start_epoch: Option<u64>,
-    end_epoch: u64,
-    curve: Curve,
+    end_epoch: Option<u64>,
+    curve: Option<Curve>,
     mut flow_asset: Asset,
+    flow_label: Option<String>,
 ) -> Result<Response, ContractError> {
     // check the user is not trying to create an empty flow
     if flow_asset.amount < MIN_FLOW_AMOUNT {
@@ -319,6 +322,11 @@ pub fn open_flow(
     }
 
     let current_epoch = helpers::get_current_epoch(deps.as_ref())?;
+    let end_epoch = end_epoch.unwrap_or(
+        current_epoch
+            .checked_add(DEFAULT_FLOW_DURATION)
+            .ok_or(ContractError::InvalidEndEpoch {})?,
+    );
 
     // ensure the flow is set for a expire date in the future
     if current_epoch > end_epoch {
@@ -344,12 +352,15 @@ pub fn open_flow(
     let flow_id =
         FLOW_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1u64))?;
 
+    let curve = curve.unwrap_or(Curve::Linear);
+
     FLOWS.save(
         deps.storage,
         (start_epoch, flow_id),
         &Flow {
             flow_creator: info.sender.clone(),
             flow_id,
+            flow_label: flow_label.clone(),
             curve: curve.clone(),
             flow_asset: flow_asset.clone(),
             claimed_amount: Uint128::zero(),
@@ -360,17 +371,24 @@ pub fn open_flow(
         },
     )?;
 
+    let mut attributes = vec![("action", "open_flow".to_string())];
+
+    if let Some(flow_label) = flow_label {
+        attributes.push(("flow_label", flow_label));
+    }
+
+    attributes.extend(vec![
+        ("flow_id", flow_id.to_string()),
+        ("flow_creator", info.sender.into_string()),
+        ("flow_asset", flow_asset.info.to_string()),
+        ("flow_asset_amount", flow_asset.amount.to_string()),
+        ("start_epoch", start_epoch.to_string()),
+        ("end_epoch", end_epoch.to_string()),
+        ("emissions_per_epoch", emissions_per_epoch.to_string()),
+        ("curve", curve.to_string()),
+    ]);
+
     Ok(Response::default()
-        .add_attributes(vec![
-            ("action", "open_flow".to_string()),
-            ("flow_id", flow_id.to_string()),
-            ("flow_creator", info.sender.into_string()),
-            ("flow_asset", flow_asset.info.to_string()),
-            ("flow_asset_amount", flow_asset.amount.to_string()),
-            ("start_epoch", start_epoch.to_string()),
-            ("end_epoch", end_epoch.to_string()),
-            ("emissions_per_epoch", emissions_per_epoch.to_string()),
-            ("curve", curve.to_string()),
-        ])
+        .add_attributes(attributes)
         .add_messages(messages))
 }

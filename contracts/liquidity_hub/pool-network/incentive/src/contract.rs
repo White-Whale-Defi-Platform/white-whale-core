@@ -9,12 +9,13 @@ use white_whale::pool_network::incentive::{
 };
 
 use semver::Version;
+use white_whale::migrate_guards::check_contract_name;
 use white_whale::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
 use crate::state::{CONFIG, FLOW_COUNTER, GLOBAL_WEIGHT};
-use crate::{execute, queries};
+use crate::{execute, migrations, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-incentive";
@@ -83,8 +84,20 @@ pub fn execute(
             end_epoch,
             curve,
             flow_asset,
-        } => execute::open_flow(deps, env, info, start_epoch, end_epoch, curve, flow_asset),
-        ExecuteMsg::CloseFlow { flow_id } => execute::close_flow(deps, info, flow_id),
+            flow_label,
+        } => execute::open_flow(
+            deps,
+            env,
+            info,
+            start_epoch,
+            end_epoch,
+            curve,
+            flow_asset,
+            flow_label,
+        ),
+        ExecuteMsg::CloseFlow { flow_identifier } => {
+            execute::close_flow(deps, info, flow_identifier)
+        }
         ExecuteMsg::OpenPosition {
             amount,
             unbonding_duration,
@@ -101,10 +114,10 @@ pub fn execute(
         ExecuteMsg::Withdraw {} => execute::withdraw(deps, env, info),
         ExecuteMsg::Claim {} => execute::claim(deps, info),
         ExecuteMsg::ExpandFlow {
-            flow_id,
+            flow_identifier,
             end_epoch,
             flow_asset,
-        } => execute::expand_flow(deps, info, env, flow_id, end_epoch, flow_asset),
+        } => execute::expand_flow(deps, info, env, flow_identifier, end_epoch, flow_asset),
     }
 }
 
@@ -113,8 +126,24 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&queries::get_config(deps)?)?),
-        QueryMsg::Flow { flow_id } => Ok(to_binary(&queries::get_flow(deps, flow_id)?)?),
-        QueryMsg::Flows {} => Ok(to_binary(&queries::get_flows(deps)?)?),
+        QueryMsg::Flow {
+            flow_identifier,
+            start_epoch,
+            end_epoch,
+        } => Ok(to_binary(&queries::get_flow(
+            deps,
+            flow_identifier,
+            start_epoch,
+            end_epoch,
+        )?)?),
+        QueryMsg::Flows {
+            start_epoch,
+            end_epoch,
+        } => Ok(to_binary(&queries::get_flows(
+            deps,
+            start_epoch,
+            end_epoch,
+        )?)?),
         QueryMsg::Positions { address } => {
             Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
         }
@@ -130,7 +159,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
+
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
 
@@ -139,6 +170,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
             current_version: storage_version,
             new_version: version,
         });
+    }
+
+    if storage_version < Version::parse("1.0.4")? {
+        migrations::migrate_to_v105(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

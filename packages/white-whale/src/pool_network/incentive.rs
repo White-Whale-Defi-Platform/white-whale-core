@@ -1,7 +1,8 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal256, Uint128};
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
+
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, Decimal256, Uint128};
 
 use crate::pool_network::asset::{Asset, AssetInfo};
 
@@ -19,23 +20,25 @@ pub enum ExecuteMsg {
     TakeGlobalWeightSnapshot {},
     /// Opens a new liquidity flow
     OpenFlow {
-        /// The epoch at which the flow should start.
-        ///
-        /// If unspecified, the flow will start at the current epoch.
+        /// The epoch at which the flow will start. If unspecified, the flow will start at the
+        /// current epoch.
         start_epoch: Option<u64>,
-        /// The epoch at which the flow should end.
-        end_epoch: u64,
-        /// The type of distribution curve.
-        curve: Curve,
+        /// The epoch at which the flow should end. If unspecified, the flow will default to end at
+        /// 14 epochs from the current one.
+        end_epoch: Option<u64>,
+        /// The type of distribution curve. If unspecified, the distribution will be linear.
+        curve: Option<Curve>,
         /// The asset to be distributed in this flow.
         flow_asset: Asset,
+        /// If set, the label will be used to identify the flow, in addition to the flow_id.
+        flow_label: Option<String>,
     },
     /// Closes an existing liquidity flow.
     ///
     /// Sender of the message must either be the contract admin or the creator of the flow.
     CloseFlow {
-        /// The id of the flow to close.
-        flow_id: u64,
+        /// The identifier of the flow to close.
+        flow_identifier: FlowIdentifier,
     },
     /// Creates a new position to earn flow rewards.
     OpenPosition {
@@ -74,11 +77,11 @@ pub enum ExecuteMsg {
     Claim {},
     /// Expands an existing flow.
     ExpandFlow {
-        /// The id of the flow to expand.
-        flow_id: u64,
-        /// The epoch at which the flow should end.
-        end_epoch: u64,
-        /// The asset to be expanded in this flow.
+        /// The identifier of the flow to expand, whether an id or a label.
+        flow_identifier: FlowIdentifier,
+        /// The epoch at which the flow should end. If not set, the flow will be expanded a default value of 14 epochs.
+        end_epoch: Option<u64>,
+        /// The asset to expand this flow with.
         flow_asset: Asset,
     },
 }
@@ -91,6 +94,8 @@ pub struct MigrateMsg {}
 pub struct Flow {
     /// A unique identifier of the flow.
     pub flow_id: u64,
+    /// An alternative flow label.
+    pub flow_label: Option<String>,
     /// The account which opened the flow and can manage it.
     pub flow_creator: Addr,
     /// The asset the flow was created to distribute.
@@ -98,7 +103,8 @@ pub struct Flow {
     /// The amount of the `flow_asset` that has been claimed so far.
     pub claimed_amount: Uint128,
     /// The type of curve the flow has.
-    pub curve: Curve, //todo not doing anything for now
+    pub curve: Curve,
+    //todo not doing anything for now
     /// The epoch at which the flow starts.
     pub start_epoch: u64,
     /// The epoch at which the flow ends.
@@ -107,7 +113,7 @@ pub struct Flow {
     pub emitted_tokens: HashMap<u64, Uint128>,
     /// A map containing the amount of tokens it was expanded to at a given epoch. This is used
     /// to calculate the right amount of tokens to distribute at a given epoch when a flow is expanded.
-    pub asset_history: BTreeMap<u64, Uint128>,
+    pub asset_history: BTreeMap<u64, (Uint128, u64)>,
 }
 
 /// Represents a position that accumulates flow rewards.
@@ -148,15 +154,28 @@ pub enum QueryMsg {
     /// Retrieves the current contract configuration.
     #[returns(ConfigResponse)]
     Config {},
-    /// Retrieves a specific flow.
+    /// Retrieves a specific flow. If start_epoch and end_epoch are set, the asset_history and
+    /// emitted_tokens will be filtered to only include epochs within the range. The maximum gap between
+    /// the start_epoch and end_epoch is 100 epochs.
     #[returns(FlowResponse)]
     Flow {
         /// The id of the flow to find.
-        flow_id: u64,
+        flow_identifier: FlowIdentifier,
+        /// If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.
+        start_epoch: Option<u64>,
+        /// If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.
+        end_epoch: Option<u64>,
     },
-    /// Retrieves the current flows.
+    /// Retrieves the current flows. If start_epoch and end_epoch are set, the asset_history and
+    /// emitted_tokens will be filtered to only include epochs within the range. The maximum gap between
+    /// the start_epoch and end_epoch is 100 epochs.
     #[returns(FlowsResponse)]
-    Flows {},
+    Flows {
+        /// If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.
+        start_epoch: Option<u64>,
+        /// If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.
+        end_epoch: Option<u64>,
+    },
     /// Retrieves the positions for an address.
     #[returns(PositionsResponse)]
     Positions {
@@ -284,4 +303,19 @@ pub struct RewardsShareResponse {
     pub address_weight: Uint128,
     pub share: Decimal256,
     pub epoch_id: u64,
+}
+
+#[cw_serde]
+pub enum FlowIdentifier {
+    Id(u64),
+    Label(String),
+}
+
+impl fmt::Display for FlowIdentifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FlowIdentifier::Id(flow_id) => write!(f, "flow_id: {}", flow_id),
+            FlowIdentifier::Label(flow_label) => write!(f, "flow_label: {}", flow_label),
+        }
+    }
 }
