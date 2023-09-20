@@ -10,12 +10,12 @@ mod tests {
     #[test]
     fn test_get_flow_asset_amount_at_epoch_with_expansion() {
         let mut asset_history = BTreeMap::new();
-        asset_history.insert(0, Uint128::from(10000u128));
-        asset_history.insert(7, Uint128::from(20000u128));
-        asset_history.insert(10, Uint128::from(50000u128));
-
+        asset_history.insert(0, (Uint128::from(10000u128), 105u64));
+        asset_history.insert(7, (Uint128::from(20000u128), 110u64));
+        asset_history.insert(10, (Uint128::from(50000u128), 115u64));
         let flow = Flow {
             flow_id: 1,
+            flow_label: None,
             flow_creator: Addr::unchecked("creator"),
             flow_asset: Asset {
                 info: AssetInfo::NativeToken {
@@ -69,10 +69,11 @@ mod tests {
     }
     #[test]
     fn test_get_flow_asset_amount_at_epoch_without_expansion() {
-        let mut asset_history = BTreeMap::new();
+        let asset_history = BTreeMap::new();
 
         let flow = Flow {
             flow_id: 1,
+            flow_label: None,
             flow_creator: Addr::unchecked("creator"),
             flow_asset: Asset {
                 info: AssetInfo::NativeToken {

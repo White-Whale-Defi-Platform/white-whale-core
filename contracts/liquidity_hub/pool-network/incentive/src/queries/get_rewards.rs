@@ -4,6 +4,7 @@ use white_whale::pool_network::{asset::Asset, incentive::RewardsResponse};
 
 use crate::error::ContractError;
 use crate::helpers;
+use crate::helpers::{get_flow_asset_amount_at_epoch, get_flow_current_end_epoch};
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};
 
 #[allow(unused_assignments)]
@@ -21,18 +22,21 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
         }
     }
 
-    println!("current_epoch: {:?}", current_epoch);
-    println!("last_claimed_epoch: {:?}", last_claimed_epoch);
-
     let flows = helpers::get_available_flows(deps, &current_epoch)?;
 
     let mut last_epoch_user_weight_update: EpochId = 0u64;
     let mut last_user_weight_seen: Uint128 = Uint128::zero();
     let mut rewards = vec![];
-    println!("flows: {:?}", flows);
+
     for flow in flows.iter() {
+        let expanded_default_values = (flow.flow_asset.amount, flow.end_epoch);
+        let (_, (expanded_asset_amount, expanded_end_epoch)) = flow
+            .asset_history
+            .last_key_value()
+            .unwrap_or((&0u64, &expanded_default_values));
+
         // check if flow already ended and if everything has been claimed for that flow.
-        if current_epoch > flow.end_epoch && flow.claimed_amount == flow.flow_asset.amount {
+        if current_epoch > *expanded_end_epoch && flow.claimed_amount == expanded_asset_amount {
             // if so, skip flow.
             continue;
         }
@@ -50,11 +54,6 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
                 earliest_available_weight_for_user[0];
         }
 
-        println!(
-            "earliest_available_weight_for_user: {:?}",
-            earliest_available_weight_for_user
-        );
-
         let first_claimable_epoch = if let Some(last_claimed_epoch) = last_claimed_epoch {
             // start claiming from the last claimed epoch + 1
             last_claimed_epoch + 1u64
@@ -70,8 +69,6 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
             }
         };
 
-        println!("first_claimable_epoch: {:?}", first_claimable_epoch);
-
         let mut flow_emitted_tokens = flow.emitted_tokens.clone();
         let mut total_reward = Uint128::zero();
 
@@ -80,7 +77,7 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
             if epoch_id < flow.start_epoch {
                 // the flow is not active yet, skip
                 continue;
-            } else if epoch_id >= flow.end_epoch {
+            } else if epoch_id >= *expanded_end_epoch {
                 // this flow has finished
                 // todo maybe we should make end_epoch inclusive?
                 break;
@@ -98,22 +95,20 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
                 // emission stored in the map. So defaulting to zero emulates the case when the if
                 // statement above is true.
                 let previous_emission = *flow_emitted_tokens
-                    .get(&(epoch_id - 1u64))
+                    .get(&(epoch_id.saturating_sub(1u64)))
                     .unwrap_or(&Uint128::zero());
 
                 previous_emission
             };
 
-            println!("emitted_tokens: {:?}", emitted_tokens);
+            // use the flow asset amount at the current epoch considering flow expansions
+            let flow_asset_amount = get_flow_asset_amount_at_epoch(flow, epoch_id);
+            let flow_expanded_end_epoch = get_flow_current_end_epoch(flow, epoch_id);
 
             // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
-            let emission_per_epoch = flow
-                .flow_asset
-                .amount
+            let emission_per_epoch = flow_asset_amount
                 .saturating_sub(emitted_tokens)
-                .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
-
-            println!("emission_per_epoch: {:?}", emission_per_epoch);
+                .checked_div(Uint128::from(flow_expanded_end_epoch - epoch_id))?;
 
             // record the emitted tokens for this epoch if it hasn't been recorded before.
             // emitted tokens for this epoch is the total emitted tokens in previous epoch + the ones
@@ -164,7 +159,7 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
 
             // sanity check for user_reward_at_epoch
             if user_reward_at_epoch > emission_per_epoch
-                || user_reward_at_epoch.checked_add(flow.claimed_amount)? > flow.flow_asset.amount
+                || user_reward_at_epoch.checked_add(flow.claimed_amount)? > *expanded_asset_amount
             {
                 return Err(ContractError::InvalidReward {});
             }

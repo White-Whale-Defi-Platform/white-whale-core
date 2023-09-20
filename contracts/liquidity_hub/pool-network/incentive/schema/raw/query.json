@@ -17,7 +17,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Retrieves a specific flow.",
+      "description": "Retrieves a specific flow. If start_epoch and end_epoch are set, the asset_history and emitted_tokens will be filtered to only include epochs within the range. The maximum gap between the start_epoch and end_epoch is 100 epochs.",
       "type": "object",
       "required": [
         "flow"
@@ -26,12 +26,32 @@
         "flow": {
           "type": "object",
           "required": [
-            "flow_id"
+            "flow_identifier"
           ],
           "properties": {
-            "flow_id": {
+            "end_epoch": {
+              "description": "If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "flow_identifier": {
               "description": "The id of the flow to find.",
-              "type": "integer",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/FlowIdentifier"
+                }
+              ]
+            },
+            "start_epoch": {
+              "description": "If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.",
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint64",
               "minimum": 0.0
             }
@@ -42,7 +62,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Retrieves the current flows.",
+      "description": "Retrieves the current flows. If start_epoch and end_epoch are set, the asset_history and emitted_tokens will be filtered to only include epochs within the range. The maximum gap between the start_epoch and end_epoch is 100 epochs.",
       "type": "object",
       "required": [
         "flows"
@@ -50,6 +70,26 @@
       "properties": {
         "flows": {
           "type": "object",
+          "properties": {
+            "end_epoch": {
+              "description": "If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "start_epoch": {
+              "description": "If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
           "additionalProperties": false
         }
       },
@@ -149,5 +189,37 @@
       },
       "additionalProperties": false
     }
-  ]
+  ],
+  "definitions": {
+    "FlowIdentifier": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
 }
