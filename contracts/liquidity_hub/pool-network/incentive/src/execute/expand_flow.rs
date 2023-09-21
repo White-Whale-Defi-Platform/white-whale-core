@@ -15,6 +15,10 @@ use crate::state::{EpochId, FlowId, FLOWS};
 // If the end_epoch is not specified, the flow will be expanded by DEFAULT_FLOW_DURATION when
 // the current epoch is within FLOW_EXPANSION_BUFFER epochs from the end_epoch.
 const FLOW_EXPANSION_BUFFER: u64 = 5u64;
+// A flow can only be expanded for a maximum of FLOW_EXPANSION_LIMIT epochs. If that limit is exceeded,
+// the flow is "reset", shifting the start_epoch to the current epoch and the end_epoch to the current_epoch + DEFAULT_FLOW_DURATION.
+// Unclaimed assets become the flow.asset and both the flow.asset_history and flow.emitted_tokens is cleared.
+const FLOW_EXPANSION_LIMIT: u64 = 180u64;
 
 /// Expands a flow with the given id. Can be done by anyone.
 pub fn expand_flow(
@@ -108,6 +112,36 @@ pub fn expand_flow(
             return Err(ContractError::InvalidEndEpoch {});
         }
 
+        let mut attributes = vec![("action", "expand_flow".to_string())];
+
+        // check if the flow will be reset, i.e. asset history will be cleared
+        if expanded_end_epoch.saturating_sub(flow.start_epoch) > FLOW_EXPANSION_LIMIT {
+            // if the flow is being reset, shift the start_epoch to the current epoch, clear the map histories,
+            // and make the flow_asset the remaining amount that has not been claimed.
+
+            FLOWS.remove(deps.storage, (flow.start_epoch, flow.flow_id));
+
+            let flow_amount_default_value = (flow_asset.amount, 0u64);
+
+            let (_, (flow_amount, _)) = flow
+                .asset_history
+                .last_key_value()
+                .unwrap_or((&0u64, &flow_amount_default_value));
+
+            flow.flow_asset = Asset {
+                info: flow_asset.info.clone(),
+                amount: flow_amount.saturating_sub(flow.claimed_amount),
+            };
+
+            flow.start_epoch = current_epoch;
+            flow.end_epoch = expanded_end_epoch;
+            flow.claimed_amount = Uint128::zero();
+            flow.asset_history.clear();
+            flow.emitted_tokens.clear();
+
+            attributes.push(("flow reset", "true".to_string()));
+        }
+
         // expand amount and end_epoch for the flow. The expansion happens from the next epoch.
         let next_epoch = current_epoch.checked_add(1u64).map_or_else(
             || {
@@ -129,18 +163,6 @@ pub fn expand_flow(
             // default to the original flow asset amount
 
             let expanded_amount = get_flow_asset_amount_at_epoch(&flow, current_epoch);
-            //
-            // let expanded_amount = if flow.asset_history.is_empty() {
-            //     flow.flow_asset.amount
-            // } else {
-            //     flow.asset_history.range(..=current_epoch).rev().next()
-            // };
-            //
-            // let expanded_amount = flow
-            //     .asset_history
-            //
-            //     .get(&current_epoch)
-            //     .unwrap_or(&flow.flow_asset.amount);
 
             flow.asset_history.insert(
                 next_epoch,
@@ -157,13 +179,14 @@ pub fn expand_flow(
             .sum::<Uint128>()
             .checked_add(flow.flow_asset.amount)?;
 
-        Ok(Response::default().add_attributes(vec![
-            ("action", "expand_flow".to_string()),
-            ("flow_id", flow_identifier.to_string()),
+        attributes.append(&mut vec![
+            ("flow_id", flow.flow_id.to_string()),
             ("end_epoch", end_epoch.to_string()),
             ("expanding_flow_asset", flow_asset.to_string()),
             ("total_flow_asset", total_flow_asset.to_string()),
-        ]))
+        ]);
+
+        Ok(Response::default().add_attributes(attributes))
     } else {
         Err(ContractError::NonExistentFlow {
             invalid_identifier: flow_identifier,
