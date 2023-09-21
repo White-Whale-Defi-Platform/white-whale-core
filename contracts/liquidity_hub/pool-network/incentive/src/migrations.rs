@@ -1,3 +1,5 @@
+#![cfg(not(tarpaulin_include))]
+
 use std::collections::BTreeMap;
 
 // currently a stub file
@@ -7,8 +9,8 @@ use cosmwasm_std::{DepsMut, StdError};
 use crate::queries::get_flows;
 use crate::state::FLOWS;
 
-/// Migrates to version 1.0.5, which introduces the [Flow] field asset_history.
-pub(crate) fn migrate_to_v105(deps: DepsMut) -> Result<(), StdError> {
+/// Migrates to version 1.0.6, which introduces the [Flow] field asset_history.
+pub(crate) fn migrate_to_v106(deps: DepsMut) -> Result<(), StdError> {
     let mut flows = get_flows(deps.as_ref(), None, None)?;
 
     // add the asset_history field to all available flows

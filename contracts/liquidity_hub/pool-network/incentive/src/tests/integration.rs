@@ -5582,11 +5582,8 @@ fn open_expand_flow_with_default_values() {
             *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
         });
 
-    let carol_usdc_funds = RefCell::new(Uint128::zero());
-    let alice_usdc_funds = RefCell::new(Uint128::zero());
     println!("CURRENT_EPOCH  -> {:?}", current_epoch);
 
-    let flow_end_epoch = current_epoch.clone().into_inner() + 10;
     suite
         .open_incentive_flow(
             alice.clone(),
@@ -5672,7 +5669,7 @@ fn open_expand_flow_with_default_values() {
         )
         .query_flow(
             incentive_addr.clone().into_inner(),
-            FlowIdentifier::Id(1u64),
+            FlowIdentifier::Label("alias".to_string()),
             |result| {
                 let flow = result.unwrap().unwrap().flow.unwrap();
                 assert_eq!(
@@ -6361,6 +6358,254 @@ fn open_expand_flow_verify_rewards() {
                         .checked_add(Uint128::new(30_000u128))
                         .unwrap(),
                 );
+            },
+        );
+}
+
+#[test]
+fn open_expand_flow_over_expand_limit() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(5_000_000_000u128, "uwhale".to_string()),
+        coin(50_000_000_000u128, "usdc".to_string()),
+        coin(5_000_000_000u128, "ampWHALE".to_string()),
+        coin(5_000_000_000u128, "bWHALE".to_string()),
+    ]);
+    let alice = suite.creator();
+    let carol = suite.senders[2].clone();
+
+    suite.instantiate_default_native_fee().create_lp_tokens();
+
+    let incentive_asset = AssetInfo::NativeToken {
+        denom: "ampWHALE".to_string(),
+    };
+
+    let incentive_addr = RefCell::new(Addr::unchecked(""));
+    let flow_ref = RefCell::new(Flow {
+        flow_id: 0,
+        flow_label: None,
+        flow_creator: alice.clone(),
+        flow_asset: Asset {
+            info: AssetInfo::NativeToken {
+                denom: "".to_string(),
+            },
+            amount: Default::default(),
+        },
+        claimed_amount: Default::default(),
+        curve: Curve::Linear,
+        start_epoch: 0,
+        end_epoch: 0,
+        emitted_tokens: Default::default(),
+        asset_history: Default::default(),
+    });
+
+    suite
+        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+            result.unwrap();
+        })
+        .query_incentive(incentive_asset.clone(), |result| {
+            let incentive = result.unwrap();
+            assert!(incentive.is_some());
+            *incentive_addr.borrow_mut() = incentive.unwrap();
+        })
+        .query_incentive_config(incentive_addr.clone().into_inner(), |result| {
+            let config = result.unwrap();
+            assert_eq!(config.lp_asset, incentive_asset.clone());
+        });
+
+    let open_position = incentive::OpenPosition {
+        amount: Uint128::new(1_000u128),
+        unbonding_duration: 86400u64,
+    };
+    suite
+        .open_incentive_position(
+            carol.clone(),
+            incentive_addr.clone().into_inner(),
+            open_position.amount,
+            open_position.unbonding_duration,
+            None,
+            vec![coin(1_000u128, "ampWHALE".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_positions(
+            incentive_addr.clone().into_inner(),
+            carol.clone(),
+            |result| {
+                assert_eq!(
+                    result.unwrap().positions.first().unwrap(),
+                    &incentive::QueryPosition::OpenPosition {
+                        amount: Uint128::new(1_000u128),
+                        unbonding_duration: open_position.unbonding_duration,
+                        weight: Uint128::new(1_000u128),
+                    }
+                );
+            },
+        );
+
+    let current_epoch = RefCell::new(0u64);
+    suite
+        .create_epochs_on_fee_distributor(10, vec![incentive_addr.clone().into_inner()])
+        .query_current_epoch(|result| {
+            *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+        });
+
+    println!("CURRENT_EPOCH  -> {:?}", current_epoch);
+
+    suite
+        .open_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            None,
+            Some(21u64),
+            None,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(10_000u128),
+            },
+            Some("alias".to_string()),
+            &vec![coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(
+            incentive_addr.clone().into_inner(),
+            FlowIdentifier::Id(1u64),
+            |result| {
+                let flow = result.unwrap().unwrap().flow.unwrap();
+                *flow_ref.borrow_mut() = flow.clone();
+                assert_eq!(
+                    flow,
+                    Flow {
+                        flow_id: 1u64,
+                        flow_label: Some("alias".to_string()),
+                        flow_creator: alice.clone(),
+                        flow_asset: Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "usdc".to_string(),
+                            },
+                            amount: Uint128::new(10_000u128),
+                        },
+                        claimed_amount: Default::default(),
+                        curve: Curve::Linear,
+                        start_epoch: 11u64,
+                        end_epoch: 21u64,
+                        emitted_tokens: Default::default(),
+                        asset_history: Default::default(),
+                    }
+                );
+            },
+        );
+
+    let claimed_rewards = RefCell::new(Uint128::zero());
+
+    let mut i = 0;
+
+    // expand the flow until it gets reset
+    while flow_ref.clone().into_inner().start_epoch == 11u64 {
+        suite
+            .create_epochs_on_fee_distributor(1, vec![incentive_addr.clone().into_inner()])
+            .expand_flow(
+                carol.clone(),
+                incentive_addr.clone().into_inner(),
+                FlowIdentifier::Id(1u64),
+                None,
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "usdc".to_string(),
+                    },
+                    amount: Uint128::new(1_000u128),
+                },
+                vec![coin(1_000u128, "usdc")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_flow(
+                incentive_addr.clone().into_inner(),
+                FlowIdentifier::Id(1u64),
+                |result| {
+                    let flow = result.unwrap().unwrap().flow.unwrap();
+                    *flow_ref.borrow_mut() = flow.clone();
+                },
+            );
+
+        if i <= 170 {
+            suite
+                .claim(
+                    incentive_addr.clone().into_inner(),
+                    carol.clone(),
+                    |result| {
+                        result.unwrap();
+                    },
+                )
+                .query_flow(
+                    incentive_addr.clone().into_inner(),
+                    FlowIdentifier::Id(1u64),
+                    |result| {
+                        let flow_response = result.unwrap();
+                        println!("flow_response  -> {:?}", flow_response);
+                        *claimed_rewards.borrow_mut() =
+                            flow_response.unwrap().flow.unwrap().claimed_amount;
+                    },
+                );
+        }
+
+        i += 1;
+    }
+
+    suite.query_current_epoch(|result| {
+        *current_epoch.borrow_mut() = result.unwrap().epoch.id.u64();
+    });
+
+    suite
+        .query_flow(
+            incentive_addr.clone().into_inner(),
+            FlowIdentifier::Id(1u64),
+            |result| {
+                let flow_response = result.unwrap();
+                assert_eq!(
+                    flow_response.unwrap().flow.unwrap(),
+                    Flow {
+                        flow_id: 1u64,
+                        flow_label: Some("alias".to_string()),
+                        flow_creator: alice.clone(),
+                        flow_asset: Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "usdc".to_string(),
+                            },
+                            amount: Uint128::new(12_005u128), // 184k - ~173k claimed
+                        },
+                        claimed_amount: Default::default(),
+                        curve: Curve::Linear,
+                        start_epoch: 186u64,
+                        end_epoch: 203u64,
+                        emitted_tokens: Default::default(),
+                        asset_history: BTreeMap::from_iter(vec![(
+                            187,
+                            (Uint128::new(13_005), 203u64)
+                        )]),
+                    }
+                );
+            },
+        )
+        .close_incentive_flow(
+            alice.clone(),
+            incentive_addr.clone().into_inner(),
+            FlowIdentifier::Label("alias".to_string()),
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_flow(
+            incentive_addr.clone().into_inner(),
+            FlowIdentifier::Label("alias".to_string()),
+            |result| {
+                let flow_response = result.unwrap();
+                assert!(flow_response.is_none());
             },
         );
 }
