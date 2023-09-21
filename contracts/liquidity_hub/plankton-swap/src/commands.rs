@@ -93,8 +93,6 @@ pub fn create_pair(
     pair_type: PairType,
     token_factory_lp: bool,
 ) -> Result<Response, ContractError> {
-    println!("create_pair");
-    println!("{}", env.contract.address);
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
     let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
@@ -126,7 +124,6 @@ pub fn create_pair(
             (assets, decimals)
         }
     };
-    println!("asset_infos_vec: {:?}", asset_infos_vec);
 
     if asset_infos_vec
         .iter()
@@ -190,7 +187,6 @@ pub fn create_pair(
         // Create the LP token using instantiate2
         let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
         let code_id = config.token_code_id;
-        println!("Before mint");
 
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
@@ -200,7 +196,6 @@ pub fn create_pair(
             env.block.height
         );
         let salt = Binary::from(seed.as_bytes());
-        println!("Before mint");
         // let pool_lp_address = deps.api.addr_humanize(
         //     &instantiate2_address(&checksum, &creator, &salt)
         //         .map_err(|e| StdError::generic_err(e.to_string()))?,
@@ -213,20 +208,28 @@ pub fn create_pair(
                 .map_err(|e| StdError::generic_err(e.to_string()))?
                 .to_string(),
         );
-        println!("Pool lp address: {}", pool_lp_address);
         // Then we get the new address
-        let contract = env.contract.address.to_string().chars().map(|c| c as u8).collect::<Vec<_>>().into();
-        let pool_lp_address = Addr::unchecked(&instantiate2_address(
-            &checksum,
-            &contract,
-            &salt,
-        ).unwrap().0 .0.iter().map(|&c| c as char).collect::<String>());
-        println!("Pool lp address: {}", pool_lp_address);
+        let contract = env
+            .contract
+            .address
+            .to_string()
+            .chars()
+            .map(|c| c as u8)
+            .collect::<Vec<_>>()
+            .into();
+        let pool_lp_address = Addr::unchecked(
+            &instantiate2_address(&checksum, &contract, &salt)
+                .unwrap()
+                .0
+                 .0
+                .iter()
+                .map(|&c| c as char)
+                .collect::<String>(),
+        );
 
         let lp_asset = AssetInfo::Token {
             contract_addr: pool_lp_address.into_string(),
         };
-        println!("Before pair save with key {:?}", pair_key);
         // Now, after generating an address using instantiate 2 we can save this into PAIRS
         // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
         PAIRS.save(
@@ -339,7 +342,6 @@ pub mod swap {
             assets if assets.len() == 2 => {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
-                println!("{:?}", pair_info);
                 let mut pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
@@ -508,7 +510,7 @@ pub mod swap {
 }
 
 pub mod liquidity {
-    use cosmwasm_std::{Decimal, OverflowError, Uint128};
+    use cosmwasm_std::{Decimal, OverflowError, StdResult, Uint128};
     use cw20::Cw20ExecuteMsg;
     use white_whale::pool_network::{
         asset::{get_total_share, Asset, MINIMUM_LIQUIDITY_AMOUNT},
@@ -645,6 +647,28 @@ pub mod liquidity {
         }))
     }
 
+    /// Builds a CW20 transfer message
+    /// recipient: the address of the recipient
+    /// token_contract_address: the address of the CW20 contract
+    /// amount: the amount of tokens to transfer
+    /// returns a CosmosMsg::Wasm(WasmMsg::Execute) message
+    /// to transfer CW20 tokens
+    ///
+    pub fn build_transfer_cw20_token_msg(
+        recipient: Addr,
+        token_contract_address: String,
+        amount: Uint128,
+    ) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: token_contract_address,
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: recipient.into(),
+                amount,
+            })?,
+            funds: vec![],
+        }))
+    }
+
     pub fn provide_liquidity(
         deps: DepsMut,
         env: Env,
@@ -660,20 +684,15 @@ pub mod liquidity {
                 "provide_liquidity".to_string(),
             ));
         }
-        println!("provide_liquidity");
         let asset_infos = assets
             .iter()
             .map(|asset| asset.info.clone())
             .collect::<Vec<_>>();
-        println!("pro");
         let (assets_vec, mut pools, deposits, pair_info) = match assets {
             // For TWO assets we use the constant product logic
             assets if assets.len() == 2 => {
-                println!("before here");
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-                println!("pair_key: {:?}", pair_key);
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
-                println!("pair_key: {:?}", pair_info);
 
                 let mut pools: [Asset; 2] = [
                     Asset {
@@ -693,7 +712,6 @@ pub mod liquidity {
                         )?,
                     },
                 ];
-                println!("after here");
                 let deposits: [Uint128; 2] = [
                     assets
                         .iter()
@@ -706,7 +724,6 @@ pub mod liquidity {
                         .map(|a| a.amount)
                         .expect("Wrong asset info is given"),
                 ];
-                println!("after deposit dchecks");
 
                 (
                     assets.to_vec(),
@@ -776,7 +793,6 @@ pub mod liquidity {
         for asset in assets_vec.iter() {
             asset.assert_sent_native_token_balance(&info)?;
         }
-        println!("after native dchecks");
 
         if deposits.iter().any(|&deposit| deposit.is_zero()) {
             return Err(ContractError::InvalidZeroAmount {});
@@ -801,7 +817,6 @@ pub mod liquidity {
                 pool.amount = pool.amount.checked_sub(deposits[i]).unwrap();
             }
         }
-        println!("before fees");
         // // deduct protocol fee from pools
         // let collected_protocol_fees =
         //     COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
@@ -817,12 +832,10 @@ pub mod liquidity {
             }
             AssetInfo::NativeToken { denom } => denom,
         };
-
         // Compute share and other logic based on the number of assets
         let share = Uint128::zero();
         // ...
-        let total_share = deps.querier.query_supply(&liquidity_token)?.amount;
-        println!("total_share: {:?}", total_share);
+        let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
         let share = match pair_info.pair_type {
             PairType::ConstantProduct => {
                 let share = if total_share == Uint128::zero() {
@@ -840,11 +853,11 @@ pub mod liquidity {
                         ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
                     })?;
                     // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
-        if share.is_zero() {
-            return Err(ContractError::InvalidInitialLiquidityAmount(
-                MINIMUM_LIQUIDITY_AMOUNT,
-            ));
-        }
+                    if share.is_zero() {
+                        return Err(ContractError::InvalidInitialLiquidityAmount(
+                            MINIMUM_LIQUIDITY_AMOUNT,
+                        ));
+                    }
 
                     messages.append(&mut mint_lp_token_msg(
                         liquidity_token.clone(),
@@ -869,15 +882,34 @@ pub mod liquidity {
                         Uint128::from(result.as_u128())
                     };
 
+                    let amount = std::cmp::min(
+                        deposits[0].multiply_ratio(total_share, pools[0].amount),
+                        deposits[1].multiply_ratio(total_share, pools[1].amount),
+                    );
+
+                    let deps_as = [deposits[0], deposits[1]];
+                    let pools_as = [pools[0].clone(), pools[1].clone()];
+
+                    // assert slippage tolerance
+                    helpers::assert_slippage_tolerance(
+                        &slippage_tolerance,
+                        &deps_as,
+                        &pools_as,
+                        pair_info.pair_type,
+                        amount,
+                        total_share,
+                    )?;
+
                     messages.append(&mut mint_lp_token_msg(
                         liquidity_token.clone(),
                         env.contract.address.to_string(),
                         env.contract.address.to_string(),
-                        share,
+                        amount,
                     )?);
 
                     share
                 };
+
                 share
             }
             PairType::StableSwap { amp } => {
@@ -890,12 +922,11 @@ pub mod liquidity {
 
         // mint LP token to sender
         let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
-        messages.append(&mut mint_lp_token_msg(
+        messages.append(&mut vec![build_transfer_cw20_token_msg(
+            deps.api.addr_validate(&receiver)?,
             liquidity_token,
-            receiver.clone(),
-            env.contract.address.to_string(),
             share,
-        )?);
+        )?]);
 
         Ok(Response::new().add_messages(messages).add_attributes(vec![
             ("action", "provide_liquidity"),

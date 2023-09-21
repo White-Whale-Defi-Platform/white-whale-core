@@ -1,13 +1,13 @@
+use crate::state::NAssets;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
-use crate::state::NAssets;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
+    SubMsgResult, Uint128, WasmMsg,
+};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
-use cosmwasm_std::{
-    to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg, attr,
-};
 use cw20::Cw20ExecuteMsg;
 use white_whale::fee::Fee;
 
@@ -19,9 +19,9 @@ use white_whale::pool_network::denom::MsgMint;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::PoolFee;
 // use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
-use crate::msg::ExecuteMsg;
 use crate::contract::{execute, instantiate};
 use crate::error::ContractError;
+use crate::msg::ExecuteMsg;
 use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
 
 #[test]
@@ -31,33 +31,84 @@ fn provide_liquidity_cw20_lp() {
         amount: Uint128::from(2_000u128),
     }]);
 
+    // Note: In order to support and write tests sooner I override the MockAPI in mock_querier with a SimpleMockAPI
+    // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
+    // This likely breaks tests elsewhere
+    let TEMP_CONTRACT_ADDR: String =
+        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
+
     deps.querier.with_token_balances(&[
         (
-            &"liquidity0000".to_string(),
+            &TEMP_CONTRACT_ADDR.clone(),
             &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
         ),
-        (&"asset0000".to_string(), &[]),
+        (
+            &"asset0000".to_string(),
+            &[(&"addr0000".to_string(), &Uint128::from(100u128))],
+        ),
     ]);
+    deps.querier
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
 
-     // Instantiate contract
-        let msg = SingleSwapInstantiateMsg {
-            fee_collector_addr: "fee_collector_addr".to_string(),
-            owner: "owner".to_string(),
-            pair_code_id: 10u64,
-            token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
-                amount: Uint128::new(1000000u128),
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            }],
-        };
-        let env = mock_env();
-        let info = mock_info("owner", &[]);
-        let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+    // Instantiate contract
+    let msg = SingleSwapInstantiateMsg {
+        fee_collector_addr: "fee_collector_addr".to_string(),
+        owner: "owner".to_string(),
+        pair_code_id: 10u64,
+        token_code_id: 11u64,
+        pool_creation_fee: vec![Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+        }],
+    };
+    let env = mock_env();
+    let info = mock_info("owner", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(0, res.messages.len());
 
-    
+    // Create the Pair
+    let asset_infos = [
+        AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+    ];
+
+    let assets: NAssets = NAssets::TWO(asset_infos.clone());
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: assets.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
+    };
+
+    let env = mock_env();
+
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    );
+
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
     // unsuccessfully providing liquidity since share becomes zero, MINIMUM_LIQUIDITY_AMOUNT provided
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
@@ -73,7 +124,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: MINIMUM_LIQUIDITY_AMOUNT,
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };
@@ -89,7 +141,10 @@ fn provide_liquidity_cw20_lp() {
     let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     match res {
         ContractError::InvalidInitialLiquidityAmount { .. } => {}
-        _ => panic!("should return ContractError::InvalidInitialLiquidityAmount"),
+        _ => {
+            println!("{:?}", res);
+            panic!("should return ContractError::InvalidInitialLiquidityAmount")
+        }
     }
 
     // successfully provide liquidity for the exist pool
@@ -107,7 +162,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(2_000u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };
@@ -143,7 +199,7 @@ fn provide_liquidity_cw20_lp() {
     assert_eq!(
         mint_initial_lp_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "liquidity0000".to_string(),
+            contract_addr: TEMP_CONTRACT_ADDR.clone(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "cosmos2contract".to_string(),
                 amount: MINIMUM_LIQUIDITY_AMOUNT,
@@ -155,10 +211,10 @@ fn provide_liquidity_cw20_lp() {
     assert_eq!(
         mint_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
+            contract_addr: TEMP_CONTRACT_ADDR.clone(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
-                amount: Uint128::from(1_000u128),
+                amount: MINIMUM_LIQUIDITY_AMOUNT,
             })
             .unwrap(),
             funds: vec![],
@@ -179,7 +235,7 @@ fn provide_liquidity_cw20_lp() {
 
     deps.querier.with_token_balances(&[
         (
-            &"liquidity0000".to_string(),
+            &TEMP_CONTRACT_ADDR.to_string(),
             &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
         ),
         (
@@ -202,7 +258,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(200u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: Some("staking0000".to_string()), // try changing receiver
     };
@@ -218,7 +275,7 @@ fn provide_liquidity_cw20_lp() {
 
     // only accept 100, then 50 share will be generated with 100 * (100 / 200)
     let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
-    assert_eq!(res.messages.len(), 2usize);
+    assert_eq!(res.messages.len(), 3usize);
 
     let transfer_from_msg = res.messages.get(0).expect("no message");
     let mint_msg = res.messages.get(1).expect("no message");
@@ -229,7 +286,7 @@ fn provide_liquidity_cw20_lp() {
             msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: "addr0000".to_string(),
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(200u128),
             })
             .unwrap(),
             funds: vec![],
@@ -238,10 +295,10 @@ fn provide_liquidity_cw20_lp() {
     assert_eq!(
         mint_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "liquidity0000".to_string(),
+            contract_addr: TEMP_CONTRACT_ADDR.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Mint {
-                recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
-                amount: Uint128::from(50u128),
+                recipient: "cosmos2contract".to_string(), // LP tokens sent to specified receiver
+                amount: Uint128::from(33u128),
             })
             .unwrap(),
             funds: vec![],
@@ -263,7 +320,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(50u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };
@@ -282,7 +340,10 @@ fn provide_liquidity_cw20_lp() {
             msg,
             "Native token balance mismatch between the argument and the transferred".to_string()
         ),
-        _ => panic!("Must return generic error"),
+        _ => {
+            println!("{:?}", res);
+            panic!("Must return generic error");
+        }
     }
 
     // initialize token balance to 1:1
@@ -303,7 +364,7 @@ fn provide_liquidity_cw20_lp() {
         ),
         (
             &"asset0000".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(200u128))],
         ),
     ]);
 
@@ -322,7 +383,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(100u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: Some(Decimal::percent(1)),
         receiver: None,
     };
@@ -335,6 +397,17 @@ fn provide_liquidity_cw20_lp() {
             amount: Uint128::from(100u128),
         }],
     );
+
+    deps.querier.with_token_balances(&[
+        (
+            &TEMP_CONTRACT_ADDR.to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+        ),
+    ]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
     match res {
         ContractError::MaxSlippageAssertion {} => {}
@@ -365,7 +438,8 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(98u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: Some(Decimal::percent(1)),
         receiver: None,
     };
@@ -395,6 +469,20 @@ fn provide_liquidity_cw20_lp() {
         }],
     )]);
 
+    deps.querier.with_token_balances(&[
+        (
+            &TEMP_CONTRACT_ADDR.clone(),
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128))],
+        ),
+        (
+            &"asset0000".to_string(),
+            &[
+                (&"addr0001".to_string(), &Uint128::from(100u128)),
+                (&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(100u128)),
+            ],
+        ),
+    ]);
+
     // successfully provides
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
@@ -410,8 +498,9 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(100u128),
             },
-        ].to_vec(),
-        slippage_tolerance: Some(Decimal::percent(1)),
+        ]
+        .to_vec(),
+        slippage_tolerance: Some(Decimal::percent(2)),
         receiver: None,
     };
 
@@ -449,8 +538,9 @@ fn provide_liquidity_cw20_lp() {
                 },
                 amount: Uint128::from(99u128),
             },
-        ].to_vec(),
-        slippage_tolerance: Some(Decimal::percent(1)),
+        ]
+        .to_vec(),
+        slippage_tolerance: Some(Decimal::percent(2)),
         receiver: None,
     };
 
@@ -469,34 +559,102 @@ fn provide_liquidity_cw20_lp() {
 fn provide_liquidity_zero_amount() {
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
-        amount: Uint128::from(200u128),
+        amount: Uint128::from(2_000u128),
     }]);
+
+    // Note: In order to support and write tests sooner I override the MockAPI in mock_querier with a SimpleMockAPI
+    // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
+    // This likely breaks tests elsewhere
+    let TEMP_CONTRACT_ADDR: String =
+        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
 
     deps.querier.with_token_balances(&[
         (
-            &"liquidity0000".to_string(),
+            &TEMP_CONTRACT_ADDR.clone(),
             &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
         ),
         (&"asset0000".to_string(), &[]),
     ]);
 
-     // Instantiate contract
-        let msg = SingleSwapInstantiateMsg {
-            fee_collector_addr: "fee_collector_addr".to_string(),
-            owner: "owner".to_string(),
-            pair_code_id: 10u64,
-            token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
-                amount: Uint128::new(1000000u128),
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            }],
-        };
-        let env = mock_env();
-        let info = mock_info("owner", &[]);
-        let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+    deps.querier
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
+
+    // Instantiate contract
+    let msg = SingleSwapInstantiateMsg {
+        fee_collector_addr: "fee_collector_addr".to_string(),
+        owner: "owner".to_string(),
+        pair_code_id: 10u64,
+        token_code_id: 11u64,
+        pool_creation_fee: vec![Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+        }],
+    };
+    let env = mock_env();
+    let info = mock_info("owner", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(0, res.messages.len());
+
+    // Create the Pair
+    let asset_infos = [
+        AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+    ];
+
+    let assets: NAssets = NAssets::TWO(asset_infos.clone());
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: assets.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
+    };
+
+    let env = mock_env();
+
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    );
+
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+    // Instantiate contract
+    let msg = SingleSwapInstantiateMsg {
+        fee_collector_addr: "fee_collector_addr".to_string(),
+        owner: "owner".to_string(),
+        pair_code_id: 10u64,
+        token_code_id: 11u64,
+        pool_creation_fee: vec![Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+        }],
+    };
+    let env = mock_env();
+    let info = mock_info("owner", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(0, res.messages.len());
 
     // provide invalid (zero) liquidity
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -513,7 +671,8 @@ fn provide_liquidity_zero_amount() {
                 },
                 amount: Uint128::from(100u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };
@@ -542,84 +701,86 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         amount: Uint128::from(999u128),
     }]);
 
+    // Note: In order to support and write tests sooner I override the MockAPI in mock_querier with a SimpleMockAPI
+    // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
+    // This likely breaks tests elsewhere
+    let TEMP_CONTRACT_ADDR: String =
+        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
+
     deps.querier.with_token_balances(&[
         (
-            &"liquidity0000".to_string(),
+            &TEMP_CONTRACT_ADDR.to_string(),
             &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
         ),
-        (&"asset0000".to_string(), &[]),
+        (&"asset0001".to_string(), &[]),
     ]);
     deps.querier
-            .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
-        deps.querier.with_token_balances(&[(
-            &"asset0001".to_string(),
-            &[(&"addr0000".to_string(), &Uint128::new(1000000u128))],
-        )]);
+        .with_pool_factory(&[], &[("uusd".to_string(), 6u8)]);
+
     // Instantiate contract
-        let msg = SingleSwapInstantiateMsg {
-            fee_collector_addr: "fee_collector_addr".to_string(),
-            owner: "owner".to_string(),
-            pair_code_id: 10u64,
-            token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
-                amount: Uint128::new(1000000u128),
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            }],
-        };
-        let env = mock_env();
-        let info = mock_info("owner", &[]);
-        let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-
-        let asset_infos = [
-            AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-            AssetInfo::NativeToken {
+    let msg = SingleSwapInstantiateMsg {
+        fee_collector_addr: "fee_collector_addr".to_string(),
+        owner: "owner".to_string(),
+        pair_code_id: 10u64,
+        token_code_id: 11u64,
+        pool_creation_fee: vec![Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-        ];
+        }],
+    };
+    let env = mock_env();
+    let info = mock_info("owner", &[]);
+    let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+    assert_eq!(0, res.messages.len());
 
-        let assets: NAssets = NAssets::TWO(asset_infos.clone());
+    let asset_infos = [
+        AssetInfo::Token {
+            contract_addr: "asset0001".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uusd".to_string(),
+        },
+    ];
 
-        let msg = ExecuteMsg::CreatePair {
-            asset_infos: assets.clone(),
-            pool_fees: PoolFee {
-                protocol_fee: Fee {
-                    share: Decimal::percent(1u64),
-                },
-                swap_fee: Fee {
-                    share: Decimal::percent(1u64),
-                },
-                burn_fee: Fee {
-                    share: Decimal::zero(),
-                },
+    let assets: NAssets = NAssets::TWO(asset_infos.clone());
+
+    let msg = ExecuteMsg::CreatePair {
+        asset_infos: assets.clone(),
+        pool_fees: PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(1u64),
             },
-            pair_type: PairType::ConstantProduct,
-            token_factory_lp: false,
-        };
+            swap_fee: Fee {
+                share: Decimal::percent(1u64),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        },
+        pair_type: PairType::ConstantProduct,
+        token_factory_lp: false,
+    };
 
-        let env = mock_env();
-        let info = mock_info(
-            "addr0000",
-            &[Coin {
-                denom: "uusd".to_string(),
-                amount: Uint128::new(1u128),
-            }],
-        );
-        let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-        assert_eq!(
-            res.attributes,
-            vec![
-                attr("action", "create_pair"),
-                attr("pair","mAAPL-uusd"),
-                attr("pair_label", "mAAPL-uusd"),
-                attr("pair_type", "ConstantProduct"),
-            ]
-        );
-
+    let env = mock_env();
+    let info = mock_info(
+        "addr0000",
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    );
+    let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    assert_eq!(
+        res.attributes,
+        vec![
+            attr("action", "create_pair"),
+            attr("pair", "mAAPL-uusd"),
+            attr("pair_label", "mAAPL-uusd"),
+            attr("pair_type", "ConstantProduct"),
+        ]
+    );
 
     // successfully provide liquidity for the exist pool
     let msg = ExecuteMsg::ProvideLiquidity {
@@ -636,7 +797,8 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 },
                 amount: Uint128::from(100u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };
@@ -654,11 +816,10 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
     match res {
         Ok(_) => panic!("should return ContractError::InvalidInitialLiquidityAmount"),
         Err(ContractError::InvalidInitialLiquidityAmount { .. }) => {}
-        e => 
-        {println!("{:?}", e.unwrap()); 
-        panic!("should return ContractError::InvalidInitialLiquidityAmount");
-    }
-        
+        e => {
+            println!("{:?}", e.unwrap());
+            panic!("should return ContractError::InvalidInitialLiquidityAmount");
+        }
     }
 }
 
@@ -685,8 +846,8 @@ fn provide_liquidity_tokenfactory_lp() {
     deps.querier
         .with_token_balances(&[(&"asset0000".to_string(), &[])]);
 
-     // Instantiate contract
-     let msg = SingleSwapInstantiateMsg {
+    // Instantiate contract
+    let msg = SingleSwapInstantiateMsg {
         fee_collector_addr: "fee_collector_addr".to_string(),
         owner: "owner".to_string(),
         pair_code_id: 10u64,
@@ -717,7 +878,8 @@ fn provide_liquidity_tokenfactory_lp() {
                 },
                 amount: Uint128::from(2_000u128),
             },
-        ].to_vec(),
+        ]
+        .to_vec(),
         slippage_tolerance: None,
         receiver: None,
     };

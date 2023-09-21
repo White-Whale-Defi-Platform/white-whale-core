@@ -4,7 +4,7 @@ use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
 use white_whale::pool_network::router::SwapOperation;
-pub const LP_SYMBOL: &str ="uLP";
+pub const LP_SYMBOL: &str = "uLP";
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
 pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
 // Used for PAIRS

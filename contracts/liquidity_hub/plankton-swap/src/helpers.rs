@@ -402,11 +402,13 @@ pub fn assert_slippage_tolerance(
     amount: Uint128,
     pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
+    println!("assert_slippage_tolerance");
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
         if slippage_tolerance > Decimal256::one() {
             return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
         }
+        println!("slippage_tolerance: {}", slippage_tolerance);
 
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
         let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
@@ -435,6 +437,22 @@ pub fn assert_slippage_tolerance(
                         * one_minus_slippage_tolerance
                         > Decimal256::from_ratio(pools[1], pools[0])
                 {
+                    println!(
+                        "max {:?}",
+                        [
+                            Decimal256::from_ratio(deposits[0], deposits[1])
+                                * one_minus_slippage_tolerance,
+                            Decimal256::from_ratio(pools[0], pools[1])
+                        ]
+                    );
+                    println!(
+                        "max {:?}",
+                        [
+                            Decimal256::from_ratio(deposits[1], deposits[0])
+                                * one_minus_slippage_tolerance,
+                            Decimal256::from_ratio(pools[1], pools[0])
+                        ]
+                    );
                     return Err(ContractError::MaxSlippageAssertion {});
                 }
             }

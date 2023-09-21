@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn create_stableswap_pair() {
         let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
-
+        // deps.api = Box::new(MockApi::default());
         // Instantiate contract
         let msg = SingleSwapInstantiateMsg {
             fee_collector_addr: "fee_collector_addr".to_string(),
@@ -586,7 +586,7 @@ mod tests {
         let info = mock_info("addr0000", &[]);
 
         if let ContractError::ExistingPair { .. } = expected_error {
-            // Create the pair so when we try again below we get ExistingPair provided the error checking is behaving properly 
+            // Create the pair so when we try again below we get ExistingPair provided the error checking is behaving properly
             let res = execute(deps.as_mut(), env.clone(), info.clone(), msg.clone());
         }
 

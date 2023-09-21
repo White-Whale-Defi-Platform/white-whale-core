@@ -12,6 +12,7 @@ pub mod querier;
 pub mod router;
 pub mod token;
 pub mod trio;
+pub mod temp_mock_api;
 
 #[cfg(test)]
 mod testing;

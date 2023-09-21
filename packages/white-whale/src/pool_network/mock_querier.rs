@@ -3,7 +3,7 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::panic;
 
-use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
     OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
@@ -16,7 +16,7 @@ use crate::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as Pa
 use crate::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use crate::pool_network::trio;
 use crate::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
-
+use crate::pool_network::temp_mock_api::MockSimpleApi as MockApi;
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
