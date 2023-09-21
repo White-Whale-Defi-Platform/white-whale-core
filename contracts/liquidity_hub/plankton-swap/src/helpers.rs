@@ -3,25 +3,24 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, Uint128, Uint256, WasmMsg,
+    Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256,
 };
-use cw20::MinterResponse;
+
 use cw_storage_plus::Item;
 
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::CosmosMsg;
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::pair::{PoolFee};
+
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::state::PAIR_INFO;
+
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 

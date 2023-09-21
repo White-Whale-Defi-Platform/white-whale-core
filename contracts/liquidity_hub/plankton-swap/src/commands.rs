@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use white_whale::pool_network::{
     asset::{AssetInfo, AssetInfoRaw, PairType},
-    pair::{FeatureToggle, PoolFee},
+    pair::{PoolFee},
 };
 
 use crate::{helpers, state::add_allow_native_token, token::InstantiateMsg as TokenInstantiateMsg};
@@ -169,12 +169,13 @@ pub fn create_pair(
         .collect();
 
     let asset_label = asset_labels?.join("-"); // Handle the error if needed
-    let lp_token_name = format!("{}-LP", asset_label);
+    let _lp_token_name = format!("{}-LP", asset_label);
     // TODO: Add this
     let mut messages: Vec<CosmosMsg> = vec![];
     let mut attributes = Vec::<Attribute>::new();
 
     if token_factory_lp {
+        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
         let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
         #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
         messages.push(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
@@ -203,8 +204,8 @@ pub fn create_pair(
         // let canonical = &instantiate2_address(&checksum, &creator, &salt)
         // .map_err(|e| StdError::generic_err(e.to_string()))?;
         // let pool_lp_address = Addr::unchecked(canonical.0 .0.iter().map(|&c| c as char).collect::<String>());
-        let pool_lp_address = Addr::unchecked(
-            &instantiate2_address(&checksum, &creator, &salt)
+        let _pool_lp_address = Addr::unchecked(
+            instantiate2_address(&checksum, &creator, &salt)
                 .map_err(|e| StdError::generic_err(e.to_string()))?
                 .to_string(),
         );
@@ -218,7 +219,7 @@ pub fn create_pair(
             .collect::<Vec<_>>()
             .into();
         let pool_lp_address = Addr::unchecked(
-            &instantiate2_address(&checksum, &contract, &salt)
+            instantiate2_address(&checksum, &contract, &salt)
                 .unwrap()
                 .0
                  .0
@@ -236,11 +237,11 @@ pub fn create_pair(
             deps.storage,
             &pair_key,
             &PairInfo {
-                asset_infos: NAssets::N(asset_infos_vec.clone()),
+                asset_infos: NAssets::N(asset_infos_vec),
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
-                asset_decimals: NDecimals::N(asset_decimals_vec.clone()),
-                pool_fees: pool_fees.clone(),
+                asset_decimals: NDecimals::N(asset_decimals_vec),
+                pool_fees: pool_fees,
             },
         )?;
 
@@ -332,17 +333,17 @@ pub mod swap {
 
         let asset_infos = [offer_asset.info.clone(), ask_asset.clone()];
         let ask_asset = Asset {
-            info: ask_asset.clone(),
+            info: ask_asset,
             amount: Uint128::zero(),
         };
         let assets = [offer_asset.clone(), ask_asset.clone()];
         // Load assets, pools and pair info
-        let (assets_vec, mut pools, pair_info) = match assets {
+        let (_assets_vec, pools, pair_info) = match assets {
             // For TWO assets we use the constant product logic
             assets if assets.len() == 2 => {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
-                let mut pools: [Asset; 2] = [
+                let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -356,7 +357,7 @@ pub mod swap {
                         amount: asset_infos[1].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address.clone(),
+                            env.contract.address,
                         )?,
                     },
                 ];
@@ -373,9 +374,9 @@ pub mod swap {
                     ask_asset.info.clone(),
                     ask_asset.info.clone(),
                 ];
-                let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset.clone()];
+                let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset];
 
-                let mut pools: [Asset; 3] = [
+                let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -397,7 +398,7 @@ pub mod swap {
                         amount: asset_infos[2].query_pool(
                             &deps.querier,
                             deps.api,
-                            env.contract.address.clone(),
+                            env.contract.address,
                         )?,
                     },
                 ];
@@ -434,7 +435,7 @@ pub mod swap {
             return Err(ContractError::AssetMismatch {});
         }
 
-        let mut attributes = vec![
+        let _attributes = vec![
             ("action", "swap"),
             ("pair_type", pair_info.pair_type.get_label()),
         ];
@@ -517,7 +518,7 @@ pub mod liquidity {
         U256,
     };
 
-    use crate::state::COLLECTABLE_PROTOCOL_FEES;
+    
 
     // ProvideLiquidity works based on two patterns so far and eventually 3.
     // Constant Product which is used for 2 assets
@@ -694,7 +695,7 @@ pub mod liquidity {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
-                let mut pools: [Asset; 2] = [
+                let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -737,7 +738,7 @@ pub mod liquidity {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
-                let mut pools: [Asset; 3] = [
+                let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -833,12 +834,14 @@ pub mod liquidity {
             AssetInfo::NativeToken { denom } => denom,
         };
         // Compute share and other logic based on the number of assets
-        let share = Uint128::zero();
+        let _share = Uint128::zero();
         // ...
         let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
         let share = match pair_info.pair_type {
             PairType::ConstantProduct => {
-                let share = if total_share == Uint128::zero() {
+                
+
+                if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
                     let share = Uint128::new(
@@ -908,15 +911,13 @@ pub mod liquidity {
                     )?);
 
                     share
-                };
-
-                share
+                }
             }
-            PairType::StableSwap { amp } => {
-                let share = Uint128::one();
+            PairType::StableSwap { amp: _ } => {
+                
                 // TODO: Handle stableswap
 
-                share
+                Uint128::one()
             }
         };
 
@@ -966,13 +967,13 @@ pub mod liquidity {
             .map(|asset| asset.info.clone())
             .collect::<Vec<_>>();
 
-        let (assets_vec, mut pools, deposits, pair_info) = match assets {
+        let (_assets_vec, _pools, _deposits, pair_info) = match assets {
             // For TWO assets we use the constant product logic
             assets if assets.len() == 2 => {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
-                let mut pools: [Asset; 2] = [
+                let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -1015,7 +1016,7 @@ pub mod liquidity {
                 let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
                 let pair_info = PAIRS.load(deps.storage, &pair_key)?;
 
-                let mut pools: [Asset; 3] = [
+                let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
                         amount: asset_infos[0].query_pool(
@@ -1072,7 +1073,7 @@ pub mod liquidity {
             pair_info.query_pools(&deps.querier, deps.api, &env.contract.address)?;
 
         let liquidity_token = match pair_info.liquidity_token {
-            AssetInfo::Token { contract_addr } => contract_addr.to_string(),
+            AssetInfo::Token { contract_addr } => contract_addr,
             AssetInfo::NativeToken { denom } => denom,
         };
 
@@ -1129,5 +1130,5 @@ pub mod liquidity {
 
 pub mod ownership {
     // Stuff like ProposeNewOwner, TransferOwnership, AcceptOwnership
-    use super::*;
+    
 }
