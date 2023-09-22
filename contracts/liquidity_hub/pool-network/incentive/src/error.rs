@@ -5,6 +5,7 @@ use cosmwasm_std::{
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
+use white_whale::pool_network::incentive::FlowIdentifier;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -28,6 +29,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -59,11 +63,11 @@ pub enum ContractError {
     #[error("Flow start timestamp is after the end timestamp")]
     FlowStartTimeAfterEndTime,
 
-    #[error("Flow identifier ({invalid_id}) does not point to any flow")]
-    NonExistentFlow { invalid_id: u64 },
+    #[error("Flow identifier ({invalid_identifier}) does not point to any flow")]
+    NonExistentFlow { invalid_identifier: FlowIdentifier },
 
-    #[error("Account not permitted to close flow {flow_id}")]
-    UnauthorizedFlowClose { flow_id: u64 },
+    #[error("Account not permitted to close flow {flow_identifier}")]
+    UnauthorizedFlowClose { flow_identifier: FlowIdentifier },
 
     #[error("Flow creation fee was not included")]
     FlowFeeMissing,
@@ -143,6 +147,12 @@ pub enum ContractError {
 
     #[error("There're pending rewards to be claimed before you can execute this action")]
     PendingRewards {},
+
+    #[error("The end epoch for this flow is invalid")]
+    InvalidEndEpoch {},
+
+    #[error("The flow has already ended, can't be expanded")]
+    FlowAlreadyEnded {},
 }
 
 impl From<semver::Error> for ContractError {
