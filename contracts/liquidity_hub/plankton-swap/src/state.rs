@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdResult, Storage};
+use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdResult, Storage, Uint128, StdError};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
@@ -33,6 +33,8 @@ pub const PAIR_INFO: Map<&str, Item<PairInfo>> = Map::new("pair_info");
 pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Asset>> = Map::new("collected_protocol_fees");
 pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
+pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burned_fees");
+
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 
 // key : asset info / value: decimals
@@ -182,4 +184,51 @@ pub struct Config {
     pub pool_creation_fee: Vec<Asset>,
     //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
+}
+
+
+/// Stores the fee for an asset in the given fees_storage_item
+pub fn store_fee(
+    storage: &mut dyn Storage,
+    fee_amount: Uint128,
+    asset_id: String,
+    fees_storage_item: Map<&str, Vec<Asset>>,
+) -> StdResult<()> {
+    let fees = fees_storage_item
+    .load( storage, &asset_id)?
+    .iter()
+    .map(|fee_asset| {
+        if fee_asset.clone().get_id() == asset_id {
+            Asset {
+                info: fee_asset.info.clone(),
+                amount: fee_asset.amount + fee_amount,
+            }
+        } else {
+            fee_asset.clone()
+        }
+    })
+    .collect();
+   
+    fees_storage_item.save(storage, &asset_id,&fees)
+}
+
+/// Gets the fees for an asset from the given fees_storage_item
+pub fn get_fees_for_asset(
+    storage: &dyn Storage,
+    asset_id: String,
+    fees_storage_item: Map<&str, Vec<Asset>>,
+) -> StdResult<Asset> {
+    let fees = fees_storage_item
+    .load( storage, &asset_id)?
+    .iter()
+        .find(|&fee_asset| fee_asset.clone().get_id() == asset_id)
+        .cloned();
+
+    if let Some(fees) = fees {
+        Ok(fees)
+    } else {
+        Err(StdError::generic_err(format!(
+            "Fees for asset {asset_id} not found"
+        )))
+    }
 }
