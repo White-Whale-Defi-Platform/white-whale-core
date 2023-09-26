@@ -105,39 +105,39 @@ pub enum ExecuteMsg {
     /// Withdraws from the vault manager. Used when the LP token is a token manager token.
     Withdraw {},
     Receive(Cw20ReceiveMsg),
-    Callback(CallbackMsg),
-
     // ROUTER MESSAGES
-    /// Retrieves the desired `assets` and runs the `msgs`, paying the required amount back the vaults
-    /// after running the messages, and returning the profit to the sender.
+    /// Retrieves the desired `asset` and runs the `payload`, paying the required amount back to the vault
+    /// after running the messages in the payload, and returning the profit to the sender.
     FlashLoan {
-        assets: Vec<Asset>,
-        msgs: Vec<CosmosMsg>,
-    },
-    /// Performs the next loan.
-    ///
-    /// Should only be called by internal contract.
-    NextLoan {
-        /// The person to pay back all profits to
-        initiator: Addr,
-        /// The source vault's [AssetInfo]. Used for validation.
-        source_vault_asset_info: AssetInfo,
-        /// The final message to run once all assets have been loaned.
+        asset: Asset,
         payload: Vec<CosmosMsg>,
-        /// The next loans to run.
-        to_loan: Vec<(String, Asset)>,
-        /// The assets that have been loaned
-        loaned_assets: Vec<(String, Asset)>,
     },
-    /// Completes the flash-loan by paying back all outstanding loans, and returning profits to the sender.
-    ///
-    /// Should only be called by internal contract.
-    CompleteLoan {
-        /// The person to pay back all profits to
-        initiator: Addr,
-        /// A vec of tuples where the first value represents the vault address, and the second value represents the loan size
-        loaned_assets: Vec<(String, Asset)>,
-    },
+    /// Callback message for post-processing flash-loans.
+    Callback(CallbackMsg),
+    // /// Performs the next loan.
+    // ///
+    // /// Should only be called by internal contract.
+    // NextLoan {
+    //     /// The person to pay back all profits to
+    //     initiator: Addr,
+    //     /// The source vault's [AssetInfo]. Used for validation.
+    //     source_vault_asset_info: AssetInfo,
+    //     /// The final message to run once all assets have been loaned.
+    //     payload: Vec<CosmosMsg>,
+    //     /// The next loans to run.
+    //     to_loan: Vec<(String, Asset)>,
+    //     /// The assets that have been loaned
+    //     loaned_assets: Vec<(String, Asset)>,
+    // },
+    // /// Completes the flash-loan by paying back all outstanding loans, and returning profits to the sender.
+    // ///
+    // /// Should only be called by internal contract.
+    // CompleteLoan {
+    //     /// The person to pay back all profits to
+    //     initiator: Addr,
+    //     /// A vec of tuples where the first value represents the vault address, and the second value represents the loan size
+    //     loaned_assets: Vec<(String, Asset)>,
+    // },
 }
 
 /// The migrate message
@@ -178,9 +178,10 @@ pub struct VaultsResponse {
 /// The callback messages available. Only callable by the vault contract itself.
 #[cw_serde]
 pub enum CallbackMsg {
-    AfterTrade {
-        old_balance: Uint128,
-        loan_amount: Uint128,
+    AfterFlashloan {
+        old_asset_balance: Uint128,
+        loan_asset: Asset,
+        sender: Addr,
     },
 }
 

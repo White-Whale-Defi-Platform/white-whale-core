@@ -54,6 +54,18 @@ pub enum ContractError {
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error(
+    "Final desired amount of {required_amount} is less than current balance of {current_balance} (got {old_balance} -> {current_balance}, want {old_balance} -> {required_amount})"
+    )]
+    NegativeProfit {
+        /// The balance before the loan occurred
+        old_balance: Uint128,
+        /// The current balance of the vault manager
+        current_balance: Uint128,
+        /// The required return amount for the vault manager
+        required_amount: Uint128,
+    },
 }
 
 impl From<semver::Error> for ContractError {

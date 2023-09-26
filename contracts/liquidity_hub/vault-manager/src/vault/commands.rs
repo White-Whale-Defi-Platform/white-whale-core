@@ -1,4 +1,4 @@
-use crate::state::{COLLECTED_PROTOCOL_FEES, LOAN_COUNTER, MANAGER_CONFIG, VAULTS};
+use crate::state::{COLLECTED_PROTOCOL_FEES, MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
@@ -26,8 +26,7 @@ pub fn deposit(
     }
 
     // check that we are not currently in a flash-loan
-    if LOAN_COUNTER.load(deps.storage)? != 0 {
-        // more than 0 loans is being performed currently
+    if ONGOING_FLASHLOAN.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
