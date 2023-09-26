@@ -10,7 +10,7 @@ use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
 use crate::state::{MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 
-/// Takes a flashloan.
+/// Takes a flashloan of the specified asset and executes the payload.
 pub fn flash_loan(
     deps: DepsMut,
     env: Env,
@@ -130,6 +130,8 @@ pub fn after_flashloan(
             .protocol_fee
             .compute(Uint256::from(loan_asset.amount)),
     )?;
+
+    // flashloan fee stays in the vault
     let flash_loan_fee = Uint128::try_from(
         vault
             .fees
@@ -156,10 +158,24 @@ pub fn after_flashloan(
         .checked_sub(protocol_fee)?
         .checked_sub(flash_loan_fee)?;
 
-    let profit_asset = Asset {
+    let mut response_messages: Vec<CosmosMsg> = vec![];
+
+    if !profit.is_zero() {
+        let profit_asset = Asset {
+            info: loan_asset.info.clone(),
+            amount: profit,
+        };
+
+        // send profit to sender
+        response_messages.push(profit_asset.into_msg(sender)?);
+    }
+    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let protocol_fee_asset = Asset {
         info: loan_asset.info.clone(),
-        amount: profit,
+        amount: protocol_fee,
     };
+    //todo protocol_fee to be sent to "fee collector", i.e. with hook directly to the whale lair. `config.fee_collector_addr` to be remade
+    response_messages.push(protocol_fee_asset.into_msg(config.fee_collector_addr)?);
 
     // toggle off flashloan indicator
     ONGOING_FLASHLOAN
@@ -170,10 +186,9 @@ pub fn after_flashloan(
         .unwrap();
 
     Ok(Response::default()
-        //todo protocol_fee to be sent to "fee collector", i.e. with hook directly to the whale lair
-        .add_message(profit_asset.into_msg(sender)?)
+        .add_messages(response_messages)
         .add_attributes(vec![
-            ("method", "after_trade".to_string()),
+            ("action", "after_flashloan".to_string()),
             ("profit", profit.to_string()),
             ("protocol_fee", protocol_fee.to_string()),
             ("flash_loan_fee", flash_loan_fee.to_string()),

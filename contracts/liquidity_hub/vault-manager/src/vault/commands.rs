@@ -1,4 +1,4 @@
-use crate::state::{COLLECTED_PROTOCOL_FEES, MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
+use crate::state::{MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,

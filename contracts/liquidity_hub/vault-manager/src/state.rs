@@ -1,14 +1,18 @@
 use std::string::ToString;
 
-use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
-use crate::ContractError;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_manager::{ManagerConfig, Vault};
+
+use crate::ContractError;
 
 pub const OWNER: Item<Addr> = Item::new("owner");
 pub const PROPOSED_OWNER: Item<Addr> = Item::new("proposed_owner");
+
+// A bool representing if a flashloan is being performed or not
+pub const ONGOING_FLASHLOAN: Item<bool> = Item::new("ongoing_flashloan");
 
 pub const MANAGER_CONFIG: Item<ManagerConfig> = Item::new("manager_config");
 // pub const VAULTS: Map<&[u8], Vault> = Map::new("vaults");
@@ -29,14 +33,6 @@ impl<'a> IndexList<Vault> for VaultIndexes<'a> {
         Box::new(v.into_iter())
     }
 }
-
-// Fees that have been accrued by the vaults
-pub const COLLECTED_PROTOCOL_FEES: Item<Asset> = Item::new("collected_protocol_fees");
-//todo remove
-// Fees that have been burned by the vault since the vault's inception
-pub const ALL_TIME_BURNED_FEES: Item<Asset> = Item::new("all_time_burned_fees");
-// A bool representing if a flashloan is being performed or not
-pub const ONGOING_FLASHLOAN: Item<bool> = Item::new("ongoing_flashloan");
 
 // settings for pagination
 const MAX_LIMIT: u32 = 30;
