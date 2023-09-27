@@ -2,16 +2,14 @@ use cosmwasm_std::{Decimal, Deps, Env, Uint128, Uint256};
 
 use white_whale::pool_network::asset::{get_total_share, Asset, AssetInfo};
 use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{
-    ManagerConfig, PaybackAssetResponse, ShareResponse, VaultsResponse,
-};
+use white_whale::vault_manager::{Config, PaybackAssetResponse, ShareResponse, VaultsResponse};
 
-use crate::state::{get_vault, read_vaults, MANAGER_CONFIG, VAULTS};
+use crate::state::{get_vault, read_vaults, CONFIG, VAULTS};
 use crate::ContractError;
 
-/// Gets the [ManagerConfig].
-pub(crate) fn query_manager_config(deps: Deps) -> Result<ManagerConfig, ContractError> {
-    Ok(MANAGER_CONFIG.load(deps.storage)?)
+/// Gets the [Config].
+pub(crate) fn query_manager_config(deps: Deps) -> Result<Config, ContractError> {
+    Ok(CONFIG.load(deps.storage)?)
 }
 
 /// Gets a vault given the [AssetInfo].

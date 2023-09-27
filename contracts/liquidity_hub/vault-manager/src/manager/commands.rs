@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Api, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+    attr, instantiate2_address, to_binary, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut,
+    Env, MessageInfo, Response, StdError, WasmMsg,
 };
 use cw20::MinterResponse;
 
@@ -15,7 +15,7 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::state::{MANAGER_CONFIG, OWNER, VAULTS};
+use crate::state::{CONFIG, OWNER, VAULTS};
 use crate::ContractError;
 
 /// Creates a new vault
@@ -26,9 +26,9 @@ pub fn create_vault(
     asset_info: AssetInfo,
     fees: VaultFee,
 ) -> Result<Response, ContractError> {
-    let manager_config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
-    let denom = match manager_config.vault_creation_fee.info {
+    let denom = match config.vault_creation_fee.info.clone() {
         // this will never happen as the fee is always native, enforced when instantiating the contract
         AssetInfo::Token { .. } => "".to_string(),
         AssetInfo::NativeToken { denom } => denom,
@@ -36,15 +36,22 @@ pub fn create_vault(
 
     // verify fee payment
     let amount = cw_utils::must_pay(&info, denom.as_str())?;
-    if amount < manager_config.vault_creation_fee.amount {
+    if amount < config.vault_creation_fee.amount {
         return Err(ContractError::InvalidVaultCreationFee {
             amount,
-            expected: manager_config.vault_creation_fee.amount,
+            expected: config.vault_creation_fee.amount,
         });
     }
 
-    //todo send vault creation fee to "fee collector", i.e. with hook directly to the whale lair
-    // or whatever distributes the protocol fees
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let fee_asset = Asset {
+        info: config.vault_creation_fee.info,
+        amount: config.vault_creation_fee.amount,
+    };
+
+    //todo fix this with a hook msg
+    // send fees to whale lair
+    messages.push(fee_asset.into_msg(config.fee_collector_addr)?);
 
     let binding = asset_info.clone();
     let asset_info_reference = binding.get_reference();
@@ -55,13 +62,13 @@ pub fn create_vault(
         return Err(ContractError::ExistingVault { asset_info });
     }
 
-    // check the fees are valid
+    // check the vault fees are valid
     fees.is_valid()?;
 
     let asset_label = asset_info.clone().get_label(&deps.as_ref())?;
     let mut attributes = Vec::<Attribute>::new();
 
-    let message = if manager_config.lp_token_type == LpTokenType::TokenFactory {
+    let message = if config.lp_token_type == LpTokenType::TokenFactory {
         #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
         return Err(ContractError::TokenFactoryNotEnabled {});
 
@@ -88,7 +95,7 @@ pub fn create_vault(
         }))
     } else {
         let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let code_id = manager_config.lp_token_type.get_cw20_code_id()?;
+        let code_id = config.lp_token_type.get_cw20_code_id()?;
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
             "{}{}{}",
@@ -147,7 +154,7 @@ pub fn create_vault(
 }
 
 /// Updates the manager config
-pub fn update_manager_config(
+pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     fee_collector_addr: Option<String>,
@@ -159,7 +166,7 @@ pub fn update_manager_config(
 ) -> Result<Response, ContractError> {
     validate_owner(deps.storage, OWNER, info.sender)?;
 
-    let new_config = MANAGER_CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
+    let new_config = CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
         if let Some(new_fee_collector_addr) = fee_collector_addr {
             config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
         }
@@ -229,6 +236,8 @@ pub fn update_vault_fees(
 
     vault_fee.is_valid()?;
     vault.fees = vault_fee.clone();
+
+    VAULTS.save(deps.storage, vault_asset_info.get_reference(), &vault)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "update_vault_fees".to_string()),

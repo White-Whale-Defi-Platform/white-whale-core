@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
 
 use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_manager::{ManagerConfig, Vault};
+use white_whale::vault_manager::{Config, Vault};
 
 use crate::ContractError;
 
@@ -14,7 +14,7 @@ pub const PROPOSED_OWNER: Item<Addr> = Item::new("proposed_owner");
 // A bool representing if a flashloan is being performed or not
 pub const ONGOING_FLASHLOAN: Item<bool> = Item::new("ongoing_flashloan");
 
-pub const MANAGER_CONFIG: Item<ManagerConfig> = Item::new("manager_config");
+pub const CONFIG: Item<Config> = Item::new("manager_config");
 // pub const VAULTS: Map<&[u8], Vault> = Map::new("vaults");
 pub const VAULTS: IndexedMap<&[u8], Vault, VaultIndexes> = IndexedMap::new(
     "vaults",

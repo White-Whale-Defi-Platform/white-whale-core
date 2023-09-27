@@ -1,20 +1,16 @@
 use cosmwasm_std::{entry_point, from_binary};
-use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Storage,
-    Uint128,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
 use cw2::{get_contract_version, set_contract_version};
-use cw_storage_plus::Item;
 use cw_utils::one_coin;
 use semver::Version;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_manager::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, ManagerConfig, MigrateMsg, QueryMsg,
+    Config, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 use crate::error::ContractError;
-use crate::state::{get_vault, MANAGER_CONFIG, ONGOING_FLASHLOAN, OWNER};
+use crate::state::{get_vault, CONFIG, ONGOING_FLASHLOAN, OWNER};
 use crate::{manager, queries, router, vault};
 
 // version info for migration info
@@ -37,7 +33,7 @@ pub fn instantiate(
         AssetInfo::NativeToken { .. } => {}
     }
 
-    let manager_config = ManagerConfig {
+    let manager_config = Config {
         lp_token_type: msg.lp_token_type,
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         vault_creation_fee: msg.vault_creation_fee.clone(),
@@ -45,7 +41,7 @@ pub fn instantiate(
         deposit_enabled: true,
         withdraw_enabled: true,
     };
-    MANAGER_CONFIG.save(deps.storage, &manager_config)?;
+    CONFIG.save(deps.storage, &manager_config)?;
 
     //todo ownership proposal stuff to change ownership of the contract
     OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
@@ -86,14 +82,14 @@ pub fn execute(
             vault_asset_info,
             vault_fee,
         } => manager::commands::update_vault_fees(deps, info, vault_asset_info, vault_fee),
-        ExecuteMsg::UpdateManagerConfig {
+        ExecuteMsg::UpdateConfig {
             fee_collector_addr,
             vault_creation_fee,
             cw20_lp_code_id,
             flash_loan_enabled,
             deposit_enabled,
             withdraw_enabled,
-        } => manager::commands::update_manager_config(
+        } => manager::commands::update_config(
             deps,
             info,
             fee_collector_addr,
@@ -144,7 +140,7 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::ManagerConfig {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
+        QueryMsg::Config {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
         QueryMsg::Vault { asset_info } => Ok(to_binary(&queries::query_vault(deps, asset_info)?)?),
         QueryMsg::Vaults { start_after, limit } => Ok(to_binary(&queries::query_vaults(
             deps,
@@ -159,7 +155,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 #[cfg(not(tarpaulin_include))]
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use white_whale::migrate_guards::check_contract_name;
 

@@ -7,7 +7,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
 
-use crate::state::{MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
+use crate::state::{CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 
 /// Takes a flashloan of the specified asset and executes the payload.
@@ -19,16 +19,13 @@ pub fn flash_loan(
     payload: Vec<CosmosMsg>,
 ) -> Result<Response, ContractError> {
     // check that flash loans are enabled
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     if !config.flash_loan_enabled {
         return Err(ContractError::Unauthorized {});
     }
 
     // toggle on the flashloan indicator
-    ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |mut ongoing_flashloan| {
-        ongoing_flashloan = true;
-        Ok(ongoing_flashloan)
-    })?;
+    ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |_| Ok(true))?;
 
     // store current balance for after trade profit check
     let old_asset_balance = match asset.info.clone() {
@@ -158,7 +155,7 @@ pub fn after_flashloan(
         .checked_sub(protocol_fee)?
         .checked_sub(flash_loan_fee)?;
 
-    let mut response_messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg> = vec![];
 
     if !profit.is_zero() {
         let profit_asset = Asset {
@@ -167,26 +164,23 @@ pub fn after_flashloan(
         };
 
         // send profit to sender
-        response_messages.push(profit_asset.into_msg(sender)?);
+        messages.push(profit_asset.into_msg(sender)?);
     }
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     let protocol_fee_asset = Asset {
         info: loan_asset.info.clone(),
         amount: protocol_fee,
     };
     //todo protocol_fee to be sent to "fee collector", i.e. with hook directly to the whale lair. `config.fee_collector_addr` to be remade
-    response_messages.push(protocol_fee_asset.into_msg(config.fee_collector_addr)?);
+    messages.push(protocol_fee_asset.into_msg(config.fee_collector_addr)?);
 
     // toggle off flashloan indicator
     ONGOING_FLASHLOAN
-        .update::<_, StdError>(deps.storage, |mut ongoing_flashloan| {
-            ongoing_flashloan = false;
-            Ok(ongoing_flashloan)
-        })
+        .update::<_, StdError>(deps.storage, |_| Ok(false))
         .unwrap();
 
     Ok(Response::default()
-        .add_messages(response_messages)
+        .add_messages(messages)
         .add_attributes(vec![
             ("action", "after_flashloan".to_string()),
             ("profit", profit.to_string()),

@@ -1,8 +1,7 @@
-use crate::state::{MANAGER_CONFIG, ONGOING_FLASHLOAN, VAULTS};
+use crate::state::{CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128,
-    WasmMsg,
+    to_binary, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use white_whale::lp_common;
 use white_whale::pool_network::asset::{
@@ -18,7 +17,7 @@ pub fn deposit(
     info: &MessageInfo,
     asset: &Asset,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     // check that deposits are enabled
     if !config.deposit_enabled {
@@ -148,7 +147,7 @@ pub fn withdraw(
     lp_amount: Uint128,
     vault: Vault,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
 
     // check that withdrawals are enabled
     if !config.withdraw_enabled {
