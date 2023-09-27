@@ -7,6 +7,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
 
+use crate::helpers::fill_rewards_msg;
 use crate::state::{CONFIG, ONGOING_FLASHLOAN, VAULTS};
 use crate::ContractError;
 
@@ -167,12 +168,16 @@ pub fn after_flashloan(
         messages.push(profit_asset.into_msg(sender)?);
     }
     let config = CONFIG.load(deps.storage)?;
-    let protocol_fee_asset = Asset {
-        info: loan_asset.info.clone(),
+    let protocol_fee_asset = vec![Asset {
+        info: loan_asset.info,
         amount: protocol_fee,
-    };
-    //todo protocol_fee to be sent to "fee collector", i.e. with hook directly to the whale lair. `config.fee_collector_addr` to be remade
-    messages.push(protocol_fee_asset.into_msg(config.fee_collector_addr)?);
+    }];
+
+    // send protocol fee to whale lair
+    messages.push(fill_rewards_msg(
+        config.whale_lair_addr.into_string(),
+        protocol_fee_asset,
+    )?);
 
     // toggle off flashloan indicator
     ONGOING_FLASHLOAN

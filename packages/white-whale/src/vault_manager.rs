@@ -2,17 +2,19 @@ use crate::fee::Fee;
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, StdError, StdResult, Uint128};
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use std::fmt::{Display, Formatter};
 
 /// The instantiation message
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// The owner of the manager
+    /// The owner of the contract
     pub owner: String,
     /// The type of LP token to use, whether a cw20 token or a token factory token
     pub lp_token_type: LpTokenType,
-    /// The address where fees get collected
-    pub fee_collector_addr: String,
+    /// The whale lair address, where protocol fees are distributed
+    pub whale_lair_addr: String,
+    /// The fee to create a vault
     pub vault_creation_fee: Asset,
 }
 
@@ -21,8 +23,8 @@ pub struct InstantiateMsg {
 pub struct Config {
     /// The type of LP token to use, whether a cw20 token or a token factory token
     pub lp_token_type: LpTokenType,
-    /// The fee collector contract address
-    pub fee_collector_addr: Addr,
+    /// The whale lair contract address
+    pub whale_lair_addr: Addr,
     /// The fee to create a new vault
     pub vault_creation_fee: Asset,
     /// If flash-loans are enabled
@@ -104,6 +106,7 @@ impl Display for VaultFee {
 }
 
 /// The execution messages
+#[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
@@ -124,7 +127,7 @@ pub enum ExecuteMsg {
     /// Updates the configuration of the vault manager.
     /// If a field is not specified, it will not be modified.
     UpdateConfig {
-        fee_collector_addr: Option<String>,
+        whale_lair_addr: Option<String>,
         vault_creation_fee: Option<Asset>,
         cw20_lp_code_id: Option<u64>,
         flash_loan_enabled: Option<bool>,
@@ -153,6 +156,7 @@ pub enum ExecuteMsg {
 pub struct MigrateMsg {}
 
 /// The query messages
+#[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {

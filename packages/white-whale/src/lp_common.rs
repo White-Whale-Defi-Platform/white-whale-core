@@ -1,6 +1,6 @@
 use std::prelude::rust_2015::Ok;
 
-use cosmwasm_std::{coins, to_binary, CosmosMsg, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use crate::pool_network::asset::is_factory_token;
@@ -8,6 +8,8 @@ use crate::pool_network::asset::is_factory_token;
 use crate::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use crate::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+use cosmwasm_std::coins;
 
 /// Creates the Mint LP message
 #[allow(unused_variables)]

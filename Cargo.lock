@@ -1709,6 +1709,7 @@ version = "1.1.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-ownable",
  "cw-storage-plus",
  "cw2",
  "cw20",

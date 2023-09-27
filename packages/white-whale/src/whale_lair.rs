@@ -80,6 +80,11 @@ pub enum ExecuteMsg {
         growth_rate: Option<Decimal>,
         fee_distributor_addr: Option<String>,
     },
+
+    /// V2 MESSAGES
+
+    /// Fills the whale lair with new rewards.
+    FillRewards { assets: Vec<Asset> },
 }
 
 #[cw_serde]

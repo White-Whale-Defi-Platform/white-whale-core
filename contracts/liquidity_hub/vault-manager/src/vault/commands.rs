@@ -54,7 +54,7 @@ pub fn deposit(
         }
     };
 
-    if sent_funds != asset.amount.clone() {
+    if sent_funds != asset.amount {
         return Err(ContractError::FundsMismatch {
             sent: sent_funds,
             wanted: asset.amount,
@@ -70,7 +70,7 @@ pub fn deposit(
                 msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.clone().into_string(),
                     recipient: env.contract.address.clone().into_string(),
-                    amount: asset.amount.clone(),
+                    amount: asset.amount,
                 })?,
                 funds: vec![],
             }
@@ -109,7 +109,7 @@ pub fn deposit(
         // To calculate it properly we should subtract user deposit from the vault.
         // If the asset is a cw20 token, the balance has not changed yet so we don't need to subtract it
         let deposit_amount = match vault.asset_info {
-            AssetInfo::NativeToken { .. } => asset.amount.clone(),
+            AssetInfo::NativeToken { .. } => asset.amount,
             AssetInfo::Token { .. } => Uint128::zero(),
         };
 

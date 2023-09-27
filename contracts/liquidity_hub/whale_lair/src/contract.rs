@@ -93,6 +93,7 @@ pub fn execute(
             growth_rate,
             fee_distributor_addr,
         ),
+        ExecuteMsg::FillRewards { assets } => todo!("FillRewards is not implemented yet."),
     }
 }
 

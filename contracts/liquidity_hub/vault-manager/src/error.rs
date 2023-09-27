@@ -1,4 +1,5 @@
 use cosmwasm_std::{ConversionOverflowError, DivideByZeroError, OverflowError, StdError, Uint128};
+use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
@@ -54,6 +55,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("{0}")]
+    OwnershipError(#[from] OwnershipError),
 
     #[error(
     "Final desired amount of {required_amount} is less than current balance of {current_balance} (got {old_balance} -> {current_balance}, want {old_balance} -> {required_amount})"

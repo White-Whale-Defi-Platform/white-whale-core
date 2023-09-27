@@ -10,7 +10,7 @@ use white_whale::vault_manager::{
 };
 
 use crate::error::ContractError;
-use crate::state::{get_vault, CONFIG, ONGOING_FLASHLOAN, OWNER};
+use crate::state::{get_vault, CONFIG, ONGOING_FLASHLOAN};
 use crate::{manager, queries, router, vault};
 
 // version info for migration info
@@ -33,18 +33,17 @@ pub fn instantiate(
         AssetInfo::NativeToken { .. } => {}
     }
 
-    let manager_config = Config {
+    let config = Config {
         lp_token_type: msg.lp_token_type,
-        fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
+        whale_lair_addr: deps.api.addr_validate(&msg.whale_lair_addr)?,
         vault_creation_fee: msg.vault_creation_fee.clone(),
         flash_loan_enabled: true,
         deposit_enabled: true,
         withdraw_enabled: true,
     };
-    CONFIG.save(deps.storage, &manager_config)?;
+    CONFIG.save(deps.storage, &config)?;
 
-    //todo ownership proposal stuff to change ownership of the contract
-    OWNER.save(deps.storage, &deps.api.addr_validate(&msg.owner)?)?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
 
     // set flashloan counter to false
     ONGOING_FLASHLOAN.save(deps.storage, &false)?;
@@ -52,15 +51,9 @@ pub fn instantiate(
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", msg.owner),
-        ("lp_token_type", manager_config.lp_token_type.to_string()),
-        (
-            "fee_collector_addr",
-            manager_config.fee_collector_addr.into_string(),
-        ),
-        (
-            "vault_creation_fee",
-            manager_config.vault_creation_fee.to_string(),
-        ),
+        ("lp_token_type", config.lp_token_type.to_string()),
+        ("whale_lair_addr", config.whale_lair_addr.into_string()),
+        ("vault_creation_fee", config.vault_creation_fee.to_string()),
     ]))
 }
 
@@ -83,7 +76,7 @@ pub fn execute(
             vault_fee,
         } => manager::commands::update_vault_fees(deps, info, vault_asset_info, vault_fee),
         ExecuteMsg::UpdateConfig {
-            fee_collector_addr,
+            whale_lair_addr,
             vault_creation_fee,
             cw20_lp_code_id,
             flash_loan_enabled,
@@ -92,7 +85,7 @@ pub fn execute(
         } => manager::commands::update_config(
             deps,
             info,
-            fee_collector_addr,
+            whale_lair_addr,
             vault_creation_fee,
             cw20_lp_code_id,
             flash_loan_enabled,
@@ -134,6 +127,17 @@ pub fn execute(
             router::commands::flash_loan(deps, env, info, asset, payload)
         }
         ExecuteMsg::Callback(msg) => router::commands::callback(deps, env, info, msg),
+        ExecuteMsg::UpdateOwnership(action) => {
+            Ok(
+                cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
+                    |ownership| {
+                        Response::default()
+                            .add_attribute("action", "update_ownership")
+                            .add_attributes(ownership.into_attributes())
+                    },
+                )?,
+            )
+        }
     }
 }
 
@@ -151,6 +155,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::PaybackAmount { asset } => {
             Ok(to_binary(&queries::get_payback_amount(deps, asset)?)?)
         }
+        QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }
 }
 

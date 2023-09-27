@@ -4,7 +4,6 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use white_whale::common::validate_owner;
 use white_whale::constants::LP_SYMBOL;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 #[cfg(feature = "token_factory")]
@@ -15,7 +14,8 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::state::{CONFIG, OWNER, VAULTS};
+use crate::helpers::fill_rewards_msg;
+use crate::state::{CONFIG, VAULTS};
 use crate::ContractError;
 
 /// Creates a new vault
@@ -44,21 +44,25 @@ pub fn create_vault(
     }
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    let fee_asset = Asset {
+
+    // send vault creation fee to whale lair
+    let creation_fee = vec![Asset {
         info: config.vault_creation_fee.info,
         amount: config.vault_creation_fee.amount,
-    };
+    }];
 
-    //todo fix this with a hook msg
-    // send fees to whale lair
-    messages.push(fee_asset.into_msg(config.fee_collector_addr)?);
+    // send protocol fee to whale lair
+    messages.push(fill_rewards_msg(
+        config.whale_lair_addr.into_string(),
+        creation_fee,
+    )?);
 
     let binding = asset_info.clone();
     let asset_info_reference = binding.get_reference();
 
     // check that existing vault does not exist
     let vault = VAULTS.may_load(deps.storage, asset_info_reference)?;
-    if let Some(_) = vault {
+    if vault.is_some() {
         return Err(ContractError::ExistingVault { asset_info });
     }
 
@@ -157,18 +161,18 @@ pub fn create_vault(
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
-    fee_collector_addr: Option<String>,
+    whale_lair_addr: Option<String>,
     vault_creation_fee: Option<Asset>,
     cw20_lp_code_id: Option<u64>,
     flash_loan_enabled: Option<bool>,
     deposit_enabled: Option<bool>,
     withdraw_enabled: Option<bool>,
 ) -> Result<Response, ContractError> {
-    validate_owner(deps.storage, OWNER, info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let new_config = CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
-        if let Some(new_fee_collector_addr) = fee_collector_addr {
-            config.fee_collector_addr = deps.api.addr_validate(&new_fee_collector_addr)?;
+        if let Some(new_whale_lair_addr) = whale_lair_addr {
+            config.whale_lair_addr = deps.api.addr_validate(&new_whale_lair_addr)?;
         }
 
         if let Some(vault_creation_fee) = vault_creation_fee {
@@ -203,10 +207,7 @@ pub fn update_config(
 
     Ok(Response::default().add_attributes(vec![
         ("method", "update_manager_config"),
-        (
-            "fee_collector_addr",
-            &new_config.fee_collector_addr.into_string(),
-        ),
+        ("whale_lair_addr", &new_config.whale_lair_addr.into_string()),
         ("lp_token_type", &new_config.lp_token_type.to_string()),
         (
             "vault_creation_fee",
@@ -228,7 +229,7 @@ pub fn update_vault_fees(
     vault_asset_info: AssetInfo,
     vault_fee: VaultFee,
 ) -> Result<Response, ContractError> {
-    validate_owner(deps.storage, OWNER, info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let mut vault = VAULTS
         .may_load(deps.storage, vault_asset_info.get_reference())?
@@ -251,7 +252,7 @@ pub fn remove_vault(
     info: MessageInfo,
     asset_info: AssetInfo,
 ) -> Result<Response, ContractError> {
-    validate_owner(deps.storage, OWNER, info.sender)?;
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
         return Err(ContractError::NonExistentVault {});
