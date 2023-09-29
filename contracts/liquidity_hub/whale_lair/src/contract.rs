@@ -1,15 +1,15 @@
-use cosmwasm_std::{entry_point, Addr};
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Addr, entry_point};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, to_binary};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
-use white_whale::pool_network::asset::AssetInfo;
 
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
+use crate::{commands, migrations, queries};
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
-use crate::{commands, migrations, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-whale_lair";
@@ -93,7 +93,9 @@ pub fn execute(
             growth_rate,
             fee_distributor_addr,
         ),
-        ExecuteMsg::FillRewards { assets } => todo!("FillRewards is not implemented yet."),
+        ExecuteMsg::FillRewards { assets } => Ok(Response::default().add_attributes(vec![
+            ("action", "fill_rewards".to_string())
+        ])),
     }
 }
 

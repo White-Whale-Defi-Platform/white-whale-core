@@ -151,8 +151,10 @@ pub fn create_vault(
         }))
     }?;
 
+    messages.push(message);
+
     Ok(Response::default()
-        .add_message(message)
+        .add_messages(messages)
         .add_attribute("action", "create_vault".to_string())
         .add_attributes(attributes))
 }

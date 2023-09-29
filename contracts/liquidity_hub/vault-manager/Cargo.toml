@@ -45,3 +45,6 @@ cw-ownable.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
+whale-lair.workspace = true
+terraswap-token.workspace = true
+anyhow.workspace = true
