@@ -1682,7 +1682,7 @@ version = "1.3.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test",
+ "cw-multi-test 0.17.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
