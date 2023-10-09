@@ -6,6 +6,7 @@ use white_whale::pool_network::pair::FeatureToggle;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG};
 use crate::{commands, queries};
 /*
@@ -175,15 +176,15 @@ pub fn query(deps: Deps, env: Env, _msg: QueryMsg) -> Result<Binary, ContractErr
         // } => Ok(to_binary(&reverse_simulate_swap_operations(
         //     deps, ask_amount, operations,
         // )?)?),
-        // QueryMsg::SwapRoute {
-        //     offer_asset_info,
-        //     ask_asset_info,
-        // } => Ok(to_binary(&get_swap_route(
-        //     deps,
-        //     offer_asset_info,
-        //     ask_asset_info,
-        // )?)?),
-        // QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
+        QueryMsg::SwapRoute {
+            offer_asset_info,
+            ask_asset_info,
+        } => Ok(to_binary(&get_swap_route(
+            deps,
+            offer_asset_info,
+            ask_asset_info,
+        )?)?),
+        QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
     }
 }
 

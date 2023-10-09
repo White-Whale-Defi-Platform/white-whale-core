@@ -3,7 +3,8 @@ use cosmwasm_std::Decimal;
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
-    pair::PoolFee,
+    pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
+    router::{SwapOperation, SwapRouteResponse},
 };
 
 use crate::state::NAssets;
@@ -71,4 +72,14 @@ pub enum QueryMsg {
         ask_asset: Asset,
         offer_asset: Asset,
     },
+
+    /// Gets the swap route for the given offer and ask assets.
+    #[returns(Vec<SwapOperation>)]
+    SwapRoute {
+        offer_asset_info: AssetInfo,
+        ask_asset_info: AssetInfo,
+    },
+    /// Gets all swap routes registered
+    #[returns(Vec<SwapRouteResponse>)]
+    SwapRoutes {},
 }

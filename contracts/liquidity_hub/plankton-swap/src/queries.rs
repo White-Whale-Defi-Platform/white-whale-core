@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Decimal256, Deps, DepsMut, Env, Fraction, StdResult, Uint128};
+use cosmwasm_std::{Decimal256, Deps, DepsMut, Env, Fraction, Order, StdResult, Uint128};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
+    router::{SwapOperation, SwapRouteResponse},
 };
 
-use crate::math::Decimal256Helper;
 use crate::{
     helpers::{self, calculate_stableswap_y, get_protocol_fee_for_asset, StableSwapDirection},
     state::{
@@ -16,6 +16,7 @@ use crate::{
     },
     ContractError,
 };
+use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
 
 /// Query the native token decimals
 pub fn query_native_token_decimal(
@@ -354,4 +355,46 @@ pub fn query_reverse_simulation(
             })
         }
     }
+}
+
+// Router related queries, swap routes and SwapOperations
+// get_swap_routes which only takes deps: Deps as input
+// the function will read from SWAP_ROUTES and return all swpa routes in a vec
+pub fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractError> {
+    let swap_routes: Vec<SwapRouteResponse> = SWAP_ROUTES
+        .range(deps.storage, None, None, Order::Ascending)
+        .map(|item| {
+            let swap_info = item?;
+            // Destructure key into (offer_asset, ask_asset)
+            let (offer_asset, ask_asset) = swap_info.0;
+            // Destructure value into vec of SwapOperation
+            let swap_route = swap_info.1;
+
+            Ok(SwapRouteResponse {
+                offer_asset,
+                ask_asset,
+                swap_route,
+            })
+        })
+        .collect::<StdResult<Vec<SwapRouteResponse>>>()?;
+
+    Ok(swap_routes)
+}
+
+pub fn get_swap_route(
+    deps: Deps,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> Result<Vec<SwapOperation>, ContractError> {
+    let swap_route_key = SWAP_ROUTES.key((
+        offer_asset_info.clone().get_label(&deps)?.as_str(),
+        ask_asset_info.clone().get_label(&deps)?.as_str(),
+    ));
+
+    swap_route_key
+        .load(deps.storage)
+        .map_err(|_| ContractError::NoSwapRouteForAssets {
+            offer_asset: offer_asset_info.to_string(),
+            ask_asset: ask_asset_info.to_string(),
+        })
 }

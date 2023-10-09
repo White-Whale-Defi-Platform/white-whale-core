@@ -81,4 +81,10 @@ pub enum ContractError {
 
     #[error(transparent)]
     ConversionOverflowError(#[from] ConversionOverflowError),
+
+    #[error("No swap route found for {offer_asset} -> {ask_asset}")]
+    NoSwapRouteForAssets {
+        offer_asset: String,
+        ask_asset: String,
+    },
 }
