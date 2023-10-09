@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdResult, Storage, Uint128, StdError};
+use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Item, Map};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
@@ -186,7 +186,6 @@ pub struct Config {
     pub feature_toggle: FeatureToggle,
 }
 
-
 /// Stores the fee for an asset in the given fees_storage_item
 pub fn store_fee(
     storage: &mut dyn Storage,
@@ -195,21 +194,21 @@ pub fn store_fee(
     fees_storage_item: Map<&str, Vec<Asset>>,
 ) -> StdResult<()> {
     let fees = fees_storage_item
-    .load( storage, &asset_id)?
-    .iter()
-    .map(|fee_asset| {
-        if fee_asset.clone().get_id() == asset_id {
-            Asset {
-                info: fee_asset.info.clone(),
-                amount: fee_asset.amount + fee_amount,
+        .load(storage, &asset_id)?
+        .iter()
+        .map(|fee_asset| {
+            if fee_asset.clone().get_id() == asset_id {
+                Asset {
+                    info: fee_asset.info.clone(),
+                    amount: fee_asset.amount + fee_amount,
+                }
+            } else {
+                fee_asset.clone()
             }
-        } else {
-            fee_asset.clone()
-        }
-    })
-    .collect();
-   
-    fees_storage_item.save(storage, &asset_id,&fees)
+        })
+        .collect();
+
+    fees_storage_item.save(storage, &asset_id, &fees)
 }
 
 /// Gets the fees for an asset from the given fees_storage_item
@@ -219,8 +218,8 @@ pub fn get_fees_for_asset(
     fees_storage_item: Map<&str, Vec<Asset>>,
 ) -> StdResult<Asset> {
     let fees = fees_storage_item
-    .load( storage, &asset_id)?
-    .iter()
+        .load(storage, &asset_id)?
+        .iter()
         .find(|&fee_asset| fee_asset.clone().get_id() == asset_id)
         .cloned();
 

@@ -57,4 +57,18 @@ pub enum QueryMsg {
     /// Retrieves the decimals for the given native or ibc denom.
     #[returns(NativeTokenDecimalsResponse)]
     NativeTokenDecimals { denom: String },
+
+    /// Simulates a swap.
+    #[returns(SimulationResponse)]
+    Simulation {
+        offer_asset: Asset,
+        ask_asset: Asset,
+    },
+    /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
+    /// perform the swap.
+    #[returns(ReverseSimulationResponse)]
+    ReverseSimulation {
+        ask_asset: Asset,
+        offer_asset: Asset,
+    },
 }

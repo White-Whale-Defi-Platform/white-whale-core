@@ -1,6 +1,6 @@
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::tests::suite::SuiteBuilder;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
@@ -8,8 +8,6 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 // and add liquidity to it
 #[test]
 fn north_star() {
-    let mut app = App::default();
-
     let mut suite = SuiteBuilder::new()
         .with_native_balances("uusd", vec![("addr0000", 1000001), ("admin", 1000001)])
         .with_native_balances("fable", vec![("addr0000", 1000001), ("admin", 1000001)])
@@ -35,7 +33,6 @@ fn north_star() {
         .create_constant_product_pool(Addr::unchecked("addr0000"), asset_infos)
         .unwrap();
     println!("{:?}", res);
-    assert_eq!(1, 0);
 
     // Lets try to add liquidity
     let res = suite
@@ -52,6 +49,16 @@ fn north_star() {
                     info: AssetInfo::NativeToken {
                         denom: "fable".to_string(),
                     },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            &vec![
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "fable".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],

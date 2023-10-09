@@ -28,7 +28,7 @@ use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
 use crate::state::{pair_key, PAIRS, TMP_PAIR_INFO};
 use test_case::test_case;
 #[cfg(test)]
-mod tests {
+mod pair_creation_tests {
     use super::*;
     use cosmwasm_std::testing::{mock_env, mock_info};
     use cosmwasm_std::{coin, coins, Binary, Decimal, DepsMut, Uint128};

@@ -117,21 +117,36 @@ pub fn execute(
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             commands::add_native_token_decimals(deps, env, denom, decimals)
         }
+        // ExecuteMsg::UpdatePairInfo { pair_key } => {
+        //     commands::update_pair_info(deps, env, denom, decimals)
+        // },
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, _msg: QueryMsg) -> Result<Binary, ContractError> {
     match _msg {
-        QueryMsg::NativeTokenDecimals { denom } => {
-            to_binary(&queries::query_native_token_decimal(_deps, denom)?)
-        }
-        // QueryMsg::Simulation { offer_asset } => {
-        //     Ok(to_binary(&queries::query_simulation(deps, offer_asset)?)?)
-        // }
-        // QueryMsg::ReverseSimulation { ask_asset } => Ok(to_binary(
-        //     &queries::query_reverse_simulation(deps, ask_asset)?,
-        // )?),
+        QueryMsg::NativeTokenDecimals { denom } => Ok(to_binary(
+            &queries::query_native_token_decimal(deps, denom)?,
+        )?),
+        QueryMsg::Simulation {
+            offer_asset,
+            ask_asset,
+        } => Ok(to_binary(&queries::query_simulation(
+            deps,
+            env,
+            offer_asset,
+            ask_asset,
+        )?)?),
+        QueryMsg::ReverseSimulation {
+            ask_asset,
+            offer_asset,
+        } => Ok(to_binary(&queries::query_reverse_simulation(
+            deps,
+            env,
+            ask_asset,
+            offer_asset,
+        )?)?),
         // QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
         //     deps,
         //     asset_id,

@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256,
-};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
 use cw_storage_plus::Item;
 
@@ -15,12 +13,10 @@ use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::pair::{PoolFee};
-
+use white_whale::pool_network::pair::PoolFee;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 

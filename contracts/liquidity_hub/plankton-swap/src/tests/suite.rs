@@ -4,7 +4,9 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use anyhow::Result as AnyResult;
 use cosmwasm_std::{Addr, Coin, Decimal, Empty, Uint128};
 use cw20::Cw20Coin;
-use cw_multi_test::{App, AppResponse, Contract, ContractWrapper, Executor};
+use cw_multi_test::{
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor,
+};
 use white_whale::{
     fee::Fee,
     pool_network::{
@@ -13,7 +15,9 @@ use white_whale::{
     },
 };
 
-fn contract_pool_manager(app: &mut App) -> u64 {
+fn contract_pool_manager(
+    app: &mut App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>,
+) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         crate::contract::execute,
         crate::contract::instantiate,
@@ -23,7 +27,7 @@ fn contract_pool_manager(app: &mut App) -> u64 {
     app.store_code(contract)
 }
 
-fn store_token_code(app: &mut App) -> u64 {
+fn store_token_code(app: &mut App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         cw20_base::contract::execute,
         cw20_base::contract::instantiate,
@@ -75,7 +79,10 @@ impl SuiteBuilder {
 
     #[track_caller]
     pub fn build(self) -> Suite {
-        let mut app: App = App::default();
+        let mut app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi> =
+            AppBuilder::new_custom()
+                .with_api(crate::tests::temp_mock_api::MockSimpleApi::default())
+                .build(|_, _, _| {});
         // provide initial native balances
         app.init_modules(|router, _, storage| {
             // group by address
@@ -123,7 +130,7 @@ impl SuiteBuilder {
 }
 
 pub struct Suite {
-    pub app: App,
+    pub app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>,
     pub pool_manager_addr: Addr,
 }
 
@@ -169,6 +176,7 @@ impl Suite {
         &mut self,
         sender: Addr,
         vec: Vec<Asset>,
+        funds: &Vec<Coin>,
     ) -> AnyResult<AppResponse> {
         let msg = ExecuteMsg::ProvideLiquidity {
             assets: vec,
@@ -178,7 +186,7 @@ impl Suite {
 
         let res = self
             .app
-            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[])?;
+            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, funds)?;
         Ok(res)
     }
 
