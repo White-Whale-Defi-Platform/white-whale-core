@@ -160,6 +160,7 @@ pub fn create_vault(
 }
 
 /// Updates the manager config
+#[allow(clippy::too_many_arguments)]
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,

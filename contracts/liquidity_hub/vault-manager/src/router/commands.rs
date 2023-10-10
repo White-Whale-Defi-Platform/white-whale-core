@@ -29,22 +29,10 @@ pub fn flash_loan(
     ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |_| Ok(true))?;
 
     // store current balance for after trade profit check
-    let old_asset_balance = match asset.info.clone() {
-        AssetInfo::NativeToken { denom } => {
-            deps.querier
-                .query_balance(env.contract.address.clone(), denom)?
-                .amount
-        }
-        AssetInfo::Token { contract_addr } => {
-            let balance_response: cw20::BalanceResponse = deps.querier.query_wasm_smart(
-                contract_addr,
-                &cw20::Cw20QueryMsg::Balance {
-                    address: env.contract.address.clone().into_string(),
-                },
-            )?;
-            balance_response.balance
-        }
-    };
+    let old_asset_balance =
+        asset
+            .info
+            .query_balance(&deps.querier, deps.api, env.contract.address.clone())?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -63,10 +51,12 @@ pub fn flash_loan(
         .into(),
     );
 
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("method", "flash_loan"),
-        ("asset", &asset.to_string()),
-    ]))
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_attributes(vec![
+            ("method", "flash_loan"),
+            ("asset", &asset.to_string()),
+        ]))
 }
 
 /// Processes callback to this contract. Callbacks can only be done by the contract itself.

@@ -156,22 +156,10 @@ pub fn withdraw(
 
     let sender = deps.api.addr_validate(&sender)?;
 
-    let total_asset_amount = match &vault.asset_info {
-        AssetInfo::NativeToken { denom } => {
-            deps.querier
-                .query_balance(env.contract.address.clone(), denom)?
-                .amount
-        }
-        AssetInfo::Token { contract_addr } => {
-            let balance: cw20::BalanceResponse = deps.querier.query_wasm_smart(
-                contract_addr,
-                &cw20::Cw20QueryMsg::Balance {
-                    address: env.contract.address.clone().into_string(),
-                },
-            )?;
-            balance.balance
-        }
-    };
+    let total_asset_amount =
+        vault
+            .asset_info
+            .query_balance(&deps.querier, deps.api, env.contract.address.clone())?;
 
     let liquidity_asset = vault.lp_asset.to_string();
     let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
