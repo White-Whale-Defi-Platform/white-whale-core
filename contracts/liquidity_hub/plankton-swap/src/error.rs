@@ -87,4 +87,7 @@ pub enum ContractError {
         offer_asset: String,
         ask_asset: String,
     },
+
+    #[error("Must provide swap operations to execute")]
+    NoSwapOperationsProvided {},
 }

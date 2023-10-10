@@ -162,20 +162,21 @@ pub fn query(deps: Deps, env: Env, _msg: QueryMsg) -> Result<Binary, ContractErr
         //     ALL_TIME_BURNED_FEES,
         //     None,
         // )?)?),
-        // QueryMsg::SimulateSwapOperations {
-        //     offer_amount,
-        //     operations,
-        // } => Ok(to_binary(&simulate_swap_operations(
-        //     deps,
-        //     offer_amount,
-        //     operations,
-        // )?)?),
-        // QueryMsg::ReverseSimulateSwapOperations {
-        //     ask_amount,
-        //     operations,
-        // } => Ok(to_binary(&reverse_simulate_swap_operations(
-        //     deps, ask_amount, operations,
-        // )?)?),
+        QueryMsg::SimulateSwapOperations {
+            offer_amount,
+            operations,
+        } => Ok(to_binary(&queries::simulate_swap_operations(
+            deps,
+            env,
+            offer_amount,
+            operations,
+        )?)?),
+        QueryMsg::ReverseSimulateSwapOperations {
+            ask_amount,
+            operations,
+        } => Ok(to_binary(&queries::reverse_simulate_swap_operations(
+            deps, env, ask_amount, operations,
+        )?)?),
         QueryMsg::SwapRoute {
             offer_asset_info,
             ask_asset_info,

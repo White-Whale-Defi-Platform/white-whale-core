@@ -1,10 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Decimal;
+use cosmwasm_std::{Decimal, Uint128};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
-    router::{SwapOperation, SwapRouteResponse},
+    router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
 
 use crate::state::NAssets;
@@ -82,4 +82,18 @@ pub enum QueryMsg {
     /// Gets all swap routes registered
     #[returns(Vec<SwapRouteResponse>)]
     SwapRoutes {},
+
+    /// Simulates swap operations.
+    #[returns(SimulateSwapOperationsResponse)]
+    SimulateSwapOperations {
+        offer_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
+    /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
+    /// is needed to perform the swap.
+    #[returns(SimulateSwapOperationsResponse)]
+    ReverseSimulateSwapOperations {
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
 }

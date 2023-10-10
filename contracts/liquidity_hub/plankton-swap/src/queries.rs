@@ -1,18 +1,18 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Decimal256, Deps, DepsMut, Env, Fraction, Order, StdResult, Uint128};
+use cosmwasm_std::{Addr, Decimal256, Deps, DepsMut, Env, Fraction, Order, StdResult, Uint128};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
-    router::{SwapOperation, SwapRouteResponse},
+    router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
 
 use crate::{
     helpers::{self, calculate_stableswap_y, get_protocol_fee_for_asset, StableSwapDirection},
     state::{
-        get_decimals, pair_key, ALLOW_NATIVE_TOKENS, COLLECTABLE_PROTOCOL_FEES, MANAGER_CONFIG,
-        PAIRS,
+        get_decimals, pair_key, NPairInfo, ALLOW_NATIVE_TOKENS, COLLECTABLE_PROTOCOL_FEES,
+        MANAGER_CONFIG, PAIRS,
     },
     ContractError,
 };
@@ -52,7 +52,7 @@ pub fn query_simulation(
 ) -> Result<SimulationResponse, ContractError> {
     let assets = [offer_asset.clone(), ask_asset.clone()];
     let asset_infos = [offer_asset.info.clone(), ask_asset.info.clone()];
-    let (_assets_vec, pools, pair_info) = match assets {
+    let (_assets_vec, mut pools, pair_info) = match assets {
         // For TWO assets we use the constant product logic
         assets if assets.len() == 2 => {
             let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
@@ -136,7 +136,7 @@ pub fn query_simulation(
         COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
 
     // To calculate pool amounts properly we should subtract the protocol fees from the pool
-    pools
+    pools = pools
         .into_iter()
         .map(|mut pool| {
             // subtract the protocol fee from the pool
@@ -231,7 +231,7 @@ pub fn query_reverse_simulation(
                 ask_asset.info.clone(),
                 ask_asset.info.clone(),
             ];
-            let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset];
+            let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset.clone()];
 
             let pools: [Asset; 3] = [
                 Asset {
@@ -274,7 +274,10 @@ pub fn query_reverse_simulation(
     let ask_pool: Asset;
     let ask_decimal;
     let decimals = get_decimals(&pair_info);
-
+    offer_pool = pools[0].clone();
+    offer_decimal = decimals[0];
+    ask_pool = pools[1].clone();
+    ask_decimal = decimals[1];
     let collected_protocol_fees =
         COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
     let pool_fees = pair_info.pool_fees;
@@ -397,4 +400,110 @@ pub fn get_swap_route(
             offer_asset: offer_asset_info.to_string(),
             ask_asset: ask_asset_info.to_string(),
         })
+}
+
+pub fn simulate_swap_operations(
+    deps: Deps,
+    env: Env,
+    offer_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided {});
+    }
+
+    let mut offer_amount = offer_amount;
+    for operation in operations.into_iter() {
+        match operation {
+            SwapOperation::TerraSwap {
+                offer_asset_info,
+                ask_asset_info,
+            } => {
+                let pair_info: NPairInfo =
+                    query_pair_info(&deps, &[offer_asset_info.clone(), ask_asset_info.clone()])?;
+
+                let res: SimulationResponse = query_simulation(
+                    deps,
+                    env.clone(),
+                    Asset {
+                        info: offer_asset_info,
+                        amount: offer_amount,
+                    },
+                    Asset {
+                        info: ask_asset_info,
+                        amount: Uint128::zero(),
+                    },
+                )?;
+
+                offer_amount = res.return_amount;
+            }
+        }
+    }
+
+    Ok(SimulateSwapOperationsResponse {
+        amount: offer_amount,
+    })
+}
+
+pub fn reverse_simulate_swap_operations(
+    deps: Deps,
+    env: Env,
+    ask_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided {});
+    }
+
+    let mut ask_amount = ask_amount;
+    for operation in operations.into_iter().rev() {
+        ask_amount = match operation {
+            SwapOperation::TerraSwap {
+                offer_asset_info,
+                ask_asset_info,
+            } => reverse_simulate_return_amount(
+                deps,
+                env.clone(),
+                ask_amount,
+                offer_asset_info,
+                ask_asset_info,
+            )?,
+        }
+    }
+
+    Ok(SimulateSwapOperationsResponse { amount: ask_amount })
+}
+
+pub fn reverse_simulate_return_amount(
+    deps: Deps,
+    env: Env,
+    ask_amount: Uint128,
+    offer_asset_info: AssetInfo,
+    ask_asset_info: AssetInfo,
+) -> Result<Uint128, ContractError> {
+    let pair_info: NPairInfo =
+        query_pair_info(&deps, &[offer_asset_info.clone(), ask_asset_info.clone()])?;
+
+    let res: ReverseSimulationResponse = query_reverse_simulation(
+        deps,
+        env,
+        Asset {
+            info: ask_asset_info,
+            amount: Uint128::zero(),
+        },
+        Asset {
+            info: offer_asset_info,
+            amount: Uint128::zero(),
+        },
+    )?;
+
+    Ok(res.offer_amount)
+}
+
+pub fn query_pair_info(deps: &Deps<'_>, asset_infos: &[AssetInfo]) -> StdResult<NPairInfo> {
+    let pair_key = get_pair_key_from_assets(asset_infos, deps).unwrap();
+    let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+    Ok(pair_info)
 }
