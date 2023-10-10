@@ -1,7 +1,7 @@
 use std::string::ToString;
 
-use cosmwasm_std::{Deps, Order, StdResult, Storage};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, UniqueIndex};
+use cosmwasm_std::{Deps, Order, StdResult, Storage, Uint128};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_manager::{Config, Vault};
@@ -10,6 +10,9 @@ use crate::ContractError;
 
 // A bool representing if a flashloan is being performed or not
 pub const ONGOING_FLASHLOAN: Item<bool> = Item::new("ongoing_flashloan");
+
+// Stores the balances of all assets in the contract before a flashloan, to compare after the messages are executed
+pub const TEMP_BALANCES: Map<&[u8], Uint128> = Map::new("temp_balances");
 
 // Contract's config
 pub const CONFIG: Item<Config> = Item::new("config");

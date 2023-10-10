@@ -70,6 +70,9 @@ pub enum ContractError {
         /// The required return amount for the vault manager
         required_amount: Uint128,
     },
+
+    #[error("The balance of an asset in the vault has decreased after the flashloan.")]
+    FlashLoanLoss {},
 }
 
 impl From<semver::Error> for ContractError {
