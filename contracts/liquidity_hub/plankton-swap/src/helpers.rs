@@ -480,10 +480,12 @@ pub fn instantiate_fees(
     storage: &mut dyn Storage,
     asset_info_0: AssetInfo,
     asset_info_1: AssetInfo,
-    fee_storage_item: Item<Vec<Asset>>,
+    pair_key: &Vec<u8>,
+    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], std::vec::Vec<Asset>>,
 ) -> StdResult<()> {
     fee_storage_item.save(
         storage,
+        pair_key,
         &vec![
             Asset {
                 info: asset_info_0,

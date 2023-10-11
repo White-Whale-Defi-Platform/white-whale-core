@@ -29,7 +29,6 @@ pub fn get_decimals(pair_info: &NPairInfo) -> Vec<u8> {
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
 
 // Dyanmic Maps for Fee and Pair info
-pub const PAIR_INFO: Map<&str, Item<PairInfo>> = Map::new("pair_info");
 pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Asset>> = Map::new("collected_protocol_fees");
 pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
