@@ -29,6 +29,18 @@ end
 
 ```
 
+### Todo work
+
++ [X] Create a pool manager contract
++ [X] Can create a pair 
++ [X] Can provide liquidity 
++ [X] Can withdraw liquidity
++ [X] Can swap assets
++ [ ] Tests for all the above ported over 
++ [ ] Tests for Swap Operations 
++ [ ] Tests for swap routes 
++ [ ] 
+
 
 ## Creating a new repo from template
 
