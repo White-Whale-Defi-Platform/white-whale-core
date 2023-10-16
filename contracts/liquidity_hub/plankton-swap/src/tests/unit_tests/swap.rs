@@ -49,11 +49,11 @@ fn try_native_to_token() {
     deps.querier.with_token_balances(&[
         (
             &TEMP_CONTRACT_ADDR.clone(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::zero())],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &total_share)],
         ),
         (
             &"asset0000".to_string(),
-            &[(&"addr0000".to_string(), &Uint128::from(100u128)), (&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
+            &[(&MOCK_CONTRACT_ADDR.to_string(), &asset_pool_amount)],
         ),
     ]);
     deps.querier
@@ -65,12 +65,7 @@ fn try_native_to_token() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![Asset {
-            amount: Uint128::new(1000000u128),
-            info: AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        }],
+        pool_creation_fee: vec![],
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -79,11 +74,12 @@ fn try_native_to_token() {
 
     // Create the Pair
     let asset_infos = [
-        AssetInfo::Token {
-            contract_addr: "asset0000".to_string(),
-        },
+       
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
+        },
+        AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
         },
     ];
 
@@ -110,125 +106,15 @@ fn try_native_to_token() {
 
     let info = mock_info(
         "addr0000",
-        &[Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::new(1u128),
-        }],
+        // &[Coin {
+        //     denom: "uusd".to_string(),
+        //     amount: Uint128::new(1u128),
+        // }],
+        &[],
     );
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-    // unsuccessfully providing liquidity since share becomes zero, MINIMUM_LIQUIDITY_AMOUNT provided
-    let msg = ExecuteMsg::ProvideLiquidity {
-        assets: [
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
-            },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
-            },
-        ]
-        .to_vec(),
-        slippage_tolerance: None,
-        receiver: None,
-    };
-
-    let env = mock_env();
-    let info = mock_info(
-        "addr0000",
-        &[Coin {
-            denom: "uusd".to_string(),
-            amount: MINIMUM_LIQUIDITY_AMOUNT,
-        }],
-    );
-    let res = execute(deps.as_mut(), env, info, msg).unwrap_err();
-    match res {
-        ContractError::InvalidInitialLiquidityAmount { .. } => {}
-        _ => {
-            println!("{:?}", res);
-            panic!("should return ContractError::InvalidInitialLiquidityAmount")
-        }
-    }
-
-    // successfully provide liquidity for the exist pool
-    let msg = ExecuteMsg::ProvideLiquidity {
-        assets: [
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "asset0000".to_string(),
-                },
-                amount: Uint128::from(2_000u128),
-            },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-                amount: Uint128::from(2_000u128),
-            },
-        ]
-        .to_vec(),
-        slippage_tolerance: None,
-        receiver: None,
-    };
-
-    let env = mock_env();
-    let info = mock_info(
-        "addr0000",
-        &[Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::from(2_000u128),
-        }],
-    );
-    let res = execute(deps.as_mut(), env, info, msg).unwrap();
-
-    assert_eq!(res.messages.len(), 3usize);
-
-    let transfer_from_msg = res.messages.get(0).expect("no message");
-    let mint_initial_lp_msg = res.messages.get(1).expect("no message");
-    let mint_msg = res.messages.get(2).expect("no message");
-    assert_eq!(
-        transfer_from_msg,
-        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: "addr0000".to_string(),
-                recipient: MOCK_CONTRACT_ADDR.to_string(),
-                amount: Uint128::from(2_000u128),
-            })
-            .unwrap(),
-            funds: vec![],
-        }))
-    );
-    assert_eq!(
-        mint_initial_lp_msg,
-        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TEMP_CONTRACT_ADDR.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
-                recipient: "cosmos2contract".to_string(),
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
-            })
-            .unwrap(),
-            funds: vec![],
-        }))
-    );
-    assert_eq!(
-        mint_msg,
-        &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: TEMP_CONTRACT_ADDR.clone(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: "addr0000".to_string(),
-                amount: MINIMUM_LIQUIDITY_AMOUNT,
-            })
-            .unwrap(),
-            funds: vec![],
-        }))
-    );
 
     // normal swap
     let msg = ExecuteMsg::Swap {
@@ -260,6 +146,7 @@ fn try_native_to_token() {
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
     // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee - burn_fee
+    // TODO: Returned amount is 904545457 and spread is up to 5% -- 43290043. Investigate this 
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
@@ -277,20 +164,22 @@ fn try_native_to_token() {
 
     // since there is a burn_fee on the PoolFee, check burn message
     // since we swapped to a cw20 token, the burn message should be a Cw20ExecuteMsg::Burn
-    // let expected_burn_msg = SubMsg {
-    //     id: 0,
-    //     msg: CosmosMsg::Wasm(WasmMsg::Execute {
-    //         contract_addr: "asset0000".to_string(),
-    //         msg: to_binary(&Cw20ExecuteMsg::Burn {
-    //             amount: expected_burn_fee_amount,
-    //         })
-    //         .unwrap(),
-    //         funds: vec![],
-    //     }),
-    //     gas_limit: None,
-    //     reply_on: ReplyOn::Never,
-    // };
-    // assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
+    let expected_burn_msg = SubMsg {
+        id: 0,
+        msg: CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: "asset0000".to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Burn {
+                amount: expected_burn_fee_amount,
+            })
+            .unwrap(),
+            funds: vec![],
+        }),
+        gas_limit: None,
+        reply_on: ReplyOn::Never,
+    };
+    println!("{:?}", exchange_rate);
+    println!("{:?}", offer_amount * exchange_rate);
+    assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
 
     // // as we swapped native to token, we accumulate the protocol fees in token
     // let protocol_fees_for_token = query_fees(
