@@ -10,7 +10,8 @@ use white_whale::vault_manager::{
 };
 
 use crate::error::ContractError;
-use crate::state::{get_vault, CONFIG, ONGOING_FLASHLOAN};
+use crate::helpers::assert_asset;
+use crate::state::{get_vault_by_lp, CONFIG, ONGOING_FLASHLOAN, VAULT_COUNTER};
 use crate::{manager, queries, router, vault};
 
 // version info for migration info
@@ -47,6 +48,8 @@ pub fn instantiate(
 
     // set flashloan counter to false
     ONGOING_FLASHLOAN.save(deps.storage, &false)?;
+    // initialize vault counter
+    VAULT_COUNTER.save(deps.storage, &0u64)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
@@ -65,16 +68,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateVault { asset_info, fees } => {
-            manager::commands::create_vault(deps, env, info, asset_info, fees)
-        }
-        ExecuteMsg::RemoveVault { asset_info } => {
-            manager::commands::remove_vault(deps, info, asset_info)
-        }
-        ExecuteMsg::UpdateVaultFees {
-            vault_asset_info,
-            vault_fee,
-        } => manager::commands::update_vault_fees(deps, info, vault_asset_info, vault_fee),
+        ExecuteMsg::CreateVault {
+            asset_info,
+            fees,
+            vault_identifier,
+        } => manager::commands::create_vault(deps, env, info, asset_info, fees, vault_identifier),
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             vault_creation_fee,
@@ -92,14 +90,18 @@ pub fn execute(
             deposit_enabled,
             withdraw_enabled,
         ),
-        ExecuteMsg::Deposit { asset } => vault::commands::deposit(&deps, &env, &info, &asset),
-        ExecuteMsg::Withdraw {} => {
+        ExecuteMsg::Deposit {
+            asset,
+            vault_identifier,
+        } => vault::commands::deposit(deps, &env, &info, &asset, &vault_identifier),
+        ExecuteMsg::Withdraw => {
             let lp_asset = AssetInfo::NativeToken {
                 denom: one_coin(&info)?.denom,
             };
 
-            // check if the vault exists
-            let vault = get_vault(&deps.as_ref(), &lp_asset)?;
+            // check if the vault exists and the asset matches
+            let vault = get_vault_by_lp(&deps.as_ref(), &lp_asset)?;
+            assert_asset(&vault.lp_asset, &lp_asset)?;
 
             vault::commands::withdraw(
                 deps,
@@ -115,17 +117,20 @@ pub fn execute(
                 contract_addr: info.sender.into_string(),
             };
 
-            let vault = get_vault(&deps.as_ref(), &lp_asset)?;
+            let vault = get_vault_by_lp(&deps.as_ref(), &lp_asset)?;
+            assert_asset(&vault.lp_asset, &lp_asset)?;
 
             match from_binary(&msg.msg)? {
-                Cw20HookMsg::Withdraw {} => {
+                Cw20HookMsg::Withdraw => {
                     vault::commands::withdraw(deps, env, msg.sender, msg.amount, vault)
                 }
             }
         }
-        ExecuteMsg::FlashLoan { asset, payload } => {
-            router::commands::flash_loan(deps, env, info, asset, payload)
-        }
+        ExecuteMsg::FlashLoan {
+            asset,
+            vault_identifier,
+            payload,
+        } => router::commands::flash_loan(deps, env, info, asset, vault_identifier, payload),
         ExecuteMsg::Callback(msg) => router::commands::callback(deps, env, info, msg),
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
@@ -145,16 +150,21 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
-        QueryMsg::Vault { asset_info } => Ok(to_binary(&queries::query_vault(deps, asset_info)?)?),
+        QueryMsg::Vault { filter_by } => Ok(to_binary(&queries::query_vault(deps, filter_by)?)?),
         QueryMsg::Vaults { start_after, limit } => Ok(to_binary(&queries::query_vaults(
             deps,
             start_after,
             limit,
         )?)?),
         QueryMsg::Share { lp_share } => Ok(to_binary(&queries::get_share(deps, env, lp_share)?)?),
-        QueryMsg::PaybackAmount { asset } => {
-            Ok(to_binary(&queries::get_payback_amount(deps, asset)?)?)
-        }
+        QueryMsg::PaybackAmount {
+            asset,
+            vault_identifier,
+        } => Ok(to_binary(&queries::get_payback_amount(
+            deps,
+            asset,
+            vault_identifier,
+        )?)?),
         QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "white-whale"
-version = "1.1.1"
+version = "1.1.2"
 edition.workspace = true
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 description = "Common White Whale types and utils"
@@ -33,3 +33,4 @@ osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 cw-ownable.workspace = true
+anybuf.workspace = true

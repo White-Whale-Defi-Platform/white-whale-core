@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, to_binary, Uint128, Uint256,
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128, Uint256,
     WasmMsg,
 };
 
@@ -7,10 +7,10 @@ use white_whale::pool_network::asset::Asset;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
 
-use crate::ContractError;
-use crate::helpers::{fill_rewards_msg, query_balances};
+use crate::helpers::{assert_asset, fill_rewards_msg, query_balances};
 use crate::queries::query_vaults;
-use crate::state::{CONFIG, ONGOING_FLASHLOAN, TEMP_BALANCES};
+use crate::state::{get_vault_by_identifier, CONFIG, MAX_LIMIT, ONGOING_FLASHLOAN, TEMP_BALANCES};
+use crate::ContractError;
 
 /// Takes a flashloan of the specified asset and executes the payload.
 pub fn flash_loan(
@@ -18,6 +18,7 @@ pub fn flash_loan(
     env: Env,
     info: MessageInfo,
     asset: Asset,
+    vault_identifier: String,
     payload: Vec<CosmosMsg>,
 ) -> Result<Response, ContractError> {
     // check that flash loans are enabled
@@ -26,12 +27,26 @@ pub fn flash_loan(
         return Err(ContractError::Unauthorized {});
     }
 
+    let vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.to_owned())?;
+
+    // check that the asset sent matches the vault
+    assert_asset(&vault.asset.info, &asset.info)?;
+
+    // check if the vault has enough funds
+    if vault.asset.amount < asset.amount {
+        return Err(ContractError::InsufficientAssetBalance {
+            asset_balance: vault.asset.amount,
+            requested_amount: asset.amount,
+        });
+    }
+
     // toggle on the flashloan indicator
     ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |_| Ok(true))?;
 
-    let vaults = query_vaults(deps.as_ref(), None, None)?.vaults;
+    //todo think how to redo this so it's scalable
+    let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
 
-    // store balances of all assets in the vault
+    // store balances of all assets in the contract, so that we can check that other assets were not touched during the fashloan
     let balances = query_balances(deps.as_ref(), env.contract.address.clone(), &vaults)?;
     for (asset_info_reference, balance) in &balances {
         TEMP_BALANCES.save(deps.storage, asset_info_reference, balance)?;
@@ -52,18 +67,20 @@ pub fn flash_loan(
             msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterFlashloan {
                 old_asset_balance,
                 loan_asset: asset.clone(),
+                vault_identifier: vault_identifier.clone(),
                 sender: info.sender,
             }))?,
             funds: vec![],
         }
-            .into(),
+        .into(),
     );
 
     Ok(Response::default()
         .add_messages(messages)
         .add_attributes(vec![
-            ("method", "flash_loan"),
-            ("asset", &asset.to_string()),
+            ("action", "flash_loan".to_string()),
+            ("asset", asset.to_string()),
+            ("vault_identifier", vault_identifier),
         ]))
 }
 
@@ -83,8 +100,9 @@ pub fn callback(
         CallbackMsg::AfterFlashloan {
             old_asset_balance: old_balance,
             loan_asset,
+            vault_identifier,
             sender,
-        } => after_flashloan(deps, env, old_balance, loan_asset, sender),
+        } => after_flashloan(deps, env, old_balance, loan_asset, vault_identifier, sender),
     }
 }
 
@@ -95,11 +113,12 @@ pub fn after_flashloan(
     env: Env,
     old_balance: Uint128,
     loan_asset: Asset,
+    vault_identifier: String,
     sender: Addr,
 ) -> Result<Response, ContractError> {
     // query asset balances
-
-    let vaults = query_vaults(deps.as_ref(), None, None)?.vaults;
+    //todo think how to redo this so it's scalable
+    let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
 
     // get balances of all assets in the vault
     let new_balances = query_balances(deps.as_ref(), env.contract.address, &vaults)?;
@@ -123,16 +142,12 @@ pub fn after_flashloan(
 
     TEMP_BALANCES.clear(deps.storage);
 
-    let new_asset_balance =  *new_balances
+    let new_asset_balance = *new_balances
         .get(loan_asset.info.get_reference())
         .ok_or(ContractError::NonExistentVault {})?;
 
     // calculate the fees for executing the flashloan
-    let vault = vaults
-        .iter()
-        .find(|vault| vault.asset_info.get_reference() == loan_asset.info.get_reference())
-        .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
-        .clone();
+    let mut vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.to_owned())?;
 
     let protocol_fee = Uint128::try_from(
         vault
@@ -162,6 +177,9 @@ pub fn after_flashloan(
         });
     }
 
+    // add the flashloan fee to the vault
+    vault.asset.amount = vault.asset.amount.checked_add(flash_loan_fee)?;
+
     // calculate flashloan profit
     let profit = new_asset_balance
         .checked_sub(old_balance)?
@@ -179,6 +197,7 @@ pub fn after_flashloan(
         // send profit to sender
         messages.push(profit_asset.into_msg(sender)?);
     }
+
     let config = CONFIG.load(deps.storage)?;
     let protocol_fee_asset = vec![Asset {
         info: loan_asset.info,
@@ -198,6 +217,7 @@ pub fn after_flashloan(
         .add_messages(messages)
         .add_attributes(vec![
             ("action", "after_flashloan".to_string()),
+            ("vault_identifier", vault.identifier),
             ("profit", profit.to_string()),
             ("protocol_fee", protocol_fee.to_string()),
             ("flash_loan_fee", flash_loan_fee.to_string()),

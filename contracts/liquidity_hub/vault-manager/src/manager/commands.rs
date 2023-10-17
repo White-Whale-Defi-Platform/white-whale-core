@@ -1,21 +1,22 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut,
-    Env, MessageInfo, Response, StdError, WasmMsg,
+    Env, MessageInfo, Response, StdError, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 
 use white_whale::constants::LP_SYMBOL;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-#[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::traits::AssetReference;
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use white_whale::tokenfactory;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
 use crate::helpers::fill_rewards_msg;
-use crate::state::{CONFIG, VAULTS};
+use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
 use crate::ContractError;
 
 /// Creates a new vault
@@ -25,6 +26,7 @@ pub fn create_vault(
     info: MessageInfo,
     asset_info: AssetInfo,
     fees: VaultFee,
+    vault_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -57,13 +59,17 @@ pub fn create_vault(
         creation_fee,
     )?);
 
-    let binding = asset_info.clone();
-    let asset_info_reference = binding.get_reference();
+    let vault_id = VAULT_COUNTER.load(deps.storage)?;
+    // if no identifier is provided, use the vault counter (id) as identifier
+    let identifier = vault_identifier.unwrap_or(vault_id.to_string());
 
-    // check that existing vault does not exist
-    let vault = VAULTS.may_load(deps.storage, asset_info_reference)?;
-    if vault.is_some() {
-        return Err(ContractError::ExistingVault { asset_info });
+    // check if there is an existing vault with the given identifier
+    let vault = get_vault_by_identifier(&deps.as_ref(), identifier.clone());
+    if vault.is_ok() {
+        return Err(ContractError::ExistingVault {
+            asset_info,
+            identifier,
+        });
     }
 
     // check the vault fees are valid
@@ -71,39 +77,53 @@ pub fn create_vault(
 
     let asset_label = asset_info.clone().get_label(&deps.as_ref())?;
     let mut attributes = Vec::<Attribute>::new();
+    attributes.push(attr("vault_identifier", identifier.clone()));
 
     let message = if config.lp_token_type == LpTokenType::TokenFactory {
-        #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+        #[cfg(all(
+            not(feature = "token_factory"),
+            not(feature = "osmosis_token_factory"),
+            not(feature = "injective")
+        ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
 
-        let lp_symbol = format!("{asset_label}.vault.{LP_SYMBOL}");
+        let lp_symbol = format!("{asset_label}.vault.{identifier}.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };
 
         VAULTS.save(
             deps.storage,
-            asset_info_reference,
+            identifier.clone(),
             &Vault {
-                asset_info,
+                asset: Asset {
+                    info: asset_info,
+                    amount: Uint128::zero(),
+                },
                 lp_asset: lp_asset.clone(),
                 fees,
+                identifier,
             },
         )?;
 
         attributes.push(attr("lp_asset", lp_asset.to_string()));
 
-        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-        Ok(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
-            sender: env.contract.address.to_string(),
-            subdenom: lp_symbol,
-        }))
+        #[cfg(any(
+            feature = "token_factory",
+            feature = "osmosis_token_factory",
+            feature = "injective"
+        ))]
+        Ok(tokenfactory::create_denom::create_denom(
+            env.contract.address,
+            lp_symbol,
+        ))
     } else {
         let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
         let code_id = config.lp_token_type.get_cw20_code_id()?;
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
-            "{}{}{}",
+            "{}{}{}{}",
             asset_info,
+            identifier,
             info.sender.into_string(),
             env.block.height
         );
@@ -120,11 +140,15 @@ pub fn create_vault(
 
         VAULTS.save(
             deps.storage,
-            asset_info_reference,
+            identifier.clone(),
             &Vault {
-                asset_info,
+                asset: Asset {
+                    info: asset_info,
+                    amount: Uint128::zero(),
+                },
                 lp_asset: lp_asset.clone(),
                 fees,
+                identifier,
             },
         )?;
 
@@ -150,6 +174,12 @@ pub fn create_vault(
             salt,
         }))
     }?;
+
+    // increase vault counter
+    VAULT_COUNTER.update(deps.storage, |mut counter| -> Result<_, ContractError> {
+        counter += 1;
+        Ok(counter)
+    })?;
 
     messages.push(message);
 
@@ -222,49 +252,5 @@ pub fn update_config(
         ),
         ("deposit_enabled", &new_config.deposit_enabled.to_string()),
         ("withdraw_enabled", &new_config.withdraw_enabled.to_string()),
-    ]))
-}
-
-/// Updates the fees for the vault of the given asset
-pub fn update_vault_fees(
-    deps: DepsMut,
-    info: MessageInfo,
-    vault_asset_info: AssetInfo,
-    vault_fee: VaultFee,
-) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
-
-    let mut vault = VAULTS
-        .may_load(deps.storage, vault_asset_info.get_reference())?
-        .ok_or(ContractError::NonExistentVault {})?;
-
-    vault_fee.is_valid()?;
-    vault.fees = vault_fee.clone();
-
-    VAULTS.save(deps.storage, vault_asset_info.get_reference(), &vault)?;
-
-    Ok(Response::default().add_attributes(vec![
-        ("action", "update_vault_fees".to_string()),
-        ("vault_asset_info", vault_asset_info.to_string()),
-        ("vault_fee", vault_fee.to_string()),
-    ]))
-}
-
-pub fn remove_vault(
-    deps: DepsMut,
-    info: MessageInfo,
-    asset_info: AssetInfo,
-) -> Result<Response, ContractError> {
-    cw_ownable::assert_owner(deps.storage, &info.sender)?;
-
-    if let Ok(None) = VAULTS.may_load(deps.storage, asset_info.get_reference()) {
-        return Err(ContractError::NonExistentVault {});
-    }
-
-    VAULTS.remove(deps.storage, asset_info.get_reference())?;
-
-    Ok(Response::default().add_attributes(vec![
-        ("method", "remove_vault".to_string()),
-        ("asset_info", asset_info.to_string()),
     ]))
 }

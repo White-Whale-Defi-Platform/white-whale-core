@@ -62,12 +62,14 @@ impl Display for LpTokenType {
 /// Vault representation
 #[cw_serde]
 pub struct Vault {
-    /// The asset info the vault manages
-    pub asset_info: AssetInfo,
+    /// The asset the vault manages
+    pub asset: Asset,
     /// The LP asset
     pub lp_asset: AssetInfo,
     /// The fees associated with the vault
     pub fees: VaultFee,
+    /// Identifier associated with the vault
+    pub identifier: String,
 }
 
 #[cw_serde]
@@ -114,15 +116,7 @@ pub enum ExecuteMsg {
     CreateVault {
         asset_info: AssetInfo,
         fees: VaultFee,
-    },
-    /// Removes a vault given its [AssetInfo]
-    RemoveVault {
-        asset_info: AssetInfo,
-    },
-    /// Updates a vault config
-    UpdateVaultFees {
-        vault_asset_info: AssetInfo,
-        vault_fee: VaultFee,
+        vault_identifier: Option<String>,
     },
     /// Updates the configuration of the vault manager.
     /// If a field is not specified, it will not be modified.
@@ -137,14 +131,16 @@ pub enum ExecuteMsg {
     /// Deposits a given asset into the vault manager.
     Deposit {
         asset: Asset,
+        vault_identifier: String,
     },
     /// Withdraws from the vault manager. Used when the LP token is a token manager token.
-    Withdraw {},
+    Withdraw,
     Receive(Cw20ReceiveMsg),
     /// Retrieves the desired `asset` and runs the `payload`, paying the required amount back to the vault
     /// after running the messages in the payload, and returning the profit to the sender.
     FlashLoan {
         asset: Asset,
+        vault_identifier: String,
         payload: Vec<CosmosMsg>,
     },
     /// Callback message for post-processing flash-loans.
@@ -165,7 +161,7 @@ pub enum QueryMsg {
     Config {},
     /// Retrieves a vault given the asset_info.
     #[returns(VaultsResponse)]
-    Vault { asset_info: AssetInfo },
+    Vault { filter_by: FilterVaultBy },
     /// Retrieves the addresses for all the vaults.
     #[returns(VaultsResponse)]
     Vaults {
@@ -177,7 +173,10 @@ pub enum QueryMsg {
     Share { lp_share: Asset },
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
     #[returns(PaybackAssetResponse)]
-    PaybackAmount { asset: Asset },
+    PaybackAmount {
+        asset: Asset,
+        vault_identifier: String,
+    },
 }
 
 /// Response for the vaults query
@@ -186,12 +185,38 @@ pub struct VaultsResponse {
     pub vaults: Vec<Vault>,
 }
 
+/// Response for the vaults query
+#[cw_serde]
+pub enum FilterVaultBy {
+    AssetInfo(AssetInfoQueryParams),
+    Identifier(IdentifierQueryParams),
+    LpAsset(LpAssetQueryParams),
+}
+
+#[cw_serde]
+pub struct AssetInfoQueryParams {
+    pub asset_info: AssetInfo,
+    pub start_after: Option<Vec<u8>>,
+    pub limit: Option<u32>,
+}
+
+#[cw_serde]
+pub struct IdentifierQueryParams {
+    pub identifier: String,
+}
+
+#[cw_serde]
+pub struct LpAssetQueryParams {
+    pub lp_asset: AssetInfo,
+}
+
 /// The callback messages available. Only callable by the vault contract itself.
 #[cw_serde]
 pub enum CallbackMsg {
     AfterFlashloan {
         old_asset_balance: Uint128,
         loan_asset: Asset,
+        vault_identifier: String,
         sender: Addr,
     },
 }
@@ -200,7 +225,7 @@ pub enum CallbackMsg {
 #[cw_serde]
 pub enum Cw20HookMsg {
     /// Withdraws a given amount from the vault.
-    Withdraw {},
+    Withdraw,
 }
 
 #[cw_serde]

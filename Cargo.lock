@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "anybuf"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a03eb4d55fa21466cac727930be07f82581223ee04bcaf61f934e98b7ecb859"
+
+[[package]]
 name = "anyhow"
 version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1150,7 +1156,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "265baba7fabd416cf5078179f7d2cbeca4ce7a9041111900675ea7c4cb8a4c32"
 dependencies = [
  "anyhow",
- "itertools 0.10.3",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.32",
@@ -1919,8 +1925,9 @@ dependencies = [
 
 [[package]]
 name = "white-whale"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
+ "anybuf",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-ownable",

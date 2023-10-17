@@ -1,10 +1,13 @@
 use cosmwasm_std::{Decimal, Deps, Env, Uint128, Uint256};
 
-use white_whale::pool_network::asset::{get_total_share, Asset, AssetInfo};
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{Config, PaybackAssetResponse, ShareResponse, VaultsResponse};
+use white_whale::pool_network::asset::{get_total_share, Asset};
+use white_whale::vault_manager::{
+    Config, FilterVaultBy, PaybackAssetResponse, ShareResponse, VaultsResponse,
+};
 
-use crate::state::{get_vault, read_vaults, CONFIG, VAULTS};
+use crate::state::{
+    get_vault_by_identifier, get_vault_by_lp, get_vaults, get_vaults_by_asset_info, CONFIG,
+};
 use crate::ContractError;
 
 /// Gets the [Config].
@@ -12,18 +15,25 @@ pub(crate) fn query_manager_config(deps: Deps) -> Result<Config, ContractError> 
     Ok(CONFIG.load(deps.storage)?)
 }
 
-/// Gets a vault given the [AssetInfo].
+/// Gets a vault given the params provided by the filter [FilterVaultBy].
 pub(crate) fn query_vault(
     deps: Deps,
-    asset_info: AssetInfo,
+    filter_by: FilterVaultBy,
 ) -> Result<VaultsResponse, ContractError> {
-    let vault = VAULTS
-        .may_load(deps.storage, asset_info.get_reference())?
-        .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?;
+    let vaults = match filter_by {
+        FilterVaultBy::AssetInfo(params) => get_vaults_by_asset_info(
+            deps.storage,
+            params.asset_info,
+            params.start_after,
+            params.limit,
+        )?,
+        FilterVaultBy::Identifier(params) => {
+            vec![get_vault_by_identifier(&deps, params.identifier)?]
+        }
+        FilterVaultBy::LpAsset(params) => vec![get_vault_by_lp(&deps, &params.lp_asset)?],
+    };
 
-    Ok(VaultsResponse {
-        vaults: vec![vault],
-    })
+    Ok(VaultsResponse { vaults })
 }
 
 /// Gets all vaults in the contract.
@@ -32,7 +42,7 @@ pub(crate) fn query_vaults(
     start_after: Option<Vec<u8>>,
     limit: Option<u32>,
 ) -> Result<VaultsResponse, ContractError> {
-    let vaults = read_vaults(deps.storage, start_after, limit)?;
+    let vaults = get_vaults(deps.storage, start_after, limit)?;
 
     Ok(VaultsResponse { vaults })
 }
@@ -43,11 +53,12 @@ pub(crate) fn get_share(
     env: Env,
     lp_asset: Asset,
 ) -> Result<ShareResponse, ContractError> {
-    let vault = get_vault(&deps, &lp_asset.info)?;
+    let vault = get_vault_by_lp(&deps, &lp_asset.info)?;
 
     let lp_amount = get_total_share(&deps, lp_asset.info.to_string())?;
     let balance = vault
-        .asset_info
+        .asset
+        .info
         .query_balance(&deps.querier, deps.api, env.contract.address)?;
 
     // lp_share = amount / lp_amount
@@ -55,7 +66,7 @@ pub(crate) fn get_share(
     let asset_share = Decimal::from_ratio(lp_asset.amount, lp_amount) * balance;
     Ok(ShareResponse {
         share: Asset {
-            info: vault.asset_info,
+            info: vault.asset.info,
             amount: asset_share,
         },
     })
@@ -65,10 +76,9 @@ pub(crate) fn get_share(
 pub(crate) fn get_payback_amount(
     deps: Deps,
     asset: Asset,
+    vault_identifier: String,
 ) -> Result<PaybackAssetResponse, ContractError> {
-    let vault = VAULTS
-        .may_load(deps.storage, asset.info.get_reference())?
-        .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?;
+    let vault = get_vault_by_identifier(&deps, vault_identifier)?;
 
     // check that balance is greater than expected
     let protocol_fee =

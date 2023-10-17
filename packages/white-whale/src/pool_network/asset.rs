@@ -621,26 +621,14 @@ pub fn get_total_share(deps: &Deps, liquidity_asset: String) -> StdResult<Uint12
         feature = "osmosis_token_factory",
         feature = "injective"
     ))]
-    let total_share = if is_factory_token(liquidity_asset.as_str()) {
+    if is_factory_token(liquidity_asset.as_str()) {
         //bank query total
-        deps.querier.query_supply(&liquidity_asset)?.amount
-    } else {
-        query_token_info(
-            &deps.querier,
-            deps.api.addr_validate(liquidity_asset.as_str())?,
-        )?
-        .total_supply
-    };
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
-    let total_share = query_token_info(
+        return Ok(deps.querier.query_supply(&liquidity_asset)?.amount);
+    }
+
+    Ok(query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_asset.as_str())?,
     )?
-    .total_supply;
-
-    Ok(total_share)
+    .total_supply)
 }

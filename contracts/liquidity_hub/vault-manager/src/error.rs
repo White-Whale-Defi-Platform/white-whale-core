@@ -20,8 +20,11 @@ pub enum ContractError {
     #[error("mismatch of sent {sent} but specified deposit amount of {wanted}")]
     FundsMismatch { sent: Uint128, wanted: Uint128 },
 
-    #[error("The asset \"{asset_info}\" already has a vault")]
-    ExistingVault { asset_info: AssetInfo },
+    #[error("The asset \"{asset_info}\" with the identifier \"{identifier}\" already has a vault")]
+    ExistingVault {
+        asset_info: AssetInfo,
+        identifier: String,
+    },
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -73,6 +76,15 @@ pub enum ContractError {
 
     #[error("The balance of an asset in the vault has decreased after the flashloan.")]
     FlashLoanLoss {},
+
+    #[error("The asset sent doesn't match the asset stored in contract. Expected {expected}, got {actual}")]
+    AssetMismatch { expected: String, actual: String },
+
+    #[error("The requested vault doesn't have enough balance to serve the demand. Asset balance: {asset_balance}, requested: {requested_amount}")]
+    InsufficientAssetBalance {
+        asset_balance: Uint128,
+        requested_amount: Uint128,
+    },
 }
 
 impl From<semver::Error> for ContractError {

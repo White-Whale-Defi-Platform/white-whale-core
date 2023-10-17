@@ -44,6 +44,7 @@ integer-sqrt = { version = "0.1.5"}
 anyhow = { version = "1.0.71"}
 cw-controllers = { version = "1.1.0"}
 cw-ownable = { version = "0.5.1"}
+anybuf = { version = "0.3.0"}
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
