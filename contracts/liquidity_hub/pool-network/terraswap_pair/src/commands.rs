@@ -407,8 +407,8 @@ pub fn swap(
         .swap_fee_amount
         .checked_add(swap_computation.protocol_fee_amount)?
         .checked_add(swap_computation.burn_fee_amount)?;
-    // check max spread limit if exist
 
+    // check max spread limit if exist
     helpers::assert_max_spread(
         belief_price,
         max_spread,

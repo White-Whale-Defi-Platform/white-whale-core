@@ -14,9 +14,9 @@ use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, P
 
 #[test]
 fn test_protocol_fees() {
-    let total_share = Uint128::from(30_000_000_000u128);
-    let asset_pool_amount = Uint128::from(20_000_000_000u128);
-    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
+    let total_share = Uint128::from(300_000_000_000u128);
+    let asset_pool_amount = Uint128::from(200_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(300_000_000_000u128);
     let offer_amount = Uint128::from(1_500_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
@@ -107,8 +107,8 @@ fn test_protocol_fees() {
     execute(deps.as_mut(), env, info, msg).unwrap();
 
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(952_380_952u128);
+    // 995.024875 = (200000 - 0) * 1500 / (300000 - 0 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(995_024_875u128);
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as we swapped native to token, we accumulate the protocol fees in token. Native token fees should be 0
@@ -162,8 +162,8 @@ fn test_protocol_fees() {
     execute(deps.as_mut(), env, info, msg).unwrap();
 
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 952.335600 = (20000 - 0.952380 ) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(952_335_600u128);
+    // 995.019925 = (200000 - 0.995024 ) * 1500 / (300000 - 0 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(995_019_925u128);
     let new_expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // the new protocol fees should have increased from the previous time
@@ -198,9 +198,9 @@ fn test_protocol_fees() {
 
 #[test]
 fn test_collect_protocol_fees_successful() {
-    let total_share = Uint128::from(30_000_000_000u128);
-    let asset_pool_amount = Uint128::from(20_000_000_000u128);
-    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
+    let total_share = Uint128::from(300_000_000_000u128);
+    let asset_pool_amount = Uint128::from(200_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(300_000_000_000u128);
     let offer_amount = Uint128::from(1_500_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
@@ -291,8 +291,8 @@ fn test_collect_protocol_fees_successful() {
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(952_380_952u128);
+    // 995.024875 = (200000 - 0) * 1500 / (300000 - 0 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(995_024_875u128);
     let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // second swap, token -> native
@@ -310,8 +310,8 @@ fn test_collect_protocol_fees_successful() {
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
-    // 2362.612505 = (31500 - 0) * 1500 / (18500 - 0.952380 + 1500) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(2_362_612_505u128);
+    // 2261.261505 = (301500 - 0) * 1500 / (18500 - 0.995024 + 1500) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(2_261_261_505u128);
     let expected_protocol_fee_native_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.001%
 
     // as we swapped both native and token, we should have collected fees in both of them
@@ -426,10 +426,10 @@ fn test_collect_protocol_fees_successful() {
 
 #[test]
 fn test_collect_protocol_fees_successful_1_fee_only() {
-    let total_share = Uint128::from(30_000_000_000u128);
-    let asset_pool_amount = Uint128::from(20_000_000_000u128);
-    let collateral_pool_amount = Uint128::from(30_000_000_000u128);
-    let offer_amount = Uint128::from(1_500_000_000u128);
+    let total_share = Uint128::from(300_000_000_000u128);
+    let asset_pool_amount = Uint128::from(200_000_000_000u128);
+    let collateral_pool_amount = Uint128::from(300_000_000_000u128);
+    let offer_amount = Uint128::from(1_500_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
@@ -519,8 +519,8 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 952.380952 = 20000 * 1500 / (30000 + 1500) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(952_380_952u128);
+    // 9.995002 = 20000 * 15 / (30000 + 15) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(999000u128);
     let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as did only one swap from native -> token, we should have collected fees in token

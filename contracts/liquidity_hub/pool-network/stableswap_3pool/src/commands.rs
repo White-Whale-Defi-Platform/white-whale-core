@@ -472,15 +472,18 @@ pub fn swap(
         amount: swap_computation.return_amount,
     };
 
+    let fees = swap_computation
+        .swap_fee_amount
+        .checked_add(swap_computation.protocol_fee_amount)?
+        .checked_add(swap_computation.burn_fee_amount)?;
+
     // check max spread limit if exist
     helpers::assert_max_spread(
         belief_price,
         max_spread,
-        offer_asset.clone(),
-        return_asset.clone(),
+        offer_asset.amount,
+        return_asset.amount.checked_add(fees)?,
         swap_computation.spread_amount,
-        offer_decimal,
-        ask_decimal,
     )?;
 
     let receiver = to.unwrap_or_else(|| sender.clone());

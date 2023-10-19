@@ -345,7 +345,6 @@ fn test_initialization_invalid_fees() {
         _ => panic!("should return StdError::generic_err(Invalid fee)"),
     }
 }
-
 #[test]
 fn test_max_spread() {
     assert_max_spread(
@@ -381,9 +380,9 @@ fn test_max_spread() {
 
     assert_max_spread(
         Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
-        None, // defaults to 0.5%
+        None, // defaults to 0.1%
         Uint128::from(1200_000_000u128),
-        Uint128::from(990_000u128), // fails
+        Uint128::from(989_000u128), // fails
         Uint128::zero(),
     )
     .unwrap_err();
@@ -463,7 +462,6 @@ fn test_max_spread() {
     )
     .unwrap();
 }
-
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);

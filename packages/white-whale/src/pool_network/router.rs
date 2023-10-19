@@ -1,7 +1,7 @@
 use std::fmt;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 
 use crate::pool_network::asset::AssetInfo;
@@ -74,11 +74,13 @@ pub enum ExecuteMsg {
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
         to: Option<String>,
+        max_spread: Option<Decimal>,
     },
     /// Swap the offer to ask token. This message can only be called internally by the router contract.
     ExecuteSwapOperation {
         operation: SwapOperation,
         to: Option<String>,
+        max_spread: Option<Decimal>,
     },
     /// Checks if the swap amount exceeds the minimum_receive. This message can only be called
     /// internally by the router contract.
@@ -100,6 +102,7 @@ pub enum Cw20HookMsg {
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
         to: Option<String>,
+        max_spread: Option<Decimal>,
     },
 }
 

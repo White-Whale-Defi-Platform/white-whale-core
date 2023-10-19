@@ -181,7 +181,7 @@ pub fn increase_allowance(app: &mut App, sender: Addr, contract_addr: Addr, spen
         contract_addr,
         &cw20::Cw20ExecuteMsg::IncreaseAllowance {
             spender: spender.to_string(),
-            amount: Uint128::new(500_000_000_000u128),
+            amount: Uint128::new(5_000_000_000_000u128),
             expires: None,
         },
         &[],

@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::ops::Mul;
 use std::str::FromStr;
 
@@ -324,7 +323,7 @@ pub struct OfferAmountComputation {
 }
 
 /// Default swap slippage in case max_spread is not specified
-pub const DEFAULT_SLIPPAGE: &str = "0.005";
+pub const DEFAULT_SLIPPAGE: &str = "0.01";
 /// Cap on the maximum swap slippage that is allowed. If max_spread goes over this limit, it will
 /// be capped to this value.
 pub const MAX_ALLOWED_SLIPPAGE: &str = "0.5";
@@ -339,10 +338,22 @@ pub fn assert_max_spread(
     return_amount: Uint128,
     spread_amount: Uint128,
 ) -> Result<(), ContractError> {
+    println!("assert_max_spread: belief_price: {:?}, max_spread: {:?}, offer_amount: {:?}, return_amount: {:?}, spread_amount: {:?}", belief_price, max_spread, offer_amount, return_amount, spread_amount);
+
     let max_spread: Decimal256 = max_spread
         .unwrap_or(Decimal::from_str(DEFAULT_SLIPPAGE)?)
         .min(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?)
         .into();
+
+    println!("max_spread: {:?}", max_spread);
+    println!(
+        "Decimal256::from_ratio(spread_amount, return_amount + spread_amount) {:?}",
+        Decimal256::from_ratio(spread_amount, return_amount + spread_amount)
+    );
+    println!(
+        "Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread: {:?}",
+        Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread
+    );
 
     if let Some(belief_price) = belief_price {
         let expected_return = offer_amount
