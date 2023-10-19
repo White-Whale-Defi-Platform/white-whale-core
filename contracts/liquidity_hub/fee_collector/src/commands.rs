@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
-    QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut, Env,
+    MessageInfo, QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -289,6 +289,7 @@ pub fn aggregate_fees(
                             operations,
                             minimum_receive: None,
                             to: None,
+                            max_spread: Some(Decimal::percent(50u64)),
                         })?;
 
                     match offer_asset_info.clone() {

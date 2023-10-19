@@ -3,8 +3,8 @@ use std::collections::HashMap;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Order, Response, StdError, StdResult, Uint128, WasmMsg,
+    attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Order, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
@@ -59,6 +59,7 @@ pub fn execute(
             operations,
             minimum_receive,
             to,
+            max_spread,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -68,9 +69,14 @@ pub fn execute(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                max_spread,
             )
         }
-        ExecuteMsg::ExecuteSwapOperation { operation, to } => {
+        ExecuteMsg::ExecuteSwapOperation {
+            operation,
+            to,
+            max_spread,
+        } => {
             let api = deps.api;
             execute_swap_operation(
                 deps,
@@ -78,6 +84,7 @@ pub fn execute(
                 info,
                 operation,
                 optional_addr_validate(api, to)?.map(|v| v.to_string()),
+                max_spread,
             )
         }
         ExecuteMsg::AssertMinimumReceive {
@@ -123,6 +130,7 @@ pub fn receive_cw20(
             operations,
             minimum_receive,
             to,
+            max_spread,
         } => {
             let api = deps.api;
             execute_swap_operations(
@@ -132,6 +140,7 @@ pub fn receive_cw20(
                 operations,
                 minimum_receive,
                 optional_addr_validate(api, to)?,
+                max_spread,
             )
         }
     }
@@ -144,6 +153,7 @@ pub fn execute_swap_operations(
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
     to: Option<Addr>,
+    max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     let operations_len = operations.len();
     if operations_len == 0 {
@@ -174,6 +184,7 @@ pub fn execute_swap_operations(
                     } else {
                         None
                     },
+                    max_spread,
                 })?,
             }))
         })
