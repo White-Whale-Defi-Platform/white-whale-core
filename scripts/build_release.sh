@@ -31,10 +31,10 @@ flag=""
 
 case $chain in
 
-juno)
+juno | terra)
   flag="-osmosis_token_factory"
   ;;
-terra | migaloo)
+migaloo)
   flag="-token_factory"
   ;;
 injective)
