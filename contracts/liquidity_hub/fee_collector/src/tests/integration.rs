@@ -118,7 +118,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                     decimals: 6,
                     initial_balances: vec![Cw20Coin {
                         address: creator.clone().sender.to_string(),
-                        amount: Uint128::new(1_000_000_000_000u128),
+                        amount: Uint128::new(10_000_000_000_000u128),
                     }],
                     mint: Some(MinterResponse {
                         minter: creator.clone().sender.to_string(),
@@ -228,13 +228,13 @@ fn collect_all_factories_cw20_fees_successfully() {
                         info: AssetInfo::Token {
                             contract_addr: cw20_tokens[i as usize].to_string(),
                         },
-                        amount: Uint128::new(500_000u128),
+                        amount: Uint128::new(1_000_000_000_000u128),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: cw20_tokens[i as usize + 1].to_string(),
                         },
-                        amount: Uint128::new(500_000u128),
+                        amount: Uint128::new(1_000_000_000_000u128),
                     },
                 ],
                 slippage_tolerance: None,
@@ -274,7 +274,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                 amount: Uint128::new(200_000_000_000u128),
                 msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
-                    max_spread: None,
+                    max_spread: Some(Decimal::percent(20u64)),
                     to: None,
                 })
                 .unwrap(),
@@ -711,10 +711,10 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             cw20_tokens[i].clone(),
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
-                amount: Uint128::new(100_000_000u128),
+                amount: Uint128::new(100_000u128),
                 msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
-                    max_spread: None,
+                    max_spread: Some(Decimal::percent(30u64)),
                     to: None,
                 })
                 .unwrap(),
@@ -728,10 +728,10 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             cw20_tokens[i].clone(),
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
-                amount: Uint128::new(200_000_000_000u128),
+                amount: Uint128::new(200_000u128),
                 msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
-                    max_spread: None,
+                    max_spread: Some(Decimal::percent(30u64)),
                     to: None,
                 })
                 .unwrap(),
@@ -935,7 +935,7 @@ fn collect_pools_native_fees_successfully() {
     let creator = mock_creator();
     let balances = vec![(
         creator.clone().sender,
-        coins(1_000_000_000u128, "native".to_string()),
+        coins(50_000_000_000_000u128, "native".to_string()),
     )];
 
     let mut app = mock_app_with_balance(balances);
@@ -1031,7 +1031,7 @@ fn collect_pools_native_fees_successfully() {
                     decimals: 6,
                     initial_balances: vec![Cw20Coin {
                         address: creator.clone().sender.to_string(),
-                        amount: Uint128::new(1_000_000_000_000u128),
+                        amount: Uint128::new(10_000_000_000_000u128),
                     }],
                     mint: Some(MinterResponse {
                         minter: creator.clone().sender.to_string(),
@@ -1116,13 +1116,13 @@ fn collect_pools_native_fees_successfully() {
                         info: AssetInfo::NativeToken {
                             denom: "native".to_string(),
                         },
-                        amount: Uint128::new(500_000u128),
+                        amount: Uint128::new(5_000_000_000_000u128),
                     },
                     Asset {
                         info: AssetInfo::Token {
                             contract_addr: cw20_token.to_string(),
                         },
-                        amount: Uint128::new(500_000u128),
+                        amount: Uint128::new(5_000_000_000_000u128),
                     },
                 ],
                 slippage_tolerance: None,
@@ -1130,7 +1130,7 @@ fn collect_pools_native_fees_successfully() {
             },
             &[Coin {
                 denom: "native".to_string(),
-                amount: Uint128::new(500_000u128),
+                amount: Uint128::new(5_000_000_000_000u128),
             }],
         )
         .unwrap();
@@ -1676,15 +1676,15 @@ fn collect_fees_with_pagination_successfully() {
                     info: AssetInfo::NativeToken {
                         denom: "native".to_string(),
                     },
-                    amount: Uint128::new(200_000_000u128),
+                    amount: Uint128::new(200_000u128),
                 },
                 belief_price: None,
-                max_spread: None,
+                max_spread: Some(Decimal::percent(40u64)),
                 to: None,
             },
             &[Coin {
                 denom: "native".to_string(),
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             }],
         )
         .unwrap();
@@ -1695,10 +1695,10 @@ fn collect_fees_with_pagination_successfully() {
             cw20_token.clone(),
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
                 msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
-                    max_spread: None,
+                    max_spread: Some(Decimal::percent(40u64)),
                     to: None,
                 })
                 .unwrap(),
@@ -3047,15 +3047,15 @@ fn collect_and_distribute_fees_successfully() {
                     info: AssetInfo::NativeToken {
                         denom: "uwhale".to_string(),
                     },
-                    amount: Uint128::new(200_000_000u128),
+                    amount: Uint128::new(200_000u128),
                 },
                 belief_price: None,
-                max_spread: None,
+                max_spread: Some(Decimal::percent(30u64)),
                 to: None,
             },
             &[Coin {
                 denom: "uwhale".to_string(),
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             }],
         )
         .unwrap();
@@ -3069,15 +3069,15 @@ fn collect_and_distribute_fees_successfully() {
                     info: AssetInfo::NativeToken {
                         denom: native_token.clone().to_string(),
                     },
-                    amount: Uint128::new(200_000_000u128),
+                    amount: Uint128::new(200_000u128),
                 },
                 belief_price: None,
-                max_spread: None,
+                max_spread: Some(Decimal::percent(40u64)),
                 to: None,
             },
             &[Coin {
                 denom: native_token.clone().to_string(),
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             }],
         )
         .unwrap();
@@ -4419,15 +4419,15 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -4473,15 +4473,15 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -5670,15 +5670,15 @@ fn create_epoch_unsuccessfully() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -5713,15 +5713,15 @@ fn create_epoch_unsuccessfully() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -6116,15 +6116,15 @@ fn decrease_grace_period_fee_distributor() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -6155,15 +6155,15 @@ fn decrease_grace_period_fee_distributor() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -6545,15 +6545,15 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -6598,15 +6598,15 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -6680,15 +6680,15 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7105,15 +7105,15 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7158,15 +7158,15 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7306,15 +7306,15 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7759,15 +7759,15 @@ fn user_weight_accounts_for_unbondings() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7812,15 +7812,15 @@ fn user_weight_accounts_for_unbondings() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -7960,15 +7960,15 @@ fn user_weight_accounts_for_unbondings() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -8048,7 +8048,7 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::new(161u128)
+            amount: Uint128::new(1324u128)
         }]
     );
     assert_eq!(
@@ -8057,7 +8057,7 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::new(161u128)
+            amount: Uint128::new(1323u128)
         }]
     );
 
@@ -8087,7 +8087,7 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::zero()
+            amount: Uint128::one()
         }]
     );
     assert_eq!(
@@ -8096,10 +8096,15 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::new(322u128)
+            amount: Uint128::new(2646u128)
         }]
     );
-    assert_eq!(epoch_res.epoch.claimed, epoch_res.epoch.total);
+    assert!(
+        (epoch_res.epoch.claimed.first().unwrap().amount.u128() as i128
+            - epoch_res.epoch.total.first().unwrap().amount.u128() as i128)
+            .abs()
+            < 2i128
+    );
 
     //now unbond partially, check if weight is computed correctly
     app.execute_contract(
@@ -8129,15 +8134,15 @@ fn user_weight_accounts_for_unbondings() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -8196,7 +8201,7 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::new(112u128)
+            amount: Uint128::new(1242u128)
         }]
     );
     assert_eq!(
@@ -8205,7 +8210,7 @@ fn user_weight_accounts_for_unbondings() {
             info: NativeToken {
                 denom: "uwhale".to_string()
             },
-            amount: Uint128::new(55u128)
+            amount: Uint128::new(620u128)
         }]
     );
 }
@@ -8555,15 +8560,15 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();
@@ -8614,15 +8619,15 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(200_000_000u128),
+                amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(40u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(200_000_000u128),
+            amount: Uint128::new(200_000u128),
         }],
     )
     .unwrap();

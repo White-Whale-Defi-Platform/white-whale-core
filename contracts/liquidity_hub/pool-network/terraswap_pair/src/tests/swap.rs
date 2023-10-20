@@ -133,7 +133,7 @@ fn try_native_to_token() {
             amount: offer_amount,
         },
         belief_price: None,
-        max_spread: None,
+        max_spread: Some(Decimal::percent(5u64)),
         to: None,
     };
     let env = mock_env();
@@ -597,7 +597,7 @@ fn try_token_to_native() {
         amount: offer_amount,
         msg: to_binary(&Cw20HookMsg::Swap {
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(5u64)),
             to: Some("third_party".to_string()),
         })
         .unwrap(),
@@ -926,7 +926,7 @@ fn test_swap_to_third_party() {
             amount: offer_amount,
         },
         belief_price: None,
-        max_spread: None,
+        max_spread: Some(Decimal::percent(5u64)),
         to: Some("third_party".to_string()),
     };
     let env = mock_env();

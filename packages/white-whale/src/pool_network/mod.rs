@@ -10,6 +10,7 @@ pub mod incentive_factory;
 pub mod pair;
 pub mod querier;
 pub mod router;
+pub mod swap;
 pub mod token;
 pub mod trio;
 
