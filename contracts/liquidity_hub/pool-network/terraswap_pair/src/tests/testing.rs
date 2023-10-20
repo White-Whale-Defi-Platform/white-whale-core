@@ -16,11 +16,12 @@ use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
 use white_whale::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
+use white_whale::pool_network::swap::assert_max_spread;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
-use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
+use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_pair_info;
 
 #[test]

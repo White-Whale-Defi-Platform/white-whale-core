@@ -34,9 +34,6 @@ pub enum ContractError {
     #[error("Invalid zero amount")]
     InvalidZeroAmount {},
 
-    #[error("Spread limit exceeded")]
-    MaxSpreadAssertion {},
-
     #[error("Slippage tolerance exceeded")]
     MaxSlippageAssertion {},
 

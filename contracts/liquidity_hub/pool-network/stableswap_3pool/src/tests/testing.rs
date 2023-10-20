@@ -14,13 +14,14 @@ use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale::pool_network::swap::assert_max_spread;
 use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
 use white_whale::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
-use crate::helpers::{assert_max_spread, assert_slippage_tolerance};
+use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_trio_info;
 
 #[test]
