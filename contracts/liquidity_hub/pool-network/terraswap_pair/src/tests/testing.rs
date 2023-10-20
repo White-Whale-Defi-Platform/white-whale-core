@@ -1,14 +1,12 @@
-#[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
+use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
-
-use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
+
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
 #[cfg(feature = "token_factory")]
@@ -23,6 +21,8 @@ use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_pair_info;
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
 
 #[test]
 fn proper_initialization_cw20_lp() {
@@ -346,6 +346,7 @@ fn test_initialization_invalid_fees() {
         _ => panic!("should return StdError::generic_err(Invalid fee)"),
     }
 }
+
 #[test]
 fn test_max_spread() {
     assert_max_spread(
@@ -462,7 +463,26 @@ fn test_max_spread() {
         Uint128::zero(),
     )
     .unwrap();
+
+    assert_max_spread(
+        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::percent(60)), // this will default to 50%
+        Uint128::from(1200_000_000u128),
+        Uint128::from(989_999u128),
+        Uint128::zero(),
+    )
+    .unwrap();
+
+    assert_max_spread(
+        Some(Decimal::zero()),
+        None,
+        Uint128::new(100),
+        Uint128::new(90),
+        Uint128::new(10),
+    )
+    .unwrap_err();
 }
+
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
