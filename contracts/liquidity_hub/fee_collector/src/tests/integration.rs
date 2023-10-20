@@ -8070,7 +8070,7 @@ fn user_weight_accounts_for_unbondings() {
     )
     .unwrap();
 
-    let mut epoch_res: EpochResponse = app
+    let epoch_res: EpochResponse = app
         .wrap()
         .query_wasm_smart(
             fee_distributor_address.clone(),

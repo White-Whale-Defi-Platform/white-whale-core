@@ -17,7 +17,7 @@ use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use white_whale::pool_network::U256;
+use white_whale::pool_network::{swap, U256};
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -409,7 +409,7 @@ pub fn swap(
         .checked_add(swap_computation.burn_fee_amount)?;
 
     // check max spread limit if exist
-    helpers::assert_max_spread(
+    swap::assert_max_spread(
         belief_price,
         max_spread,
         offer_asset.amount,
