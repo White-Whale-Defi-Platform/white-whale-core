@@ -3,11 +3,17 @@ use cosmwasm_std::{
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{get_total_share, AssetInfo};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn};
+#[cfg(feature = "injective")]
+use white_whale::pool_network::denom_injective::{Coin, MsgBurn};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn};
 
@@ -94,7 +100,11 @@ fn burn_lp_asset_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<CosmosMsg, VaultError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    #[cfg(any(
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
+    ))]
     if is_factory_token(liquidity_asset.as_str()) {
         Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
             sender,
@@ -110,7 +120,11 @@ fn burn_lp_asset_msg(
             funds: vec![],
         }))
     }
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
         msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
