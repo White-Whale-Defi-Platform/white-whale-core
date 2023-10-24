@@ -1,5 +1,3 @@
-#[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
@@ -8,8 +6,8 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use white_whale::fee::Fee;
 
+use white_whale::fee::Fee;
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
@@ -20,6 +18,17 @@ use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
+#[cfg(feature = "token_factory")]
+use crate::state::LP_SYMBOL;
+
+#[cfg(feature = "injective")]
+use crate::tests::mock_app::mock_app_with_balance;
+#[cfg(feature = "injective")]
+use crate::tests::mock_instantiate::{app_mock_instantiate, mock_creator};
+#[cfg(feature = "injective")]
+use cosmwasm_std::coin;
+#[cfg(feature = "injective")]
+use cw_multi_test::Executor;
 
 #[test]
 fn provide_liquidity_cw20_lp() {
@@ -814,4 +823,87 @@ fn provide_liquidity_tokenfactory_lp() {
     assert_eq!(mint_msg, mint_msg_expected);
 
     assert_eq!(bank_send_msg, bank_send_msg_expected);
+}
+
+#[cfg(feature = "injective")]
+#[test]
+fn provide_liquidity_18_decimals() {
+    let mut app = mock_app_with_balance(vec![(
+        mock_creator().sender,
+        vec![
+            coin(1_000_000_000_000_000_000000000000000000, "inj"),
+            coin(1_000_000_000_000_000_000000000000000000, "jni"),
+        ],
+    )]);
+
+    let pool_addr = app_mock_instantiate(
+        &mut app,
+        [
+            AssetInfo::NativeToken {
+                denom: "inj".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "jni".to_string(),
+            },
+        ],
+        [18u8, 18u8],
+    );
+
+    //deposit
+    app.execute_contract(
+        mock_creator().sender,
+        pool_addr.clone(),
+        &ExecuteMsg::ProvideLiquidity {
+            assets: [
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "inj".to_string(),
+                    },
+                    amount: Uint128::new(1_000_000_000_000_000000000000000000),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "jni".to_string(),
+                    },
+                    amount: Uint128::new(1_000_000_000_000_000000000000000000),
+                },
+            ],
+            slippage_tolerance: None,
+            receiver: None,
+        },
+        &vec![
+            coin(1_000_000_000_000_000000000000000000, "inj"),
+            coin(1_000_000_000_000_000000000000000000, "jni"),
+        ],
+    )
+    .unwrap();
+
+    //deposit again
+    app.execute_contract(
+        mock_creator().sender,
+        pool_addr.clone(),
+        &ExecuteMsg::ProvideLiquidity {
+            assets: [
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "inj".to_string(),
+                    },
+                    amount: Uint128::new(1_000_000_000_000_000000000000000000),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "jni".to_string(),
+                    },
+                    amount: Uint128::new(1_000_000_000_000_000000000000000000),
+                },
+            ],
+            slippage_tolerance: None,
+            receiver: None,
+        },
+        &vec![
+            coin(1_000_000_000_000_000000000000000000, "inj"),
+            coin(1_000_000_000_000_000000000000000000, "jni"),
+        ],
+    )
+    .unwrap();
 }
