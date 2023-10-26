@@ -248,11 +248,18 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
+    #[cfg(feature = "injective")]
+    if storage_version <= Version::parse("1.1.0")? {
+        migrations::migrate_to_v13x(deps.branch())?;
+    }
+
+    #[cfg(not(feature = "injective"))]
     if storage_version <= Version::parse("1.0.4")? {
         migrations::migrate_to_v110(deps.branch())?;
     } else if storage_version == Version::parse("1.1.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
+    #[cfg(not(feature = "injective"))]
     if storage_version == Version::parse("1.2.0")? {
         migrations::migrate_to_v130(deps.branch())?;
     }
