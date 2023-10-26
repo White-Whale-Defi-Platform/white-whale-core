@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    attr, coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_network::vault::PaybackAmountResponse;
@@ -17,6 +17,8 @@ pub fn complete_loan(
     if info.sender != env.contract.address {
         return Err(VaultRouterError::Unauthorized {});
     }
+
+    let mut attributes = vec![];
 
     // pay back loans and profit
     let messages: Vec<Vec<CosmosMsg>> = assets
@@ -57,6 +59,12 @@ pub fn complete_loan(
                     output_amount: final_amount,
                     required_amount: payback_amount.payback_amount,
                 })?;
+
+            attributes.push(attr(
+                "payback_amount",
+                payback_amount.payback_amount.to_string(),
+            ));
+            attributes.push(attr("profit_amount", profit_amount.to_string()));
 
             let mut response_messages: Vec<CosmosMsg> = vec![];
             let payback_loan_msg: StdResult<CosmosMsg> = match loaned_asset.info.clone() {
@@ -106,7 +114,8 @@ pub fn complete_loan(
 
     Ok(Response::new()
         .add_messages(messages.concat())
-        .add_attributes(vec![("method", "complete_loan")]))
+        .add_attributes(vec![("method", "complete_loan")])
+        .add_attributes(attributes))
 }
 
 #[cfg(test)]
