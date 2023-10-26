@@ -1788,7 +1788,7 @@ checksum = "e1766d682d402817b5ac4490b3c3002d91dfa0d22812f341609f97b08757359c"
 
 [[package]]
 name = "vault"
-version = "1.2.5"
+version = "1.2.6"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
