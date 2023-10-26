@@ -398,6 +398,14 @@ mod tests {
                     key: "method".to_string(),
                     value: "complete_loan".to_string(),
                 },
+                Attribute {
+                    key: "payback_amount".to_string(),
+                    value: "1066".to_string(),
+                },
+                Attribute {
+                    key: "profit_amount".to_string(),
+                    value: "0".to_string(),
+                },
             ]),
             Event::new("transfer").add_attributes(vec![
                 Attribute {

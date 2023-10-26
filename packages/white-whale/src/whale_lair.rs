@@ -32,7 +32,7 @@ impl Default for Bond {
         Self {
             asset: Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "".to_string(),
+                    denom: String::new(),
                 },
                 amount: Uint128::zero(),
             },
