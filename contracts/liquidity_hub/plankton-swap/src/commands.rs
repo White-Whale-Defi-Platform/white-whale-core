@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg, HexBinary,
 };
 use cw20::MinterResponse;
 use white_whale::pool_network::{
@@ -201,40 +201,28 @@ pub fn create_pair(
         //     &instantiate2_address(&checksum, &creator, &salt)
         //         .map_err(|e| StdError::generic_err(e.to_string()))?,
         // )?;
+        let pool_lp_address = Addr::unchecked(format!(
+            "contract{}",
+            HexBinary::from(salt.clone()).to_hex()
+        ));
 
         // let canonical = &instantiate2_address(&checksum, &creator, &salt)
         // .map_err(|e| StdError::generic_err(e.to_string()))?;
         // let pool_lp_address = Addr::unchecked(canonical.0 .0.iter().map(|&c| c as char).collect::<String>());
         // println!("pool_lp_address: {}", pool_lp_address);
-        let _pool_lp_address = Addr::unchecked(
-            instantiate2_address(&checksum, &creator, &salt)
-                .map_err(|e| StdError::generic_err(e.to_string()))?
-                .to_string(),
-        );
-        // Then we get the new address
-        let contract = env
-            .contract
-            .address
-            .to_string()
-            .chars()
-            .map(|c| c as u8)
-            .collect::<Vec<_>>()
-            .into();
-        let pool_lp_address = Addr::unchecked(
-            instantiate2_address(&checksum, &contract, &salt)
-                .unwrap()
-                .0
-                 .0
-                .iter()
-                .map(|&c| c as char)
-                .collect::<String>(),
-        );
+        // let pool_lp_address = Addr::unchecked(
+        //     instantiate2_address(&checksum, &creator, &salt)
+        //         .map_err(|e| StdError::generic_err(e.to_string()))?
+        //         .to_string(),
+        // );
+       
 
-        let lp_asset = AssetInfo::Token {
-            contract_addr: pool_lp_address.into_string(),
+        let lp_asset = AssetInfo::NativeToken {
+            denom: pool_lp_address.into_string(),
         };
         // Now, after generating an address using instantiate 2 we can save this into PAIRS
         // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
+        println!("Before save {}", lp_asset.clone());
         PAIRS.save(
             deps.storage,
             &pair_key,
@@ -883,6 +871,7 @@ pub mod liquidity {
                 pool.amount = pool.amount.checked_sub(deposits[i]).unwrap();
             }
         }
+
         // // deduct protocol fee from pools
         let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
             .load(deps.storage, &pair_info.liquidity_token.to_string())
@@ -895,12 +884,15 @@ pub mod liquidity {
 
         let liquidity_token = match pair_info.liquidity_token {
             AssetInfo::Token { contract_addr } => {
+                println!("Liquidity token is a CW20");
                 let thing = deps.api.addr_validate(&contract_addr)?;
                 println!("Before share");
                 thing.to_string()
             }
             AssetInfo::NativeToken { denom } => denom,
         };
+        println!("\n\n\n Before fees ");
+
         // Compute share and other logic based on the number of assets
         let _share = Uint128::zero();
         println!("{:?}", liquidity_token.clone());

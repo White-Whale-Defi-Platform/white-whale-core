@@ -35,7 +35,7 @@ fn provide_liquidity_cw20_lp() {
     // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
     // This likely breaks tests elsewhere
     let TEMP_CONTRACT_ADDR: String =
-        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
+        "contract6d4141504c2d7575736461646472303030303132333435".to_string();
 
     deps.querier.with_token_balances(&[
         (
@@ -566,7 +566,7 @@ fn provide_liquidity_zero_amount() {
     // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
     // This likely breaks tests elsewhere
     let TEMP_CONTRACT_ADDR: String =
-        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
+        "contract757573642d6d4141504c61646472303030303132333435".to_string();
 
     deps.querier.with_token_balances(&[
         (
@@ -705,7 +705,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
     // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
     // This likely breaks tests elsewhere
     let TEMP_CONTRACT_ADDR: String =
-        "\u{9e}#\u{4}dÒ\"wyîÊÖ\u{92}Ãj\u{8c}à\u{87}~·åòî\u{81}'\u{9f}Mã\u{89}î\u{80}sÆ".to_string();
+        "contract6d4141504c2d7575736461646472303030303132333435".to_string();
 
     deps.querier.with_token_balances(&[
         (

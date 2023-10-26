@@ -16,7 +16,7 @@ use white_whale::{
 };
 
 fn contract_pool_manager(
-    app: &mut App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>,
+    app: &mut App,
 ) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         crate::contract::execute,
@@ -24,17 +24,17 @@ fn contract_pool_manager(
         crate::contract::query,
     ));
 
-    app.store_code(contract)
+    app.store_code_with_creator(Addr::unchecked("admin"), contract)
 }
 
-fn store_token_code(app: &mut App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>) -> u64 {
+fn store_token_code(app: &mut App) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         cw20_base::contract::execute,
         cw20_base::contract::instantiate,
         cw20_base::contract::query,
     ));
 
-    app.store_code(contract)
+    app.store_code_with_creator(Addr::unchecked("admin"), contract)
 }
 
 #[derive(Debug)]
@@ -79,10 +79,23 @@ impl SuiteBuilder {
 
     #[track_caller]
     pub fn build(self) -> Suite {
-        let mut app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi> =
-            AppBuilder::new_custom()
-                .with_api(crate::tests::temp_mock_api::MockSimpleApi::default())
-                .build(|_, _, _| {});
+        // let mut app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi> =
+        //     AppBuilder::new_custom()
+        //         .with_api(crate::tests::temp_mock_api::MockSimpleApi::default())
+        //         .build(|_, _, _| {});
+        // Default app 
+        let mut app: App = AppBuilder::new().build(|_,_,_|{});
+        
+        // Instantiate2 version 
+        // prepare wasm module with custom address generator
+    // let wasm_keeper: WasmKeeper<Empty, Empty> =
+    //     WasmKeeper::new().with_address_generator(MockAddressGenerator);
+
+    // // prepare application with custom api
+    // let mut app = AppBuilder::default()
+    //     .with_api(MockApiBech32::new("juno"))
+    //     .with_wasm(wasm_keeper)
+    //     .build(|_, _, _| {});
         // provide initial native balances
         app.init_modules(|router, _, storage| {
             // group by address
@@ -121,6 +134,7 @@ impl SuiteBuilder {
                 None,
             )
             .unwrap();
+        
 
         Suite {
             app,
@@ -130,7 +144,7 @@ impl SuiteBuilder {
 }
 
 pub struct Suite {
-    pub app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi>,
+    pub app: App,
     pub pool_manager_addr: Addr,
 }
 

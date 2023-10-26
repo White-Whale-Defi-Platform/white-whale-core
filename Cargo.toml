@@ -28,7 +28,7 @@ cw2 = "1.0.1"
 cw20 = "1.0.1"
 cw20-base = { version = "1.1.0", features = ["library"] }
 cw-storage-plus = "1.1.0"
-cw-utils = "1.0.1"
+cw-utils = "1.0.2"
 protobuf = { version = "3.2.0", features = ["with-bytes"] }
 schemars = "0.8.12"
 semver = "1.0.12"
@@ -39,7 +39,7 @@ prost = {version = "0.11.9", default-features = false, features = ["prost-derive
 prost-types = {version = "0.11.9", default-features = false}
 white-whale = { path = "./packages/white-whale" }
 white-whale-testing = { path = "./packages/white-whale-testing" }
-cw-multi-test = { version = "0.16.5", features = ["cosmwasm_1_2", "cosmwasm_1_3"], git="https://github.com/CosmWasm/cw-multi-test", branch = "main"}
+cw-multi-test = { version = "0.18.0", features = ["cosmwasm_1_2", "cosmwasm_1_3"], git="https://github.com/CosmWasm/cw-multi-test", branch = "release_v0_18_0"}
 uint = "0.9.5"
 integer-sqrt = "0.1.5"
 anyhow = { version = "1.0.75"}

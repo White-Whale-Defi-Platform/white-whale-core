@@ -31,4 +31,5 @@ uint.workspace = true
 osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
+cw-utils.workspace = true
 sha256.workspace = true
