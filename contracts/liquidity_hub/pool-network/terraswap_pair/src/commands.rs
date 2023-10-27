@@ -228,10 +228,8 @@ pub fn provide_liquidity(
             ));
         }
 
-        println!("first");
         share
     } else {
-        println!("here");
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
         // == deposit_0 * total_share / pool_0
