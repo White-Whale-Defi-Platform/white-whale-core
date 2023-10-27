@@ -15,7 +15,7 @@ documentation = "https://whitewhale.money"
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-injective = []
+injective = ["token_factory"]
 token_factory = ["cosmwasm-std/stargate", "cosmwasm-std/cosmwasm_1_1"]
 osmosis_token_factory = ["token_factory"] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
 

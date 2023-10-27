@@ -1,7 +1,11 @@
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{
     to_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult, Storage,
@@ -13,6 +17,8 @@ use cw_storage_plus::Item;
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "injective")]
+use white_whale::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
@@ -427,7 +433,11 @@ pub fn create_lp_token(
             Ok(pair_info)
         })?;
 
-        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+        #[cfg(any(
+            feature = "token_factory",
+            feature = "osmosis_token_factory",
+            feature = "injective"
+        ))]
         return Ok(
             Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
                 MsgCreateDenom {

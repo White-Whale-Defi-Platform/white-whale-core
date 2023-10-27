@@ -14,8 +14,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test_and_check:
-    name: Test and check
+  test_and_check-token_factory_feature:
+    name: Test and check Token factory feature
     runs-on: ubuntu-latest
 
     steps:
@@ -43,11 +43,11 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Run cargo-tarpaulin
+      - name: Run cargo-tarpaulin token_factory feature
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: "0.15.0"
-          args: '--features "injective token_factory" --locked -- --test-threads 4'
+          args: '--features "token_factory" --locked -- --test-threads 4'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
@@ -75,3 +75,53 @@ jobs:
           chmod +x ./scripts/build_schemas.sh
           ./scripts/build_schemas.sh true
         shell: bash
+
+  test_and_check-token_injective_feature:
+    name: Test and check Injective feature
+    runs-on: ubuntu-latest
+
+    steps:
+      # Cancel any existing runs to save on CI time
+      # - name: Cancel Previous Runs
+      #   uses: styfle/cancel-workflow-action@0.9.1
+      #   with:
+      #     access_token: ${{ github.token }}
+      # Checkout code, with submodules using PAT
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      # Use Rust Cache to speed up subsequent jobs with no cargo lock changes
+      - name: Use Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "test"
+
+      # Install rust
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.70.0
+          override: true
+          components: rustfmt, clippy
+
+      - name: Run cargo-tarpaulin injective feature
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: "0.15.0"
+          args: '--features "injective" --locked -- --test-threads 4'
+
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --locked -- -D warnings
+
+      #- name: Run cosmwasm linter
+      #  run: cargo dylint cw_lint --workspace
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
