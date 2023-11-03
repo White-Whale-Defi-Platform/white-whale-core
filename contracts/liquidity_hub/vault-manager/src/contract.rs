@@ -147,7 +147,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
         QueryMsg::Vault { filter_by } => Ok(to_binary(&queries::query_vault(deps, filter_by)?)?),
@@ -156,7 +156,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             start_after,
             limit,
         )?)?),
-        QueryMsg::Share { lp_share } => Ok(to_binary(&queries::get_share(deps, env, lp_share)?)?),
+        QueryMsg::Share { lp_share } => Ok(to_binary(&queries::get_share(deps, lp_share)?)?),
         QueryMsg::PaybackAmount {
             asset,
             vault_identifier,

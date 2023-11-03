@@ -1,4 +1,4 @@
-use cosmwasm_std::{Decimal, Deps, Env, Uint128, Uint256};
+use cosmwasm_std::{Decimal, Deps, Uint128, Uint256};
 
 use white_whale::pool_network::asset::{get_total_share, Asset};
 use white_whale::vault_manager::{
@@ -48,22 +48,14 @@ pub(crate) fn query_vaults(
 }
 
 /// Gets the share of the assets stored in the vault that a given `lp_share` is entitled to.
-pub(crate) fn get_share(
-    deps: Deps,
-    env: Env,
-    lp_asset: Asset,
-) -> Result<ShareResponse, ContractError> {
+pub(crate) fn get_share(deps: Deps, lp_asset: Asset) -> Result<ShareResponse, ContractError> {
     let vault = get_vault_by_lp(&deps, &lp_asset.info)?;
 
     let lp_amount = get_total_share(&deps, lp_asset.info.to_string())?;
-    let balance = vault
-        .asset
-        .info
-        .query_balance(&deps.querier, deps.api, env.contract.address)?;
 
     // lp_share = amount / lp_amount
-    // asset_share = lp_share * balance
-    let asset_share = Decimal::from_ratio(lp_asset.amount, lp_amount) * balance;
+    // asset_share = lp_share * vault.asset.amount
+    let asset_share = Decimal::from_ratio(lp_asset.amount, lp_amount) * vault.asset.amount;
     Ok(ShareResponse {
         share: Asset {
             info: vault.asset.info,
@@ -79,6 +71,14 @@ pub(crate) fn get_payback_amount(
     vault_identifier: String,
 ) -> Result<PaybackAssetResponse, ContractError> {
     let vault = get_vault_by_identifier(&deps, vault_identifier)?;
+
+    // sanity check
+    if vault.asset.amount < asset.amount {
+        return Err(ContractError::InsufficientAssetBalance {
+            asset_balance: vault.asset.amount,
+            requested_amount: asset.amount,
+        });
+    }
 
     // check that balance is greater than expected
     let protocol_fee =
