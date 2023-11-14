@@ -8,7 +8,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG};
-use crate::{commands, queries};
+use crate::{commands, queries, manager};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:plankton-swap";
@@ -53,7 +53,8 @@ pub fn execute(
             pool_fees,
             pair_type,
             token_factory_lp,
-        } => commands::create_pair(
+            pair_identifier,
+        } => manager::commands::create_pair(
             deps,
             env,
             info,
@@ -61,6 +62,7 @@ pub fn execute(
             pool_fees,
             pair_type,
             token_factory_lp,
+            pair_identifier
         ),
         ExecuteMsg::ProvideLiquidity {
             assets,
@@ -96,7 +98,7 @@ pub fn execute(
             } else {
                 None
             };
-            commands::swap::swap(
+            swap::commands::swap(
                 deps,
                 env,
                 info.clone(),
