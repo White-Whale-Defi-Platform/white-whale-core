@@ -182,7 +182,7 @@ pub fn create_pair(
             sender: env.contract.address.to_string(),
             subdenom: denom,
         }));
-        #[allow(unreachable_code)]
+        #[cfg(not(any(feature = "token_factory", feature = "osmosis_token_factory")))]
         return Err(ContractError::TokenFactoryNotEnabled {});
     } else {
         // Create the LP token using instantiate2

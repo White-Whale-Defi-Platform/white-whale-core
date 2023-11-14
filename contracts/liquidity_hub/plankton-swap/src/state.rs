@@ -1,12 +1,55 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128};
-use cw_storage_plus::{Bound, Item, Map};
+use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128, Deps};
+use cw_storage_plus::{Bound, Item, Map, IndexedMap, UniqueIndex, MultiIndex, IndexList, Index};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
 use white_whale::pool_network::router::SwapOperation;
+
+use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
-pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
+// pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
+
+pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
+    "vaults",
+    PairIndexes {
+        lp_asset: UniqueIndex::new(|v| v.liquidity_token.to_string(), "pairs__lp_asset"),
+    },
+);
+
+pub struct PairIndexes<'a> {
+    pub lp_asset: UniqueIndex<'a, String, NPairInfo, String>,
+    // pub asset_info: MultiIndex<'a, String, Vault, String>,
+}
+
+impl<'a> IndexList<NPairInfo> for PairIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<NPairInfo>> + '_> {
+        let v: Vec<&dyn Index<NPairInfo>> = vec![&self.lp_asset];
+        Box::new(v.into_iter())
+    }
+}
+
+/// Gets the vault given an lp asset as [AssetInfo]
+pub fn get_vault_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<NPairInfo, ContractError> {
+    Ok(PAIRS
+        .idx
+        .lp_asset
+        .item(deps.storage, lp_asset.to_string())?
+        .map_or_else(|| Err(ContractError::ExistingPair {}), Ok)?
+        .1)
+}
+
+/// Gets the vault given its identifier
+pub fn get_vault_by_identifier(
+    deps: &Deps,
+    vault_identifier: String,
+) -> Result<NPairInfo, ContractError> {
+    PAIRS
+        .may_load(deps.storage, vault_identifier.clone())?
+        .ok_or_else(|| ContractError::ExistingPair {})
+}
+
+
 // Used for PAIRS
 pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
     let mut asset_infos = asset_infos.to_vec();
