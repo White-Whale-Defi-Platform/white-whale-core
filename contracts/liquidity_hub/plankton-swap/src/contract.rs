@@ -1,14 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use white_whale::pool_network::pair::FeatureToggle;
+use white_whale::pool_network::pair::{FeatureToggle, self};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG};
-use crate::{commands, queries, manager};
+use crate::{commands, queries, manager, swap, liquidity};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:plankton-swap";
@@ -68,13 +68,14 @@ pub fn execute(
             assets,
             slippage_tolerance,
             receiver,
-        } => commands::liquidity::provide_liquidity(
+        } => liquidity::commands::provide_liquidity(
             deps,
             env,
             info,
             assets,
             slippage_tolerance,
             receiver,
+            pair_identifier
         ),
         ExecuteMsg::Swap {
             offer_asset,
@@ -82,6 +83,7 @@ pub fn execute(
             belief_price,
             max_spread,
             to,
+            pair_identifier,
         } => {
             // check if the swap feature is enabled
             let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
@@ -108,17 +110,30 @@ pub fn execute(
                 belief_price,
                 max_spread,
                 to_addr,
+                pair_identifier
             )
         }
-        ExecuteMsg::WithdrawLiquidity { assets } => commands::liquidity::withdraw_liquidity(
+        ExecuteMsg::WithdrawLiquidity { assets, pair_identifier } => liquidity::commands::withdraw_liquidity(
             deps,
             env,
             info.sender,
             info.funds[0].amount,
             assets,
+            pair_identifier
         ),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            commands::add_native_token_decimals(deps, env, denom, decimals)
+            manager::commands::add_native_token_decimals(deps, env, denom, decimals)
+        },
+        ExecuteMsg::UpdateOwnership(action) => {
+            Ok(
+                cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
+                    |ownership| {
+                        Response::default()
+                            .add_attribute("action", "update_ownership")
+                            .add_attributes(ownership.into_attributes())
+                    },
+                )?,
+            )
         }
         // ExecuteMsg::UpdatePairInfo { pair_key } => {
         //     commands::update_pair_info(deps, env, denom, decimals)

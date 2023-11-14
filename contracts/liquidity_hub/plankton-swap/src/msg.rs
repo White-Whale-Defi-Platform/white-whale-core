@@ -6,6 +6,8 @@ use white_whale::pool_network::{
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
     router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
+
 
 use crate::state::NAssets;
 
@@ -18,6 +20,7 @@ pub struct InstantiateMsg {
     pub pool_creation_fee: Asset,
 }
 
+#[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
@@ -52,6 +55,7 @@ pub enum ExecuteMsg {
     },
 }
 
+#[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {

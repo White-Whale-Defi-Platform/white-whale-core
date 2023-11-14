@@ -10,6 +10,7 @@ pub mod math;
 pub mod queries;
 pub mod manager;
 pub mod swap;
+pub mod liquidity;
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tests;

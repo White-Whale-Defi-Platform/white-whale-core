@@ -57,6 +57,7 @@ serde.workspace = true
 white-whale.workspace = true
 thiserror.workspace = true
 cw-utils.workspace = true
+cw-ownable.workspace = true
 
 
 [dev-dependencies]
