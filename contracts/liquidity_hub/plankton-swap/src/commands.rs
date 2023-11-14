@@ -95,6 +95,22 @@ pub fn create_pair(
 ) -> Result<Response, ContractError> {
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
+    // Check if fee was provided and is sufficient 
+    let denom = match config.pool_creation_fee.info.clone() {
+        // this will never happen as the fee is always native, enforced when instantiating the contract
+        AssetInfo::Token { .. } => "".to_string(),
+        AssetInfo::NativeToken { denom } => denom,
+    };
+
+    // verify fee payment
+    let amount = cw_utils::must_pay(&info, denom.as_str())?;
+    if amount < config.pool_creation_fee.amount {
+        return Err(ContractError::InvalidPairCreationFee {
+            amount,
+            expected: config.pool_creation_fee.amount,
+        });
+    }
+    // Handle the asset infos and ge the decimals for each asset 
     let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
         NAssets::TWO(assets) => {
             let decimals = [
@@ -111,6 +127,7 @@ pub fn create_pair(
             ];
             (assets.to_vec(), decimals.to_vec())
         }
+        // If we remove the TWO, THREE, N separators then the below will work for all cases
         NAssets::N(assets) => {
             if assets.len() > MAX_ASSETS_PER_POOL {
                 return Err(ContractError::TooManyAssets {
@@ -124,7 +141,7 @@ pub fn create_pair(
             (assets, decimals)
         }
     };
-
+    // Check if the asset infos are the same
     if asset_infos_vec
         .iter()
         .any(|asset| asset_infos_vec.iter().filter(|&a| a == asset).count() > 1)

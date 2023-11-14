@@ -223,7 +223,7 @@ pub struct Config {
     // The code ID for CW20
     pub token_code_id: u64,
     // We must set a creation fee on instantiation to prevent spamming of pools
-    pub pool_creation_fee: Vec<Asset>,
+    pub pool_creation_fee: Asset,
     //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
 }

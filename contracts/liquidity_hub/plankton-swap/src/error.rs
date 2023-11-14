@@ -4,10 +4,17 @@ use cosmwasm_std::{
     OverflowError, StdError, Uint128,
 };
 use thiserror::Error;
+use cw_utils::PaymentError;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
+    // Handle all normal errors from the StdError
     #[error("{0}")]
     Std(#[from] StdError),
+
+    // Handle errors specific to payments from cw-util
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -90,4 +97,7 @@ pub enum ContractError {
 
     #[error("Must provide swap operations to execute")]
     NoSwapOperationsProvided {},
+    #[error("Invalid pair creation fee, expected {expected} got {amount}")]
+    InvalidPairCreationFee { amount: cosmwasm_std::Uint128, expected: cosmwasm_std::Uint128 },
+    
 }
