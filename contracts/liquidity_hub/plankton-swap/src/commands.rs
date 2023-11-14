@@ -8,7 +8,7 @@ use white_whale::pool_network::{
     pair::PoolFee,
 };
 
-use crate::{helpers, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES, PAIR_COUNTER, get_vault_by_identifier, get_pair_by_identifier}, token::InstantiateMsg as TokenInstantiateMsg};
+use crate::{helpers, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES, PAIR_COUNTER, get_pair_by_identifier}, token::InstantiateMsg as TokenInstantiateMsg};
 use crate::{
     state::{
         pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
@@ -410,7 +410,7 @@ pub mod swap {
                 let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -418,7 +418,7 @@ pub mod swap {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address,
@@ -443,7 +443,7 @@ pub mod swap {
                 let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -451,7 +451,7 @@ pub mod swap {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -459,7 +459,7 @@ pub mod swap {
                     },
                     Asset {
                         info: asset_infos[2].clone(),
-                        amount: asset_infos[2].query_pool(
+                        amount: asset_infos[2].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address,
@@ -635,7 +635,7 @@ pub mod liquidity {
             let amount =
                 asset
                     .info
-                    .query_pool(&deps.querier, deps.api, env.contract.address.clone())?;
+                    .query_balance(&deps.querier, deps.api, env.contract.address.clone())?;
             pools.push(Asset {
                 info: asset.info.clone(),
                 amount,
@@ -795,7 +795,7 @@ pub mod liquidity {
                 let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -803,7 +803,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -838,7 +838,7 @@ pub mod liquidity {
                 let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -846,7 +846,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -854,7 +854,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[2].clone(),
-                        amount: asset_infos[2].query_pool(
+                        amount: asset_infos[2].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -1085,7 +1085,7 @@ pub mod liquidity {
                 let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -1093,7 +1093,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -1128,7 +1128,7 @@ pub mod liquidity {
                 let pools: [Asset; 3] = [
                     Asset {
                         info: asset_infos[0].clone(),
-                        amount: asset_infos[0].query_pool(
+                        amount: asset_infos[0].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -1136,7 +1136,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[1].clone(),
-                        amount: asset_infos[1].query_pool(
+                        amount: asset_infos[1].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),
@@ -1144,7 +1144,7 @@ pub mod liquidity {
                     },
                     Asset {
                         info: asset_infos[2].clone(),
-                        amount: asset_infos[2].query_pool(
+                        amount: asset_infos[2].query_balance(
                             &deps.querier,
                             deps.api,
                             env.contract.address.clone(),

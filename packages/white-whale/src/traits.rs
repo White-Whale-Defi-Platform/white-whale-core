@@ -1,6 +1,5 @@
 use crate::pool_network::asset::AssetInfo;
 use cosmwasm_std::Decimal;
-use crate::pool_network::asset::AssetInfo;
 
 /// A trait for converting an Option<Decimal> to a string.
 pub trait OptionDecimal {

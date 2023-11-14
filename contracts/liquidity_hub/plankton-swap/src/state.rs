@@ -148,11 +148,11 @@ impl NPairInfo {
                 let info_1: AssetInfo = assets[1].clone();
                 Ok([
                     Asset {
-                        amount: info_0.query_pool(querier, api, contract_addr.to_owned())?,
+                        amount: info_0.query_balance(querier, api, contract_addr.to_owned())?,
                         info: info_0,
                     },
                     Asset {
-                        amount: info_1.query_pool(querier, api, contract_addr.to_owned())?,
+                        amount: info_1.query_balance(querier, api, contract_addr.to_owned())?,
                         info: info_1,
                     },
                 ])

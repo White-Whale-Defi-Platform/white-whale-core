@@ -60,7 +60,7 @@ pub fn query_simulation(
             let pools: [Asset; 2] = [
                 Asset {
                     info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_pool(
+                    amount: asset_infos[0].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -68,7 +68,7 @@ pub fn query_simulation(
                 },
                 Asset {
                     info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_pool(
+                    amount: asset_infos[1].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address,
@@ -93,7 +93,7 @@ pub fn query_simulation(
             let pools: [Asset; 3] = [
                 Asset {
                     info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_pool(
+                    amount: asset_infos[0].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -101,7 +101,7 @@ pub fn query_simulation(
                 },
                 Asset {
                     info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_pool(
+                    amount: asset_infos[1].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -109,7 +109,7 @@ pub fn query_simulation(
                 },
                 Asset {
                     info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_pool(
+                    amount: asset_infos[2].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address,
@@ -203,7 +203,7 @@ pub fn query_reverse_simulation(
             let pools: [Asset; 2] = [
                 Asset {
                     info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_pool(
+                    amount: asset_infos[0].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -211,7 +211,7 @@ pub fn query_reverse_simulation(
                 },
                 Asset {
                     info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_pool(
+                    amount: asset_infos[1].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address,
@@ -236,7 +236,7 @@ pub fn query_reverse_simulation(
             let pools: [Asset; 3] = [
                 Asset {
                     info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_pool(
+                    amount: asset_infos[0].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -244,7 +244,7 @@ pub fn query_reverse_simulation(
                 },
                 Asset {
                     info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_pool(
+                    amount: asset_infos[1].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address.clone(),
@@ -252,7 +252,7 @@ pub fn query_reverse_simulation(
                 },
                 Asset {
                     info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_pool(
+                    amount: asset_infos[2].query_balance(
                         &deps.querier,
                         deps.api,
                         env.contract.address,
