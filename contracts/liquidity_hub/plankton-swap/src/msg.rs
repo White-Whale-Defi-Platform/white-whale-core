@@ -15,7 +15,7 @@ pub struct InstantiateMsg {
     pub token_code_id: u64,
     pub pair_code_id: u64,
     pub owner: String,
-    pub pool_creation_fee: Vec<Asset>,
+    pub pool_creation_fee: Asset,
 }
 
 #[cw_serde]

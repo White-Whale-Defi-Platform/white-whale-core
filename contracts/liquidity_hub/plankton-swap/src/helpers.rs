@@ -2,18 +2,19 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256, CosmosMsg, to_json_binary, WasmMsg};
 
 use cw_storage_plus::Item;
 
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::CosmosMsg;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, ToCoins};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::pair::PoolFee;
+use white_whale::whale_lair;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
@@ -27,6 +28,20 @@ const NEWTON_ITERATIONS: u64 = 32;
 
 // the number of pools in the pair
 const N_COINS: Uint256 = Uint256::from_u128(2);
+
+/// Creates a message to fill rewards on the whale lair contract.
+pub(crate) fn fill_rewards_msg(
+    contract_addr: String,
+    assets: Vec<Asset>,
+) -> Result<CosmosMsg, ContractError> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr,
+        msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewards {
+            assets: assets.clone(),
+        })?,
+        funds: assets.to_coins()?,
+    }))
+}
 
 fn calculate_stableswap_d(
     offer_pool: Decimal256,
