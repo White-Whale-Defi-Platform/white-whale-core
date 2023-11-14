@@ -5,6 +5,7 @@ use cosmwasm_std::{
 };
 use thiserror::Error;
 use cw_utils::PaymentError;
+use white_whale::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -22,6 +23,12 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("The provided assets are both the same")]
     SameAsset {},
+
+    #[error("The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault")]
+    PairExists {
+        asset_infos: String, //String representation of the asset infos
+        identifier: String,
+    },
 
     #[error("More assets provided than is supported the max is currently {MAX_ASSETS_PER_POOL}, you provided {assets_provided}")]
     TooManyAssets { assets_provided: usize },
@@ -100,4 +107,7 @@ pub enum ContractError {
     #[error("Invalid pair creation fee, expected {expected} got {amount}")]
     InvalidPairCreationFee { amount: cosmwasm_std::Uint128, expected: cosmwasm_std::Uint128 },
     
+
+    
 }
+

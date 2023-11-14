@@ -9,7 +9,6 @@ use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
 // pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
-
 pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
     "vaults",
     PairIndexes {
@@ -29,8 +28,8 @@ impl<'a> IndexList<NPairInfo> for PairIndexes<'a> {
     }
 }
 
-/// Gets the vault given an lp asset as [AssetInfo]
-pub fn get_vault_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<NPairInfo, ContractError> {
+/// Gets the pair given an lp asset as [AssetInfo]
+pub fn get_pair_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<NPairInfo, ContractError> {
     Ok(PAIRS
         .idx
         .lp_asset
@@ -39,8 +38,8 @@ pub fn get_vault_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<NPairInfo, C
         .1)
 }
 
-/// Gets the vault given its identifier
-pub fn get_vault_by_identifier(
+/// Gets the pair given its identifier
+pub fn get_pair_by_identifier(
     deps: &Deps,
     vault_identifier: String,
 ) -> Result<NPairInfo, ContractError> {
@@ -78,6 +77,8 @@ pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
 pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burned_fees");
 
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
+pub const PAIR_COUNTER: Item<u64> = Item::new("vault_count");
+
 
 // key : asset info / value: decimals
 pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");

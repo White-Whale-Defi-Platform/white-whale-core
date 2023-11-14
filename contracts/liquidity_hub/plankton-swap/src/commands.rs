@@ -4,11 +4,11 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 use white_whale::pool_network::{
-    asset::{AssetInfo, AssetInfoRaw, PairType},
+    asset::{AssetInfo, AssetInfoRaw, PairType, Asset},
     pair::PoolFee,
 };
 
-use crate::{helpers, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES}, token::InstantiateMsg as TokenInstantiateMsg};
+use crate::{helpers, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES, PAIR_COUNTER, get_vault_by_identifier, get_pair_by_identifier}, token::InstantiateMsg as TokenInstantiateMsg};
 use crate::{
     state::{
         pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
@@ -92,6 +92,7 @@ pub fn create_pair(
     pool_fees: PoolFee,
     pair_type: PairType,
     token_factory_lp: bool,
+    pair_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
@@ -110,6 +111,22 @@ pub fn create_pair(
             expected: config.pool_creation_fee.amount,
         });
     }
+
+    // Prepare the sending of pair creation fee
+    let mut messages: Vec<CosmosMsg> = vec![];
+
+    // send vault creation fee to whale lair
+    let creation_fee = vec![Asset {
+        info: config.pool_creation_fee.info,
+        amount: config.pool_creation_fee.amount,
+    }];
+
+    // send protocol fee to whale lair
+    // messages.push(fill_rewards_msg(
+    //     config.whale_lair_addr.into_string(),
+    //     creation_fee,
+    // )?);
+
     // Handle the asset infos and ge the decimals for each asset 
     let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
         NAssets::TWO(assets) => {
@@ -149,26 +166,20 @@ pub fn create_pair(
         return Err(ContractError::SameAsset {});
     }
 
-    let raw_infos: Vec<AssetInfoRaw> = asset_infos_vec
-        .iter()
-        .map(|asset| asset.to_raw(deps.api))
-        .collect::<Result<_, _>>()?;
 
-    let pair_key = pair_key(&raw_infos);
-    if let Ok(Some(_)) = PAIRS.may_load(deps.storage, &pair_key) {
-        return Err(ContractError::ExistingPair {});
+    let pair_id = PAIR_COUNTER.load(deps.storage)?;
+    // if no identifier is provided, use the vault counter (id) as identifier
+    let identifier = pair_identifier.unwrap_or(pair_id.to_string());
+
+    // check if there is an existing vault with the given identifier
+    let pair = get_pair_by_identifier(&deps.as_ref(), identifier.clone());
+    if pair.is_ok() {
+        return Err(ContractError::PairExists {
+            asset_infos: asset_infos_vec.iter().map(|i|i.to_string()).collect::<Vec<_>>().join(", "),
+            identifier,
+        });
     }
 
-    // TODO: may no longer be needed as we dont use the reply pattern for pair info anymore
-    TMP_PAIR_INFO.save(
-        deps.storage,
-        &TmpPairInfo {
-            pair_key: pair_key.clone(),
-            asset_infos: NAssets::N(asset_infos_vec.clone()),
-            asset_decimals: crate::state::NDecimals::N(asset_decimals_vec.clone()),
-            pair_type: pair_type.clone(),
-        },
-    )?;
 
     // prepare labels for creating the pair token with a meaningful name
     let pair_label = asset_infos_vec
@@ -191,58 +202,21 @@ pub fn create_pair(
     let mut messages: Vec<CosmosMsg> = vec![];
     let mut attributes = Vec::<Attribute>::new();
 
-    if token_factory_lp {
-        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-        let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
-        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-        messages.push(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
-            sender: env.contract.address.to_string(),
-            subdenom: denom,
-        }));
-        #[cfg(not(any(feature = "token_factory", feature = "osmosis_token_factory")))]
+    let pair_creation_msg = if token_factory_lp == true {
+        #[cfg(all(
+            not(feature = "token_factory"),
+            not(feature = "osmosis_token_factory"),
+            not(feature = "injective")
+        ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
-    } else {
-        // Create the LP token using instantiate2
-        let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let code_id = config.token_code_id;
 
-        let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
-        let seed = format!(
-            "{}{}{}",
-            asset_label,
-            info.sender.into_string(),
-            env.block.height
-        );
-        let salt = Binary::from(seed.as_bytes());
-        // let pool_lp_address = deps.api.addr_humanize(
-        //     &instantiate2_address(&checksum, &creator, &salt)
-        //         .map_err(|e| StdError::generic_err(e.to_string()))?,
-        // )?;
-        let pool_lp_address = Addr::unchecked(format!(
-            "contract{}",
-            HexBinary::from(salt.clone()).to_hex()
-        ));
+        let lp_symbol = format!("{asset_label}.vault.{identifier}.{LP_SYMBOL}");
+        let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
+        let lp_asset = AssetInfo::NativeToken { denom };
 
-        // let canonical = &instantiate2_address(&checksum, &creator, &salt)
-        // .map_err(|e| StdError::generic_err(e.to_string()))?;
-        // let pool_lp_address = Addr::unchecked(canonical.0 .0.iter().map(|&c| c as char).collect::<String>());
-        // println!("pool_lp_address: {}", pool_lp_address);
-        // let pool_lp_address = Addr::unchecked(
-        //     instantiate2_address(&checksum, &creator, &salt)
-        //         .map_err(|e| StdError::generic_err(e.to_string()))?
-        //         .to_string(),
-        // );
-       
-
-        let lp_asset = AssetInfo::NativeToken {
-            denom: pool_lp_address.into_string(),
-        };
-        // Now, after generating an address using instantiate 2 we can save this into PAIRS
-        // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
-        println!("Before save {}", lp_asset.clone());
         PAIRS.save(
             deps.storage,
-            &pair_key,
+            identifier.clone(),
             &PairInfo {
                 asset_infos: NAssets::N(asset_infos_vec),
                 pair_type: pair_type.clone(),
@@ -252,11 +226,59 @@ pub fn create_pair(
             },
         )?;
 
-        // attributes.push(attr("lp_asset", lp_asset.to_string()));
+        attributes.push(attr("lp_asset", lp_asset.to_string()));
+
+        #[cfg(any(
+            feature = "token_factory",
+            feature = "osmosis_token_factory",
+            feature = "injective"
+        ))]
+        Ok(tokenfactory::create_denom::create_denom(
+            env.contract.address,
+            lp_symbol,
+        ))
+    } else {
+        // Create the LP token using instantiate2
+        let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
+        let code_id = config.token_code_id;
+        let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
+        let seed = format!(
+            "{}{}{}{}",
+            asset_label,
+            identifier,
+            info.sender.into_string(),
+            env.block.height
+        );
+        let salt = Binary::from(seed.as_bytes());
+        // Generate the LP address with instantiate2
+        let pair_lp_address = deps.api.addr_humanize(
+            &instantiate2_address(&checksum, &creator, &salt)
+                .map_err(|e| StdError::generic_err(e.to_string()))?,
+        )?;
+
+        let lp_asset = AssetInfo::Token {
+            contract_addr: pair_lp_address.into_string(),
+        };
+        // Now, after generating an address using instantiate 2 we can save this into PAIRS
+        // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
+        println!("Before save {}", lp_asset.clone());
+        PAIRS.save(
+            deps.storage,
+            identifier.clone(),
+            &PairInfo {
+                asset_infos: NAssets::N(asset_infos_vec),
+                pair_type: pair_type.clone(),
+                liquidity_token: lp_asset.clone(),
+                asset_decimals: NDecimals::N(asset_decimals_vec),
+                pool_fees: pool_fees,
+            },
+        )?;
+
+        attributes.push(attr("lp_asset", lp_asset.to_string()));
 
         let lp_token_name = format!("{asset_label}-LP");
 
-        let message = CosmosMsg::Wasm(WasmMsg::Instantiate2 {
+        Ok::<CosmosMsg, ContractError>(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
             admin: None,
             code_id,
             label: lp_token_name.to_owned(),
@@ -272,9 +294,8 @@ pub fn create_pair(
             })?,
             funds: vec![],
             salt,
-        });
-        messages.push(message);
-    }
+        }))
+    }?;
 
     // // Instantiate the collected protocol fees
     // helpers::instantiate_fees(
@@ -296,6 +317,14 @@ pub fn create_pair(
     //     &pair_key,
     //     ALL_TIME_BURNED_FEES,
     // )?;
+    messages.push(pair_creation_msg);
+
+    // increase pair counter
+    PAIR_COUNTER.update(deps.storage, |mut counter| -> Result<_, ContractError> {
+        counter += 1;
+        Ok(counter)
+    })?;
+
     attributes.push(attr("action", "create_pair"));
     attributes.push(attr("pair", &pair_label));
     attributes.push(attr("pair_label", pair_label.as_str()));
