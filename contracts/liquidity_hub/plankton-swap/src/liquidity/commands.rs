@@ -50,11 +50,10 @@ fn get_pair_key_from_assets(
     use cosmwasm_std::{Decimal, OverflowError, StdResult, Uint128};
     use cw20::Cw20ExecuteMsg;
     use white_whale::pool_network::{
-        asset::{get_total_share, Asset, MINIMUM_LIQUIDITY_AMOUNT},
+        asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
         pair, U256,
     };
 
-    use crate::state::COLLECTABLE_PROTOCOL_FEES;
 
     // ProvideLiquidity works based on two patterns so far and eventually 3.
     // Constant Product which is used for 2 assets

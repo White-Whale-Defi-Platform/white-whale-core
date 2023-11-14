@@ -7,7 +7,7 @@ use white_whale::pool_network::pair::{FeatureToggle, self};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
-use crate::state::{Config, MANAGER_CONFIG};
+use crate::state::{Config, MANAGER_CONFIG, PAIR_COUNTER};
 use crate::{commands, queries, manager, swap, liquidity};
 /*
 // version info for migration info
@@ -36,6 +36,8 @@ pub fn instantiate(
         },
     };
     MANAGER_CONFIG.save(deps.storage, &config)?;
+    // initialize vault counter
+    PAIR_COUNTER.save(deps.storage, &0u64)?;
 
     Ok(Response::default())
 }
@@ -68,6 +70,7 @@ pub fn execute(
             assets,
             slippage_tolerance,
             receiver,
+            pair_identifier
         } => liquidity::commands::provide_liquidity(
             deps,
             env,
@@ -135,15 +138,12 @@ pub fn execute(
                 )?,
             )
         }
-        // ExecuteMsg::UpdatePairInfo { pair_key } => {
-        //     commands::update_pair_info(deps, env, denom, decimals)
-        // },
     }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, _msg: QueryMsg) -> Result<Binary, ContractError> {
-    match _msg {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
         QueryMsg::NativeTokenDecimals { denom } => Ok(to_binary(
             &queries::query_native_token_decimal(deps, denom)?,
         )?),
@@ -203,6 +203,7 @@ pub fn query(deps: Deps, env: Env, _msg: QueryMsg) -> Result<Binary, ContractErr
             ask_asset_info,
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
+        QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }
 }
 

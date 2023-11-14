@@ -3,6 +3,7 @@ use cosmwasm_std::{
     DepsMut, Env, MessageInfo, Response, StdError, WasmMsg, HexBinary,
 };
 use cw20::MinterResponse;
+use sha2::{Sha256, Digest};
 use white_whale::pool_network::{
     asset::{AssetInfo, AssetInfoRaw, PairType, Asset},
     pair::PoolFee,
@@ -91,7 +92,8 @@ pub fn create_pair(
         AssetInfo::Token { .. } => "".to_string(),
         AssetInfo::NativeToken { denom } => denom,
     };
-
+    if !config.pool_creation_fee.amount.is_zero() {
+       
     // verify fee payment
     let amount = cw_utils::must_pay(&info, denom.as_str())?;
     if amount < config.pool_creation_fee.amount {
@@ -100,6 +102,7 @@ pub fn create_pair(
             expected: config.pool_creation_fee.amount,
         });
     }
+}
 
     // Prepare the sending of pair creation fee
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -156,7 +159,7 @@ pub fn create_pair(
     }
 
     // Verify pool fees 
-    pool_fees.is_valid();
+    pool_fees.is_valid()?;
 
     let pair_id = PAIR_COUNTER.load(deps.storage)?;
     // if no identifier is provided, use the vault counter (id) as identifier
@@ -241,10 +244,13 @@ pub fn create_pair(
             env.block.height
         );
         let salt = Binary::from(seed.as_bytes());
+        let mut hasher = Sha256::new();
+        hasher.update(seed.as_bytes());
+        let salt = hasher.finalize().to_vec();
+        
         // Generate the LP address with instantiate2
         let pair_lp_address = deps.api.addr_humanize(
-            &instantiate2_address(&checksum, &creator, &salt)
-                .map_err(|e| StdError::generic_err(e.to_string()))?,
+            &instantiate2_address(&checksum, &creator, &salt)?
         )?;
 
         let lp_asset = AssetInfo::Token {
@@ -284,7 +290,7 @@ pub fn create_pair(
                 }),
             })?,
             funds: vec![],
-            salt,
+            salt: salt.into(),
         }))
     }?;
 

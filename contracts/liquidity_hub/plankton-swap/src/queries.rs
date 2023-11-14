@@ -56,7 +56,7 @@ pub fn query_simulation(
         // For TWO assets we use the constant product logic
         assets if assets.len() == 2 => {
             let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
             let pools: [Asset; 2] = [
                 Asset {
                     info: asset_infos[0].clone(),
@@ -81,7 +81,7 @@ pub fn query_simulation(
         // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
         assets if assets.len() == 3 => {
             let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
             // TODO: this is fucked, rework later after constant product working
             let asset_infos = [
                 offer_asset.info.clone(),
@@ -199,7 +199,7 @@ pub fn query_reverse_simulation(
         // For TWO assets we use the constant product logic
         assets if assets.len() == 2 => {
             let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
             let pools: [Asset; 2] = [
                 Asset {
                     info: asset_infos[0].clone(),
@@ -224,7 +224,7 @@ pub fn query_reverse_simulation(
         // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
         assets if assets.len() == 3 => {
             let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
             // TODO: this is fucked, rework later after constant product working
             let asset_infos = [
                 offer_asset.info.clone(),
@@ -504,6 +504,6 @@ pub fn reverse_simulate_return_amount(
 
 pub fn query_pair_info(deps: &Deps<'_>, asset_infos: &[AssetInfo]) -> StdResult<NPairInfo> {
     let pair_key = get_pair_key_from_assets(asset_infos, deps).unwrap();
-    let pair_info = PAIRS.load(deps.storage, &pair_key)?;
+    let pair_info = PAIRS.load(deps.storage, "".to_string())?;
     Ok(pair_info)
 }

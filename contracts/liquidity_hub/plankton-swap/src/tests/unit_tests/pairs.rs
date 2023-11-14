@@ -58,12 +58,12 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
+            pool_creation_fee: Asset {
                 amount: Uint128::new(1000000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-            }],
+            },
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -101,6 +101,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+            pair_identifier: Some("uusd-mAAPL".to_string()),
         };
 
         let env = mock_env();
@@ -168,12 +169,12 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
+            pool_creation_fee: Asset {
                 amount: Uint128::new(1000000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-            }],
+            },
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -212,6 +213,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::StableSwap { amp: 100 },
             token_factory_lp: false,
+            pair_identifier: Some("uusd-mAAPL".to_string()),
         };
 
         let env = mock_env();
@@ -279,12 +281,12 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
+            pool_creation_fee: Asset {
                 amount: Uint128::new(1000000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-            }],
+            },
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -344,6 +346,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+            pair_identifier: None
         };
 
         let env = mock_env();
@@ -413,12 +416,12 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
+            pool_creation_fee: Asset {
                 amount: Uint128::new(1000000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-            }],
+            },
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -468,6 +471,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+            pair_identifier: None,
         };
 
         let env = mock_env();
@@ -545,12 +549,12 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: vec![Asset {
+            pool_creation_fee: Asset {
                 amount: Uint128::new(1000000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-            }],
+            },
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -565,7 +569,7 @@ mod pair_creation_tests {
         )]);
         let asset_infos = NAssets::TWO([asset1, asset2]);
 
-        let msg = ExecuteMsg::CreatePair {
+        let msg = crate::msg::ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees: PoolFee {
                 protocol_fee: Fee {
@@ -580,6 +584,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+            pair_identifier: None,
         };
 
         let env = mock_env();

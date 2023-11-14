@@ -29,12 +29,14 @@ pub enum ExecuteMsg {
         pool_fees: PoolFee,
         pair_type: PairType,
         token_factory_lp: bool,
+        pair_identifier: Option<String>,
     },
     /// Provides liquidity to the pool
     ProvideLiquidity {
         assets: Vec<Asset>,
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
+        pair_identifier: String,
     },
     /// Swap an offer asset to the other
     Swap {
@@ -43,10 +45,12 @@ pub enum ExecuteMsg {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
+        pair_identifier: String,
     },
     // /// Withdraws liquidity from the pool. Used only when the LP is a token factory token.
     WithdrawLiquidity {
         assets: Vec<Asset>,
+        pair_identifier: String,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
     AddNativeTokenDecimals {

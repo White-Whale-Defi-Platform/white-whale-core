@@ -56,12 +56,12 @@ fn provide_liquidity_cw20_lp() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![Asset {
+        pool_creation_fee: Asset {
             amount: Uint128::new(1000000u128),
             info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-        }],
+        },
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -95,6 +95,7 @@ fn provide_liquidity_cw20_lp() {
         },
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
+        pair_identifier: None,
     };
 
     let env = mock_env();
@@ -103,12 +104,13 @@ fn provide_liquidity_cw20_lp() {
         "addr0000",
         &[Coin {
             denom: "uusd".to_string(),
-            amount: Uint128::new(1u128),
+            amount: Uint128::new(1000000u128),
         }],
     );
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
+    println!(   "res: {:?}", res);
     // unsuccessfully providing liquidity since share becomes zero, MINIMUM_LIQUIDITY_AMOUNT provided
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
@@ -128,6 +130,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
+        pair_identifier: "1".to_string(),
     };
 
     let env = mock_env();
@@ -166,6 +169,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -262,6 +266,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: Some("staking0000".to_string()), // try changing receiver
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -324,6 +329,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -387,6 +393,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: Some(Decimal::percent(1)),
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -442,6 +449,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: Some(Decimal::percent(1)),
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -502,6 +510,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: Some(Decimal::percent(2)),
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -542,6 +551,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: Some(Decimal::percent(2)),
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -585,12 +595,12 @@ fn provide_liquidity_zero_amount() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![Asset {
+        pool_creation_fee: Asset {
             amount: Uint128::new(1000000u128),
             info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-        }],
+        },
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -624,6 +634,7 @@ fn provide_liquidity_zero_amount() {
         },
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
+        pair_identifier: None,
     };
 
     let env = mock_env();
@@ -644,12 +655,12 @@ fn provide_liquidity_zero_amount() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![Asset {
+        pool_creation_fee: Asset {
             amount: Uint128::new(1000000u128),
             info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-        }],
+        },
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -675,6 +686,7 @@ fn provide_liquidity_zero_amount() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();
@@ -723,12 +735,12 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![Asset {
+        pool_creation_fee: Asset {
             amount: Uint128::new(1000000u128),
             info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
-        }],
+        },
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -761,6 +773,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         },
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
+        pair_identifier: None,
     };
 
     let env = mock_env();
@@ -801,6 +814,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
+        pair_identifier: 1.to_string(),
     };
 
     let env = mock_env();

@@ -1,11 +1,12 @@
 use crate::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
     CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
-    OverflowError, StdError, Uint128,
+    OverflowError, StdError, Uint128, Instantiate2AddressError
 };
 use thiserror::Error;
 use cw_utils::PaymentError;
 use white_whale::pool_network::asset::AssetInfo;
+use cw_ownable::OwnershipError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -16,6 +17,14 @@ pub enum ContractError {
     // Handle errors specific to payments from cw-util
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error(transparent)]
+    Instantiate2Error(#[from] Instantiate2AddressError),
+
+
+    // Handle ownership errors from cw-ownable
+    #[error("{0}")]
+    OwnershipError(#[from] OwnershipError),
 
     #[error("Unauthorized")]
     Unauthorized {},

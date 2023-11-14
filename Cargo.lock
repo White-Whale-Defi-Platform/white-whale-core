@@ -372,9 +372,9 @@ dependencies = [
 
 [[package]]
 name = "cw-multi-test"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d818f5323c80ed4890db7f89d65eda3f0261fe21878e628c27ea2d8de4b7ba4"
+checksum = "579e2c2f2c0877b839c5cad85e67811074e854a50c1ff3085eb8290b1c27809c"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
@@ -660,7 +660,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-controllers",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "schemars",
@@ -708,7 +708,7 @@ version = "1.1.2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -735,7 +735,7 @@ version = "0.9.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -784,7 +784,7 @@ version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -881,7 +881,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -1139,7 +1139,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-ownable",
  "cw-storage-plus",
  "cw-utils",
@@ -1147,6 +1147,7 @@ dependencies = [
  "cw20",
  "cw20-base",
  "serde",
+ "sha2 0.10.8",
  "test-case",
  "thiserror",
  "white-whale",
@@ -1782,7 +1783,7 @@ version = "1.3.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -1916,7 +1917,7 @@ version = "1.2.6"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -1937,7 +1938,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-ownable",
  "cw-storage-plus",
  "cw-utils",
@@ -1959,7 +1960,7 @@ version = "1.1.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -1980,7 +1981,7 @@ version = "1.1.6"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "cw-storage-plus",
  "cw2",
  "cw20",
@@ -2062,7 +2063,7 @@ version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.17.0",
+ "cw-multi-test 0.18.0",
  "fee_collector",
  "fee_distributor",
  "schemars",

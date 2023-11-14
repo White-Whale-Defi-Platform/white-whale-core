@@ -65,7 +65,12 @@ fn try_native_to_token() {
         owner: "owner".to_string(),
         pair_code_id: 10u64,
         token_code_id: 11u64,
-        pool_creation_fee: vec![],
+        pool_creation_fee: Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+        },
     };
     let env = mock_env();
     let info = mock_info("owner", &[]);
@@ -100,6 +105,7 @@ fn try_native_to_token() {
         },
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
+        pair_identifier: None,
     };
 
     let env = mock_env();
@@ -128,6 +134,7 @@ fn try_native_to_token() {
         belief_price: None,
         max_spread: Some(Decimal::percent(5)),
         to: None,
+        pair_identifier: 1.to_string(),
     };
     let env = mock_env();
     let info = mock_info(

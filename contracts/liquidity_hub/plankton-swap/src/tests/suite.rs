@@ -127,7 +127,7 @@ impl SuiteBuilder {
                     token_code_id: token_contract_code_id,
                     pair_code_id: token_contract_code_id,
                     owner: "owner".to_string(),
-                    pool_creation_fee: vec![],
+                    pool_creation_fee: Asset { amount: Uint128::zero(), info: AssetInfo::NativeToken { denom: "uusd".to_string() } },
                 },
                 &[],
                 "pool_manager",
@@ -178,6 +178,7 @@ impl Suite {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
+            pair_identifier: None,
         };
 
         let res = self
@@ -196,6 +197,7 @@ impl Suite {
             assets: vec,
             slippage_tolerance: None,
             receiver: None,
+            pair_identifier: 1.to_string()
         };
 
         let res = self
