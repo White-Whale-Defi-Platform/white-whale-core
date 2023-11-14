@@ -31,16 +31,16 @@ flag=""
 
 case $chain in
 
-juno)
+juno | terra)
   flag="-osmosis_token_factory"
   ;;
-terra | migaloo)
+migaloo)
   flag="-token_factory"
   ;;
 injective)
   flag="-injective"
   ;;
-chihuahua | comdex | orai) ;;
+chihuahua | comdex | orai | sei) ;;
 
 \*)
   echo "Network $chain not defined"
@@ -66,9 +66,9 @@ docker_options=(
 
 # Optimized builds
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer-arm64:0.13.0$flag")
+  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer-arm64:0.14.0$flag")
 else
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer:0.13.0$flag")
+  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer:0.14.0$flag")
 fi
 
 echo "${docker_command[@]}"

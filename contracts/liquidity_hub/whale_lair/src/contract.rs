@@ -2,8 +2,8 @@ use cosmwasm_std::{entry_point, Addr};
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
-use white_whale::pool_network::asset::AssetInfo;
 
+use white_whale::pool_network::asset::AssetInfo;
 use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::error::ContractError;
@@ -93,6 +93,10 @@ pub fn execute(
             growth_rate,
             fee_distributor_addr,
         ),
+        ExecuteMsg::FillRewards { assets } => {
+            unimplemented!();
+            Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+        }
     }
 }
 

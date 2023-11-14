@@ -1,8 +1,9 @@
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
 };
+
 use white_whale::pool_network::asset::AssetInfo;
-use white_whale::pool_network::incentive::Flow;
+use white_whale::pool_network::incentive::{Flow, FlowIdentifier};
 
 use crate::{
     error::ContractError,
@@ -13,7 +14,7 @@ use crate::{
 pub fn close_flow(
     deps: DepsMut,
     info: MessageInfo,
-    flow_id: u64,
+    flow_identifier: FlowIdentifier,
 ) -> Result<Response, ContractError> {
     // validate that user is allowed to close the flow
     let config = CONFIG.load(deps.storage)?;
@@ -27,14 +28,17 @@ pub fn close_flow(
         .range(deps.storage, None, None, Order::Ascending)
         .collect::<StdResult<Vec<(_, Flow)>>>()?
         .into_iter()
-        .find(|(_, flow)| flow.flow_id == flow_id)
+        .find(|(_, flow)| match &flow_identifier.clone() {
+            FlowIdentifier::Id(id) => flow.flow_id == *id,
+            FlowIdentifier::Label(label) => flow.flow_label.as_ref() == Some(label),
+        })
         .ok_or(ContractError::NonExistentFlow {
-            invalid_id: flow_id,
+            invalid_identifier: flow_identifier.clone(),
         })
         .map(|(_, flow)| flow)?;
 
     if !(flow.flow_creator == info.sender || info.sender == factory_config.owner) {
-        return Err(ContractError::UnauthorizedFlowClose { flow_id });
+        return Err(ContractError::UnauthorizedFlowClose { flow_identifier });
     }
 
     let amount_to_return = flow.flow_asset.amount.saturating_sub(flow.claimed_amount);
@@ -63,7 +67,7 @@ pub fn close_flow(
     Ok(Response::default()
         .add_attributes(vec![
             ("action", "close_flow".to_string()),
-            ("flow_id", flow_id.to_string()),
+            ("flow_identifier", flow_identifier.to_string()),
         ])
         .add_messages(messages))
 }

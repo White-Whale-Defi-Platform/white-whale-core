@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
@@ -8,11 +6,17 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use cosmwasm_std::CosmosMsg;
 use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "injective")]
+use white_whale::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::querier::query_token_info;
@@ -126,83 +130,6 @@ pub struct OfferAmountComputation {
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
 }
-
-/// If `belief_price` and `max_spread` both are given,
-/// we compute new spread else we just use terraswap
-/// spread to check `max_spread`
-pub fn assert_max_spread(
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    offer_asset: Asset,
-    return_asset: Asset,
-    spread_amount: Uint128,
-    offer_decimal: u8,
-    return_decimal: u8,
-) -> Result<(), ContractError> {
-    let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
-        match offer_decimal.cmp(&return_decimal) {
-            Ordering::Greater => {
-                let diff_decimal = 10u64.pow((offer_decimal - return_decimal).into());
-
-                (
-                    offer_asset.amount.into(),
-                    return_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    spread_amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                )
-            }
-            Ordering::Less => {
-                let diff_decimal = 10u64.pow((return_decimal - offer_decimal).into());
-
-                (
-                    offer_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    return_asset.amount.into(),
-                    spread_amount.into(),
-                )
-            }
-            Ordering::Equal => (
-                offer_asset.amount.into(),
-                return_asset.amount.into(),
-                spread_amount.into(),
-            ),
-        };
-
-    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
-        let belief_price: Decimal256 = belief_price.into();
-        let max_spread: Decimal256 = max_spread.into();
-        if max_spread > Decimal256::one() {
-            return Err(StdError::generic_err("max spread cannot bigger than 1").into());
-        }
-
-        let expected_return = offer_amount * (Decimal256::one() / belief_price);
-        let spread_amount = if expected_return > return_amount {
-            expected_return - return_amount
-        } else {
-            Uint256::zero()
-        };
-
-        if return_amount < expected_return
-            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
-        {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    } else if let Some(max_spread) = max_spread {
-        let max_spread: Decimal256 = max_spread.into();
-        if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    }
-
-    Ok(())
-}
-
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 3],
@@ -286,7 +213,11 @@ pub fn instantiate_fees(
 
 /// Gets the total supply of the given liquidity token
 pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    #[cfg(any(
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
+    ))]
     let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
         deps.querier.query_supply(&liquidity_token)?.amount
@@ -297,7 +228,11 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
         )?
         .total_supply
     };
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
     let total_share = query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_token.as_str())?,
@@ -332,7 +267,11 @@ pub fn create_lp_token(
             Ok(trio_info)
         })?;
 
-        #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+        #[cfg(any(
+            feature = "token_factory",
+            feature = "osmosis_token_factory",
+            feature = "injective"
+        ))]
         return Ok(
             Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
                 MsgCreateDenom {

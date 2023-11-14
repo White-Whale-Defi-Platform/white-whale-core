@@ -103,22 +103,26 @@
           "open_flow": {
             "type": "object",
             "required": [
-              "curve",
-              "end_epoch",
               "flow_asset"
             ],
             "properties": {
               "curve": {
-                "description": "The type of distribution curve.",
-                "allOf": [
+                "description": "The type of distribution curve. If unspecified, the distribution will be linear.",
+                "anyOf": [
                   {
                     "$ref": "#/definitions/Curve"
+                  },
+                  {
+                    "type": "null"
                   }
                 ]
               },
               "end_epoch": {
-                "description": "The epoch at which the flow should end.",
-                "type": "integer",
+                "description": "The epoch at which the flow should end. If unspecified, the flow will default to end at 14 epochs from the current one.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
                 "format": "uint64",
                 "minimum": 0.0
               },
@@ -130,8 +134,15 @@
                   }
                 ]
               },
+              "flow_label": {
+                "description": "If set, the label will be used to identify the flow, in addition to the flow_id.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "start_epoch": {
-                "description": "The epoch at which the flow should start.\n\nIf unspecified, the flow will start at the current epoch.",
+                "description": "The epoch at which the flow will start. If unspecified, the flow will start at the current epoch.",
                 "type": [
                   "integer",
                   "null"
@@ -155,14 +166,16 @@
           "close_flow": {
             "type": "object",
             "required": [
-              "flow_id"
+              "flow_identifier"
             ],
             "properties": {
-              "flow_id": {
-                "description": "The id of the flow to close.",
-                "type": "integer",
-                "format": "uint64",
-                "minimum": 0.0
+              "flow_identifier": {
+                "description": "The identifier of the flow to close.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowIdentifier"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -304,6 +317,51 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Expands an existing flow.",
+        "type": "object",
+        "required": [
+          "expand_flow"
+        ],
+        "properties": {
+          "expand_flow": {
+            "type": "object",
+            "required": [
+              "flow_asset",
+              "flow_identifier"
+            ],
+            "properties": {
+              "end_epoch": {
+                "description": "The epoch at which the flow should end. If not set, the flow will be expanded a default value of 14 epochs.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "flow_asset": {
+                "description": "The asset to expand this flow with.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Asset"
+                  }
+                ]
+              },
+              "flow_identifier": {
+                "description": "The identifier of the flow to expand, whether an id or a label.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowIdentifier"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
@@ -372,9 +430,44 @@
       },
       "Curve": {
         "description": "The type of distribution curve to exist.",
-        "type": "string",
-        "enum": [
-          "linear"
+        "oneOf": [
+          {
+            "description": "A linear curve that releases assets as we approach the end of the flow period.",
+            "type": "string",
+            "enum": [
+              "linear"
+            ]
+          }
+        ]
+      },
+      "FlowIdentifier": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
         ]
       },
       "Uint128": {
@@ -402,7 +495,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Retrieves a specific flow.",
+        "description": "Retrieves a specific flow. If start_epoch and end_epoch are set, the asset_history and emitted_tokens will be filtered to only include epochs within the range. The maximum gap between the start_epoch and end_epoch is 100 epochs.",
         "type": "object",
         "required": [
           "flow"
@@ -411,12 +504,32 @@
           "flow": {
             "type": "object",
             "required": [
-              "flow_id"
+              "flow_identifier"
             ],
             "properties": {
-              "flow_id": {
+              "end_epoch": {
+                "description": "If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "flow_identifier": {
                 "description": "The id of the flow to find.",
-                "type": "integer",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/FlowIdentifier"
+                  }
+                ]
+              },
+              "start_epoch": {
+                "description": "If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
                 "format": "uint64",
                 "minimum": 0.0
               }
@@ -427,7 +540,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Retrieves the current flows.",
+        "description": "Retrieves the current flows. If start_epoch and end_epoch are set, the asset_history and emitted_tokens will be filtered to only include epochs within the range. The maximum gap between the start_epoch and end_epoch is 100 epochs.",
         "type": "object",
         "required": [
           "flows"
@@ -435,6 +548,26 @@
         "properties": {
           "flows": {
             "type": "object",
+            "properties": {
+              "end_epoch": {
+                "description": "If set, filters the asset_history and emitted_tokens to only include epochs until end_epoch.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "start_epoch": {
+                "description": "If set, filters the asset_history and emitted_tokens to only include epochs from start_epoch.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
             "additionalProperties": false
           }
         },
@@ -534,7 +667,39 @@
         },
         "additionalProperties": false
       }
-    ]
+    ],
+    "definitions": {
+      "FlowIdentifier": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
   },
   "migrate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -769,15 +934,21 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "type": "string",
-          "enum": [
-            "linear"
+          "oneOf": [
+            {
+              "description": "A linear curve that releases assets as we approach the end of the flow period.",
+              "type": "string",
+              "enum": [
+                "linear"
+              ]
+            }
           ]
         },
         "Flow": {
           "description": "Represents a flow.",
           "type": "object",
           "required": [
+            "asset_history",
             "claimed_amount",
             "curve",
             "emitted_tokens",
@@ -788,6 +959,25 @@
             "start_epoch"
           ],
           "properties": {
+            "asset_history": {
+              "description": "A map containing the amount of tokens it was expanded to at a given epoch. This is used to calculate the right amount of tokens to distribute at a given epoch when a flow is expanded.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
             "claimed_amount": {
               "description": "The amount of the `flow_asset` that has been claimed so far.",
               "allOf": [
@@ -838,6 +1028,13 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            },
+            "flow_label": {
+              "description": "An alternative flow label.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "start_epoch": {
               "description": "The epoch at which the flow starts.",
@@ -941,15 +1138,21 @@
         },
         "Curve": {
           "description": "The type of distribution curve to exist.",
-          "type": "string",
-          "enum": [
-            "linear"
+          "oneOf": [
+            {
+              "description": "A linear curve that releases assets as we approach the end of the flow period.",
+              "type": "string",
+              "enum": [
+                "linear"
+              ]
+            }
           ]
         },
         "Flow": {
           "description": "Represents a flow.",
           "type": "object",
           "required": [
+            "asset_history",
             "claimed_amount",
             "curve",
             "emitted_tokens",
@@ -960,6 +1163,25 @@
             "start_epoch"
           ],
           "properties": {
+            "asset_history": {
+              "description": "A map containing the amount of tokens it was expanded to at a given epoch. This is used to calculate the right amount of tokens to distribute at a given epoch when a flow is expanded.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
             "claimed_amount": {
               "description": "The amount of the `flow_asset` that has been claimed so far.",
               "allOf": [
@@ -1010,6 +1232,13 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            },
+            "flow_label": {
+              "description": "An alternative flow label.",
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "start_epoch": {
               "description": "The epoch at which the flow starts.",

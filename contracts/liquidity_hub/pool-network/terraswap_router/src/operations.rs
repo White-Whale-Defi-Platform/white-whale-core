@@ -20,6 +20,7 @@ pub fn execute_swap_operation(
     info: MessageInfo,
     operation: SwapOperation,
     to: Option<String>,
+    max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     if env.contract.address != info.sender {
         return Err(ContractError::Unauthorized {});
@@ -57,7 +58,7 @@ pub fn execute_swap_operation(
                 deps.as_ref(),
                 Addr::unchecked(pair_info.contract_addr),
                 offer_asset,
-                None,
+                max_spread,
                 to,
             )?]
         }

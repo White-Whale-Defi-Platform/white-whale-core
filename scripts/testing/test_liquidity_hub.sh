@@ -22,7 +22,7 @@ function create_pool_input_files() {
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
 
   # create a bash array for token_address in test_token_file with jq
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
 
   # create a pool with a native token
   token_address=${token_addresses[0]}
@@ -31,6 +31,8 @@ function create_pool_input_files() {
                             "protocol_fee": "0.01",
                             "burn_fee": "0.02",
                             "swap_fee": "0.03",
+                            "token_factory_lp": false,
+                            "pair_type": "constant_product",
                             "assets": [
                               {
                                 "asset": "'$DENOM'",
@@ -55,6 +57,8 @@ function create_pool_input_files() {
                                 "protocol_fee": "0.01",
                                 "burn_fee": "0.02",
                                 "swap_fee": "0.03",
+                                "token_factory_lp": false,
+                                "pair_type": "constant_product",
                                 "assets": [
                                   {
                                     "asset": "'$token_address_0'",
@@ -75,7 +79,7 @@ function create_vault_input_files() {
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
 
   # create a bash array for token_address in test_token_file with jq
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
 
   # create a vault with a native token
   token_address=${token_addresses[0]}
@@ -119,7 +123,7 @@ function smoke_test_pool_network() {
 
   # provide liquidity to the pools
   pools_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
-  mapfile pools < <(jq -r '.pools[] | .pool_address' $pools_file)
+  while IFS= read -r line; do pools+=("$line"); done < <(jq -r '.pools[] | .pool_address' "$pools_file")
 
   for i in "${!pools[@]}"; do
     pool_address=${pools[$i]}
@@ -146,7 +150,9 @@ function smoke_test_pool_network() {
   for i in "${!pools[@]}"; do
     pool_address=$(echo "${pools[$i]}" | sed -e 's/\ *$//g')
     query='{"pool":{}}'
-    readarray -t asset_infos < <($BINARY query wasm contract-state smart $pool_address "$query" --node $RPC --output json | jq -c '.data.assets[].info')
+    while IFS= read -r line; do asset_infos+=("$line"); done < <($BINARY query wasm contract-state smart "$pool_address" "$query" --node "$RPC" --output json | jq -c '.data.assets[].info')
+
+    echo ${asset_infos[@]}
 
     swap_amounts=(1000 70000000 550000000000)
     for asset_info in "${asset_infos[@]}"; do
@@ -333,7 +339,7 @@ function smoke_test_vault_network() {
 
   # provide liquidity to the vaults
   vaults_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_vaults.json
-  mapfile vaults < <(jq -r '.vaults[] | .vault_address' $vaults_file)
+  while IFS= read -r line; do vaults+=("$line"); done < <(jq -r '.vaults[] | .vault_address' "$vaults_file")
 
   echo -e "\nDeposit into the vaults...\n"
 
@@ -416,11 +422,14 @@ function test_pool_network_queries() {
   local pool_router=$(jq -r '.contracts[] | select (.wasm == "terraswap_router.wasm") | .contract_address' $contracts_file)
   local vault_factory=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .contract_address' $contracts_file)
   pools_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
-  mapfile pools < <(jq -r '.pools[] | .pool_address' $pools_file)
+  while IFS= read -r line; do pools+=("$line"); done < <(jq -r '.pools[] | .pool_address' "$pools_file")
+
   vaults_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_vaults.json
-  mapfile vaults < <(jq -r '.vaults[] | .vault_address' $vaults_file)
+  while IFS= read -r line; do vaults+=("$line"); done < <(jq -r '.vaults[] | .vault_address' "$vaults_file")
+
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
+
   cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
 
   echo -e "\nFee collector queries...\n"
@@ -519,9 +528,11 @@ function test_vault_network_queries() {
   local vault_factory=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .contract_address' $contracts_file)
   local vault_router=$(jq -r '.contracts[] | select (.wasm == "vault_router.wasm") | .contract_address' $contracts_file)
   vaults_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_vaults.json
-  mapfile vaults < <(jq -r '.vaults[] | .vault_address' $vaults_file)
+  while IFS= read -r line; do vaults+=("$line"); done < <(jq -r '.vaults[] | .vault_address' "$vaults_file")
+
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
+
   cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
 
   echo -e "\nVault factory queries...\n"
@@ -581,9 +592,13 @@ function pool_factory_execute_msgs() {
   local contracts_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
   local pool_factory=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .contract_address' $contracts_file)
   pools_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
-  mapfile pools < <(jq -r '.pools[] | .pool_address' $pools_file)
+  while IFS= read -r line; do pools+=("$line"); done < <(jq -r '.pools[] | .pool_address' "$pools_file")
+
+  cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
+
+  cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
   cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
   pool=$(echo "${pools[0]}" | sed -e 's/\ *$//g')
 
@@ -632,9 +647,11 @@ function vault_factory_execute_msgs() {
   local contracts_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
   local vault_factory=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .contract_address' $contracts_file)
   vaults_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_vaults.json
-  mapfile vaults < <(jq -r '.vaults[] | .vault_address' $vaults_file)
+  while IFS= read -r line; do vaults+=("$line"); done < <(jq -r '.vaults[] | .vault_address' "$vaults_file")
+
   test_tokens_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_test_tokens.json
-  mapfile token_addresses < <(jq -r '.test_tokens[] | .token_address' $test_tokens_file)
+  while IFS= read -r line; do token_addresses+=("$line"); done < <(jq -r '.test_tokens[] | .token_address' "$test_tokens_file")
+
   cw20_0=$(echo "${token_addresses[0]}" | sed -e 's/\ *$//g')
   vault=$(echo "${vaults[1]}" | sed -e 's/\ *$//g')
 
@@ -738,7 +755,8 @@ function test_migrations() {
   echo -e "\nMigrating pool..."
 
   pools_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
-  mapfile pools < <(jq -r '.pools[] | .pool_address' $pools_file)
+  while IFS= read -r line; do pools+=("$line"); done < <(jq -r '.pools[] | .pool_address' "$pools_file")
+
   pool=$(echo "${pools[0]}" | sed -e 's/\ *$//g')
 
   code_ids=($(jq -r '.contracts[] | select(.wasm == "terraswap_pair.wasm") | .code_id' $contracts_file))
@@ -835,11 +853,11 @@ while getopts $optstring arg; do
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
     if [[ "$chain" = "local" ]]; then
-      tx_delay=0.5s
+      tx_delay=0.5
     else
       echo "This kind of testing is supported on local chains only"
       exit 1
-      tx_delay=8s
+      tx_delay=8
     fi
     ;;
   t)

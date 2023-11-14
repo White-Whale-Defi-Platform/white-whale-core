@@ -5,8 +5,8 @@ use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 use white_whale::fee_distributor::EpochResponse;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::incentive::{
-    Curve, Flow, FlowResponse, GlobalWeightResponse, PositionsResponse, RewardsResponse,
-    RewardsShareResponse,
+    Curve, Flow, FlowIdentifier, FlowResponse, GlobalWeightResponse, PositionsResponse,
+    RewardsResponse, RewardsShareResponse,
 };
 use white_whale::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
@@ -362,9 +362,10 @@ impl TestingSuite {
         sender: Addr,
         incentive_addr: Addr,
         start_epoch: Option<u64>,
-        end_epoch: u64,
-        curve: Curve,
+        end_epoch: Option<u64>,
+        curve: Option<Curve>,
         flow_asset: Asset,
+        flow_label: Option<String>,
         funds: &Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -373,6 +374,7 @@ impl TestingSuite {
             end_epoch,
             curve,
             flow_asset,
+            flow_label,
         };
 
         result(
@@ -387,10 +389,10 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         incentive_addr: Addr,
-        flow_id: u64,
+        flow_identifier: FlowIdentifier,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::CloseFlow { flow_id };
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::CloseFlow { flow_identifier };
 
         result(
             self.app
@@ -562,6 +564,30 @@ impl TestingSuite {
 
         self
     }
+
+    pub(crate) fn expand_flow(
+        &mut self,
+        sender: Addr,
+        incentive_addr: Addr,
+        flow_identifier: FlowIdentifier,
+        end_epoch: Option<u64>,
+        flow_asset: Asset,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_network::incentive::ExecuteMsg::ExpandFlow {
+            flow_identifier,
+            end_epoch,
+            flow_asset,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, incentive_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
 }
 
 /// queries
@@ -655,12 +681,16 @@ impl TestingSuite {
     pub(crate) fn query_flow(
         &mut self,
         incentive_addr: Addr,
-        flow_id: u64,
+        flow_identifier: FlowIdentifier,
         result: impl Fn(StdResult<Option<FlowResponse>>),
     ) -> &mut Self {
         let flow_response: StdResult<Option<FlowResponse>> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Flow { flow_id },
+            &white_whale::pool_network::incentive::QueryMsg::Flow {
+                flow_identifier,
+                start_epoch: None,
+                end_epoch: None,
+            },
         );
 
         result(flow_response);
@@ -671,11 +701,16 @@ impl TestingSuite {
     pub(crate) fn query_flows(
         &mut self,
         incentive_addr: Addr,
+        start_epoch: Option<u64>,
+        end_epoch: Option<u64>,
         result: impl Fn(StdResult<Vec<Flow>>),
     ) -> &mut Self {
         let flows_response: StdResult<Vec<Flow>> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Flows {},
+            &white_whale::pool_network::incentive::QueryMsg::Flows {
+                start_epoch,
+                end_epoch,
+            },
         );
 
         result(flows_response);

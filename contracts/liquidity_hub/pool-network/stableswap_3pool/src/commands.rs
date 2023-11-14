@@ -5,17 +5,28 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::contract::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP, MIN_RAMP_BLOCKS};
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use cosmwasm_std::coins;
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::{
     Asset, AssetInfo, AssetInfoRaw, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+#[cfg(feature = "injective")]
+use white_whale::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale::pool_network::swap;
 use white_whale::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
 
 use crate::error::ContractError;
@@ -387,24 +398,16 @@ pub fn swap(
     let ask_pool: Asset;
     let offer_pool: Asset;
     let unswapped_pool: Asset;
-    let ask_decimal: u8;
-    let offer_decimal: u8;
 
     if ask_asset.equal(&pools[0].info) {
         if offer_asset.info.equal(&pools[1].info) {
             ask_pool = pools[0].clone();
             offer_pool = pools[1].clone();
             unswapped_pool = pools[2].clone();
-
-            ask_decimal = trio_info.asset_decimals[0];
-            offer_decimal = trio_info.asset_decimals[1];
         } else if offer_asset.info.equal(&pools[2].info) {
             ask_pool = pools[0].clone();
             offer_pool = pools[2].clone();
             unswapped_pool = pools[1].clone();
-
-            ask_decimal = trio_info.asset_decimals[0];
-            offer_decimal = trio_info.asset_decimals[2];
         } else {
             return Err(ContractError::AssetMismatch {});
         }
@@ -413,16 +416,10 @@ pub fn swap(
             ask_pool = pools[1].clone();
             offer_pool = pools[0].clone();
             unswapped_pool = pools[2].clone();
-
-            ask_decimal = trio_info.asset_decimals[1];
-            offer_decimal = trio_info.asset_decimals[0];
         } else if offer_asset.info.equal(&pools[2].info) {
             ask_pool = pools[1].clone();
             offer_pool = pools[2].clone();
             unswapped_pool = pools[0].clone();
-
-            ask_decimal = trio_info.asset_decimals[1];
-            offer_decimal = trio_info.asset_decimals[2];
         } else {
             return Err(ContractError::AssetMismatch {});
         }
@@ -431,16 +428,10 @@ pub fn swap(
             ask_pool = pools[2].clone();
             offer_pool = pools[0].clone();
             unswapped_pool = pools[1].clone();
-
-            ask_decimal = trio_info.asset_decimals[2];
-            offer_decimal = trio_info.asset_decimals[0];
         } else if offer_asset.info.equal(&pools[1].info) {
             ask_pool = pools[2].clone();
             offer_pool = pools[1].clone();
             unswapped_pool = pools[0].clone();
-
-            ask_decimal = trio_info.asset_decimals[2];
-            offer_decimal = trio_info.asset_decimals[1];
         } else {
             return Err(ContractError::AssetMismatch {});
         }
@@ -472,15 +463,18 @@ pub fn swap(
         amount: swap_computation.return_amount,
     };
 
+    let fees = swap_computation
+        .swap_fee_amount
+        .checked_add(swap_computation.protocol_fee_amount)?
+        .checked_add(swap_computation.burn_fee_amount)?;
+
     // check max spread limit if exist
-    helpers::assert_max_spread(
+    swap::assert_max_spread(
         belief_price,
         max_spread,
-        offer_asset.clone(),
-        return_asset.clone(),
+        offer_asset.amount,
+        return_asset.amount.checked_add(fees)?,
         swap_computation.spread_amount,
-        offer_decimal,
-        ask_decimal,
     )?;
 
     let receiver = to.unwrap_or_else(|| sender.clone());
@@ -688,7 +682,11 @@ fn mint_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    #[cfg(any(
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
+    ))]
     if is_factory_token(liquidity_token.as_str()) {
         let mut messages = vec![];
         messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
@@ -715,7 +713,11 @@ fn mint_lp_token_msg(
         })])
     }
 
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
@@ -730,7 +732,11 @@ fn burn_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    #[cfg(any(
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
+    ))]
     if is_factory_token(liquidity_token.as_str()) {
         Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
             sender,
@@ -747,7 +753,11 @@ fn burn_lp_token_msg(
         }))
     }
 
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,

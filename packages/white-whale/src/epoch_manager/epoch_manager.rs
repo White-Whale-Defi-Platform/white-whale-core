@@ -1,3 +1,4 @@
+#![allow(clippy::module_inception)]
 use std::fmt;
 use std::fmt::Display;
 

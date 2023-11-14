@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdResult, Uint128};
+use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 
 use white_whale::pool_network::incentive::Flow;
 
@@ -57,4 +57,66 @@ pub fn delete_weight_history_for_user(
             ADDRESS_WEIGHT_HISTORY.remove(deps.storage, (address, epoch_key));
         });
     Ok(())
+}
+
+/// Gets the flow asset amount for a given epoch, taking into account the asset history, i.e. flow expansion.
+pub fn get_flow_asset_amount_at_epoch(flow: &Flow, epoch: u64) -> Uint128 {
+    let mut asset_amount = flow.flow_asset.amount;
+
+    if let Some((_, &(change_amount, _))) = flow.asset_history.range(..=epoch).rev().next() {
+        asset_amount = change_amount;
+    }
+
+    asset_amount
+}
+
+/// Gets the flow end_epoch, taking into account flow expansion.
+pub fn get_flow_end_epoch(flow: &Flow) -> u64 {
+    let mut end_epoch = flow.end_epoch;
+
+    if let Some((_, &(_, expanded_end_epoch))) = flow.asset_history.last_key_value() {
+        end_epoch = expanded_end_epoch;
+    }
+
+    end_epoch
+}
+
+/// Gets the flow end_epoch, taking into account flow expansion.
+pub fn get_flow_current_end_epoch(flow: &Flow, epoch: u64) -> u64 {
+    let mut end_epoch = flow.end_epoch;
+
+    if let Some((_, &(_, current_end_epoch))) = flow.asset_history.range(..=epoch).rev().next() {
+        end_epoch = current_end_epoch;
+    }
+
+    end_epoch
+}
+
+pub const MAX_EPOCH_LIMIT: u64 = 100;
+
+/// Gets a [Flow] filtering the asset history and emitted tokens to the given range of epochs.
+pub fn get_filtered_flow(
+    mut flow: Flow,
+    start_epoch: Option<u64>,
+    end_epoch: Option<u64>,
+) -> StdResult<Flow> {
+    let start_range = start_epoch.unwrap_or(flow.start_epoch);
+    let mut end_range = end_epoch.unwrap_or(
+        start_range
+            .checked_add(MAX_EPOCH_LIMIT)
+            .ok_or_else(|| StdError::generic_err("Overflow"))?,
+    );
+
+    if end_range.saturating_sub(start_range) > MAX_EPOCH_LIMIT {
+        end_range = start_range
+            .checked_add(MAX_EPOCH_LIMIT)
+            .ok_or_else(|| StdError::generic_err("Overflow"))?;
+    }
+
+    flow.asset_history
+        .retain(|&k, _| k >= start_range && k <= end_range);
+    flow.emitted_tokens
+        .retain(|k, _| *k >= start_range && *k <= end_range);
+
+    Ok(flow)
 }

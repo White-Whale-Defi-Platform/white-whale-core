@@ -45,6 +45,16 @@
               "operations"
             ],
             "properties": {
+              "max_spread": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Decimal"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "minimum_receive": {
                 "anyOf": [
                   {
@@ -86,6 +96,16 @@
               "operation"
             ],
             "properties": {
+              "max_spread": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Decimal"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "operation": {
                 "$ref": "#/definitions/SwapOperation"
               },
@@ -233,6 +253,10 @@
           }
         },
         "additionalProperties": false
+      },
+      "Decimal": {
+        "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
+        "type": "string"
       },
       "SwapOperation": {
         "oneOf": [

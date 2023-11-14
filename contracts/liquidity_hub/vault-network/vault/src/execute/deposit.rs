@@ -1,14 +1,26 @@
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use cosmwasm_std::coins;
-use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg};
+use cosmwasm_std::{
+    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, Uint256, WasmMsg,
+};
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::pool_network::asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgMint};
+#[cfg(feature = "injective")]
+use white_whale::pool_network::denom_injective::{Coin, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::{Coin, MsgMint};
 
@@ -123,13 +135,14 @@ pub fn deposit(
         let collected_protocol_fees = COLLECTED_PROTOCOL_FEES.load(deps.storage)?;
         let total_deposits = config
             .asset_info
-            .query_pool(&deps.querier, deps.api, env.contract.address.clone())?
+            .query_balance(&deps.querier, deps.api, env.contract.address.clone())?
             .checked_sub(collected_protocol_fees.amount)?
             .checked_sub(deposit_amount)?;
 
-        amount
-            .checked_mul(total_share)?
-            .checked_div(total_deposits)?
+        Uint256::from_uint128(amount)
+            .checked_mul(Uint256::from_uint128(total_share))?
+            .checked_div(Uint256::from_uint128(total_deposits))?
+            .try_into()?
     };
 
     // mint LP token to sender
@@ -153,7 +166,11 @@ fn mint_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, VaultError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
+    #[cfg(any(
+        feature = "token_factory",
+        feature = "osmosis_token_factory",
+        feature = "injective"
+    ))]
     if is_factory_token(liquidity_asset.as_str()) {
         let mut messages = vec![];
         messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
@@ -180,7 +197,11 @@ fn mint_lp_token_msg(
         })])
     }
 
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
         msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
@@ -651,5 +672,52 @@ mod test {
         // creator is entitled to 9,000 / 18,666 of the total LP supply or 14,000 tokens
         // depositor2 is entitled to 3,333 / 18,666 of the total LP supply or 5,000 tokens
         // depositor3 is entitled to 5,333 / 18,666 of the total LP supply or 8,000 tokens
+    }
+
+    #[cfg(feature = "injective")]
+    #[test]
+    fn deposits_handle_18_decimals() {
+        // simulate an inj vault where users deposit large amounts of inj, even more than the inj supply
+        let second_depositor = Addr::unchecked("depositor2");
+
+        let mut app = mock_app_with_balance(vec![
+            (
+                mock_creator().sender,
+                coins(1_000_000_000_000000000000000000, "inj"),
+            ),
+            (
+                second_depositor.clone(),
+                coins(1_000_000_000_000000000000000000, "inj"),
+            ),
+        ]);
+
+        let vault_addr = app_mock_instantiate(
+            &mut app,
+            AssetInfo::NativeToken {
+                denom: "inj".to_string(),
+            },
+        );
+
+        // first depositor deposits 1_000_000_000_000000000000000000 inj
+        app.execute_contract(
+            mock_creator().sender,
+            vault_addr.clone(),
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(1_000_000_000_000000000000000000),
+            },
+            &coins(1_000_000_000_000000000000000000, "inj"),
+        )
+        .unwrap();
+
+        // second depositor deposits 1_000_000_000_000000000000000000 inj
+        app.execute_contract(
+            second_depositor.clone(),
+            vault_addr.clone(),
+            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+                amount: Uint128::new(1_000_000_000_000000000000000000),
+            },
+            &coins(1_000_000_000_000000000000000000, "inj"),
+        )
+        .unwrap();
     }
 }

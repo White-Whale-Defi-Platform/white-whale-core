@@ -5,10 +5,13 @@ use cosmwasm_std::{
 
 use white_whale::pool_network::asset::AssetInfo;
 
+use crate::helpers::{get_flow_asset_amount_at_epoch, get_flow_current_end_epoch};
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};
 use crate::{error::ContractError, helpers, state::FLOWS};
 
 //todo abstract code in this function as most of it is also used in get_rewards.rs
+
+pub const EPOCH_CLAIM_CAP: u64 = 100u64;
 
 #[allow(unused_assignments)]
 /// Performs the claim function, returning all the [`CosmosMsg`]'s to run.
@@ -33,9 +36,16 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
     let mut last_epoch_user_weight_update: EpochId = 0u64;
     let mut last_user_weight_seen: Uint128 = Uint128::zero();
     //let mut last_user_weight_seen: (EpochId, Uint128) = (064, Uint128::zero());
-    for mut flow in flows.iter_mut() {
+    for flow in flows.iter_mut() {
+        let expanded_default_values = (flow.flow_asset.amount, flow.end_epoch);
+
+        let (_, (expanded_asset_amount, expanded_end_epoch)) = flow
+            .asset_history
+            .last_key_value()
+            .unwrap_or((&0u64, &expanded_default_values));
+
         // check if flow already ended and if everything has been claimed for that flow.
-        if current_epoch > flow.end_epoch && flow.claimed_amount == flow.flow_asset.amount {
+        if current_epoch > *expanded_end_epoch && flow.claimed_amount == expanded_asset_amount {
             // if so, skip flow.
             continue;
         }
@@ -68,13 +78,21 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
             }
         };
 
+        let mut epoch_count = 0;
+
         // calculate the total reward for this flow, from the first claimable epoch to the current epoch
         for epoch_id in first_claimable_epoch..=current_epoch {
+            epoch_count += 1;
+
+            if epoch_count > EPOCH_CLAIM_CAP {
+                break;
+            }
+
             // check if the flow is active in this epoch
             if epoch_id < flow.start_epoch {
                 // the flow is not active yet, skip
                 continue;
-            } else if epoch_id >= flow.end_epoch {
+            } else if epoch_id >= *expanded_end_epoch {
                 // this flow has finished
                 // todo maybe we should make end_epoch inclusive?
                 break;
@@ -93,18 +111,20 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
                 // statement above is true.
                 let previous_emission = *flow
                     .emitted_tokens
-                    .get(&(epoch_id - 1u64))
+                    .get(&(epoch_id.saturating_sub(1u64)))
                     .unwrap_or(&Uint128::zero());
 
                 previous_emission
             };
 
-            // emission = (total_tokens - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
-            let emission_per_epoch = flow
-                .flow_asset
-                .amount
+            // use the flow asset amount at the current epoch considering flow expansions
+            let flow_asset_amount = get_flow_asset_amount_at_epoch(flow, epoch_id);
+            let flow_expanded_end_epoch = get_flow_current_end_epoch(flow, epoch_id);
+
+            // emission = (total_tokens_for_epoch_considering_expansion - emitted_tokens_at_epoch) / (flow_start + flow_duration - epoch) = (total_tokens - emitted_tokens_at_epoch) / (flow_end - epoch)
+            let emission_per_epoch = flow_asset_amount
                 .saturating_sub(emitted_tokens)
-                .checked_div(Uint128::from(flow.end_epoch - epoch_id))?;
+                .checked_div(Uint128::from(flow_expanded_end_epoch - epoch_id))?;
 
             // record the emitted tokens for this epoch if it hasn't been recorded before.
             // emitted tokens for this epoch is the total emitted tokens in previous epoch + the ones
@@ -155,7 +175,7 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
 
             // sanity check for user_reward_at_epoch
             if user_reward_at_epoch > emission_per_epoch
-                || user_reward_at_epoch.checked_add(flow.claimed_amount)? > flow.flow_asset.amount
+                || user_reward_at_epoch.checked_add(flow.claimed_amount)? > *expanded_asset_amount
             {
                 return Err(ContractError::InvalidReward {});
             }

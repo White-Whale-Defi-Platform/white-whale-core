@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{Timestamp, Uint64};
-use white_whale::epoch_manager::EpochConfig;
+use white_whale::epoch_manager::epoch_manager::EpochConfig;
 
 use crate::ContractError;
 use white_whale::fee_distributor::Epoch;

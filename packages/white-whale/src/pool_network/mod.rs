@@ -1,6 +1,8 @@
 pub mod asset;
 #[cfg(feature = "token_factory")]
 pub mod denom;
+#[cfg(feature = "injective")]
+pub mod denom_injective;
 #[cfg(feature = "osmosis_token_factory")]
 pub mod denom_osmosis;
 pub mod factory;
@@ -10,6 +12,7 @@ pub mod incentive_factory;
 pub mod pair;
 pub mod querier;
 pub mod router;
+pub mod swap;
 pub mod token;
 pub mod trio;
 pub mod temp_mock_api;

@@ -26,22 +26,26 @@
         "open_flow": {
           "type": "object",
           "required": [
-            "curve",
-            "end_epoch",
             "flow_asset"
           ],
           "properties": {
             "curve": {
-              "description": "The type of distribution curve.",
-              "allOf": [
+              "description": "The type of distribution curve. If unspecified, the distribution will be linear.",
+              "anyOf": [
                 {
                   "$ref": "#/definitions/Curve"
+                },
+                {
+                  "type": "null"
                 }
               ]
             },
             "end_epoch": {
-              "description": "The epoch at which the flow should end.",
-              "type": "integer",
+              "description": "The epoch at which the flow should end. If unspecified, the flow will default to end at 14 epochs from the current one.",
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint64",
               "minimum": 0.0
             },
@@ -53,8 +57,15 @@
                 }
               ]
             },
+            "flow_label": {
+              "description": "If set, the label will be used to identify the flow, in addition to the flow_id.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "start_epoch": {
-              "description": "The epoch at which the flow should start.\n\nIf unspecified, the flow will start at the current epoch.",
+              "description": "The epoch at which the flow will start. If unspecified, the flow will start at the current epoch.",
               "type": [
                 "integer",
                 "null"
@@ -78,14 +89,16 @@
         "close_flow": {
           "type": "object",
           "required": [
-            "flow_id"
+            "flow_identifier"
           ],
           "properties": {
-            "flow_id": {
-              "description": "The id of the flow to close.",
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
+            "flow_identifier": {
+              "description": "The identifier of the flow to close.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/FlowIdentifier"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -227,6 +240,51 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Expands an existing flow.",
+      "type": "object",
+      "required": [
+        "expand_flow"
+      ],
+      "properties": {
+        "expand_flow": {
+          "type": "object",
+          "required": [
+            "flow_asset",
+            "flow_identifier"
+          ],
+          "properties": {
+            "end_epoch": {
+              "description": "The epoch at which the flow should end. If not set, the flow will be expanded a default value of 14 epochs.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "flow_asset": {
+              "description": "The asset to expand this flow with.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Asset"
+                }
+              ]
+            },
+            "flow_identifier": {
+              "description": "The identifier of the flow to expand, whether an id or a label.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/FlowIdentifier"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
@@ -295,9 +353,44 @@
     },
     "Curve": {
       "description": "The type of distribution curve to exist.",
-      "type": "string",
-      "enum": [
-        "linear"
+      "oneOf": [
+        {
+          "description": "A linear curve that releases assets as we approach the end of the flow period.",
+          "type": "string",
+          "enum": [
+            "linear"
+          ]
+        }
+      ]
+    },
+    "FlowIdentifier": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
       ]
     },
     "Uint128": {

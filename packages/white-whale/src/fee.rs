@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Uint256};
+use std::fmt::{Display, Formatter};
 
 #[cw_serde]
 pub struct Fee {
@@ -23,6 +24,12 @@ impl Fee {
             return Err(StdError::generic_err("Invalid fee"));
         }
         Ok(())
+    }
+}
+
+impl Display for Fee {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}%", self.share * Decimal::percent(100))
     }
 }
 
