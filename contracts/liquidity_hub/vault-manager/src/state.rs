@@ -47,9 +47,10 @@ impl<'a> IndexList<Vault> for VaultIndexes<'a> {
 }
 
 // settings for pagination
-pub(crate) const MAX_LIMIT: u32 = 50;
+pub(crate) const MAX_LIMIT: u32 = 1_000;
 const DEFAULT_LIMIT: u32 = 10;
 
+/// Gets the vaults in the contract
 pub fn get_vaults(
     storage: &dyn Storage,
     start_after: Option<Vec<u8>>,

@@ -1,15 +1,18 @@
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128, Uint256,
-    WasmMsg,
+    to_binary, to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response,
+    StdError, Uint128, Uint256, WasmMsg,
 };
 
 use white_whale::pool_network::asset::Asset;
 use white_whale::traits::AssetReference;
 use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
+use white_whale::whale_lair::fill_rewards_msg;
 
-use crate::helpers::{assert_asset, fill_rewards_msg, query_balances};
+use crate::helpers::{assert_asset, query_balances};
 use crate::queries::query_vaults;
-use crate::state::{get_vault_by_identifier, CONFIG, MAX_LIMIT, ONGOING_FLASHLOAN, TEMP_BALANCES};
+use crate::state::{
+    get_vault_by_identifier, CONFIG, MAX_LIMIT, ONGOING_FLASHLOAN, TEMP_BALANCES, VAULTS,
+};
 use crate::ContractError;
 
 /// Takes a flashloan of the specified asset and executes the payload.
@@ -43,13 +46,12 @@ pub fn flash_loan(
     // toggle on the flashloan indicator
     ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |_| Ok(true))?;
 
-    //todo think how to redo this so it's scalable
     let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
 
     // store balances of all assets in the contract, so that we can check that other assets were not touched during the fashloan
     let balances = query_balances(deps.as_ref(), env.contract.address.clone(), &vaults)?;
     for (asset_info_reference, balance) in &balances {
-        TEMP_BALANCES.save(deps.storage, asset_info_reference, balance)?;
+        TEMP_BALANCES.save(deps.storage, asset_info_reference.as_slice(), balance)?;
     }
 
     // store current balance for after trade profit check
@@ -64,7 +66,7 @@ pub fn flash_loan(
     messages.push(
         WasmMsg::Execute {
             contract_addr: env.contract.address.into_string(),
-            msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterFlashloan {
+            msg: to_json_binary(&ExecuteMsg::Callback(CallbackMsg::AfterFlashloan {
                 old_asset_balance,
                 loan_asset: asset.clone(),
                 vault_identifier: vault_identifier.clone(),
@@ -117,11 +119,20 @@ pub fn after_flashloan(
     sender: Addr,
 ) -> Result<Response, ContractError> {
     // query asset balances
-    //todo think how to redo this so it's scalable
     let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
 
     // get balances of all assets in the vault
     let new_balances = query_balances(deps.as_ref(), env.contract.address, &vaults)?;
+
+    // check that no LP assets where taken during the flashloan. When a native asset is all sent, it
+    // disappears from the balance vector, thus we compare the length of the original balances
+    // vector with the new balances vector
+    let original_native_assets_count = TEMP_BALANCES
+        .keys(deps.storage, None, None, Order::Ascending)
+        .count();
+    if original_native_assets_count > new_balances.len() {
+        return Err(ContractError::FlashLoanLoss {});
+    }
 
     // check that all assets balances are equal or greater than before flashloan
     let any_balance_lower = new_balances
@@ -149,6 +160,7 @@ pub fn after_flashloan(
     // calculate the fees for executing the flashloan
     let mut vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.to_owned())?;
 
+    // protocol fee goes to the bonders
     let protocol_fee = Uint128::try_from(
         vault
             .fees
@@ -179,12 +191,13 @@ pub fn after_flashloan(
 
     // add the flashloan fee to the vault
     vault.asset.amount = vault.asset.amount.checked_add(flash_loan_fee)?;
+    VAULTS.save(deps.storage, vault_identifier.clone(), &vault)?;
 
     // calculate flashloan profit
     let profit = new_asset_balance
         .checked_sub(old_balance)?
-        .checked_sub(protocol_fee)?
-        .checked_sub(flash_loan_fee)?;
+        .saturating_sub(protocol_fee)
+        .saturating_sub(flash_loan_fee);
 
     let mut messages: Vec<CosmosMsg> = vec![];
 

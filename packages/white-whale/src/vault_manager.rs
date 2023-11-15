@@ -188,26 +188,16 @@ pub struct VaultsResponse {
 /// Response for the vaults query
 #[cw_serde]
 pub enum FilterVaultBy {
-    AssetInfo(AssetInfoQueryParams),
-    Identifier(IdentifierQueryParams),
-    LpAsset(LpAssetQueryParams),
+    Asset(AssetQueryParams),
+    Identifier(String),
+    LpAsset(AssetInfo),
 }
 
 #[cw_serde]
-pub struct AssetInfoQueryParams {
+pub struct AssetQueryParams {
     pub asset_info: AssetInfo,
     pub start_after: Option<Vec<u8>>,
     pub limit: Option<u32>,
-}
-
-#[cw_serde]
-pub struct IdentifierQueryParams {
-    pub identifier: String,
-}
-
-#[cw_serde]
-pub struct LpAssetQueryParams {
-    pub lp_asset: AssetInfo,
 }
 
 /// The callback messages available. Only callable by the vault contract itself.

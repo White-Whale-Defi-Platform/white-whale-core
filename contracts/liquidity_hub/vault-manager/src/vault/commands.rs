@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
+    to_json_binary, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw_utils::must_pay;
 
@@ -70,7 +70,7 @@ pub fn deposit(
         messages.push(
             WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.clone().into_string(),
                     recipient: env.contract.address.clone().into_string(),
                     amount: asset.amount,
@@ -82,8 +82,10 @@ pub fn deposit(
     }
 
     // mint LP token for the sender
-    let total_share = get_total_share(&deps.as_ref(), vault.lp_asset.to_string())?;
-    let lp_amount = if total_share.is_zero() {
+    let total_lp_share = get_total_share(&deps.as_ref(), vault.lp_asset.to_string())?;
+
+    // todo revise this for cw20 tokens, duplicated vaults will not have total == 0
+    let lp_amount = if total_lp_share.is_zero() {
         // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
         // depositor preventing small liquidity providers from joining the vault
         let share = asset
@@ -107,25 +109,14 @@ pub fn deposit(
 
         share
     } else {
-        // If the asset is native token, the balance has already increased in the vault
-        // To calculate it properly we should subtract user deposit from the vault.
-        // If the asset is a cw20 token, the balance has not changed yet so we don't need to subtract it
-        let deposit_amount = match vault.asset.info {
-            AssetInfo::NativeToken { .. } => asset.amount,
-            AssetInfo::Token { .. } => Uint128::zero(),
-        };
-
-        // return based on a share of the total vault manager
-        let total_deposits = asset
-            .info
-            .clone()
-            .query_balance(&deps.querier, deps.api, env.contract.address.clone())?
-            .checked_sub(deposit_amount)?;
+        // return based on a share of the vault. We subtract the deposit amount from the vault since
+        // it was added previously to the vault in this function
+        let vault_total_deposits = vault.asset.amount.checked_sub(asset.amount)?;
 
         asset
             .amount
-            .checked_mul(total_share)?
-            .checked_div(total_deposits)?
+            .checked_mul(total_lp_share)?
+            .checked_div(vault_total_deposits)?
     };
 
     // mint LP token to sender
@@ -160,8 +151,8 @@ pub fn withdraw(
 
     // calculate return amount based on the share of the given vault
     let liquidity_asset = vault.lp_asset.to_string();
-    let total_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
-    let withdraw_amount = Decimal::from_ratio(lp_amount, total_share) * vault.asset.amount;
+    let total_lp_share = get_total_share(&deps.as_ref(), liquidity_asset.clone())?;
+    let withdraw_amount = Decimal::from_ratio(lp_amount, total_lp_share) * vault.asset.amount;
 
     // sanity check
     if withdraw_amount > vault.asset.amount {
