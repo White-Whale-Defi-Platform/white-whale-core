@@ -5,7 +5,7 @@ use anyhow::Result as AnyResult;
 use cosmwasm_std::{Addr, Coin, Decimal, Empty, Uint128};
 use cw20::Cw20Coin;
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
 use white_whale::{
     fee::Fee,
@@ -15,9 +15,8 @@ use white_whale::{
     },
 };
 
-fn contract_pool_manager(
-    app: &mut App,
-) -> u64 {
+use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
+fn contract_pool_manager(app: &mut App) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         crate::contract::execute,
         crate::contract::instantiate,
@@ -83,19 +82,19 @@ impl SuiteBuilder {
         //     AppBuilder::new_custom()
         //         .with_api(crate::tests::temp_mock_api::MockSimpleApi::default())
         //         .build(|_, _, _| {});
-        // Default app 
-        let mut app: App = AppBuilder::new().build(|_,_,_|{});
-        
-        // Instantiate2 version 
-        // prepare wasm module with custom address generator
-    // let wasm_keeper: WasmKeeper<Empty, Empty> =
-    //     WasmKeeper::new().with_address_generator(MockAddressGenerator);
+        // Default app
+        let mut app: App = AppBuilder::new().build(|_, _, _| {});
 
-    // // prepare application with custom api
-    // let mut app = AppBuilder::default()
-    //     .with_api(MockApiBech32::new("juno"))
-    //     .with_wasm(wasm_keeper)
-    //     .build(|_, _, _| {});
+        // Instantiate2 version
+        // prepare wasm module with custom address generator
+        // let wasm_keeper: WasmKeeper<Empty, Empty> =
+        //     WasmKeeper::new().with_address_generator(MockAddressGenerator);
+
+        // prepare application with custom api
+        let mut app = AppBuilder::default()
+            .with_api(MockApiBech32::new("juno"))
+            .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
+            .build(|_, _, _| {});
         // provide initial native balances
         app.init_modules(|router, _, storage| {
             // group by address
@@ -127,14 +126,18 @@ impl SuiteBuilder {
                     token_code_id: token_contract_code_id,
                     pair_code_id: token_contract_code_id,
                     owner: "owner".to_string(),
-                    pool_creation_fee: Asset { amount: Uint128::zero(), info: AssetInfo::NativeToken { denom: "uusd".to_string() } },
+                    pool_creation_fee: Asset {
+                        amount: Uint128::zero(),
+                        info: AssetInfo::NativeToken {
+                            denom: "uusd".to_string(),
+                        },
+                    },
                 },
                 &[],
                 "pool_manager",
                 None,
             )
             .unwrap();
-        
 
         Suite {
             app,
@@ -197,7 +200,7 @@ impl Suite {
             assets: vec,
             slippage_tolerance: None,
             receiver: None,
-            pair_identifier: 1.to_string()
+            pair_identifier: 1.to_string(),
         };
 
         let res = self

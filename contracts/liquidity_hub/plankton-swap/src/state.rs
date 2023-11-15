@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128, Deps};
-use cw_storage_plus::{Bound, Item, Map, IndexedMap, UniqueIndex, MultiIndex, IndexList, Index};
+use cosmwasm_std::{Addr, Api, Deps, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
 use white_whale::pool_network::router::SwapOperation;
@@ -48,7 +48,6 @@ pub fn get_pair_by_identifier(
         .ok_or_else(|| ContractError::ExistingPair {})
 }
 
-
 // Used for PAIRS
 pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
     let mut asset_infos = asset_infos.to_vec();
@@ -78,7 +77,6 @@ pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burne
 
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 pub const PAIR_COUNTER: Item<u64> = Item::new("vault_count");
-
 
 // key : asset info / value: decimals
 pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");

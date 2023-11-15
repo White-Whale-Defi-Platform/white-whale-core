@@ -1,14 +1,21 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg, HexBinary,
+    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg,
 };
 use cw20::MinterResponse;
 use white_whale::pool_network::{
-    asset::{AssetInfo, AssetInfoRaw, PairType, Asset},
+    asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
     pair::PoolFee,
 };
 
-use crate::{helpers::{self, fill_rewards_msg}, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES, PAIR_COUNTER, get_pair_by_identifier}, token::InstantiateMsg as TokenInstantiateMsg};
+use crate::{
+    helpers::{self, fill_rewards_msg},
+    state::{
+        add_allow_native_token, get_pair_by_identifier, ALL_TIME_BURNED_FEES,
+        COLLECTABLE_PROTOCOL_FEES, PAIR_COUNTER, TOTAL_COLLECTED_PROTOCOL_FEES,
+    },
+    token::InstantiateMsg as TokenInstantiateMsg,
+};
 use crate::{
     state::{
         pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
@@ -233,7 +240,6 @@ pub mod liquidity {
             assets if assets.len() == 2 => {
                 let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
 
-
                 let pools: [Asset; 2] = [
                     Asset {
                         info: asset_infos[0].clone(),
@@ -275,7 +281,6 @@ pub mod liquidity {
             // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
             assets if assets.len() == 3 => {
                 let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
 
                 let pools: [Asset; 3] = [
                     Asset {
@@ -523,7 +528,6 @@ pub mod liquidity {
             // For TWO assets we use the constant product logic
             assets if assets.len() == 2 => {
                 let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
 
                 let pools: [Asset; 2] = [
                     Asset {

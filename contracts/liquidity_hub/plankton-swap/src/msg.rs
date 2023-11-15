@@ -1,13 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Uint128};
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
     router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
-use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-
 
 use crate::state::NAssets;
 
@@ -53,10 +52,7 @@ pub enum ExecuteMsg {
         pair_identifier: String,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals {
-        denom: String,
-        decimals: u8,
-    },
+    AddNativeTokenDecimals { denom: String, decimals: u8 },
 }
 
 #[cw_ownable_query]

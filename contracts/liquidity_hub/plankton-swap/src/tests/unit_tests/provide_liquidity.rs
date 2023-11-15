@@ -23,7 +23,6 @@ use crate::contract::{execute, instantiate};
 use crate::error::ContractError;
 use crate::msg::ExecuteMsg;
 use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
-
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -110,7 +109,7 @@ fn provide_liquidity_cw20_lp() {
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-    println!(   "res: {:?}", res);
+    println!("res: {:?}", res);
     // unsuccessfully providing liquidity since share becomes zero, MINIMUM_LIQUIDITY_AMOUNT provided
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [

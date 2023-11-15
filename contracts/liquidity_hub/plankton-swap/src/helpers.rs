@@ -2,7 +2,10 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256, CosmosMsg, to_json_binary, WasmMsg};
+use cosmwasm_std::{
+    to_json_binary, CosmosMsg, Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256,
+    WasmMsg,
+};
 
 use cw_storage_plus::Item;
 

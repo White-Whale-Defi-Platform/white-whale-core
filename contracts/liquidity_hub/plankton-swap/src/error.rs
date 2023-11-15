@@ -1,12 +1,12 @@
 use crate::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
     CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
-    OverflowError, StdError, Uint128, Instantiate2AddressError
+    Instantiate2AddressError, OverflowError, StdError, Uint128,
 };
-use thiserror::Error;
-use cw_utils::PaymentError;
-use white_whale::pool_network::asset::AssetInfo;
 use cw_ownable::OwnershipError;
+use cw_utils::PaymentError;
+use thiserror::Error;
+use white_whale::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -21,7 +21,6 @@ pub enum ContractError {
     #[error(transparent)]
     Instantiate2Error(#[from] Instantiate2AddressError),
 
-
     // Handle ownership errors from cw-ownable
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
@@ -33,7 +32,9 @@ pub enum ContractError {
     #[error("The provided assets are both the same")]
     SameAsset {},
 
-    #[error("The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault")]
+    #[error(
+        "The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault"
+    )]
     PairExists {
         asset_infos: String, //String representation of the asset infos
         identifier: String,
@@ -114,9 +115,8 @@ pub enum ContractError {
     #[error("Must provide swap operations to execute")]
     NoSwapOperationsProvided {},
     #[error("Invalid pair creation fee, expected {expected} got {amount}")]
-    InvalidPairCreationFee { amount: cosmwasm_std::Uint128, expected: cosmwasm_std::Uint128 },
-    
-
-    
+    InvalidPairCreationFee {
+        amount: cosmwasm_std::Uint128,
+        expected: cosmwasm_std::Uint128,
+    },
 }
-

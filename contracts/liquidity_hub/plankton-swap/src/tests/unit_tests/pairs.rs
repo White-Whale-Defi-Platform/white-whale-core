@@ -346,7 +346,7 @@ mod pair_creation_tests {
             },
             pair_type: PairType::ConstantProduct,
             token_factory_lp: false,
-            pair_identifier: None
+            pair_identifier: None,
         };
 
         let env = mock_env();

@@ -1,15 +1,22 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response, StdError, WasmMsg, HexBinary,
+    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg,
 };
 use cw20::MinterResponse;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use white_whale::pool_network::{
-    asset::{AssetInfo, AssetInfoRaw, PairType, Asset},
+    asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
     pair::PoolFee,
 };
 
-use crate::{helpers::{self, fill_rewards_msg}, state::{add_allow_native_token, TOTAL_COLLECTED_PROTOCOL_FEES, COLLECTABLE_PROTOCOL_FEES, ALL_TIME_BURNED_FEES, PAIR_COUNTER, get_pair_by_identifier}, token::InstantiateMsg as TokenInstantiateMsg};
+use crate::{
+    helpers::{self, fill_rewards_msg},
+    state::{
+        add_allow_native_token, get_pair_by_identifier, ALL_TIME_BURNED_FEES,
+        COLLECTABLE_PROTOCOL_FEES, PAIR_COUNTER, TOTAL_COLLECTED_PROTOCOL_FEES,
+    },
+    token::InstantiateMsg as TokenInstantiateMsg,
+};
 use crate::{
     state::{
         pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
@@ -33,7 +40,6 @@ use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
-
 
 /// Creates a liquidity pool pair with 2, 3, or N assets. The function dynamically handles different numbers of assets,
 /// allowing for the creation of pairs with varying configurations. The maximum number of assets per pool is defined by
@@ -86,23 +92,22 @@ pub fn create_pair(
 ) -> Result<Response, ContractError> {
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
-    // Check if fee was provided and is sufficient 
+    // Check if fee was provided and is sufficient
     let denom = match config.pool_creation_fee.info.clone() {
         // this will never happen as the fee is always native, enforced when instantiating the contract
         AssetInfo::Token { .. } => "".to_string(),
         AssetInfo::NativeToken { denom } => denom,
     };
     if !config.pool_creation_fee.amount.is_zero() {
-       
-    // verify fee payment
-    let amount = cw_utils::must_pay(&info, denom.as_str())?;
-    if amount < config.pool_creation_fee.amount {
-        return Err(ContractError::InvalidPairCreationFee {
-            amount,
-            expected: config.pool_creation_fee.amount,
-        });
+        // verify fee payment
+        let amount = cw_utils::must_pay(&info, denom.as_str())?;
+        if amount < config.pool_creation_fee.amount {
+            return Err(ContractError::InvalidPairCreationFee {
+                amount,
+                expected: config.pool_creation_fee.amount,
+            });
+        }
     }
-}
 
     // Prepare the sending of pair creation fee
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -119,7 +124,7 @@ pub fn create_pair(
         creation_fee,
     )?);
 
-    // Handle the asset infos and get the decimals for each asset 
+    // Handle the asset infos and get the decimals for each asset
     let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
         NAssets::TWO(assets) => {
             let decimals = [
@@ -158,7 +163,7 @@ pub fn create_pair(
         return Err(ContractError::SameAsset {});
     }
 
-    // Verify pool fees 
+    // Verify pool fees
     pool_fees.is_valid()?;
 
     let pair_id = PAIR_COUNTER.load(deps.storage)?;
@@ -169,11 +174,14 @@ pub fn create_pair(
     let pair = get_pair_by_identifier(&deps.as_ref(), identifier.clone());
     if pair.is_ok() {
         return Err(ContractError::PairExists {
-            asset_infos: asset_infos_vec.iter().map(|i|i.to_string()).collect::<Vec<_>>().join(", "),
+            asset_infos: asset_infos_vec
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
             identifier,
         });
     }
-
 
     // prepare labels for creating the pair token with a meaningful name
     let pair_label = asset_infos_vec
@@ -247,11 +255,11 @@ pub fn create_pair(
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
         let salt = hasher.finalize().to_vec();
-        
+
         // Generate the LP address with instantiate2
-        let pair_lp_address = deps.api.addr_humanize(
-            &instantiate2_address(&checksum, &creator, &salt)?
-        )?;
+        let pair_lp_address = deps
+            .api
+            .addr_humanize(&instantiate2_address(&checksum, &creator, &salt)?)?;
 
         let lp_asset = AssetInfo::Token {
             contract_addr: pair_lp_address.into_string(),

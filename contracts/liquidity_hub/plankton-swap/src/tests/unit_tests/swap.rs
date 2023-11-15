@@ -1,11 +1,10 @@
-
 use crate::state::NAssets;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg, ReplyOn,
+    attr, to_binary, Coin, CosmosMsg, Decimal, Reply, ReplyOn, Response, StdError, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
@@ -38,7 +37,6 @@ fn try_native_to_token() {
         amount: collateral_pool_amount + offer_amount,
         /* user deposit must be pre-applied */
     }]);
-
 
     // Note: In order to support and write tests sooner I override the MockAPI in mock_querier with a SimpleMockAPI
     // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
@@ -79,7 +77,6 @@ fn try_native_to_token() {
 
     // Create the Pair
     let asset_infos = [
-       
         AssetInfo::NativeToken {
             denom: "uusd".to_string(),
         },
@@ -121,7 +118,6 @@ fn try_native_to_token() {
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-
     // normal swap
     let msg = ExecuteMsg::Swap {
         offer_asset: Asset {
@@ -130,7 +126,9 @@ fn try_native_to_token() {
             },
             amount: offer_amount,
         },
-        ask_asset: AssetInfo::Token { contract_addr: "asset0000".to_string() },
+        ask_asset: AssetInfo::Token {
+            contract_addr: "asset0000".to_string(),
+        },
         belief_price: None,
         max_spread: Some(Decimal::percent(5)),
         to: None,
@@ -153,7 +151,7 @@ fn try_native_to_token() {
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
     // 952.380952 = (20000 - 0) * 1500 / (30000 - 0 + 1500) - swap_fee - protocol_fee - burn_fee
-    // TODO: Returned amount is 904545457 and spread is up to 5% -- 43290043. Investigate this 
+    // TODO: Returned amount is 904545457 and spread is up to 5% -- 43290043. Investigate this
     let expected_ret_amount = Uint128::from(952_380_952u128);
     let expected_spread_amount = (offer_amount * exchange_rate)
         .checked_sub(expected_ret_amount)
