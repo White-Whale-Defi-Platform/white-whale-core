@@ -4,7 +4,7 @@ use std::ops::Mul;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, CosmosMsg, Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256,
-    WasmMsg,
+    WasmMsg, DepsMut,
 };
 
 use cw_storage_plus::Item;
@@ -21,6 +21,7 @@ use white_whale::whale_lair;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
+use crate::state::{PAIRS, NPairInfo};
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -45,6 +46,93 @@ pub(crate) fn fill_rewards_msg(
         funds: assets.to_coins()?,
     }))
 }
+
+pub(crate) fn gather_pools_from_state(assets: Vec<Asset>, deps: &DepsMut<'_>, pair_identifier: String, asset_infos: Vec<AssetInfo>) -> Result<(Vec<Asset>, Vec<Asset>, Vec<Uint128>, NPairInfo), ContractError> {
+    let (assets_vec, mut pools, deposits, pair_info) = match assets {
+        // For TWO assets we use the constant product logic
+        assets if assets.len() == 2 => {
+            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
+
+            // Pair Info will have the asset infos as well as the balances for the given pool
+            let the_pool = [
+                Asset {
+                    info: asset_infos[0].clone(),
+                    amount: pair_info.balances[0],
+                },
+                Asset {
+                    info: asset_infos[1].clone(),
+                    amount: pair_info.balances[1],
+                }
+            ]; 
+            let deposits: [Uint128; 2] = [
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&the_pool[1].info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&the_pool[0].info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+            ];
+
+            (
+                assets.to_vec(),
+                the_pool.to_vec(),
+                deposits.to_vec(),
+                pair_info,
+            )
+        }
+        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
+        assets if assets.len() == 3 => {
+            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
+
+            // Pair Info will have the asset infos as well as the balances for the given pool
+            let the_pool = [
+                Asset {
+                    info: asset_infos[0].clone(),
+                    amount: pair_info.balances[0],
+                },
+                Asset {
+                    info: asset_infos[1].clone(),
+                    amount: pair_info.balances[1],
+                },
+                Asset {
+                    info: asset_infos[2].clone(),
+                    amount: pair_info.balances[2],
+                }
+
+            ]; 
+            let deposits: Vec<Uint128> = vec![
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&the_pool[0].info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+                assets
+                    .iter()
+                    .find(|a| a.info.equal(&the_pool[1].info))
+                    .map(|a| a.amount)
+                    .expect("Wrong asset info is given"),
+            ];
+
+            (
+                assets.to_vec(),
+                the_pool.to_vec(),
+                deposits.to_vec(),
+                pair_info,
+            )
+        }
+        _ => {
+            return Err(ContractError::TooManyAssets {
+                assets_provided: assets.len(),
+            })
+        }
+    };
+    Ok((assets_vec, pools, deposits, pair_info))
+}
+
 
 fn calculate_stableswap_d(
     offer_pool: Decimal256,

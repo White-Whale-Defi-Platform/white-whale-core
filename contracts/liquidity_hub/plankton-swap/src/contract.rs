@@ -8,7 +8,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIR_COUNTER};
-use crate::{commands, liquidity, manager, queries, swap};
+use crate::{liquidity, manager, queries, swap};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:plankton-swap";

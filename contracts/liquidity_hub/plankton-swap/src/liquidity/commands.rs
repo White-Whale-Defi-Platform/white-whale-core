@@ -66,7 +66,6 @@ fn get_pair_key_from_assets(
 // Constant Product which is used for 2 assets
 // StableSwap which is used for 3 assets
 // Eventually concentrated liquidity will be offered but this can be assume to all be done in a well documented module we call into
-use super::*;
 
 fn get_pools_and_deposits(
     assets: &[Asset],
@@ -115,81 +114,6 @@ pub fn get_protocol_fee_for_asset(
     }
 }
 
-/// Creates the Mint LP message
-#[allow(unused_variables)]
-fn mint_lp_token_msg(
-    liquidity_token: String,
-    recipient: String,
-    sender: String,
-    amount: Uint128,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-    if is_factory_token(liquidity_token.as_str()) {
-        let mut messages = vec![];
-        messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
-            sender: sender.clone(),
-            amount: Some(Coin {
-                denom: liquidity_token.clone(),
-                amount: amount.to_string(),
-            }),
-        }));
-
-        if sender != recipient {
-            messages.push(CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
-                to_address: recipient,
-                amount: coins(amount.u128(), liquidity_token.as_str()),
-            }));
-        }
-
-        Ok(messages)
-    } else {
-        Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: liquidity_token,
-            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
-            funds: vec![],
-        })])
-    }
-
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
-    Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: liquidity_token,
-        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
-        funds: vec![],
-    })])
-}
-
-/// Creates the Burn LP message
-#[allow(unused_variables)]
-fn burn_lp_token_msg(
-    liquidity_token: String,
-    sender: String,
-    amount: Uint128,
-) -> Result<CosmosMsg, ContractError> {
-    #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-    if is_factory_token(liquidity_token.as_str()) {
-        Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
-            sender,
-            amount: Some(Coin {
-                denom: liquidity_token,
-                amount: amount.to_string(),
-            }),
-        }))
-    } else {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: liquidity_token,
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
-            funds: vec![],
-        }))
-    }
-
-    #[cfg(all(not(feature = "token_factory"), not(feature = "osmosis_token_factory")))]
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: liquidity_token,
-        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
-        funds: vec![],
-    }))
-}
-
 /// Builds a CW20 transfer message
 /// recipient: the address of the recipient
 /// token_contract_address: the address of the CW20 contract
@@ -232,105 +156,7 @@ pub fn provide_liquidity(
         .iter()
         .map(|asset| asset.info.clone())
         .collect::<Vec<_>>();
-    let (assets_vec, mut pools, deposits, pair_info) = match assets {
-        // For TWO assets we use the constant product logic
-        assets if assets.len() == 2 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
-            let pools: [Asset; 2] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-            ];
-            let deposits: [Uint128; 2] = [
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[1].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[0].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-            ];
-
-            (
-                assets.to_vec(),
-                pools.to_vec(),
-                deposits.to_vec(),
-                pair_info,
-            )
-        }
-        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-        assets if assets.len() == 3 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
-            let pools: [Asset; 3] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-            ];
-            let deposits: Vec<Uint128> = vec![
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[0].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[1].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-            ];
-
-            (
-                assets.to_vec(),
-                pools.to_vec(),
-                deposits.to_vec(),
-                pair_info,
-            )
-        }
-        _ => {
-            return Err(ContractError::TooManyAssets {
-                assets_provided: assets.len(),
-            })
-        }
-    };
+    let (assets_vec, mut pools, deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
 
     for asset in assets_vec.iter() {
         asset.assert_sent_native_token_balance(&info)?;
@@ -356,7 +182,7 @@ pub fn provide_liquidity(
                 funds: vec![],
             }));
         } else {
-            // If the asset is native token, balance is already increased
+            // If the asset is native token, balance is already increased on the contract address
             // To calculate it properly we should subtract user deposit from the pool
             pool.amount = pool.amount.checked_sub(deposits[i]).unwrap();
         }
@@ -412,12 +238,13 @@ pub fn provide_liquidity(
                     ));
                 }
 
-                messages.append(&mut mint_lp_token_msg(
-                    liquidity_token.clone(),
-                    env.contract.address.to_string(),
-                    env.contract.address.to_string(),
+                messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+                    liquidity_token.to_string(),
+                    &info.sender,
+                    &env.contract.address,
                     share,
                 )?);
+
                 println!("Before resp");
 
                 share
@@ -455,10 +282,10 @@ pub fn provide_liquidity(
                 )?;
                 println!("Before resp");
 
-                messages.append(&mut mint_lp_token_msg(
-                    liquidity_token.clone(),
-                    env.contract.address.to_string(),
-                    env.contract.address.to_string(),
+                messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+                    liquidity_token.to_string(),
+                    &info.sender,
+                    &env.contract.address,
                     amount,
                 )?);
 
@@ -498,6 +325,7 @@ pub fn provide_liquidity(
     ]))
 }
 
+
 /// Withdraws the liquidity. The user burns the LP tokens in exchange for the tokens provided, including
 /// the swap fees accrued by its share of the pool.
 pub fn withdraw_liquidity(
@@ -521,105 +349,7 @@ pub fn withdraw_liquidity(
         .map(|asset| asset.info.clone())
         .collect::<Vec<_>>();
 
-    let (_assets_vec, _pools, _deposits, pair_info) = match assets {
-        // For TWO assets we use the constant product logic
-        assets if assets.len() == 2 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
-            let pools: [Asset; 2] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-            ];
-            let deposits: [Uint128; 2] = [
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[0].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[1].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-            ];
-
-            (
-                assets.to_vec(),
-                pools.to_vec(),
-                deposits.to_vec(),
-                pair_info,
-            )
-        }
-        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-        assets if assets.len() == 3 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
-            let pools: [Asset; 3] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-            ];
-            let deposits: Vec<Uint128> = vec![
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[0].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-                assets
-                    .iter()
-                    .find(|a| a.info.equal(&pools[1].info))
-                    .map(|a| a.amount)
-                    .expect("Wrong asset info is given"),
-            ];
-
-            (
-                assets.to_vec(),
-                pools.to_vec(),
-                deposits.to_vec(),
-                pair_info,
-            )
-        }
-        _ => {
-            return Err(ContractError::TooManyAssets {
-                assets_provided: assets.len(),
-            })
-        }
-    };
+    let (_assets_vec, _pools, _deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
 
     let pool_assets: [Asset; 2] =
         pair_info.query_pools(&deps.querier, deps.api, &env.contract.address)?;
@@ -653,18 +383,15 @@ pub fn withdraw_liquidity(
         .collect();
 
     let refund_assets = refund_assets?;
-
-    let burn_lp_token_msg =
-        burn_lp_token_msg(liquidity_token, env.contract.address.to_string(), amount)?;
+    let mut messages: Vec<CosmosMsg> = vec![];
+    for asset in refund_assets{
+        messages.push(asset.clone().into_msg(sender.clone())?);
+    }
+    messages.push(white_whale::lp_common::burn_lp_asset_msg(liquidity_token, sender, amount)?);
 
     // update pool info
     Ok(Response::new()
-        .add_messages(vec![
-            refund_assets[0].clone().into_msg(sender.clone())?,
-            refund_assets[1].clone().into_msg(sender.clone())?,
-            // burn liquidity token
-            burn_lp_token_msg,
-        ])
+        .add_messages(messages)
         .add_attributes(vec![
             ("action", "withdraw_liquidity"),
             ("sender", sender.as_str()),

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg,
+    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg, Uint128,
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
@@ -84,7 +84,7 @@ pub fn create_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset_infos: NAssets,
+    asset_infos: NAssets, //Review just a vec<asset>
     pool_fees: PoolFee,
     pair_type: PairType,
     token_factory_lp: bool,
@@ -225,6 +225,7 @@ pub fn create_pair(
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: NDecimals::N(asset_decimals_vec),
                 pool_fees: pool_fees,
+                balances: vec![Uint128::zero(); asset_infos_vec.len()]
             },
         )?;
 
@@ -276,6 +277,7 @@ pub fn create_pair(
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: NDecimals::N(asset_decimals_vec),
                 pool_fees: pool_fees,
+                balances: vec![Uint128::zero(); asset_infos_vec.len()]
             },
         )?;
 
@@ -301,27 +303,7 @@ pub fn create_pair(
             salt: salt.into(),
         }))
     }?;
-
-    // // Instantiate the collected protocol fees
-    // helpers::instantiate_fees(
-    //     deps.storage,
-    //     asset_infos_vec[0].clone(),
-    //     asset_infos_vec[1].clone(),
-    //     COLLECTABLE_PROTOCOL_FEES,
-    // )?;
-    // helpers::instantiate_fees(
-    //     deps.storage,
-    //     asset_infos_vec[0].clone(),
-    //     asset_infos_vec[1].clone(),
-    //     TOTAL_COLLECTED_PROTOCOL_FEES,
-    // )?;
-    // helpers::instantiate_fees(
-    //     deps.storage,
-    //     asset_infos_vec[0].clone(),
-    //     asset_infos_vec[1].clone(),
-    //     &pair_key,
-    //     ALL_TIME_BURNED_FEES,
-    // )?;
+    
     messages.push(pair_creation_msg);
 
     // increase pair counter

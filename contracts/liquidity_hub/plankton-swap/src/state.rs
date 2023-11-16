@@ -129,6 +129,7 @@ pub struct NPairInfo {
     pub asset_infos: NAssets,
     pub liquidity_token: AssetInfo,
     pub asset_decimals: NDecimals,
+    pub balances: Vec<Uint128>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
 }

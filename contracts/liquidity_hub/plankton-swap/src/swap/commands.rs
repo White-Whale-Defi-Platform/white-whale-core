@@ -1,25 +1,15 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg,
+    Addr, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response,
 };
-use cw20::MinterResponse;
-use white_whale::pool_network::{
-    asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
-    pair::PoolFee,
-};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use crate::{
-    helpers::{self, fill_rewards_msg},
-    state::{
-        add_allow_native_token, get_decimals, get_pair_by_identifier, ALL_TIME_BURNED_FEES,
-        COLLECTABLE_PROTOCOL_FEES, PAIR_COUNTER, TOTAL_COLLECTED_PROTOCOL_FEES,
-    },
-    token::InstantiateMsg as TokenInstantiateMsg,
-};
+use crate::state::get_decimals;
+use crate::helpers; 
 use crate::{
     state::{
-        pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
-        PAIRS, TMP_PAIR_INFO,
+         MANAGER_CONFIG,
+        PAIRS,
     },
     ContractError,
 };
@@ -43,8 +33,6 @@ pub const LP_SYMBOL: &str = "uLP";
 use cosmwasm_std::{Decimal, Uint128};
 
 // Stuff like Swap, Swap through router and any other stuff related to swapping
-use super::*;
-
 pub fn swap(
     deps: DepsMut,
     env: Env,
