@@ -42,9 +42,11 @@ thiserror.workspace = true
 white-whale.workspace = true
 cw-utils.workspace = true
 cw-ownable.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
 whale-lair.workspace = true
 terraswap-token.workspace = true
 anyhow.workspace = true
+bech32.workspace = true

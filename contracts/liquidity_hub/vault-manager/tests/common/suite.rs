@@ -1,16 +1,22 @@
-use cosmwasm_std::{Addr, Coin, Decimal, StdResult, Timestamp, Uint128, Uint64};
-use cw20::{Cw20Coin, MinterResponse};
-use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
+use cosmwasm_std::{
+    coin, to_json_binary, Addr, Coin, Decimal, StdResult, Timestamp, Uint128, Uint64,
+};
+use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
+use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, WasmKeeper};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::vault_manager::{InstantiateMsg, LpTokenType};
+use white_whale::vault_manager::{
+    Cw20HookMsg, Cw20ReceiveMsg, FilterVaultBy, InstantiateMsg, LpTokenType, VaultsResponse,
+};
 
 use crate::common::suite_contracts::{
     cw20_token_contract, vault_manager_contract, whale_lair_contract,
 };
+use crate::common::test_addresses::MockAddressGenerator;
+use crate::common::test_api::MockApiBech32;
 
 pub struct TestingSuite {
-    app: App,
+    app: App<BankKeeper, MockApiBech32>,
     pub senders: [Addr; 3],
     pub whale_lair_addr: Addr,
     pub vault_manager_addr: Addr,
@@ -58,24 +64,10 @@ impl TestingSuite {
 
 /// Instantiate
 impl TestingSuite {
-    pub(crate) fn default() -> Self {
-        let sender_1 = Addr::unchecked("alice");
-        let sender_2 = Addr::unchecked("bob");
-        let sender_3 = Addr::unchecked("carol");
-
-        Self {
-            app: App::default(),
-            senders: [sender_1, sender_2, sender_3],
-            whale_lair_addr: Addr::unchecked(""),
-            vault_manager_addr: Addr::unchecked(""),
-            cw20_tokens: vec![],
-        }
-    }
-
     pub(crate) fn default_with_balances(initial_balance: Vec<Coin>) -> Self {
-        let sender_1 = Addr::unchecked("alice");
-        let sender_2 = Addr::unchecked("bob");
-        let sender_3 = Addr::unchecked("carol");
+        let sender_1 = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
+        let sender_2 = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
+        let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
 
         let bank = BankKeeper::new();
 
@@ -86,6 +78,8 @@ impl TestingSuite {
         ];
 
         let app = AppBuilder::new()
+            .with_api(MockApiBech32::new("migaloo"))
+            .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
             .with_bank(bank)
             .build(|router, _api, storage| {
                 balances.into_iter().for_each(|(account, amount)| {
@@ -175,6 +169,8 @@ impl TestingSuite {
             )
             .unwrap();
     }
+
+    #[track_caller]
     pub fn create_cw20_token(&mut self) -> u64 {
         let msg = white_whale::pool_network::token::InstantiateMsg {
             name: "mocktoken".to_string(),
@@ -287,6 +283,7 @@ impl TestingSuite {
 
 /// execute messages
 impl TestingSuite {
+    #[track_caller]
     pub(crate) fn update_ownership(
         &mut self,
         sender: Addr,
@@ -303,15 +300,103 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn create_vault(
         &mut self,
         sender: Addr,
         asset_info: AssetInfo,
+        vault_identifier: Option<String>,
         fees: white_whale::vault_manager::VaultFee,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::CreateVault { asset_info, fees };
+        let msg = white_whale::vault_manager::ExecuteMsg::CreateVault {
+            asset_info,
+            fees,
+            vault_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn deposit(
+        &mut self,
+        sender: Addr,
+        asset: Asset,
+        vault_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::vault_manager::ExecuteMsg::Deposit {
+            asset,
+            vault_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn withdraw(
+        &mut self,
+        sender: Addr,
+        asset: Asset,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        match asset.info {
+            AssetInfo::Token { contract_addr } => {
+                let msg = cw20::Cw20ExecuteMsg::Send {
+                    contract: self.vault_manager_addr.to_string(),
+                    amount: asset.amount,
+                    msg: to_json_binary(&Cw20HookMsg::Withdraw).unwrap(),
+                };
+
+                result(self.app.execute_contract(
+                    sender,
+                    Addr::unchecked(contract_addr),
+                    &msg,
+                    &funds,
+                ));
+            }
+            AssetInfo::NativeToken { .. } => {
+                unimplemented!()
+            }
+        }
+
+        self
+    }
+    #[track_caller]
+    pub(crate) fn update_config(
+        &mut self,
+        sender: Addr,
+        whale_lair_addr: Option<String>,
+        vault_creation_fee: Option<Asset>,
+        cw20_lp_code_id: Option<u64>,
+        flash_loan_enabled: Option<bool>,
+        deposit_enabled: Option<bool>,
+        withdraw_enabled: Option<bool>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::vault_manager::ExecuteMsg::UpdateConfig {
+            whale_lair_addr,
+            vault_creation_fee,
+            cw20_lp_code_id,
+            flash_loan_enabled,
+            deposit_enabled,
+            withdraw_enabled,
+        };
 
         result(
             self.app
@@ -335,6 +420,73 @@ impl TestingSuite {
             );
 
         result(ownership_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_vault(
+        &mut self,
+        filter_by: FilterVaultBy,
+        result: impl Fn(StdResult<VaultsResponse>),
+    ) -> &mut Self {
+        let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale::vault_manager::QueryMsg::Vault { filter_by },
+        );
+
+        result(vaults_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_vaults(
+        &mut self,
+        start_after: Option<Vec<u8>>,
+        limit: Option<u32>,
+        result: impl Fn(StdResult<VaultsResponse>),
+    ) -> &mut Self {
+        let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale::vault_manager::QueryMsg::Vaults { start_after, limit },
+        );
+
+        result(vaults_response);
+
+        self
+    }
+    #[track_caller]
+    pub(crate) fn query_balance(
+        &mut self,
+        asset_info: AssetInfo,
+        address: Addr,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let balance: Uint128 = match asset_info {
+            AssetInfo::Token { contract_addr } => {
+                let balance_response: StdResult<BalanceResponse> =
+                    self.app.wrap().query_wasm_smart(
+                        &contract_addr,
+                        &cw20_base::msg::QueryMsg::Balance {
+                            address: address.to_string(),
+                        },
+                    );
+
+                if balance_response.is_err() {
+                    Uint128::zero()
+                } else {
+                    balance_response.unwrap().balance
+                }
+            }
+            AssetInfo::NativeToken { denom } => {
+                let balance_response = self.app.wrap().query_balance(address, denom.clone());
+
+                balance_response.unwrap_or(coin(0, denom)).amount
+            }
+        };
+
+        result(balance);
 
         self
     }

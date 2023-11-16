@@ -42,6 +42,7 @@ pub fn instantiate(
         deposit_enabled: true,
         withdraw_enabled: true,
     };
+
     CONFIG.save(deps.storage, &config)?;
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;

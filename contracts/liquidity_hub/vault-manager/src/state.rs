@@ -121,10 +121,4 @@ pub fn get_vault_by_identifier(
     VAULTS
         .may_load(deps.storage, vault_identifier.clone())?
         .ok_or_else(|| ContractError::NonExistentVault {})
-    // Ok(VAULTS
-    //     .idx
-    //     .identifier
-    //     .item(deps.storage, vault_identifier)?
-    //     .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
-    //     .1)
 }

@@ -3,6 +3,7 @@ use cosmwasm_std::{
     DepsMut, Env, MessageInfo, Response, StdError, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
+use sha2::{Digest, Sha256};
 
 use white_whale::constants::LP_SYMBOL;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -122,12 +123,15 @@ pub fn create_vault(
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
             "{}{}{}{}",
-            asset_info,
+            asset_label,
             identifier,
             info.sender.into_string(),
             env.block.height
         );
-        let salt = Binary::from(seed.as_bytes());
+        let mut hasher = Sha256::new();
+        hasher.update(seed.as_bytes());
+        let salt: Binary = hasher.finalize().to_vec().into();
+
         let vault_lp_address = deps.api.addr_humanize(
             &instantiate2_address(&checksum, &creator, &salt)
                 .map_err(|e| StdError::generic_err(e.to_string()))?,
