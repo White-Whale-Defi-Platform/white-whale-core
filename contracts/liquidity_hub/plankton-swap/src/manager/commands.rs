@@ -19,8 +19,8 @@ use crate::{
 };
 use crate::{
     state::{
-        pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
-        PAIRS, TMP_PAIR_INFO,
+        pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG,
+        PAIRS,
     },
     ContractError,
 };
@@ -84,12 +84,13 @@ pub fn create_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset_infos: NAssets, //Review just a vec<asset>
+    asset_infos: Vec<AssetInfo>, //Review just a vec<asset>
     pool_fees: PoolFee,
     pair_type: PairType,
     token_factory_lp: bool,
     pair_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
+    // Load config for pool creation fee 
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
     // Check if fee was provided and is sufficient
@@ -124,41 +125,14 @@ pub fn create_pair(
         creation_fee,
     )?);
 
-    // Handle the asset infos and get the decimals for each asset
-    let (asset_infos_vec, asset_decimals_vec) = match asset_infos {
-        NAssets::TWO(assets) => {
-            let decimals = [
-                assets[0].query_decimals(env.contract.address.clone(), &deps.querier)?,
-                assets[1].query_decimals(env.contract.address.clone(), &deps.querier)?,
-            ];
-            (assets.to_vec(), decimals.to_vec())
-        }
-        NAssets::THREE(assets) => {
-            let decimals = [
-                assets[0].query_decimals(env.contract.address.clone(), &deps.querier)?,
-                assets[1].query_decimals(env.contract.address.clone(), &deps.querier)?,
-                assets[2].query_decimals(env.contract.address.clone(), &deps.querier)?,
-            ];
-            (assets.to_vec(), decimals.to_vec())
-        }
-        // If we remove the TWO, THREE, N separators then the below will work for all cases
-        NAssets::N(assets) => {
-            if assets.len() > MAX_ASSETS_PER_POOL {
-                return Err(ContractError::TooManyAssets {
-                    assets_provided: assets.len(),
-                });
-            }
-            let decimals: Vec<u8> = assets
-                .iter()
-                .map(|asset| asset.query_decimals(env.contract.address.clone(), &deps.querier))
-                .collect::<Result<_, _>>()?;
-            (assets, decimals)
-        }
-    };
-    // Check if the asset infos are the same
-    if asset_infos_vec
+    let asset_decimals_vec = asset_infos
         .iter()
-        .any(|asset| asset_infos_vec.iter().filter(|&a| a == asset).count() > 1)
+        .map(|asset| asset.query_decimals(env.contract.address.clone(), &deps.querier).unwrap())
+        .collect::<Vec<_>>();
+    // Check if the asset infos are the same
+    if asset_infos
+        .iter()
+        .any(|asset| asset_infos.iter().filter(|&a| a == asset).count() > 1)
     {
         return Err(ContractError::SameAsset {});
     }
@@ -174,7 +148,7 @@ pub fn create_pair(
     let pair = get_pair_by_identifier(&deps.as_ref(), identifier.clone());
     if pair.is_ok() {
         return Err(ContractError::PairExists {
-            asset_infos: asset_infos_vec
+            asset_infos: asset_infos
                 .iter()
                 .map(|i| i.to_string())
                 .collect::<Vec<_>>()
@@ -184,7 +158,7 @@ pub fn create_pair(
     }
 
     // prepare labels for creating the pair token with a meaningful name
-    let pair_label = asset_infos_vec
+    let pair_label = asset_infos
         .iter()
         .map(|asset| asset.to_owned().get_label(&deps.as_ref()))
         .collect::<Result<Vec<_>, _>>()?
@@ -193,7 +167,7 @@ pub fn create_pair(
     //   found struct `std::vec::Vec<AssetInfo>`
     // Now instead of sending a SubMsg to create the pair we can just call the instantiate function for an LP token
     // and save the info in PAIRS using pairkey as the key
-    let asset_labels: Result<Vec<String>, _> = asset_infos_vec
+    let asset_labels: Result<Vec<String>, _> = asset_infos
         .iter()
         .map(|asset| asset.clone().get_label(&deps.as_ref()))
         .collect();
@@ -201,7 +175,6 @@ pub fn create_pair(
     let asset_label = asset_labels?.join("-"); // Handle the error if needed
     let _lp_token_name = format!("{}-LP", asset_label);
     // TODO: Add this
-    let mut messages: Vec<CosmosMsg> = vec![];
     let mut attributes = Vec::<Attribute>::new();
 
     let pair_creation_msg = if token_factory_lp == true {
@@ -220,12 +193,12 @@ pub fn create_pair(
             deps.storage,
             identifier.clone(),
             &PairInfo {
-                asset_infos: NAssets::N(asset_infos_vec),
+                asset_infos,
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
-                asset_decimals: NDecimals::N(asset_decimals_vec),
+                asset_decimals: asset_decimals_vec,
                 pool_fees: pool_fees,
-                balances: vec![Uint128::zero(); asset_infos_vec.len()]
+                balances: vec![Uint128::zero(); asset_infos.len()]
             },
         )?;
 
@@ -272,12 +245,12 @@ pub fn create_pair(
             deps.storage,
             identifier.clone(),
             &PairInfo {
-                asset_infos: NAssets::N(asset_infos_vec),
+                asset_infos: asset_infos.clone(),
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
-                asset_decimals: NDecimals::N(asset_decimals_vec),
+                asset_decimals: asset_decimals_vec,
                 pool_fees: pool_fees,
-                balances: vec![Uint128::zero(); asset_infos_vec.len()]
+                balances: vec![Uint128::zero(); asset_infos.len()]
             },
         )?;
 

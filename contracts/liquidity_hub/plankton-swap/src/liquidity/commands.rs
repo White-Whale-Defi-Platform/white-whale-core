@@ -18,8 +18,8 @@ use crate::{
 };
 use crate::{
     state::{
-        pair_key, Config, NAssets, NDecimals, NPairInfo as PairInfo, TmpPairInfo, MANAGER_CONFIG,
-        PAIRS, TMP_PAIR_INFO,
+        pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG,
+        PAIRS,
     },
     ContractError,
 };
@@ -368,6 +368,7 @@ pub fn withdraw_liquidity(
     let refund_assets: Result<Vec<Asset>, OverflowError> = pool_assets
         .iter()
         .map(|pool_asset| {
+            // Calc fees and use FillRewards message 
             let protocol_fee = get_protocol_fee_for_asset(
                 collected_protocol_fees.clone(),
                 pool_asset.clone().get_id(),

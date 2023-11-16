@@ -59,11 +59,7 @@ pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
         .collect()
 }
 pub fn get_decimals(pair_info: &NPairInfo) -> Vec<u8> {
-    match &pair_info.asset_decimals {
-        NDecimals::TWO(arr) => arr.to_vec(),
-        NDecimals::THREE(arr) => arr.to_vec(),
-        NDecimals::N(vec) => vec.clone(),
-    }
+    pair_info.asset_decimals
 }
 
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
@@ -97,89 +93,23 @@ pub enum Fee {
     Custom(String),
 }
 
-#[cw_serde]
-pub enum NAssets {
-    TWO([AssetInfo; 2]),
-    THREE([AssetInfo; 3]),
-    // N Assets is also possible where N is the number of assets in the pool
-    // Note Vec with an unbounded size, we need to have extra parsing on this one to eventually store [AssetInfoRaw; N]
-    N(Vec<AssetInfo>),
-}
-
-#[cw_serde]
-pub enum NDecimals {
-    TWO([u8; 2]),
-    THREE([u8; 3]),
-    N(Vec<u8>),
-}
-
-// Use above enums to enable a somewhat dynamic PairInfo which can support a normal 2 asset or a 3 pair. The design can be expanded to N types
-#[cw_serde]
-pub struct TmpPairInfo {
-    pub pair_key: Vec<u8>,
-    pub asset_infos: NAssets,
-    pub asset_decimals: NDecimals,
-    pub pair_type: PairType,
-}
-pub const TMP_PAIR_INFO: Item<TmpPairInfo> = Item::new("tmp_pair_info");
 // Store PairInfo to N
 // We define a custom struct for which allows for dynamic but defined pairs
 #[cw_serde]
 pub struct NPairInfo {
-    pub asset_infos: NAssets,
+    pub asset_infos: Vec<AssetInfo>,
     pub liquidity_token: AssetInfo,
-    pub asset_decimals: NDecimals,
+    pub asset_decimals: Vec<u8>,
     pub balances: Vec<Uint128>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
 }
 impl NPairInfo {
-    pub fn query_pools(
-        &self,
-        querier: &QuerierWrapper,
-        api: &dyn Api,
-        contract_addr: &Addr,
-    ) -> StdResult<[Asset; 2]> {
-        match &self.asset_infos {
-            NAssets::TWO(assets) => {
-                // This is for two pools only
-                let info_0: AssetInfo = assets[0].clone();
-                let info_1: AssetInfo = assets[1].clone();
-                Ok([
-                    Asset {
-                        amount: info_0.query_balance(querier, api, contract_addr.to_owned())?,
-                        info: info_0,
-                    },
-                    Asset {
-                        amount: info_1.query_balance(querier, api, contract_addr.to_owned())?,
-                        info: info_1,
-                    },
-                ])
-            }
-            NAssets::THREE(_) => todo!(),
-            NAssets::N(_) => todo!(),
-        }
-    }
-}
-
-// // We could store trios separate to pairs but if we use trio key properly theres no need really
-// pub const TRIOS: Map<&[u8], TrioInfoRaw> = Map::new("trio_info");
-/// Used for TRIOS or to just store a trio in PAIRS, takes a vec of 3 asset infos and returns a Vec<u8> of the asset infos sorted by their byte representation
-/// The trio key can be used to ensure no clashes with any of the other 2 pair pools
-pub fn trio_key(asset_infos: &[AssetInfoRaw; 3]) -> Vec<u8> {
-    let mut asset_infos = asset_infos.to_vec();
-    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-
-    [
-        asset_infos[0].as_bytes(),
-        asset_infos[1].as_bytes(),
-        asset_infos[2].as_bytes(),
-    ]
-    .concat()
+    
 }
 
 // settings for pagination
-const MAX_LIMIT: u32 = 30;
+const MAX_LIMIT: u32 = 1000;
 const DEFAULT_LIMIT: u32 = 10;
 pub fn read_pairs(
     storage: &dyn Storage,
