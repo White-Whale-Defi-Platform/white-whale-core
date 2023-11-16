@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg, Uint128,
+    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
@@ -18,10 +18,7 @@ use crate::{
     token::InstantiateMsg as TokenInstantiateMsg,
 };
 use crate::{
-    state::{
-        pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG,
-        PAIRS,
-    },
+    state::{pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
@@ -40,6 +37,7 @@ use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
+use white_whale::tokenfactory;
 
 /// Creates a liquidity pool pair with 2, 3, or N assets. The function dynamically handles different numbers of assets,
 /// allowing for the creation of pairs with varying configurations. The maximum number of assets per pool is defined by
@@ -90,7 +88,7 @@ pub fn create_pair(
     token_factory_lp: bool,
     pair_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
-    // Load config for pool creation fee 
+    // Load config for pool creation fee
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
     // Check if fee was provided and is sufficient
@@ -127,7 +125,11 @@ pub fn create_pair(
 
     let asset_decimals_vec = asset_infos
         .iter()
-        .map(|asset| asset.query_decimals(env.contract.address.clone(), &deps.querier).unwrap())
+        .map(|asset| {
+            asset
+                .query_decimals(env.contract.address.clone(), &deps.querier)
+                .unwrap()
+        })
         .collect::<Vec<_>>();
     // Check if the asset infos are the same
     if asset_infos
@@ -193,12 +195,12 @@ pub fn create_pair(
             deps.storage,
             identifier.clone(),
             &PairInfo {
-                asset_infos,
+                asset_infos: asset_infos.clone(),
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 pool_fees: pool_fees,
-                balances: vec![Uint128::zero(); asset_infos.len()]
+                balances: vec![Uint128::zero(); asset_infos.len()],
             },
         )?;
 
@@ -225,7 +227,6 @@ pub fn create_pair(
             info.sender.into_string(),
             env.block.height
         );
-        let salt = Binary::from(seed.as_bytes());
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
         let salt = hasher.finalize().to_vec();
@@ -250,7 +251,7 @@ pub fn create_pair(
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 pool_fees: pool_fees,
-                balances: vec![Uint128::zero(); asset_infos.len()]
+                balances: vec![Uint128::zero(); asset_infos.len()],
             },
         )?;
 
@@ -276,7 +277,7 @@ pub fn create_pair(
             salt: salt.into(),
         }))
     }?;
-    
+
     messages.push(pair_creation_msg);
 
     // increase pair counter

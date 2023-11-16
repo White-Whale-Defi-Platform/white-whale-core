@@ -104,9 +104,7 @@ pub struct NPairInfo {
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
 }
-impl NPairInfo {
-    
-}
+impl NPairInfo {}
 
 // settings for pagination
 const MAX_LIMIT: u32 = 1000;

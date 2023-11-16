@@ -1,11 +1,16 @@
 use std::collections::HashMap;
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use anyhow::Result as AnyResult;
-use cosmwasm_std::{Addr, Coin, Decimal, Empty, Uint128};
+use crate::{
+    contract::Cw20HookMsg,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::NPairInfo,
+};
+use anyhow::{Ok, Result as AnyResult};
+use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128};
 use cw20::Cw20Coin;
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper, Router,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
+    WasmKeeper,
 };
 use white_whale::{
     fee::Fee,
@@ -78,7 +83,6 @@ impl SuiteBuilder {
 
     #[track_caller]
     pub fn build(self) -> Suite {
-        
         // Default app
         let mut app: App = AppBuilder::new().build(|_, _, _| {});
 
@@ -89,11 +93,11 @@ impl SuiteBuilder {
 
         // prepare application with custom api
         let mut app = AppBuilder::new()
-        .with_wasm::<WasmKeeper<Empty, Empty>>(
-            WasmKeeper::new().with_address_generator(MockAddressGenerator),
-        )
-        .with_api(MockApiBech32::new("migaloo"))
-        .build(|_, _, _| {});
+            .with_wasm::<WasmKeeper<Empty, Empty>>(
+                WasmKeeper::new().with_address_generator(MockAddressGenerator),
+            )
+            .with_api(MockApiBech32::new("migaloo"))
+            .build(|_, _, _| {});
         // provide initial native balances
         app.init_modules(|router, _, storage| {
             // group by address
@@ -186,12 +190,15 @@ impl Suite {
             pair_identifier: None,
         };
 
-        let res = self
-            .app
-            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[Coin{
+        let res = self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &msg,
+            &[Coin {
                 denom: "uusd".to_string(),
-                amount: pool_creation_fee
-            }])?;
+                amount: pool_creation_fee,
+            }],
+        )?;
         Ok(res)
     }
 
@@ -206,7 +213,7 @@ impl Suite {
             assets: vec,
             slippage_tolerance: None,
             receiver: None,
-            pair_identifier
+            pair_identifier,
         };
 
         let res = self
@@ -222,14 +229,70 @@ impl Suite {
         funds: &Vec<Coin>,
         pair_identifier: String,
     ) -> AnyResult<AppResponse> {
-        let msg = ExecuteMsg::WithdrawLiquidity{
-            assets: vec,
-            pair_identifier
+        // Get the token from config
+        let pair_resp: NPairInfo = self.app.wrap().query_wasm_smart(
+            self.pool_manager_addr.clone(),
+            &crate::msg::QueryMsg::Pair {
+                pair_identifier: pair_identifier.clone(),
+            },
+        )?;
+
+        let msg = ExecuteMsg::WithdrawLiquidity {
+            assets: vec.clone(),
+            pair_identifier: pair_identifier.clone(),
         };
 
-        let res = self
-            .app
-            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, funds)?;
+        let res = self.app.execute_contract(
+            sender.clone(),
+            self.pool_manager_addr.clone(),
+            &msg,
+            funds,
+        )?;
+        Ok(res)
+    }
+
+    pub(crate) fn withdraw_liquidity_cw20(
+        &mut self,
+        sender: Addr,
+        vec: Vec<Asset>,
+        pair_identifier: String,
+        cw20_amount: Uint128,
+    ) -> AnyResult<AppResponse> {
+        // Get the token from config
+        let pair_resp: NPairInfo = self.app.wrap().query_wasm_smart(
+            self.pool_manager_addr.clone(),
+            &crate::msg::QueryMsg::Pair {
+                pair_identifier: pair_identifier.clone(),
+            },
+        )?;
+
+        // Send the cw20 amount with a message
+        let msg = ExecuteMsg::WithdrawLiquidity {
+            assets: vec.clone(),
+            pair_identifier: pair_identifier.clone(),
+        };
+
+        let contract_addr = match pair_resp.liquidity_token {
+            AssetInfo::Token { contract_addr } => contract_addr,
+            _ => {
+                panic!("Liquidity token is not a cw20 token")
+            }
+        };
+
+        let res = self.app.execute_contract(
+            sender.clone(),
+            Addr::unchecked(contract_addr),
+            &cw20::Cw20ExecuteMsg::Send {
+                contract: self.pool_manager_addr.to_string(),
+                amount: cw20_amount,
+                msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+                    pair_identifier: "0".to_string(),
+                })
+                .unwrap(),
+            },
+            &[],
+        )?;
+
         Ok(res)
     }
 

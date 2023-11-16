@@ -1,13 +1,19 @@
+use cosmwasm_schema::cw_serde;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Uint128,
+};
+use cw20::Cw20ReceiveMsg;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::pair::{self, FeatureToggle};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
-use crate::state::{Config, MANAGER_CONFIG, PAIR_COUNTER};
+use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, swap};
 /*
 // version info for migration info
@@ -124,7 +130,6 @@ pub fn execute(
             env,
             info.sender,
             info.funds[0].amount,
-            assets,
             pair_identifier,
         ),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
@@ -141,6 +146,89 @@ pub fn execute(
                 )?,
             )
         }
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+    }
+}
+
+#[cw_serde]
+pub enum Cw20HookMsg {
+    /// Sell a given amount of asset
+    Swap {
+        ask_asset: AssetInfo,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<String>,
+        pair_identifier: String,
+    },
+    /// Withdraws liquidity
+    WithdrawLiquidity { pair_identifier: String },
+}
+
+/// Receives cw20 tokens. Used to swap and withdraw from the pool.
+pub fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    let contract_addr = info.sender.clone();
+    let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
+
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20HookMsg::Swap {
+            ask_asset,
+            belief_price,
+            max_spread,
+            to,
+            pair_identifier,
+        }) => {
+            // check if the swap feature is enabled
+            if !feature_toggle.swaps_enabled {
+                return Err(ContractError::OperationDisabled("swap".to_string()));
+            }
+
+            let to_addr = if let Some(to_addr) = to {
+                Some(deps.api.addr_validate(to_addr.as_str())?)
+            } else {
+                None
+            };
+
+            crate::swap::commands::swap(
+                deps,
+                env,
+                info,
+                Addr::unchecked(cw20_msg.sender),
+                Asset {
+                    info: AssetInfo::Token {
+                        contract_addr: contract_addr.to_string(),
+                    },
+                    amount: cw20_msg.amount,
+                },
+                ask_asset,
+                belief_price,
+                max_spread,
+                to_addr,
+                pair_identifier,
+            )
+        }
+        Ok(Cw20HookMsg::WithdrawLiquidity { pair_identifier }) => {
+            // check if the withdrawal feature is enabled
+            if !feature_toggle.withdrawals_enabled {
+                return Err(ContractError::OperationDisabled(
+                    "withdraw_liquidity".to_string(),
+                ));
+            }
+
+            let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
+            crate::liquidity::commands::withdraw_liquidity(
+                deps,
+                env,
+                sender_addr,
+                cw20_msg.amount,
+                pair_identifier,
+            )
+        }
+        Err(err) => Err(ContractError::Std(err)),
     }
 }
 
@@ -207,6 +295,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::Pair { pair_identifier } => {
+            Ok(to_binary(&PAIRS.load(deps.storage, pair_identifier)?)?)
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Uint128};
+use cw20::Cw20ReceiveMsg;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, PairType},
@@ -8,6 +9,7 @@ use white_whale::pool_network::{
     router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
 
+use crate::state::NPairInfo;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -51,7 +53,12 @@ pub enum ExecuteMsg {
         pair_identifier: String,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals { denom: String, decimals: u8 },
+    AddNativeTokenDecimals {
+        denom: String,
+        decimals: u8,
+    },
+    // CW20 Methods
+    Receive(Cw20ReceiveMsg),
 }
 
 #[cw_ownable_query]
@@ -99,4 +106,7 @@ pub enum QueryMsg {
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
+
+    #[returns(NPairInfo)]
+    Pair { pair_identifier: String },
 }

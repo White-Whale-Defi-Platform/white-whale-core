@@ -17,10 +17,7 @@ use crate::{
     token::InstantiateMsg as TokenInstantiateMsg,
 };
 use crate::{
-    state::{
-        pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG,
-        PAIRS,
-    },
+    state::{pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
@@ -59,8 +56,6 @@ fn get_pair_key_from_assets(
     let pair_key = pair_key(&raw_infos);
     Ok(pair_key)
 }
-
-
 
 // ProvideLiquidity works based on two patterns so far and eventually 3.
 // Constant Product which is used for 2 assets
@@ -152,15 +147,33 @@ pub fn provide_liquidity(
             "provide_liquidity".to_string(),
         ));
     }
-    let asset_infos = assets
-        .iter()
-        .map(|asset| asset.info.clone())
-        .collect::<Vec<_>>();
-    let (assets_vec, mut pools, deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
+    println!("Before pair");
 
-    for asset in assets_vec.iter() {
+    for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
     }
+
+    let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+
+    // For each asset_info in the pair, we need to get the asset_info and the amount of the asset which is balances
+    let asset_infos = pair.asset_infos.clone();
+    let mut deposits = pair.balances.clone();
+
+    // We have asserted native balances, now increment deposits by the amount sent
+    // Deposits does not yet have the newly added funds, increment by the amount provided
+    for (i, deposit) in deposits.iter_mut().enumerate() {
+        *deposit = deposit.checked_add(info.funds[i].amount).unwrap();
+    }
+
+    // Combine the asset_infos and the deposits into a vector of Assets
+    let mut assets = asset_infos
+        .iter()
+        .zip(deposits.iter())
+        .map(|(asset_info, amount)| Asset {
+            info: asset_info.clone(),
+            amount: *amount,
+        })
+        .collect::<Vec<_>>();
 
     if deposits.iter().any(|&deposit| deposit.is_zero()) {
         return Err(ContractError::InvalidZeroAmount {});
@@ -169,7 +182,7 @@ pub fn provide_liquidity(
     println!("Before messages");
 
     let mut messages: Vec<CosmosMsg> = vec![];
-    for (i, pool) in pools.iter_mut().enumerate() {
+    for (i, pool) in assets.iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -187,18 +200,19 @@ pub fn provide_liquidity(
             pool.amount = pool.amount.checked_add(deposits[i]).unwrap();
         }
     }
+    println!("{:?}", assets);
 
     // // deduct protocol fee from pools
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
-        .load(deps.storage, &pair_info.liquidity_token.to_string())
+        .load(deps.storage, &pair.liquidity_token.to_string())
         .unwrap_or(vec![]);
-    for pool in pools.iter_mut() {
+    for pool in assets.iter_mut() {
         let protocol_fee =
             get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
         pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
     }
 
-    let liquidity_token = match pair_info.liquidity_token {
+    let liquidity_token = match pair.liquidity_token.clone() {
         AssetInfo::Token { contract_addr } => {
             println!("Liquidity token is a CW20");
             let thing = deps.api.addr_validate(&contract_addr)?;
@@ -215,7 +229,7 @@ pub fn provide_liquidity(
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
     println!("Before resp");
 
-    let share = match pair_info.pair_type {
+    let share = match &pair.pair_type {
         PairType::ConstantProduct => {
             if total_share == Uint128::zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
@@ -254,7 +268,7 @@ pub fn provide_liquidity(
                         .checked_mul(U256::from(total_share.u128()))
                         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
 
-                    let denominator = U256::from(pools[0].amount.u128());
+                    let denominator = U256::from(assets[0].amount.u128());
 
                     let result = numerator
                         .checked_div(denominator)
@@ -264,19 +278,19 @@ pub fn provide_liquidity(
                 };
 
                 let amount = std::cmp::min(
-                    deposits[0].multiply_ratio(total_share, pools[0].amount),
-                    deposits[1].multiply_ratio(total_share, pools[1].amount),
+                    deposits[0].multiply_ratio(total_share, assets[0].amount),
+                    deposits[1].multiply_ratio(total_share, assets[1].amount),
                 );
 
                 let deps_as = [deposits[0], deposits[1]];
-                let pools_as = [pools[0].clone(), pools[1].clone()];
+                let pools_as = [assets[0].clone(), assets[1].clone()];
 
                 // assert slippage tolerance
                 helpers::assert_slippage_tolerance(
                     &slippage_tolerance,
                     &deps_as,
                     &pools_as,
-                    pair_info.pair_type,
+                    pair.pair_type.clone(),
                     amount,
                     total_share,
                 )?;
@@ -309,6 +323,9 @@ pub fn provide_liquidity(
         &env.contract.address,
         share,
     )?);
+
+    pair.balances = deposits;
+    PAIRS.save(deps.storage, pair_identifier, &pair)?;
     println!("Before resp");
     println!("{:?}", messages);
     Ok(Response::new().add_messages(messages).add_attributes(vec![
@@ -317,7 +334,7 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         (
             "assets",
-            &assets_vec
+            &assets
                 .iter()
                 .map(|asset| asset.to_string())
                 .collect::<Vec<_>>()
@@ -327,7 +344,6 @@ pub fn provide_liquidity(
     ]))
 }
 
-
 /// Withdraws the liquidity. The user burns the LP tokens in exchange for the tokens provided, including
 /// the swap fees accrued by its share of the pool.
 pub fn withdraw_liquidity(
@@ -335,7 +351,6 @@ pub fn withdraw_liquidity(
     env: Env,
     sender: Addr,
     amount: Uint128,
-    assets: Vec<Asset>, // An extra required param on singleton contract, the withdrawer must provide the assets they are due to receive so we can attempt to locate the pool, its this or the pool ID really
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
@@ -345,37 +360,44 @@ pub fn withdraw_liquidity(
             "provide_liquidity".to_string(),
         ));
     }
+    let pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
 
-    let asset_infos = assets
+    // For each asset_info in the pair, we need to get the asset_info and the amount of the asset which is balances
+    let asset_infos = pair.asset_infos;
+    let deposits = pair.balances;
+
+    // Combine the asset_infos and the deposits into a vector of Assets
+    let assets = asset_infos
         .iter()
-        .map(|asset| asset.info.clone())
+        .zip(deposits.iter())
+        .map(|(asset_info, amount)| Asset {
+            info: asset_info.clone(),
+            amount: *amount,
+        })
         .collect::<Vec<_>>();
 
-    let (_assets_vec, pools, _deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
-
-
-    let liquidity_token = match pair_info.liquidity_token {
+    let liquidity_token = match pair.liquidity_token {
         AssetInfo::Token { contract_addr } => contract_addr,
         AssetInfo::NativeToken { denom } => denom,
     };
 
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
-    let collected_protocol_fees =
-        COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &liquidity_token.to_string())?;
+    // let collected_protocol_fees =
+    //     COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &liquidity_token.to_string())?;
 
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
 
-    let refund_assets: Result<Vec<Asset>, OverflowError> = pools
+    let refund_assets: Result<Vec<Asset>, OverflowError> = assets
         .iter()
         .map(|pool_asset| {
-            // Calc fees and use FillRewards message 
-            let protocol_fee = get_protocol_fee_for_asset(
-                collected_protocol_fees.clone(),
-                pool_asset.clone().get_id(),
-            );
+            // Calc fees and use FillRewards message
+            // let protocol_fee = get_protocol_fee_for_asset(
+            //     collected_protocol_fees.clone(),
+            //     pool_asset.clone().get_id(),
+            // );
 
             // subtract the protocol_fee from the amount of the pool_asset
-            let refund_amount = pool_asset.amount.checked_sub(protocol_fee)?;
+            let refund_amount = pool_asset.amount;
             Ok(Asset {
                 info: pool_asset.info.clone(),
                 amount: refund_amount * share_ratio,
@@ -385,17 +407,20 @@ pub fn withdraw_liquidity(
 
     let refund_assets = refund_assets?;
     let mut messages: Vec<CosmosMsg> = vec![];
-    for asset in refund_assets{
+
+    for asset in refund_assets {
         messages.push(asset.clone().into_msg(sender.clone())?);
     }
-    messages.push(white_whale::lp_common::burn_lp_asset_msg(liquidity_token, sender.clone(), amount)?);
+    messages.push(white_whale::lp_common::burn_lp_asset_msg(
+        liquidity_token,
+        sender.clone(),
+        amount,
+    )?);
 
     // update pool info
-    Ok(Response::new()
-        .add_messages(messages)
-        .add_attributes(vec![
-            ("action", "withdraw_liquidity"),
-            ("sender", sender.as_str()),
-            ("withdrawn_share", &amount.to_string()),
-        ]))
+    Ok(Response::new().add_messages(messages).add_attributes(vec![
+        ("action", "withdraw_liquidity"),
+        ("sender", sender.as_str()),
+        ("withdrawn_share", &amount.to_string()),
+    ]))
 }

@@ -1,16 +1,10 @@
-use cosmwasm_std::{
-    Addr, CosmosMsg,
-    DepsMut, Env, MessageInfo, Response,
-};
+use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
+use crate::helpers;
 use crate::state::get_decimals;
-use crate::helpers; 
 use crate::{
-    state::{
-         MANAGER_CONFIG,
-        PAIRS,
-    },
+    state::{MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
