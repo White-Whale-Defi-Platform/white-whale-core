@@ -118,6 +118,32 @@ fn create_vaults() {
     suite
         .instantiate_with_cw20_lp_token()
         .create_vault(
+            creator.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            None,
+            VaultFee {
+                protocol_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 2000u128),
+                },
+                flash_loan_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 1000u128),
+                },
+            },
+            vec![coin(900u128, "uwhale".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::InvalidVaultCreationFee { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::InvalidVaultCreationFee"
+                    ),
+                }
+            },
+        )
+        .create_vault(
             creator,
             AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -129,6 +155,25 @@ fn create_vaults() {
                 },
                 flash_loan_fee: Fee {
                     share: Decimal::from_ratio(1u128, 1000u128),
+                },
+            },
+            vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .create_vault(
+            other.clone(),
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            Some("cheaper_vault".to_string()),
+            VaultFee {
+                protocol_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 20000u128),
+                },
+                flash_loan_fee: Fee {
+                    share: Decimal::from_ratio(1u128, 10000u128),
                 },
             },
             vec![coin(1_000u128, "uwhale".to_string())],
@@ -152,7 +197,12 @@ fn create_vaults() {
             },
             vec![coin(1_000u128, "uwhale".to_string())],
             |result| {
-                result.unwrap();
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::ExistingVault { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::ExistingVault"),
+                }
             },
         )
         .query_vaults(None, None, |result| {
