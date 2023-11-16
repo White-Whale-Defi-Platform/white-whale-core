@@ -8,7 +8,6 @@ use white_whale::pool_network::{
     router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
 };
 
-use crate::state::NAssets;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -23,7 +22,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
-        asset_infos: NAssets,
+        asset_infos: Vec<AssetInfo>,
         // TODO: Remap to NPoolFee maybe
         pool_fees: PoolFee,
         pair_type: PairType,

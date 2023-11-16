@@ -8,10 +8,11 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 // and add liquidity to it
 #[test]
 fn north_star() {
+    let sender = Addr::unchecked("migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l");
     let mut suite = SuiteBuilder::new()
-        .with_native_balances("uusd", vec![("addr0000", 1000001), ("admin", 1000001)])
-        .with_native_balances("fable", vec![("addr0000", 1000001), ("admin", 1000001)])
-        .with_cw20_balances(vec![("addr0000", 1000000)])
+        .with_native_balances("uusd", vec![("migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l", 1000101), ("admin", 1000001)])
+        .with_native_balances("fable", vec![("migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l", 1000001), ("admin", 1000001)])
+        .with_cw20_balances(vec![("migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l", 1000000)])
         .build();
 
     suite
@@ -29,15 +30,16 @@ fn north_star() {
             denom: "fable".to_string(),
         },
     ];
+
     let res = suite
-        .create_constant_product_pool(Addr::unchecked("addr0000"), asset_infos)
+        .create_constant_product_pool(sender.clone(), asset_infos, Uint128::from(100u128))
         .unwrap();
     println!("{:?}", res);
 
     // Lets try to add liquidity
     let res = suite
         .add_liquidity(
-            Addr::unchecked("addr0000"),
+            sender.clone(),
             vec![
                 Asset {
                     info: AssetInfo::NativeToken {
@@ -62,6 +64,39 @@ fn north_star() {
                     amount: Uint128::from(1000000u128),
                 },
             ],
+            "0".to_string()
+        )
+        .unwrap();
+
+    // Lets try to add liquidity
+    let res = suite
+        .withdraw_liquidity(
+            sender.clone(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "fable".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            &vec![
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "fable".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            "0".to_string()
         )
         .unwrap();
 }

@@ -1,4 +1,3 @@
-use crate::state::NAssets;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};

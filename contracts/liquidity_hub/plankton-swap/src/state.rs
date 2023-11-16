@@ -59,7 +59,7 @@ pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
         .collect()
 }
 pub fn get_decimals(pair_info: &NPairInfo) -> Vec<u8> {
-    pair_info.asset_decimals
+    pair_info.asset_decimals.clone()
 }
 
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection

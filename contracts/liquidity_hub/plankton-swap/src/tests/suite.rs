@@ -5,7 +5,7 @@ use anyhow::Result as AnyResult;
 use cosmwasm_std::{Addr, Coin, Decimal, Empty, Uint128};
 use cw20::Cw20Coin;
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper, Router,
 };
 use white_whale::{
     fee::Fee,
@@ -16,7 +16,7 @@ use white_whale::{
 };
 
 use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
-fn contract_pool_manager(app: &mut App) -> u64 {
+fn contract_pool_manager(app: &mut App<BankKeeper, MockApiBech32>) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         crate::contract::execute,
         crate::contract::instantiate,
@@ -26,7 +26,7 @@ fn contract_pool_manager(app: &mut App) -> u64 {
     app.store_code_with_creator(Addr::unchecked("admin"), contract)
 }
 
-fn store_token_code(app: &mut App) -> u64 {
+fn store_token_code(app: &mut App<BankKeeper, MockApiBech32>) -> u64 {
     let contract = Box::new(ContractWrapper::new_with_empty(
         cw20_base::contract::execute,
         cw20_base::contract::instantiate,
@@ -78,10 +78,7 @@ impl SuiteBuilder {
 
     #[track_caller]
     pub fn build(self) -> Suite {
-        // let mut app: App<BankKeeper, crate::tests::temp_mock_api::MockSimpleApi> =
-        //     AppBuilder::new_custom()
-        //         .with_api(crate::tests::temp_mock_api::MockSimpleApi::default())
-        //         .build(|_, _, _| {});
+        
         // Default app
         let mut app: App = AppBuilder::new().build(|_, _, _| {});
 
@@ -91,10 +88,12 @@ impl SuiteBuilder {
         //     WasmKeeper::new().with_address_generator(MockAddressGenerator);
 
         // prepare application with custom api
-        let mut app = AppBuilder::default()
-            .with_api(MockApiBech32::new("juno"))
-            .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
-            .build(|_, _, _| {});
+        let mut app = AppBuilder::new()
+        .with_wasm::<WasmKeeper<Empty, Empty>>(
+            WasmKeeper::new().with_address_generator(MockAddressGenerator),
+        )
+        .with_api(MockApiBech32::new("migaloo"))
+        .build(|_, _, _| {});
         // provide initial native balances
         app.init_modules(|router, _, storage| {
             // group by address
@@ -113,7 +112,7 @@ impl SuiteBuilder {
         });
 
         let admin = Addr::unchecked("admin");
-
+        let test_account = app.api().addr_make("addr0000");
         let pool_manager_id = contract_pool_manager(&mut app);
         let token_contract_code_id = store_token_code(&mut app);
 
@@ -122,12 +121,12 @@ impl SuiteBuilder {
                 pool_manager_id,
                 admin.clone(),
                 &InstantiateMsg {
-                    fee_collector_addr: "fee_collector_addr".to_string(),
+                    fee_collector_addr: app.api().addr_make("fee_collector_addr").to_string(),
                     token_code_id: token_contract_code_id,
                     pair_code_id: token_contract_code_id,
-                    owner: "owner".to_string(),
+                    owner: app.api().addr_make("owner").to_string(),
                     pool_creation_fee: Asset {
-                        amount: Uint128::zero(),
+                        amount: Uint128::from(100u128),
                         info: AssetInfo::NativeToken {
                             denom: "uusd".to_string(),
                         },
@@ -142,13 +141,15 @@ impl SuiteBuilder {
         Suite {
             app,
             pool_manager_addr,
+            test_account: test_account,
         }
     }
 }
 
 pub struct Suite {
-    pub app: App,
+    pub app: App<BankKeeper, MockApiBech32>,
     pub pool_manager_addr: Addr,
+    pub test_account: Addr,
 }
 
 impl Suite {
@@ -156,6 +157,7 @@ impl Suite {
         &mut self,
         sender: Addr,
         asset_infos_array: Vec<AssetInfo>,
+        pool_creation_fee: Uint128,
     ) -> AnyResult<AppResponse> {
         // Convert the Vec<AssetInfo> into a [AssetInfo; 2]
         let mut asset_infos_array = [
@@ -167,7 +169,7 @@ impl Suite {
             },
         ];
         let msg = ExecuteMsg::CreatePair {
-            asset_infos: crate::state::NAssets::TWO(asset_infos_array),
+            asset_infos: asset_infos_array.to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::zero(),
@@ -186,7 +188,10 @@ impl Suite {
 
         let res = self
             .app
-            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[])?;
+            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[Coin{
+                denom: "uusd".to_string(),
+                amount: pool_creation_fee
+            }])?;
         Ok(res)
     }
 
@@ -195,12 +200,31 @@ impl Suite {
         sender: Addr,
         vec: Vec<Asset>,
         funds: &Vec<Coin>,
+        pair_identifier: String,
     ) -> AnyResult<AppResponse> {
         let msg = ExecuteMsg::ProvideLiquidity {
             assets: vec,
             slippage_tolerance: None,
             receiver: None,
-            pair_identifier: 1.to_string(),
+            pair_identifier
+        };
+
+        let res = self
+            .app
+            .execute_contract(sender, self.pool_manager_addr.clone(), &msg, funds)?;
+        Ok(res)
+    }
+
+    pub(crate) fn withdraw_liquidity(
+        &mut self,
+        sender: Addr,
+        vec: Vec<Asset>,
+        funds: &Vec<Coin>,
+        pair_identifier: String,
+    ) -> AnyResult<AppResponse> {
+        let msg = ExecuteMsg::WithdrawLiquidity{
+            assets: vec,
+            pair_identifier
         };
 
         let res = self

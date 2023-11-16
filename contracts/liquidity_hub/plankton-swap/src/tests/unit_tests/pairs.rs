@@ -25,7 +25,7 @@ use white_whale::pool_network::trio::{
 use crate::contract::{execute, instantiate, query};
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
-use crate::state::{pair_key, PAIRS, TMP_PAIR_INFO};
+use crate::state::{pair_key, PAIRS};
 use test_case::test_case;
 #[cfg(test)]
 mod pair_creation_tests {
@@ -39,7 +39,7 @@ mod pair_creation_tests {
     };
     // use crate::msg::{AssetInfo, ExecuteMsg, Fee, PairType, PoolFee};
     use crate::msg::ExecuteMsg;
-    use crate::state::{add_allow_native_token, NAssets, NDecimals, TmpPairInfo};
+    use crate::state::{add_allow_native_token};
     use crate::token::InstantiateMsg as TokenInstantiateMsg;
     use cosmwasm_std::attr;
     use cosmwasm_std::SubMsg;

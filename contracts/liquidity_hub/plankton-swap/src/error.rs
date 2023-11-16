@@ -1,4 +1,4 @@
-use crate::commands::MAX_ASSETS_PER_POOL;
+use crate::liquidity::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
     CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
     Instantiate2AddressError, OverflowError, StdError, Uint128,

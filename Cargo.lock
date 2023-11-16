@@ -1137,6 +1137,7 @@ name = "plankton-swap"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bech32",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test 0.18.0",

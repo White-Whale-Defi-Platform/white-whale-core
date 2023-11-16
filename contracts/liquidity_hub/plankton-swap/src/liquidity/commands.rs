@@ -184,7 +184,7 @@ pub fn provide_liquidity(
         } else {
             // If the asset is native token, balance is already increased on the contract address
             // To calculate it properly we should subtract user deposit from the pool
-            pool.amount = pool.amount.checked_sub(deposits[i]).unwrap();
+            pool.amount = pool.amount.checked_add(deposits[i]).unwrap();
         }
     }
 
@@ -302,13 +302,15 @@ pub fn provide_liquidity(
 
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
-    messages.append(&mut vec![build_transfer_cw20_token_msg(
-        deps.api.addr_validate(&receiver)?,
-        liquidity_token,
+    // mint LP token to sender
+    messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+        liquidity_token.to_string(),
+        &info.sender.clone(),
+        &env.contract.address,
         share,
-    )?]);
+    )?);
     println!("Before resp");
-
+    println!("{:?}", messages);
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "provide_liquidity"),
         ("sender", info.sender.as_str()),
@@ -349,10 +351,8 @@ pub fn withdraw_liquidity(
         .map(|asset| asset.info.clone())
         .collect::<Vec<_>>();
 
-    let (_assets_vec, _pools, _deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
+    let (_assets_vec, pools, _deposits, pair_info) = helpers::gather_pools_from_state(assets, &deps, pair_identifier, asset_infos)?;
 
-    let pool_assets: [Asset; 2] =
-        pair_info.query_pools(&deps.querier, deps.api, &env.contract.address)?;
 
     let liquidity_token = match pair_info.liquidity_token {
         AssetInfo::Token { contract_addr } => contract_addr,
@@ -365,7 +365,7 @@ pub fn withdraw_liquidity(
 
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
 
-    let refund_assets: Result<Vec<Asset>, OverflowError> = pool_assets
+    let refund_assets: Result<Vec<Asset>, OverflowError> = pools
         .iter()
         .map(|pool_asset| {
             // Calc fees and use FillRewards message 
@@ -388,7 +388,7 @@ pub fn withdraw_liquidity(
     for asset in refund_assets{
         messages.push(asset.clone().into_msg(sender.clone())?);
     }
-    messages.push(white_whale::lp_common::burn_lp_asset_msg(liquidity_token, sender, amount)?);
+    messages.push(white_whale::lp_common::burn_lp_asset_msg(liquidity_token, sender.clone(), amount)?);
 
     // update pool info
     Ok(Response::new()
@@ -397,12 +397,5 @@ pub fn withdraw_liquidity(
             ("action", "withdraw_liquidity"),
             ("sender", sender.as_str()),
             ("withdrawn_share", &amount.to_string()),
-            (
-                "refund_assets",
-                &format!(
-                    "{}, {}, {}",
-                    refund_assets[0], refund_assets[1], refund_assets[2]
-                ),
-            ),
         ]))
 }

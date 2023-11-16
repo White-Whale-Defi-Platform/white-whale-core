@@ -120,10 +120,10 @@ pub fn create_pair(
     }];
 
     //send protocol fee to whale lair i.e the new fee_collector
-    messages.push(fill_rewards_msg(
-        config.fee_collector_addr.into_string(),
-        creation_fee,
-    )?);
+    // messages.push(fill_rewards_msg(
+    //     config.fee_collector_addr.into_string(),
+    //     creation_fee,
+    // )?);
 
     let asset_decimals_vec = asset_infos
         .iter()
@@ -289,6 +289,7 @@ pub fn create_pair(
     attributes.push(attr("pair", &pair_label));
     attributes.push(attr("pair_label", pair_label.as_str()));
     attributes.push(attr("pair_type", pair_type.get_label()));
+    attributes.push(attr("pair_identifier", identifier.as_str()));
 
     // TODO: We need to store the lp addr before exiting
     Ok(Response::new()
