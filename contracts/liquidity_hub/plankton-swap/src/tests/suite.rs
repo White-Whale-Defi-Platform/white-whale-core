@@ -6,8 +6,8 @@ use crate::{
     state::NPairInfo,
 };
 use anyhow::{Ok, Result as AnyResult};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128};
-use cw20::Cw20Coin;
+use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128, Timestamp, Uint64};
+use cw20::{Cw20Coin, MinterResponse};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
     WasmKeeper,
@@ -17,28 +17,282 @@ use white_whale::{
     pool_network::{
         asset::{Asset, AssetInfo, PairType},
         pair::PoolFee,
-    },
+    }, vault_manager::LpTokenType,
 };
 
 use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
-fn contract_pool_manager(app: &mut App<BankKeeper, MockApiBech32>) -> u64 {
-    let contract = Box::new(ContractWrapper::new_with_empty(
+fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new_with_empty(
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
-    ));
+    );
 
-    app.store_code_with_creator(Addr::unchecked("admin"), contract)
+    Box::new(contract)
 }
 
-fn store_token_code(app: &mut App<BankKeeper, MockApiBech32>) -> u64 {
-    let contract = Box::new(ContractWrapper::new_with_empty(
+fn cw20_token_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new_with_empty(
         cw20_base::contract::execute,
         cw20_base::contract::instantiate,
         cw20_base::contract::query,
-    ));
+    );
 
-    app.store_code_with_creator(Addr::unchecked("admin"), contract)
+    Box::new(contract)
+}
+
+/// Creates the whale lair contract
+pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        whale_lair::contract::execute,
+        whale_lair::contract::instantiate,
+        whale_lair::contract::query,
+    )
+    .with_migrate(whale_lair::contract::migrate);
+
+    Box::new(contract)
+}
+
+
+pub struct TestingSuite {
+    app: App<BankKeeper, MockApiBech32>,
+    pub senders: [Addr; 3],
+    pub whale_lair_addr: Addr,
+    pub vault_manager_addr: Addr,
+    pub cw20_tokens: Vec<Addr>,
+}
+
+/// TestingSuite helpers
+impl TestingSuite {
+    pub(crate) fn creator(&mut self) -> Addr {
+        self.senders.first().unwrap().clone()
+    }
+
+    pub(crate) fn set_time(&mut self, timestamp: Timestamp) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = timestamp;
+        self.app.set_block(block_info);
+
+        self
+    }
+
+    pub(crate) fn get_time(&mut self) -> Timestamp {
+        self.app.block_info().time
+    }
+
+    pub(crate) fn increase_allowance(
+        &mut self,
+        sender: Addr,
+        cw20contract: Addr,
+        allowance: Uint128,
+        spender: Addr,
+    ) -> &mut Self {
+        let msg = cw20_base::msg::ExecuteMsg::IncreaseAllowance {
+            spender: spender.to_string(),
+            amount: allowance,
+            expires: None,
+        };
+
+        self.app
+            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .unwrap();
+
+        self
+    }
+
+}
+
+/// Instantiate
+impl TestingSuite {
+    pub(crate) fn default_with_balances(initial_balance: Vec<Coin>) -> Self {
+        let sender_1 = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
+        let sender_2 = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
+        let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
+
+        let bank = BankKeeper::new();
+
+        let balances = vec![
+            (sender_1.clone(), initial_balance.clone()),
+            (sender_2.clone(), initial_balance.clone()),
+            (sender_3.clone(), initial_balance.clone()),
+        ];
+
+        let app = AppBuilder::new()
+            .with_api(MockApiBech32::new("migaloo"))
+            .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
+            .with_bank(bank)
+            .build(|router, _api, storage| {
+                balances.into_iter().for_each(|(account, amount)| {
+                    router.bank.init_balance(storage, &account, amount).unwrap()
+                });
+            });
+
+        Self {
+            app,
+            senders: [sender_1, sender_2, sender_3],
+            whale_lair_addr: Addr::unchecked(""),
+            vault_manager_addr: Addr::unchecked(""),
+            cw20_tokens: vec![],
+        }
+    }
+
+    #[track_caller]
+    pub(crate) fn instantiate(
+        &mut self,
+        whale_lair_addr: String,
+        lp_token_type: LpTokenType,
+        vault_creation_fee: Asset,
+    ) -> &mut Self {
+        let cw20_token_id = self.app.store_code(cw20_token_contract());
+        let msg = InstantiateMsg {
+            fee_collector_addr: whale_lair_addr,
+            token_code_id: cw20_token_id,
+            pair_code_id: cw20_token_id,
+            owner: self.creator().to_string(),
+            pool_creation_fee: Asset {
+                amount: Uint128::from(100u128),
+                info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+            },
+        };
+
+        let vault_manager_id = self.app.store_code(contract_pool_manager());
+
+        let creator = self.creator().clone();
+
+        self.vault_manager_addr = self
+            .app
+            .instantiate_contract(
+                vault_manager_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "mock pool manager",
+                Some(creator.into_string()),
+            )
+            .unwrap();
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn instantiate_default(&mut self) -> &mut Self {
+        self.create_whale_lair();
+        self.create_cw20_token();
+
+        // 17 May 2023 17:00:00 UTC
+        let timestamp = Timestamp::from_seconds(1684342800u64);
+        self.set_time(timestamp);
+
+        self.instantiate(
+            self.whale_lair_addr.to_string(),
+            LpTokenType::TokenFactory,
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+        )
+    }
+
+    #[track_caller]
+    pub(crate) fn instantiate_with_cw20_lp_token(&mut self) -> &mut Self {
+        self.create_whale_lair();
+        let cw20_code_id = self.create_cw20_token();
+
+        // 17 May 2023 17:00:00 UTC
+        let timestamp = Timestamp::from_seconds(1684342800u64);
+        self.set_time(timestamp);
+
+        self.instantiate(
+            self.whale_lair_addr.to_string(),
+            LpTokenType::Cw20(cw20_code_id),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(1_000u128),
+            },
+        )
+    }
+
+    fn create_whale_lair(&mut self) {
+        let whale_lair_id = self.app.store_code(whale_lair_contract());
+
+        // create whale lair
+        let msg = white_whale::whale_lair::InstantiateMsg {
+            unbonding_period: Uint64::new(86400u64),
+            growth_rate: Decimal::one(),
+            bonding_assets: vec![
+                AssetInfo::NativeToken {
+                    denom: "bWHALE".to_string(),
+                },
+                AssetInfo::NativeToken {
+                    denom: "ampWHALE".to_string(),
+                },
+            ],
+        };
+
+        let creator = self.creator().clone();
+
+        self.whale_lair_addr = self
+            .app
+            .instantiate_contract(
+                whale_lair_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "White Whale Lair".to_string(),
+                Some(creator.to_string()),
+            )
+            .unwrap();
+    }
+
+    #[track_caller]
+    pub fn create_cw20_token(&mut self) -> u64 {
+        let msg = white_whale::pool_network::token::InstantiateMsg {
+            name: "mocktoken".to_string(),
+            symbol: "MOCK".to_string(),
+            decimals: 6,
+            initial_balances: vec![
+                Cw20Coin {
+                    address: self.senders[0].to_string(),
+                    amount: Uint128::new(1_000_000_000_000u128),
+                },
+                Cw20Coin {
+                    address: self.senders[1].to_string(),
+                    amount: Uint128::new(1_000_000_000_000u128),
+                },
+                Cw20Coin {
+                    address: self.senders[2].to_string(),
+                    amount: Uint128::new(1_000_000_000_000u128),
+                },
+            ],
+            mint: Some(MinterResponse {
+                minter: self.senders[0].to_string(),
+                cap: None,
+            }),
+        };
+
+        let cw20_token_id = self.app.store_code(cw20_token_contract());
+
+        let creator = self.creator().clone();
+
+        self.cw20_tokens.append(&mut vec![self
+            .app
+            .instantiate_contract(
+                cw20_token_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "mock cw20 token",
+                Some(creator.into_string()),
+            )
+            .unwrap()]);
+        cw20_token_id
+    }
+
 }
 
 #[derive(Debug)]

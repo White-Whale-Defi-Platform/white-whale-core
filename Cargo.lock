@@ -1151,6 +1151,7 @@ dependencies = [
  "sha2 0.10.8",
  "test-case",
  "thiserror",
+ "whale-lair",
  "white-whale",
 ]
 
