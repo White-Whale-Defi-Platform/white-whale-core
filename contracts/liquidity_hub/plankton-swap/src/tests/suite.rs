@@ -6,7 +6,7 @@ use crate::{
     state::NPairInfo,
 };
 use anyhow::{Ok, Result as AnyResult};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128, Timestamp, Uint64};
+use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128, Timestamp, Uint64, StdResult};
 use cw20::{Cw20Coin, MinterResponse};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
@@ -295,283 +295,40 @@ impl TestingSuite {
 
 }
 
-// #[derive(Debug)]
-// pub struct SuiteBuilder {
-//     pub cw20_balances: Vec<Cw20Coin>,
-//     pub native_balances: Vec<(Addr, Coin)>,
-// }
+/// execute messages
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn update_ownership(
+        &mut self,
+        sender: Addr,
+        action: cw_ownable::Action,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::UpdateOwnership(action);
 
-// impl SuiteBuilder {
-//     pub fn new() -> Self {
-//         Self {
-//             cw20_balances: vec![],
-//             native_balances: vec![],
-//         }
-//     }
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+        );
 
-//     pub fn with_native_balances(mut self, denom: &str, balances: Vec<(&str, u128)>) -> Self {
-//         self.native_balances
-//             .extend(balances.into_iter().map(|(addr, amount)| {
-//                 (
-//                     Addr::unchecked(addr),
-//                     Coin {
-//                         denom: denom.to_owned(),
-//                         amount: amount.into(),
-//                     },
-//                 )
-//             }));
-//         self
-//     }
+        self
+    }
+}
 
-//     pub fn with_cw20_balances(mut self, balances: Vec<(&str, u128)>) -> Self {
-//         let initial_balances = balances
-//             .into_iter()
-//             .map(|(address, amount)| Cw20Coin {
-//                 address: address.to_owned(),
-//                 amount: amount.into(),
-//             })
-//             .collect::<Vec<Cw20Coin>>();
-//         self.cw20_balances = initial_balances;
-//         self
-//     }
+/// queries
+impl TestingSuite {
+    pub(crate) fn query_ownership(
+        &mut self,
+        result: impl Fn(StdResult<cw_ownable::Ownership<String>>),
+    ) -> &mut Self {
+        let ownership_response: StdResult<cw_ownable::Ownership<String>> =
+            self.app.wrap().query_wasm_smart(
+                &self.vault_manager_addr,
+                &crate::msg::QueryMsg::Ownership {},
+            );
 
-//     #[track_caller]
-//     pub fn build(self) -> Suite {
-//         // Default app
-//         let mut app: App = AppBuilder::new().build(|_, _, _| {});
+        result(ownership_response);
 
-//         // Instantiate2 version
-//         // prepare wasm module with custom address generator
-//         // let wasm_keeper: WasmKeeper<Empty, Empty> =
-//         //     WasmKeeper::new().with_address_generator(MockAddressGenerator);
-
-//         // prepare application with custom api
-//         let mut app = AppBuilder::new()
-//             .with_wasm::<WasmKeeper<Empty, Empty>>(
-//                 WasmKeeper::new().with_address_generator(MockAddressGenerator),
-//             )
-//             .with_api(MockApiBech32::new("migaloo"))
-//             .build(|_, _, _| {});
-//         // provide initial native balances
-//         app.init_modules(|router, _, storage| {
-//             // group by address
-//             let mut balances = HashMap::<Addr, Vec<Coin>>::new();
-//             for (addr, coin) in self.native_balances {
-//                 let addr_balance = balances.entry(addr).or_default();
-//                 addr_balance.push(coin);
-//             }
-
-//             for (addr, coins) in balances {
-//                 router
-//                     .bank
-//                     .init_balance(storage, &addr, coins)
-//                     .expect("init balance");
-//             }
-//         });
-
-//         let admin = Addr::unchecked("admin");
-//         let test_account = app.api().addr_make("addr0000");
-//         let pool_manager_id = contract_pool_manager(&mut app);
-//         let token_contract_code_id = store_token_code(&mut app);
-
-//         let pool_manager_addr = app
-//             .instantiate_contract(
-//                 pool_manager_id,
-//                 admin.clone(),
-//                 &InstantiateMsg {
-//                     fee_collector_addr: app.api().addr_make("fee_collector_addr").to_string(),
-//                     token_code_id: token_contract_code_id,
-//                     pair_code_id: token_contract_code_id,
-//                     owner: app.api().addr_make("owner").to_string(),
-//                     pool_creation_fee: Asset {
-//                         amount: Uint128::from(100u128),
-//                         info: AssetInfo::NativeToken {
-//                             denom: "uusd".to_string(),
-//                         },
-//                     },
-//                 },
-//                 &[],
-//                 "pool_manager",
-//                 None,
-//             )
-//             .unwrap();
-
-//         Suite {
-//             app,
-//             pool_manager_addr,
-//             test_account: test_account,
-//         }
-//     }
-// }
-
-// pub struct Suite {
-//     pub app: App<BankKeeper, MockApiBech32>,
-//     pub pool_manager_addr: Addr,
-//     pub test_account: Addr,
-// }
-
-// impl Suite {
-//     pub fn create_constant_product_pool(
-//         &mut self,
-//         sender: Addr,
-//         asset_infos_array: Vec<AssetInfo>,
-//         pool_creation_fee: Uint128,
-//     ) -> AnyResult<AppResponse> {
-//         // Convert the Vec<AssetInfo> into a [AssetInfo; 2]
-//         let mut asset_infos_array = [
-//             AssetInfo::NativeToken {
-//                 denom: "uusd".to_string(),
-//             },
-//             AssetInfo::NativeToken {
-//                 denom: "fable".to_string(),
-//             },
-//         ];
-//         let msg = ExecuteMsg::CreatePair {
-//             asset_infos: asset_infos_array.to_vec(),
-//             pool_fees: PoolFee {
-//                 protocol_fee: Fee {
-//                     share: Decimal::zero(),
-//                 },
-//                 swap_fee: Fee {
-//                     share: Decimal::zero(),
-//                 },
-//                 burn_fee: Fee {
-//                     share: Decimal::zero(),
-//                 },
-//             },
-//             pair_type: PairType::ConstantProduct,
-//             token_factory_lp: false,
-//             pair_identifier: None,
-//         };
-
-//         let res = self.app.execute_contract(
-//             sender,
-//             self.pool_manager_addr.clone(),
-//             &msg,
-//             &[Coin {
-//                 denom: "uusd".to_string(),
-//                 amount: pool_creation_fee,
-//             }],
-//         )?;
-//         Ok(res)
-//     }
-
-//     pub(crate) fn add_liquidity(
-//         &mut self,
-//         sender: Addr,
-//         vec: Vec<Asset>,
-//         funds: &Vec<Coin>,
-//         pair_identifier: String,
-//     ) -> AnyResult<AppResponse> {
-//         let msg = ExecuteMsg::ProvideLiquidity {
-//             assets: vec,
-//             slippage_tolerance: None,
-//             receiver: None,
-//             pair_identifier,
-//         };
-
-//         let res = self
-//             .app
-//             .execute_contract(sender, self.pool_manager_addr.clone(), &msg, funds)?;
-//         Ok(res)
-//     }
-
-//     pub(crate) fn withdraw_liquidity(
-//         &mut self,
-//         sender: Addr,
-//         vec: Vec<Asset>,
-//         funds: &Vec<Coin>,
-//         pair_identifier: String,
-//     ) -> AnyResult<AppResponse> {
-//         // Get the token from config
-//         let pair_resp: NPairInfo = self.app.wrap().query_wasm_smart(
-//             self.pool_manager_addr.clone(),
-//             &crate::msg::QueryMsg::Pair {
-//                 pair_identifier: pair_identifier.clone(),
-//             },
-//         )?;
-
-//         let msg = ExecuteMsg::WithdrawLiquidity {
-//             assets: vec.clone(),
-//             pair_identifier: pair_identifier.clone(),
-//         };
-
-//         let res = self.app.execute_contract(
-//             sender.clone(),
-//             self.pool_manager_addr.clone(),
-//             &msg,
-//             funds,
-//         )?;
-//         Ok(res)
-//     }
-
-//     pub(crate) fn withdraw_liquidity_cw20(
-//         &mut self,
-//         sender: Addr,
-//         vec: Vec<Asset>,
-//         pair_identifier: String,
-//         cw20_amount: Uint128,
-//     ) -> AnyResult<AppResponse> {
-//         // Get the token from config
-//         let pair_resp: NPairInfo = self.app.wrap().query_wasm_smart(
-//             self.pool_manager_addr.clone(),
-//             &crate::msg::QueryMsg::Pair {
-//                 pair_identifier: pair_identifier.clone(),
-//             },
-//         )?;
-
-//         // Send the cw20 amount with a message
-//         let msg = ExecuteMsg::WithdrawLiquidity {
-//             assets: vec.clone(),
-//             pair_identifier: pair_identifier.clone(),
-//         };
-
-//         let contract_addr = match pair_resp.liquidity_token {
-//             AssetInfo::Token { contract_addr } => contract_addr,
-//             _ => {
-//                 panic!("Liquidity token is not a cw20 token")
-//             }
-//         };
-
-//         let res = self.app.execute_contract(
-//             sender.clone(),
-//             Addr::unchecked(contract_addr),
-//             &cw20::Cw20ExecuteMsg::Send {
-//                 contract: self.pool_manager_addr.to_string(),
-//                 amount: cw20_amount,
-//                 msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
-//                     pair_identifier: "0".to_string(),
-//                 })
-//                 .unwrap(),
-//             },
-//             &[],
-//         )?;
-
-//         Ok(res)
-//     }
-
-//     pub(crate) fn add_native_token_decimals(
-//         &mut self,
-//         sender: Addr,
-//         denom: String,
-//         decimals: u8,
-//     ) -> AnyResult<AppResponse> {
-//         let msg = ExecuteMsg::AddNativeTokenDecimals {
-//             denom: denom.clone(),
-//             decimals,
-//         };
-//         let res = self
-//             .app
-//             .execute_contract(
-//                 sender,
-//                 self.pool_manager_addr.clone(),
-//                 &msg,
-//                 &[Coin {
-//                     denom: denom.to_string(),
-//                     amount: Uint128::from(1u128),
-//                 }],
-//             )
-//             .unwrap();
-//         Ok(res)
-//     }
-// }
+        self
+    }
+}

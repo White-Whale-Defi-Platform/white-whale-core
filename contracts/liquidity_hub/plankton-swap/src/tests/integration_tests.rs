@@ -1,3 +1,4 @@
+use crate::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::NPairInfo;
 // use crate::tests::suite::SuiteBuilder;
@@ -40,6 +41,70 @@ fn instantiate_normal(){
         },
     );
 }
+
+#[test]
+fn verify_ownership() {
+    let mut suite = TestingSuite::default_with_balances(vec![]);
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let unauthorized = suite.senders[2].clone();
+
+    suite
+        .instantiate_default()
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), creator);
+        })
+        .update_ownership(
+            unauthorized,
+            cw_ownable::Action::TransferOwnership {
+                new_owner: other.to_string(),
+                expiry: None,
+            },
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .update_ownership(
+            creator,
+            cw_ownable::Action::TransferOwnership {
+                new_owner: other.to_string(),
+                expiry: None,
+            },
+            |result| {
+                result.unwrap();
+            },
+        )
+        .update_ownership(
+            other.clone(),
+            cw_ownable::Action::AcceptOwnership,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), other);
+        })
+        .update_ownership(
+            other.clone(),
+            cw_ownable::Action::RenounceOwnership,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert!(ownership.owner.is_none());
+        });
+}
+
+
 
 // #[test]
 // fn north_star() {
