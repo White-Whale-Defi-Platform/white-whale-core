@@ -467,143 +467,143 @@ mod pair_creation_failures {
     }
 }
 
-// #[test]
-// fn north_star() {
-//     let sender =
-//         Addr::unchecked("migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l");
-//     let mut suite = SuiteBuilder::new()
-//         .with_native_balances(
-//             "uusd",
-//             vec![
-//                 (
-//                     "migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l",
-//                     1000101,
-//                 ),
-//                 ("admin", 1000001),
-//             ],
-//         )
-//         .with_native_balances(
-//             "fable",
-//             vec![
-//                 (
-//                     "migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l",
-//                     1000001,
-//                 ),
-//                 ("admin", 1000001),
-//             ],
-//         )
-//         .with_cw20_balances(vec![(
-//             "migaloo1xukukk68tcay629nlhnhznd9095esqln9yvc0punl645p763zd5s0tm45l",
-//             1000000,
-//         )])
-//         .build();
+mod swapping {
+    use cosmwasm_std::assert_approx_eq;
 
-//     suite
-//         .add_native_token_decimals(Addr::unchecked("admin"), "uusd".to_string(), 6u8)
-//         .unwrap();
-//     suite
-//         .add_native_token_decimals(Addr::unchecked("admin"), "fable".to_string(), 6u8)
-//         .unwrap();
+    use super::*;
 
-//     let asset_infos = vec![
-//         AssetInfo::NativeToken {
-//             denom: "uusd".to_string(),
-//         },
-//         AssetInfo::NativeToken {
-//             denom: "fable".to_string(),
-//         },
-//     ];
+    #[test]
+    fn basic_swapping_test() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and uluna
 
-//     let res = suite
-//         .create_constant_product_pool(sender.clone(), asset_infos, Uint128::from(100u128))
-//         .unwrap();
-//     println!("{:?}", res);
+        let asset_infos = vec![
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+        ];
 
-//     // Lets try to add liquidity
-//     let res = suite
-//         .add_liquidity(
-//             sender.clone(),
-//             vec![
-//                 Asset {
-//                     info: AssetInfo::NativeToken {
-//                         denom: "uusd".to_string(),
-//                     },
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//                 Asset {
-//                     info: AssetInfo::NativeToken {
-//                         denom: "fable".to_string(),
-//                     },
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//             ],
-//             &vec![
-//                 Coin {
-//                     denom: "uusd".to_string(),
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//                 Coin {
-//                     denom: "fable".to_string(),
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//             ],
-//             "0".to_string(),
-//         )
-//         .unwrap();
+        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        let fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
 
-//     // Get the token from config
-//     let pair_resp: NPairInfo = suite
-//         .app
-//         .wrap()
-//         .query_wasm_smart(
-//             suite.pool_manager_addr.clone(),
-//             &crate::msg::QueryMsg::Pair {
-//                 pair_identifier: "0".to_string(),
-//             },
-//         )
-//         .unwrap();
+        // Create a pair
+        suite
+            .instantiate_with_cw20_lp_token()
+            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
+            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
+            .create_pair(
+                creator.clone(),
+                asset_infos,
+                fees,
+                white_whale::pool_network::asset::PairType::ConstantProduct,
+                false,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
-//     // Now get balance we have the address
-//     let lp_token_addr = match pair_resp.liquidity_token {
-//         AssetInfo::Token { contract_addr } => contract_addr,
-//         _ => {
-//             panic!("Liquidity token is not a cw20 token")
-//         }
-//     };
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                }
+            },
+        );
 
-//     let lp_token_balance: BalanceResponse = suite
-//         .app
-//         .wrap()
-//         .query_wasm_smart(
-//             lp_token_addr,
-//             &cw20::Cw20QueryMsg::Balance {
-//                 address: sender.to_string(),
-//             },
-//         )
-//         .unwrap();
+        // Now lets try a swap
+        suite.swap(
+            creator.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::from(1000u128),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            None,
+            None,
+            None,
+            "whale-uluna".to_string(),
+            vec![coin(1000u128, "uwhale".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
 
-//     println!("{:?}", lp_token_balance);
-
-//     // Lets try to add liquidity
-//     let res = suite
-//         .withdraw_liquidity_cw20(
-//             sender.clone(),
-//             vec![
-//                 Asset {
-//                     info: AssetInfo::NativeToken {
-//                         denom: "uusd".to_string(),
-//                     },
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//                 Asset {
-//                     info: AssetInfo::NativeToken {
-//                         denom: "fable".to_string(),
-//                     },
-//                     amount: Uint128::from(1000000u128),
-//                 },
-//             ],
-//             "0".to_string(),
-//             lp_token_balance.balance,
-//         )
-//         .unwrap();
-// }
+                for event in result.unwrap().events {
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
+                // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
+                // Expect 1000 give or take 0.002 difference
+                // Once fees are added and being deducted properly only the "0.002" should be changed.
+                assert_approx_eq!(
+                    offer_amount.parse::<u128>().unwrap(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+            },
+        );
+    }
+}

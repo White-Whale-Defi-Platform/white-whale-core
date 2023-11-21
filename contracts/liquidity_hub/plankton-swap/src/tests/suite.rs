@@ -378,6 +378,7 @@ impl TestingSuite {
         max_spread: Option<Decimal>,
         to: Option<String>,
         pair_identifier: String,
+        funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = crate::msg::ExecuteMsg::Swap {
@@ -391,7 +392,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
         );
 
         self
