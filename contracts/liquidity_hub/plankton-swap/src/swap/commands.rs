@@ -15,7 +15,6 @@ use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::querier::query_balance;
 
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};

@@ -1,24 +1,21 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, Uint128, WasmMsg,
+    attr, instantiate2_address, to_binary, Attribute, CodeInfoResponse, CosmosMsg, DepsMut, Env,
+    MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
 use white_whale::pool_network::{
-    asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
+    asset::{Asset, AssetInfo, PairType},
     pair::PoolFee,
 };
 
 use crate::{
     helpers::{self, fill_rewards_msg},
-    state::{
-        add_allow_native_token, get_pair_by_identifier, ALL_TIME_BURNED_FEES,
-        COLLECTABLE_PROTOCOL_FEES, PAIR_COUNTER, TOTAL_COLLECTED_PROTOCOL_FEES,
-    },
+    state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER},
     token::InstantiateMsg as TokenInstantiateMsg,
 };
 use crate::{
-    state::{pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
+    state::{Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
@@ -37,7 +34,6 @@ use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
-use white_whale::tokenfactory;
 
 /// Creates a liquidity pool pair with 2, 3, or N assets. The function dynamically handles different numbers of assets,
 /// allowing for the creation of pairs with varying configurations. The maximum number of assets per pool is defined by

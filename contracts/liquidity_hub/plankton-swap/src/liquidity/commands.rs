@@ -1,23 +1,12 @@
-use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Addr, Attribute, Binary, CodeInfoResponse, CosmosMsg,
-    DepsMut, Env, HexBinary, MessageInfo, Response, StdError, WasmMsg,
-};
-use cw20::MinterResponse;
-use white_whale::pool_network::{
-    asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
-    pair::PoolFee,
-};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 
 use crate::{
-    helpers::{self, fill_rewards_msg},
-    state::{
-        add_allow_native_token, get_pair_by_identifier, ALL_TIME_BURNED_FEES,
-        COLLECTABLE_PROTOCOL_FEES, PAIR_COUNTER, TOTAL_COLLECTED_PROTOCOL_FEES,
-    },
-    token::InstantiateMsg as TokenInstantiateMsg,
+    helpers::{self},
+    state::{get_pair_by_identifier, COLLECTABLE_PROTOCOL_FEES},
 };
 use crate::{
-    state::{pair_key, Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
+    state::{pair_key, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
@@ -28,7 +17,6 @@ use white_whale::pool_network::asset::is_factory_token;
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::querier::query_balance;
 
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
@@ -40,7 +28,7 @@ use cosmwasm_std::{Decimal, OverflowError, StdResult, Uint128};
 use cw20::Cw20ExecuteMsg;
 use white_whale::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
-    pair, U256,
+    U256,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
