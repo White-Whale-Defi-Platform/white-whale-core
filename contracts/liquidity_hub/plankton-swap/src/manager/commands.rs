@@ -49,17 +49,16 @@ use white_whale::tokenfactory;
 /// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_binary};
 /// # use white_whale::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
 /// # use white_whale::fee::Fee;
-/// # use plankton_swap::state::{NAssets};
 /// # use plankton_swap::error::ContractError;
-/// # use plankton_swap::commands::MAX_ASSETS_PER_POOL;
-/// # use plankton_swap::commands::create_pair;
+/// # use plankton_swap::manager::commands::MAX_ASSETS_PER_POOL;
+/// # use plankton_swap::manager::commands::create_pair;
 /// # use std::convert::TryInto;
 /// #
 /// # fn example(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-/// let asset_infos = NAssets::TWO([
+/// let asset_infos = vec![
 ///     AssetInfo::NativeToken { denom: "uatom".into() },
 ///     AssetInfo::NativeToken { denom: "uscrt".into() },
-/// ]);
+/// ];
 /// let pool_fees = PoolFee {
 ///     protocol_fee: Fee {
 ///         share: Decimal::percent(5u64),
@@ -74,7 +73,7 @@ use white_whale::tokenfactory;
 /// let pair_type = PairType::ConstantProduct;
 /// let token_factory_lp = false;
 ///
-/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, token_factory_lp)?;
+/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, token_factory_lp, None)?;
 /// # Ok(response)
 /// # }
 /// ```
@@ -117,11 +116,11 @@ pub fn create_pair(
         amount: config.pool_creation_fee.amount,
     }];
 
-    //send protocol fee to whale lair i.e the new fee_collector
-    // messages.push(fill_rewards_msg(
-    //     config.fee_collector_addr.into_string(),
-    //     creation_fee,
-    // )?);
+    // //send protocol fee to whale lair i.e the new fee_collector
+    messages.push(fill_rewards_msg(
+        config.fee_collector_addr.into_string(),
+        creation_fee,
+    )?);
 
     let asset_decimals_vec = asset_infos
         .iter()

@@ -94,7 +94,7 @@ pub fn execute(
             fee_distributor_addr,
         ),
         ExecuteMsg::FillRewards { assets } => {
-            unimplemented!();
+            // unimplemented!();
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
         }
     }

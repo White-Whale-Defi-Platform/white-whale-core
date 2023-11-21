@@ -147,12 +147,12 @@ impl TestingSuite {
     ) -> &mut Self {
         let cw20_token_id = self.app.store_code(cw20_token_contract());
         let msg = InstantiateMsg {
-            fee_collector_addr: self.senders[0].to_string(),
+            fee_collector_addr: whale_lair_addr,
             token_code_id: cw20_token_id,
             pair_code_id: cw20_token_id,
             owner: self.creator().to_string(),
             pool_creation_fee: Asset {
-                amount: Uint128::from(100u128),
+                amount: Uint128::from(1_000u128),
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
@@ -202,7 +202,7 @@ impl TestingSuite {
     pub(crate) fn instantiate_with_cw20_lp_token(&mut self) -> &mut Self {
         self.create_whale_lair();
         let cw20_code_id = self.create_cw20_token();
-
+        println!("cw20_code_id: {}", self.whale_lair_addr);
         // 17 May 2023 17:00:00 UTC
         let timestamp = Timestamp::from_seconds(1684342800u64);
         self.set_time(timestamp);
@@ -406,6 +406,7 @@ impl TestingSuite {
         pair_type: PairType,
         token_factory_lp: bool,
         pair_identifier: Option<String>,
+        pair_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = crate::msg::ExecuteMsg::CreatePair {
@@ -420,7 +421,7 @@ impl TestingSuite {
             sender,
             self.vault_manager_addr.clone(),
             &msg,
-            &[coin(100, "uusd")],
+            &pair_creation_fee_funds,
         ));
 
         self
@@ -495,6 +496,23 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn query_pair_info(
+        &mut self,
+        pair_identifier: String,
+        result: impl Fn(StdResult<NPairInfo>),
+    ) -> &mut Self {
+        let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &crate::msg::QueryMsg::Pair {
+                pair_identifier: pair_identifier,
+            },
+        );
+
+        result(pair_info_response);
+
+        self
+    }
+
     pub(crate) fn query_amount_of_lp_token(
         &mut self,
         identifier: String,
@@ -538,5 +556,22 @@ impl TestingSuite {
 
         result(Result::Ok(balance));
         self
+    }
+
+    pub(crate) fn query_lp_token(&mut self, identifier: String, sender: String) -> AssetInfo {
+        // Get the LP token from Config
+        let lp_token_response: NPairInfo = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.vault_manager_addr,
+                &crate::msg::QueryMsg::Pair {
+                    pair_identifier: identifier,
+                },
+            )
+            .unwrap();
+
+        // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
+        lp_token_response.liquidity_token
     }
 }
