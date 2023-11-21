@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use crate::{
     contract::Cw20HookMsg,
+    liquidity,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::NPairInfo,
 };
 use anyhow::{Ok, Result as AnyResult};
-use cosmwasm_std::{to_binary, Addr, Coin, Decimal, Empty, Uint128, Timestamp, Uint64, StdResult};
-use cw20::{Cw20Coin, MinterResponse};
+use cosmwasm_std::{
+    coin, to_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
+};
+use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
     WasmKeeper,
@@ -16,8 +19,9 @@ use white_whale::{
     fee::Fee,
     pool_network::{
         asset::{Asset, AssetInfo, PairType},
-        pair::PoolFee,
-    }, vault_manager::LpTokenType,
+        pair::{self, PoolFee},
+    },
+    vault_manager::LpTokenType,
 };
 
 use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
@@ -52,7 +56,6 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
 
     Box::new(contract)
 }
-
 
 pub struct TestingSuite {
     app: App<BankKeeper, MockApiBech32>,
@@ -99,7 +102,6 @@ impl TestingSuite {
 
         self
     }
-
 }
 
 /// Instantiate
@@ -293,6 +295,34 @@ impl TestingSuite {
         cw20_token_id
     }
 
+    #[track_caller]
+    pub fn add_native_token_decimals(
+        &mut self,
+        sender: Addr,
+        native_token_denom: String,
+        decimals: u8,
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::AddNativeTokenDecimals {
+            denom: native_token_denom.clone(),
+            decimals: decimals,
+        };
+
+        let creator = self.creator().clone();
+
+        self.app
+            .execute_contract(
+                sender,
+                self.vault_manager_addr.clone(),
+                &msg,
+                &[Coin {
+                    denom: native_token_denom.to_string(),
+                    amount: Uint128::from(1u128),
+                }],
+            )
+            .unwrap();
+
+        self
+    }
 }
 
 /// execute messages
@@ -313,6 +343,139 @@ impl TestingSuite {
 
         self
     }
+
+    #[track_caller]
+    pub(crate) fn provide_liquidity(
+        &mut self,
+        sender: Addr,
+        pair_identifier: String,
+        assets: Vec<Asset>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::ProvideLiquidity {
+            assets,
+            pair_identifier,
+            slippage_tolerance: None,
+            receiver: None,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn swap(
+        &mut self,
+        sender: Addr,
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<String>,
+        pair_identifier: String,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::Swap {
+            offer_asset,
+            ask_asset,
+            belief_price,
+            max_spread,
+            to,
+            pair_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn create_pair(
+        &mut self,
+        sender: Addr,
+        asset_infos: Vec<AssetInfo>,
+        pool_fees: PoolFee,
+        pair_type: PairType,
+        token_factory_lp: bool,
+        pair_identifier: Option<String>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::CreatePair {
+            asset_infos,
+            pool_fees,
+            pair_type,
+            token_factory_lp,
+            pair_identifier,
+        };
+
+        result(self.app.execute_contract(
+            sender,
+            self.vault_manager_addr.clone(),
+            &msg,
+            &[coin(100, "uusd")],
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn withdraw_liquidity(
+        &mut self,
+        sender: Addr,
+        pair_identifier: String,
+        assets: Vec<Asset>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = crate::msg::ExecuteMsg::WithdrawLiquidity {
+            assets,
+            pair_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn withdraw_liquidity_cw20(
+        &mut self,
+        sender: Addr,
+        pair_identifier: String,
+        assets: Vec<Asset>,
+        amount: Uint128,
+        liquidity_token: Addr,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        // Prepare a CW20 Transfer message with a CW20HookMsg to withdraw liquidity
+
+        // Send the cw20 amount with a message
+        let msg = cw20::Cw20ExecuteMsg::Send {
+            contract: self.vault_manager_addr.to_string(),
+            amount: amount,
+            msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {
+                pair_identifier: pair_identifier,
+            })
+            .unwrap(),
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, liquidity_token, &msg, &[]),
+        );
+
+        self
+    }
 }
 
 /// queries
@@ -329,6 +492,51 @@ impl TestingSuite {
 
         result(ownership_response);
 
+        self
+    }
+
+    pub(crate) fn query_amount_of_lp_token(
+        &mut self,
+        identifier: String,
+        sender: String,
+        result: impl Fn(StdResult<Uint128>),
+    ) -> &mut Self {
+        // Get the LP token from Config
+        let lp_token_response: NPairInfo = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.vault_manager_addr,
+                &crate::msg::QueryMsg::Pair {
+                    pair_identifier: identifier,
+                },
+            )
+            .unwrap();
+
+        // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
+
+        let balance = match lp_token_response.liquidity_token {
+            AssetInfo::NativeToken { denom } => {
+                let balance_response: Uint128 =
+                    self.app.wrap().query_balance(sender, denom).unwrap().amount;
+
+                balance_response
+            }
+            AssetInfo::Token { contract_addr } => {
+                let balance_response: BalanceResponse = self
+                    .app
+                    .wrap()
+                    .query_wasm_smart(
+                        &contract_addr,
+                        &cw20_base::msg::QueryMsg::Balance { address: sender },
+                    )
+                    .unwrap();
+
+                balance_response.balance
+            }
+        };
+
+        result(Result::Ok(balance));
         self
     }
 }

@@ -147,26 +147,22 @@ pub fn provide_liquidity(
             "provide_liquidity".to_string(),
         ));
     }
-    println!("Before pair");
-
+    // Verify native assets are sent
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&info)?;
     }
-
     let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+
+    // For each asset in Assets we need to:
+    // Identify if it is a cw20, if it is do a transfer
+    // In both cases cw20 and native we need to increment the balance of the pool
 
     // For each asset_info in the pair, we need to get the asset_info and the amount of the asset which is balances
     let asset_infos = pair.asset_infos.clone();
     let mut deposits = pair.balances.clone();
 
-    // We have asserted native balances, now increment deposits by the amount sent
-    // Deposits does not yet have the newly added funds, increment by the amount provided
-    for (i, deposit) in deposits.iter_mut().enumerate() {
-        *deposit = deposit.checked_add(info.funds[i].amount).unwrap();
-    }
-
     // Combine the asset_infos and the deposits into a vector of Assets
-    let mut assets = asset_infos
+    let mut pool_assets = asset_infos
         .iter()
         .zip(deposits.iter())
         .map(|(asset_info, amount)| Asset {
@@ -175,14 +171,8 @@ pub fn provide_liquidity(
         })
         .collect::<Vec<_>>();
 
-    if deposits.iter().any(|&deposit| deposit.is_zero()) {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    println!("Before messages");
-
     let mut messages: Vec<CosmosMsg> = vec![];
-    for (i, pool) in assets.iter_mut().enumerate() {
+    for (i, pool) in assets.clone().iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -190,23 +180,24 @@ pub fn provide_liquidity(
                 msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
                     recipient: env.contract.address.clone().to_string(),
-                    amount: deposits[i],
+                    amount: pool.amount,
                 })?,
                 funds: vec![],
             }));
-        } else {
-            // If the asset is native token, balance is already increased on the contract address
-            // To calculate it properly we should subtract user deposit from the pool
-            pool.amount = pool.amount.checked_add(deposits[i]).unwrap();
         }
+        // Increment the pool asset amount by the amount sent
+        pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount).unwrap();
+        deposits[i] = deposits[i].checked_add(pool.amount).unwrap();
     }
-    println!("{:?}", assets);
+    if deposits.iter().any(|&deposit| deposit.is_zero()) {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
 
     // // deduct protocol fee from pools
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
         .load(deps.storage, &pair.liquidity_token.to_string())
         .unwrap_or(vec![]);
-    for pool in assets.iter_mut() {
+    for pool in pool_assets.iter_mut() {
         let protocol_fee =
             get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
         pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
@@ -221,13 +212,10 @@ pub fn provide_liquidity(
         }
         AssetInfo::NativeToken { denom } => denom,
     };
-    println!("\n\n\n Before fees ");
 
     // Compute share and other logic based on the number of assets
     let _share = Uint128::zero();
-    println!("{:?}", liquidity_token.clone());
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
-    println!("Before resp");
 
     let share = match &pair.pair_type {
         PairType::ConstantProduct => {
@@ -268,7 +256,7 @@ pub fn provide_liquidity(
                         .checked_mul(U256::from(total_share.u128()))
                         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
 
-                    let denominator = U256::from(assets[0].amount.u128());
+                    let denominator = U256::from(pool_assets[0].amount.u128());
 
                     let result = numerator
                         .checked_div(denominator)
@@ -278,12 +266,12 @@ pub fn provide_liquidity(
                 };
 
                 let amount = std::cmp::min(
-                    deposits[0].multiply_ratio(total_share, assets[0].amount),
-                    deposits[1].multiply_ratio(total_share, assets[1].amount),
+                    deposits[0].multiply_ratio(total_share, pool_assets[0].amount),
+                    deposits[1].multiply_ratio(total_share, pool_assets[1].amount),
                 );
 
                 let deps_as = [deposits[0], deposits[1]];
-                let pools_as = [assets[0].clone(), assets[1].clone()];
+                let pools_as = [pool_assets[0].clone(), pool_assets[1].clone()];
 
                 // assert slippage tolerance
                 helpers::assert_slippage_tolerance(
@@ -316,13 +304,13 @@ pub fn provide_liquidity(
 
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
-    // mint LP token to sender
-    messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
-        liquidity_token.to_string(),
-        &info.sender.clone(),
-        &env.contract.address,
-        share,
-    )?);
+    // // mint LP token to sender
+    // messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+    //     liquidity_token.to_string(),
+    //     &info.sender.clone(),
+    //     &env.contract.address,
+    //     share,
+    // )?);
 
     pair.balances = deposits;
     PAIRS.save(deps.storage, pair_identifier, &pair)?;
@@ -334,7 +322,7 @@ pub fn provide_liquidity(
         ("receiver", receiver.as_str()),
         (
             "assets",
-            &assets
+            &pool_assets
                 .iter()
                 .map(|asset| asset.to_string())
                 .collect::<Vec<_>>()

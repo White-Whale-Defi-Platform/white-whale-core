@@ -46,7 +46,6 @@ pub fn instantiate(
     PAIR_COUNTER.save(deps.storage, &0u64)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
 
-
     Ok(Response::default())
 }
 

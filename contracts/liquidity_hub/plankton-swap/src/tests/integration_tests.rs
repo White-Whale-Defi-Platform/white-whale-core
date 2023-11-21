@@ -1,12 +1,14 @@
-use crate::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::NPairInfo;
+use crate::ContractError;
 // use crate::tests::suite::SuiteBuilder;
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{Addr, Coin, Uint128, coin};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use cw20::BalanceResponse;
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::fee::Fee;
+use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale::pool_network::pair::PoolFee;
 use white_whale::vault_manager::LpTokenType;
 
 use super::suite::TestingSuite;
@@ -15,7 +17,7 @@ use super::suite::TestingSuite;
 // and add liquidity to it
 
 #[test]
-fn instantiate_normal(){
+fn instantiate_normal() {
     let mut suite = TestingSuite::default_with_balances(vec![]);
 
     suite.instantiate(
@@ -104,7 +106,98 @@ fn verify_ownership() {
         });
 }
 
+#[test]
+fn deposit_and_withdraw_sanity_check() {
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_001u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "uluna".to_string()),
+        coin(1_000_000_001u128, "uusd".to_string()),
+    ]);
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let unauthorized = suite.senders[2].clone();
+    // Asset infos with uwhale and uluna
 
+    let asset_infos = vec![
+        AssetInfo::NativeToken {
+            denom: "uwhale".to_string(),
+        },
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+    ];
+
+    // Default Pool fees white_whale::pool_network::pair::PoolFee
+    let fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::zero(),
+        },
+        swap_fee: Fee {
+            share: Decimal::zero(),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
+    // Create a pair
+    suite
+        .instantiate_with_cw20_lp_token()
+        .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
+        .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
+        .create_pair(
+            creator.clone(),
+            asset_infos,
+            fees,
+            white_whale::pool_network::asset::PairType::ConstantProduct,
+            false,
+            Some("whale-uluna".to_string()),
+            |result| println!("{:?}", result),
+        );
+
+    // Lets try to add liquidity
+    suite.provide_liquidity(
+        creator.clone(),
+        "whale-uluna".to_string(),
+        vec![
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::from(1000000u128),
+            },
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                amount: Uint128::from(1000000u128),
+            },
+        ],
+        vec![
+            Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::from(1000000u128),
+            },
+            Coin {
+                denom: "uluna".to_string(),
+                amount: Uint128::from(1000000u128),
+            },
+        ],
+        |result| {
+            // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+            for event in result.unwrap().events {
+                println!("{:?}", event);
+            }
+        },
+    );
+
+    suite.query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
+        assert_eq!(
+            result.unwrap(),
+            Uint128::from(1000000u128) - MINIMUM_LIQUIDITY_AMOUNT
+        );
+    });
+}
 
 // #[test]
 // fn north_star() {
