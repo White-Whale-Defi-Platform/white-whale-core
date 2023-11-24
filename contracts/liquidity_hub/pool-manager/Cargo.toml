@@ -1,5 +1,5 @@
 [package]
-name = "plankton-swap"
+name = "pool-manager"
 version = "0.1.0"
 authors = ["0xFable <0xfable@protonmail.com>"]
 edition = "2021"

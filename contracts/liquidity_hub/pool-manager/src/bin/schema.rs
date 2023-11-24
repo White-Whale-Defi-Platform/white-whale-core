@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use plankton_swap::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use pool_manager::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

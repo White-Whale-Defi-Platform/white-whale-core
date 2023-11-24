@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::helpers;
-use crate::state::get_decimals;
+use crate::state::{get_decimals, get_pair_by_identifier};
 use crate::{
     state::{MANAGER_CONFIG, PAIRS},
     ContractError,
@@ -46,87 +46,14 @@ pub fn swap(
 
     offer_asset.assert_sent_native_token_balance(&info)?;
 
-    let asset_infos = [ask_asset.clone(), offer_asset.info.clone()];
-    let ask_asset = Asset {
-        info: ask_asset,
-        amount: Uint128::zero(),
-    };
-    let assets = [ask_asset.clone(), offer_asset.clone()];
-    // Load assets, pools and pair info
-    let (_assets_vec, pools, pair_info) = match assets {
-        // For TWO assets we use the constant product logic
-        assets if assets.len() == 2 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-            println!("After load");
-            println!("{:?}", pair_info);
-            let pools: [Asset; 2] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
+    // let asset_infos = [ask_asset.clone(), offer_asset.info.clone()];
+    // let ask_asset = Asset {
+    //     info: ask_asset,
+    //     amount: Uint128::zero(),
+    // };
 
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-        assets if assets.len() == 3 => {
-            let pair_info = PAIRS.load(deps.storage, pair_identifier)?;
-
-            // TODO: this is fucked, rework later after constant product working
-            let asset_infos = [
-                offer_asset.info.clone(),
-                ask_asset.info.clone(),
-                ask_asset.info.clone(),
-            ];
-            let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset];
-
-            let pools: [Asset; 3] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
-
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        _ => {
-            return Err(ContractError::TooManyAssets {
-                assets_provided: assets.len(),
-            })
-        }
-    };
+    let mut pair_info = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+    let pools = pair_info.assets.clone();
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Asset;
     let ask_pool: Asset;
@@ -162,7 +89,7 @@ pub fn swap(
 
     // TODO: Add the swap logic here
     let offer_amount = offer_asset.amount;
-    let pool_fees = pair_info.pool_fees;
+    let pool_fees = pair_info.pool_fees.clone();
 
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
@@ -190,14 +117,26 @@ pub fn swap(
         offer_decimal,
         ask_decimal,
     )?;
-    println!("After spread");
-    println!("Return amount: {}", return_asset.amount);
+
     // TODO; add the swap messages
     if !swap_computation.return_amount.is_zero() {
         messages.push(return_asset.into_msg(receiver.clone())?);
     }
-    println!("After return amount: {:?}", swap_computation);
 
+    // State changes to the pairs balances 
+    // Deduct the return amount from the pool and add the offer amount to the pool
+    if offer_asset.info.equal(&pools[0].info) {
+        
+        pair_info.assets[0].amount += offer_amount;
+        pair_info.assets[1].amount -= swap_computation.return_amount;
+        PAIRS.save(deps.storage, pair_identifier, &pair_info)?;
+       
+   
+    } else {
+        pair_info.assets[1].amount += offer_amount;
+        pair_info.assets[0].amount -= swap_computation.return_amount;
+        PAIRS.save(deps.storage, pair_identifier, &pair_info)?;
+    }
     // burn ask_asset from the pool
     // if !swap_computation.burn_fee_amount.is_zero() {
     //     let burn_asset = Asset {

@@ -101,6 +101,7 @@ pub struct NPairInfo {
     pub liquidity_token: AssetInfo,
     pub asset_decimals: Vec<u8>,
     pub balances: Vec<Uint128>,
+    pub assets: Vec<Asset>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
 }

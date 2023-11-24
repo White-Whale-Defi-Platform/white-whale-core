@@ -45,9 +45,9 @@ pub const LP_SYMBOL: &str = "uLP";
 /// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_binary};
 /// # use white_whale::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
 /// # use white_whale::fee::Fee;
-/// # use plankton_swap::error::ContractError;
-/// # use plankton_swap::manager::commands::MAX_ASSETS_PER_POOL;
-/// # use plankton_swap::manager::commands::create_pair;
+/// # use pool_manager::error::ContractError;
+/// # use pool_manager::manager::commands::MAX_ASSETS_PER_POOL;
+/// # use pool_manager::manager::commands::create_pair;
 /// # use std::convert::TryInto;
 /// #
 /// # fn example(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
@@ -174,6 +174,15 @@ pub fn create_pair(
     // TODO: Add this
     let mut attributes = Vec::<Attribute>::new();
 
+    // Convert all asset_infos into assets with 0 balances 
+    let assets = asset_infos
+    .iter()
+    .map(|asset_info| Asset {
+        info: asset_info.clone(),
+        amount: Uint128::zero(),
+    })
+    .collect::<Vec<_>>();
+
     let pair_creation_msg = if token_factory_lp == true {
         #[cfg(all(
             not(feature = "token_factory"),
@@ -195,6 +204,7 @@ pub fn create_pair(
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 pool_fees: pool_fees,
+                assets,
                 balances: vec![Uint128::zero(); asset_infos.len()],
             },
         )?;
@@ -237,6 +247,7 @@ pub fn create_pair(
         // Now, after generating an address using instantiate 2 we can save this into PAIRS
         // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
         println!("Before save {}", lp_asset.clone());
+
         PAIRS.save(
             deps.storage,
             identifier.clone(),
@@ -245,6 +256,7 @@ pub fn create_pair(
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
+                assets,
                 pool_fees: pool_fees,
                 balances: vec![Uint128::zero(); asset_infos.len()],
             },

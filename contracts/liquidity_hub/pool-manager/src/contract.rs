@@ -17,7 +17,7 @@ use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, swap};
 /*
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:plankton-swap";
+const CONTRACT_NAME: &str = "crates.io:pool-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
 

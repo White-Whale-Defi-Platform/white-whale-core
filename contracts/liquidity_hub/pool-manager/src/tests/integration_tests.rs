@@ -325,6 +325,7 @@ fn deposit_and_withdraw_cw20() {
         Uint128::from(1000000u128) - MINIMUM_LIQUIDITY_AMOUNT,
         Addr::unchecked(lp_token_addr),
         |result| {
+            println!("{:?}", result);
             for event in result.unwrap().events {
                 println!("{:?}", event);
             }
