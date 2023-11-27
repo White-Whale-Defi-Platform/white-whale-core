@@ -11,10 +11,10 @@ use white_whale::pool_network::pair::{self, FeatureToggle};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, swap};
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pool-manager";
@@ -242,20 +242,24 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Simulation {
             offer_asset,
             ask_asset,
+            pair_identifier,
         } => Ok(to_binary(&queries::query_simulation(
             deps,
             env,
             offer_asset,
             ask_asset,
+            pair_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {
             ask_asset,
             offer_asset,
+            pair_identifier,
         } => Ok(to_binary(&queries::query_reverse_simulation(
             deps,
             env,
             ask_asset,
             offer_asset,
+            pair_identifier,
         )?)?),
         // QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
         //     deps,

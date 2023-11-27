@@ -1,18 +1,19 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Addr, Decimal256, Deps, DepsMut, Env, Fraction, Order, StdResult, Uint128};
+use white_whale::pool_manager::{NPairInfo, SwapOperation, SwapRouteResponse};
 use white_whale::pool_network::{
     asset::{Asset, AssetInfo, AssetInfoRaw, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
-    router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
+    router::SimulateSwapOperationsResponse,
 };
 
 use crate::{
     helpers::{self, calculate_stableswap_y, get_protocol_fee_for_asset, StableSwapDirection},
     state::{
-        get_decimals, pair_key, NPairInfo, ALLOW_NATIVE_TOKENS, COLLECTABLE_PROTOCOL_FEES,
-        MANAGER_CONFIG, PAIRS,
+        get_decimals, get_pair_by_identifier, pair_key, ALLOW_NATIVE_TOKENS,
+        COLLECTABLE_PROTOCOL_FEES, MANAGER_CONFIG, PAIRS,
     },
     ContractError,
 };
@@ -28,18 +29,6 @@ pub fn query_native_token_decimal(
     Ok(NativeTokenDecimalsResponse { decimals })
 }
 
-fn get_pair_key_from_assets(
-    assets: &[AssetInfo],
-    deps: &Deps<'_>,
-) -> Result<Vec<u8>, ContractError> {
-    let raw_infos: Vec<AssetInfoRaw> = assets
-        .iter()
-        .map(|asset| asset.to_raw(deps.api))
-        .collect::<Result<_, _>>()?;
-    let pair_key = pair_key(&raw_infos);
-    Ok(pair_key)
-}
-
 // TODO: Might be handy for organisation to have a couple of sub-modules here
 // Simulation with only stuff for that, swap routes and so on. Otherwise this file might become massive with all the queries
 
@@ -49,116 +38,28 @@ pub fn query_simulation(
     env: Env,
     offer_asset: Asset,
     ask_asset: Asset,
+    pair_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
-    let assets = [offer_asset.clone(), ask_asset.clone()];
-    let asset_infos = [offer_asset.info.clone(), ask_asset.info.clone()];
-    let (_assets_vec, mut pools, pair_info) = match assets {
-        // For TWO assets we use the constant product logic
-        assets if assets.len() == 2 => {
-            let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
-            let pools: [Asset; 2] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
-
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-        assets if assets.len() == 3 => {
-            let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
-            // TODO: this is fucked, rework later after constant product working
-            let asset_infos = [
-                offer_asset.info.clone(),
-                ask_asset.info.clone(),
-                ask_asset.info.clone(),
-            ];
-            let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset];
-
-            let pools: [Asset; 3] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
-
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        _ => {
-            return Err(ContractError::TooManyAssets {
-                assets_provided: assets.len(),
-            })
-        }
-    };
+    let mut pair_info = get_pair_by_identifier(&deps, pair_identifier.clone())?;
+    let pools = pair_info.assets.clone();
+    // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Asset;
-    let offer_decimal;
-
     let ask_pool: Asset;
-    let ask_decimal;
+    let offer_decimal: u8;
+    let ask_decimal: u8;
     let decimals = get_decimals(&pair_info);
-
-    let collected_protocol_fees =
-        COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
-
-    // To calculate pool amounts properly we should subtract the protocol fees from the pool
-    pools = pools
-        .into_iter()
-        .map(|mut pool| {
-            // subtract the protocol fee from the pool
-            let protocol_fee =
-                get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
-            pool.amount = pool.amount.checked_sub(protocol_fee)?;
-
-            Ok(pool)
-        })
-        .collect::<StdResult<Vec<_>>>()?;
-
+    // We now have the pools and pair info; we can now calculate the swap
+    // Verify the pool
     if offer_asset.info.equal(&pools[0].info) {
         offer_pool = pools[0].clone();
-        offer_decimal = decimals[0];
-
         ask_pool = pools[1].clone();
+        offer_decimal = decimals[0];
         ask_decimal = decimals[1];
     } else if offer_asset.info.equal(&pools[1].info) {
         offer_pool = pools[1].clone();
-        offer_decimal = decimals[1];
-
         ask_pool = pools[0].clone();
+
+        offer_decimal = decimals[1];
         ask_decimal = decimals[0];
     } else {
         return Err(ContractError::AssetMismatch {});
@@ -192,82 +93,10 @@ pub fn query_reverse_simulation(
     env: Env,
     ask_asset: Asset,
     offer_asset: Asset,
+    pair_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
-    let assets = [offer_asset.clone(), ask_asset.clone()];
-    let asset_infos = [offer_asset.info.clone(), ask_asset.info.clone()];
-    let (_assets_vec, pools, pair_info) = match assets {
-        // For TWO assets we use the constant product logic
-        assets if assets.len() == 2 => {
-            let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
-            let pools: [Asset; 2] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
-
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        // For both THREE and N we use the same logic; stableswap or eventually conc liquidity
-        assets if assets.len() == 3 => {
-            let pair_key = get_pair_key_from_assets(&asset_infos, &deps)?;
-            let pair_info = PAIRS.load(deps.storage, "".to_string())?;
-            // TODO: this is fucked, rework later after constant product working
-            let asset_infos = [
-                offer_asset.info.clone(),
-                ask_asset.info.clone(),
-                ask_asset.info.clone(),
-            ];
-            let assets = [offer_asset.clone(), ask_asset.clone(), ask_asset.clone()];
-
-            let pools: [Asset; 3] = [
-                Asset {
-                    info: asset_infos[0].clone(),
-                    amount: asset_infos[0].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[1].clone(),
-                    amount: asset_infos[1].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address.clone(),
-                    )?,
-                },
-                Asset {
-                    info: asset_infos[2].clone(),
-                    amount: asset_infos[2].query_balance(
-                        &deps.querier,
-                        deps.api,
-                        env.contract.address,
-                    )?,
-                },
-            ];
-
-            (assets.to_vec(), pools.to_vec(), pair_info)
-        }
-        _ => {
-            return Err(ContractError::TooManyAssets {
-                assets_provided: assets.len(),
-            })
-        }
-    };
+    let mut pair_info = get_pair_by_identifier(&deps, pair_identifier.clone())?;
+    let pools = pair_info.assets.clone();
     let offer_pool: Asset;
     let offer_decimal;
 
@@ -416,24 +245,23 @@ pub fn simulate_swap_operations(
     let mut offer_amount = offer_amount;
     for operation in operations.into_iter() {
         match operation {
-            SwapOperation::TerraSwap {
-                offer_asset_info,
-                ask_asset_info,
+            SwapOperation::WhaleSwap {
+                token_in_info,
+                token_out_info,
+                pool_identifier,
             } => {
-                let pair_info: NPairInfo =
-                    query_pair_info(&deps, &[offer_asset_info.clone(), ask_asset_info.clone()])?;
-
                 let res: SimulationResponse = query_simulation(
                     deps,
                     env.clone(),
                     Asset {
-                        info: offer_asset_info,
+                        info: token_in_info,
                         amount: offer_amount,
                     },
                     Asset {
-                        info: ask_asset_info,
+                        info: token_out_info,
                         amount: Uint128::zero(),
                     },
+                    pool_identifier,
                 )?;
 
                 offer_amount = res.return_amount;
@@ -460,15 +288,17 @@ pub fn reverse_simulate_swap_operations(
     let mut ask_amount = ask_amount;
     for operation in operations.into_iter().rev() {
         ask_amount = match operation {
-            SwapOperation::TerraSwap {
-                offer_asset_info,
-                ask_asset_info,
+            SwapOperation::WhaleSwap {
+                token_in_info: offer_asset_info,
+                token_out_info: ask_asset_info,
+                pool_identifier,
             } => reverse_simulate_return_amount(
                 deps,
                 env.clone(),
                 ask_amount,
                 offer_asset_info,
                 ask_asset_info,
+                pool_identifier,
             )?,
         }
     }
@@ -482,9 +312,9 @@ pub fn reverse_simulate_return_amount(
     ask_amount: Uint128,
     offer_asset_info: AssetInfo,
     ask_asset_info: AssetInfo,
+    pool_identifier: String,
 ) -> Result<Uint128, ContractError> {
-    let pair_info: NPairInfo =
-        query_pair_info(&deps, &[offer_asset_info.clone(), ask_asset_info.clone()])?;
+    let mut pair_info = get_pair_by_identifier(&deps, pool_identifier.clone())?;
 
     let res: ReverseSimulationResponse = query_reverse_simulation(
         deps,
@@ -497,13 +327,8 @@ pub fn reverse_simulate_return_amount(
             info: offer_asset_info,
             amount: Uint128::zero(),
         },
+        pool_identifier,
     )?;
 
     Ok(res.offer_amount)
-}
-
-pub fn query_pair_info(deps: &Deps<'_>, asset_infos: &[AssetInfo]) -> StdResult<NPairInfo> {
-    let pair_key = get_pair_key_from_assets(asset_infos, deps).unwrap();
-    let pair_info = PAIRS.load(deps.storage, "".to_string())?;
-    Ok(pair_info)
 }

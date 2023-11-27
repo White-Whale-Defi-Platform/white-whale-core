@@ -1,15 +1,99 @@
+use std::fmt;
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-use white_whale::pool_network::{
+use crate::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
-    router::{SimulateSwapOperationsResponse, SwapOperation, SwapRouteResponse},
+    router::{SimulateSwapOperationsResponse},
 };
 
-use crate::state::NPairInfo;
+
+#[cw_serde]
+pub enum SwapOperation {
+    WhaleSwap {
+        token_in_info: AssetInfo,
+        token_out_info: AssetInfo,
+        pool_identifier: String,
+    },
+}
+
+impl SwapOperation {
+    pub fn get_target_asset_info(&self) -> AssetInfo {
+        match self {
+            SwapOperation::WhaleSwap { token_out_info, .. } => token_out_info.clone(),
+        }
+    }
+}
+
+impl fmt::Display for SwapOperation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SwapOperation::WhaleSwap {
+                token_in_info,
+                token_out_info,
+                pool_identifier,
+            } => write!(
+                f,
+                "WhaleSwap {{ token_in_info: {token_in_info}, token_out_info: {token_out_info}, pool_identifier: {pool_identifier} }}"
+            ),
+            
+        }
+    }
+}
+
+#[cw_serde]
+pub struct SwapRoute {
+    pub offer_asset_info: AssetInfo,
+    pub ask_asset_info: AssetInfo,
+    pub swap_operations: Vec<SwapOperation>,
+}
+
+// Used for all swap routes
+#[cw_serde]
+pub struct SwapRouteResponse {
+    pub offer_asset: String,
+    pub ask_asset: String,
+    pub swap_route: Vec<SwapOperation>,
+}
+
+impl fmt::Display for SwapRoute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SwapRoute {{ offer_asset_info: {}, ask_asset_info: {}, swap_operations: {:?} }}",
+            self.offer_asset_info, self.ask_asset_info, self.swap_operations
+        )
+    }
+}
+
+
+// Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
+#[cw_serde]
+pub enum Fee {
+    Protocol,
+    LiquidityProvider,
+    FlashLoanFees,
+    Custom(String),
+}
+
+// Store PairInfo to N
+// We define a custom struct for which allows for dynamic but defined pairs
+#[cw_serde]
+pub struct NPairInfo {
+    pub asset_infos: Vec<AssetInfo>,
+    pub liquidity_token: AssetInfo,
+    pub asset_decimals: Vec<u8>,
+    pub balances: Vec<Uint128>,
+    pub assets: Vec<Asset>,
+    pub pair_type: PairType,
+    pub pool_fees: PoolFee,
+}
+impl NPairInfo {}
+
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -74,6 +158,7 @@ pub enum QueryMsg {
     Simulation {
         offer_asset: Asset,
         ask_asset: Asset,
+        pair_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
     /// perform the swap.
@@ -81,6 +166,7 @@ pub enum QueryMsg {
     ReverseSimulation {
         ask_asset: Asset,
         offer_asset: Asset,
+        pair_identifier: String,
     },
 
     /// Gets the swap route for the given offer and ask assets.

@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{
-    contract::Cw20HookMsg,
-    liquidity,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::NPairInfo,
-};
+use crate::{contract::Cw20HookMsg, liquidity};
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
+
 use anyhow::{Ok, Result as AnyResult};
 use cosmwasm_std::{
     coin, to_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
@@ -302,7 +299,7 @@ impl TestingSuite {
         native_token_denom: String,
         decimals: u8,
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::AddNativeTokenDecimals {
+        let msg = white_whale::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
             denom: native_token_denom.clone(),
             decimals: decimals,
         };
@@ -334,7 +331,7 @@ impl TestingSuite {
         action: cw_ownable::Action,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::UpdateOwnership(action);
+        let msg = white_whale::pool_manager::ExecuteMsg::UpdateOwnership(action);
 
         result(
             self.app
@@ -353,7 +350,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::ProvideLiquidity {
+        let msg = white_whale::pool_manager::ExecuteMsg::ProvideLiquidity {
             assets,
             pair_identifier,
             slippage_tolerance: None,
@@ -381,7 +378,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::Swap {
+        let msg = white_whale::pool_manager::ExecuteMsg::Swap {
             offer_asset,
             ask_asset,
             belief_price,
@@ -410,7 +407,7 @@ impl TestingSuite {
         pair_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::CreatePair {
+        let msg = white_whale::pool_manager::ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,
             pair_type,
@@ -436,7 +433,7 @@ impl TestingSuite {
         assets: Vec<Asset>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = crate::msg::ExecuteMsg::WithdrawLiquidity {
+        let msg = white_whale::pool_manager::ExecuteMsg::WithdrawLiquidity {
             assets,
             pair_identifier,
         };
@@ -489,7 +486,7 @@ impl TestingSuite {
         let ownership_response: StdResult<cw_ownable::Ownership<String>> =
             self.app.wrap().query_wasm_smart(
                 &self.vault_manager_addr,
-                &crate::msg::QueryMsg::Ownership {},
+                &white_whale::pool_manager::QueryMsg::Ownership {},
             );
 
         result(ownership_response);
@@ -504,7 +501,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &crate::msg::QueryMsg::Pair {
+            &white_whale::pool_manager::QueryMsg::Pair {
                 pair_identifier: pair_identifier,
             },
         );
@@ -526,7 +523,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.vault_manager_addr,
-                &crate::msg::QueryMsg::Pair {
+                &white_whale::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
             )
@@ -566,7 +563,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.vault_manager_addr,
-                &crate::msg::QueryMsg::Pair {
+                &white_whale::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
             )

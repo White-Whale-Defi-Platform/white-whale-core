@@ -20,8 +20,8 @@ use white_whale::pool_network::pair::PoolFee;
 // use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate};
 use crate::error::ContractError;
-use crate::msg::ExecuteMsg;
-use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
+use white_whale::pool_manager::ExecuteMsg;
+use white_whale::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
 
 #[test]
 fn try_native_to_token() {

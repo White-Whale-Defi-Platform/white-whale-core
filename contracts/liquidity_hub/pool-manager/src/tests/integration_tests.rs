@@ -1,6 +1,6 @@
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::NPairInfo;
 use crate::ContractError;
+use white_whale::pool_manager::NPairInfo;
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
 // use crate::tests::suite::SuiteBuilder;
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};

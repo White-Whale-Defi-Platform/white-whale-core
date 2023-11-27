@@ -24,7 +24,7 @@ use white_whale::pool_network::trio::{
 
 use crate::contract::{execute, instantiate, query};
 use crate::error::ContractError;
-use crate::msg::InstantiateMsg as SingleSwapInstantiateMsg;
+use white_whale::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
 use crate::state::{pair_key, PAIRS};
 use test_case::test_case;
 #[cfg(test)]
@@ -38,7 +38,7 @@ mod pair_creation_tests {
         mock_dependencies, mock_dependencies_trio, WasmMockQuerier, WasmMockTrioQuerier,
     };
     // use crate::msg::{AssetInfo, ExecuteMsg, Fee, PairType, PoolFee};
-    use crate::msg::ExecuteMsg;
+    use white_whale::pool_manager::ExecuteMsg;
     use crate::state::{add_allow_native_token};
     use crate::token::InstantiateMsg as TokenInstantiateMsg;
     use cosmwasm_std::attr;
@@ -569,7 +569,7 @@ mod pair_creation_tests {
         )]);
         let asset_infos = NAssets::TWO([asset1, asset2]);
 
-        let msg = crate::msg::ExecuteMsg::CreatePair {
+        let msg = white_whale::pool_manager::ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees: PoolFee {
                 protocol_fee: Fee {

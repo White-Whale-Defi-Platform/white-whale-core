@@ -1,16 +1,16 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Deps, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
+use white_whale::pool_manager::{NPairInfo, SwapOperation};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
 use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
-use white_whale::pool_network::router::SwapOperation;
 
 use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
 // Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
 // pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
 pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
-    "vaults",
+    "pairs",
     PairIndexes {
         lp_asset: UniqueIndex::new(|v| v.liquidity_token.to_string(), "pairs__lp_asset"),
     },
@@ -18,7 +18,7 @@ pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
 
 pub struct PairIndexes<'a> {
     pub lp_asset: UniqueIndex<'a, String, NPairInfo, String>,
-    // pub asset_info: MultiIndex<'a, String, Vault, String>,
+    // pub asset_info: MultiIndex<'a, String, NPairInfo, String>,
 }
 
 impl<'a> IndexList<NPairInfo> for PairIndexes<'a> {
@@ -83,29 +83,6 @@ pub fn add_allow_native_token(
 ) -> StdResult<()> {
     ALLOW_NATIVE_TOKENS.save(storage, denom.as_bytes(), &decimals)
 }
-
-// Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
-#[cw_serde]
-pub enum Fee {
-    Protocol,
-    LiquidityProvider,
-    FlashLoanFees,
-    Custom(String),
-}
-
-// Store PairInfo to N
-// We define a custom struct for which allows for dynamic but defined pairs
-#[cw_serde]
-pub struct NPairInfo {
-    pub asset_infos: Vec<AssetInfo>,
-    pub liquidity_token: AssetInfo,
-    pub asset_decimals: Vec<u8>,
-    pub balances: Vec<Uint128>,
-    pub assets: Vec<Asset>,
-    pub pair_type: PairType,
-    pub pool_fees: PoolFee,
-}
-impl NPairInfo {}
 
 // settings for pagination
 const MAX_LIMIT: u32 = 1000;

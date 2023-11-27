@@ -1,6 +1,8 @@
 use std::error::Error;
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg, StdError};
+use cosmwasm_std::{
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 
 use crate::{
@@ -146,7 +148,7 @@ pub fn provide_liquidity(
 
     let mut pool_assets = pair.assets.clone();
     let mut messages: Vec<CosmosMsg> = vec![];
-    
+
     for (i, pool) in assets.clone().iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
@@ -169,7 +171,7 @@ pub fn provide_liquidity(
     }
 
     // // deduct protocol fee from pools
-    // TODO: Replace with fill rewards msg 
+    // TODO: Replace with fill rewards msg
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
         .load(deps.storage, &pair.liquidity_token.to_string())
         .unwrap_or(vec![]);
@@ -180,9 +182,7 @@ pub fn provide_liquidity(
     }
 
     let liquidity_token = match pair.liquidity_token.clone() {
-        AssetInfo::Token { contract_addr } => {
-            deps.api.addr_validate(&contract_addr)?.to_string()
-        }
+        AssetInfo::Token { contract_addr } => deps.api.addr_validate(&contract_addr)?.to_string(),
         AssetInfo::NativeToken { denom } => denom,
     };
 
@@ -237,8 +237,12 @@ pub fn provide_liquidity(
                 };
 
                 let amount = std::cmp::min(
-                    pool_assets[0].amount.multiply_ratio(total_share, pool_assets[0].amount),
-                    pool_assets[1].amount.multiply_ratio(total_share, pool_assets[1].amount),
+                    pool_assets[0]
+                        .amount
+                        .multiply_ratio(total_share, pool_assets[0].amount),
+                    pool_assets[1]
+                        .amount
+                        .multiply_ratio(total_share, pool_assets[1].amount),
                 );
 
                 let deps_as = [pool_assets[0].amount, pool_assets[1].amount];
@@ -322,7 +326,8 @@ pub fn withdraw_liquidity(
     // Get the ratio of the amount to withdraw to the total share
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
     // Use the ratio to calculate the amount of each pool asset to refund
-    let refund_assets: Result<Vec<Asset>, OverflowError> = pair.assets
+    let refund_assets: Result<Vec<Asset>, OverflowError> = pair
+        .assets
         .iter()
         .map(|pool_asset| {
             // Calc fees and use FillRewards message

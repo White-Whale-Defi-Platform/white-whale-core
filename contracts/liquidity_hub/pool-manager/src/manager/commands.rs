@@ -15,11 +15,12 @@ use crate::{
     token::InstantiateMsg as TokenInstantiateMsg,
 };
 use crate::{
-    state::{Config, NPairInfo as PairInfo, MANAGER_CONFIG, PAIRS},
+    state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::coins;
+use white_whale::pool_manager::NPairInfo as PairInfo;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use white_whale::pool_network::asset::is_factory_token;
 #[cfg(feature = "token_factory")]
@@ -174,14 +175,14 @@ pub fn create_pair(
     // TODO: Add this
     let mut attributes = Vec::<Attribute>::new();
 
-    // Convert all asset_infos into assets with 0 balances 
+    // Convert all asset_infos into assets with 0 balances
     let assets = asset_infos
-    .iter()
-    .map(|asset_info| Asset {
-        info: asset_info.clone(),
-        amount: Uint128::zero(),
-    })
-    .collect::<Vec<_>>();
+        .iter()
+        .map(|asset_info| Asset {
+            info: asset_info.clone(),
+            amount: Uint128::zero(),
+        })
+        .collect::<Vec<_>>();
 
     let pair_creation_msg = if token_factory_lp == true {
         #[cfg(all(

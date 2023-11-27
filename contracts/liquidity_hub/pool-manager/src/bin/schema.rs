@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use pool_manager::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

@@ -123,15 +123,12 @@ pub fn swap(
         messages.push(return_asset.into_msg(receiver.clone())?);
     }
 
-    // State changes to the pairs balances 
+    // State changes to the pairs balances
     // Deduct the return amount from the pool and add the offer amount to the pool
     if offer_asset.info.equal(&pools[0].info) {
-        
         pair_info.assets[0].amount += offer_amount;
         pair_info.assets[1].amount -= swap_computation.return_amount;
         PAIRS.save(deps.storage, pair_identifier, &pair_info)?;
-       
-   
     } else {
         pair_info.assets[1].amount += offer_amount;
         pair_info.assets[0].amount -= swap_computation.return_amount;

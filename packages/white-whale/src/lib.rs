@@ -10,6 +10,7 @@ pub mod pool_network;
 pub mod token_factory;
 pub mod tokenfactory;
 pub mod traits;
+pub mod pool_manager;
 pub mod vault_manager;
 pub mod vault_network;
 pub mod whale_lair;
