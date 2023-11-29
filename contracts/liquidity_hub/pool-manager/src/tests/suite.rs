@@ -5,7 +5,7 @@ use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg}
 
 use anyhow::{Ok, Result as AnyResult};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
+    coin, to_binary, Addr, Coin, Decimal, Deps, Empty, StdResult, Timestamp, Uint128, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{
@@ -490,6 +490,19 @@ impl TestingSuite {
             );
 
         result(ownership_response);
+
+        self
+    }
+
+    pub(crate) fn query_balance(
+        &mut self,
+        addr: String,
+        denom: String,
+        result: impl Fn(StdResult<Coin>),
+    ) -> &mut Self {
+        let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(&addr, denom);
+
+        result(balance_resp);
 
         self
     }

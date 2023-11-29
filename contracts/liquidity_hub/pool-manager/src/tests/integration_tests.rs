@@ -495,12 +495,13 @@ mod swapping {
         ];
 
         // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::from_ratio(1u128, 100_00u128),
             },
             swap_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::from_ratio(1u128, 100_00u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -604,6 +605,165 @@ mod swapping {
                     return_amount.parse::<u128>().unwrap(),
                     "0.002"
                 );
+            },
+        );
+    }
+
+    #[test]
+    fn swap_with_fees() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and uluna
+
+        let asset_infos = vec![
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+        ];
+
+        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Protocol fee is 0.001% and swap fee is 0.002% and burn fee is 0%
+        let fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(2u128, 100_000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        // Create a pair
+        suite
+            .instantiate_with_cw20_lp_token()
+            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
+            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
+            .create_pair(
+                creator.clone(),
+                asset_infos,
+                fees,
+                white_whale::pool_network::asset::PairType::ConstantProduct,
+                false,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add liquidity, 1000 of each token.
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(1000_000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::from(1000_000000u128),
+                },
+            ],
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1000_000000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1000_000000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                }
+            },
+        );
+
+        // Now lets try a swap, max spread is set to 1%
+        // With 1000 of each token and a swap of 10 WHALE
+        // We should expect a return of 9900792 of ULUNA
+        // Applying Fees on the swap:
+        //    - Protocol Fee: 0.001% on uLUNA -> 99.
+        //    - Swap Fee: 0.002% on uLUNA -> 198.
+        // Total Fees: 297 uLUNA
+
+        // Spread Amount: 99,010 uLUNA.
+        // Swap Fee Amount: 198 uLUNA.
+        // Protocol Fee Amount: 99 uLUNA.
+        // Burn Fee Amount: 0 uLUNA (as expected since burn fee is set to 0%).
+        // Total -> 9,900,693 (Returned Amount) + 99,010 (Spread)(0.009x%) + 198 (Swap Fee) + 99 (Protocol Fee) = 10,000,000 uLUNA
+        suite.swap(
+            creator.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::from(10000000u128),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            None,
+            Some(Decimal::percent(1)),
+            None,
+            "whale-uluna".to_string(),
+            vec![coin(10000000u128, "uwhale".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
+                // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
+                // Expect 1000 give or take 0.002 difference
+                // Once fees are added and being deducted properly only the "0.002" should be changed.
+                assert_approx_eq!(
+                    offer_amount.parse::<u128>().unwrap(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.01"
+                );
+            },
+        );
+
+        // Verify fee collection by querying the address of the fee_collector and checking its balance
+        // Should be 297 uLUNA
+        suite.query_balance(
+            suite.whale_lair_addr.to_string(),
+            "uluna".to_string(),
+            |result| {
+                assert_eq!(result.unwrap().amount, Uint128::from(296u128));
             },
         );
     }
