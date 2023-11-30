@@ -15,7 +15,7 @@ pub(crate) fn query_balances(
 ) -> Result<HashMap<Vec<u8>, Uint128>, ContractError> {
     let mut balances = HashMap::new();
 
-    // get balances of all native assets in the contract
+    // get balances of all native assets in the contract, returns all non-zero balances
     let coins = query_all_balances(&deps.querier, contract_address.clone())?;
     for coin in coins {
         let asset_info = AssetInfo::NativeToken {

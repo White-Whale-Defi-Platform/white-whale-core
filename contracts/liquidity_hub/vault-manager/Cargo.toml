@@ -48,5 +48,7 @@ sha2.workspace = true
 cw-multi-test.workspace = true
 whale-lair.workspace = true
 terraswap-token.workspace = true
+terraswap-pair.workspace = true
+fee_collector.workspace = true
 anyhow.workspace = true
 bech32.workspace = true

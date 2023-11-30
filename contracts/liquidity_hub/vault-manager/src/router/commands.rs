@@ -9,6 +9,8 @@ use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
 use white_whale::whale_lair::fill_rewards_msg;
 
 use crate::helpers::{assert_asset, query_balances};
+use white_whale::pool_network::querier::query_balance;
+
 use crate::queries::query_vaults;
 use crate::state::{
     get_vault_by_identifier, CONFIG, MAX_LIMIT, ONGOING_FLASHLOAN, TEMP_BALANCES, VAULTS,
@@ -122,7 +124,7 @@ pub fn after_flashloan(
     let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
 
     // get balances of all assets in the vault
-    let new_balances = query_balances(deps.as_ref(), env.contract.address, &vaults)?;
+    let new_balances = query_balances(deps.as_ref(), env.contract.address.clone(), &vaults)?;
 
     // check that no LP assets where taken during the flashloan. When a native asset is all sent, it
     // disappears from the balance vector, thus we compare the length of the original balances
@@ -130,6 +132,7 @@ pub fn after_flashloan(
     let original_native_assets_count = TEMP_BALANCES
         .keys(deps.storage, None, None, Order::Ascending)
         .count();
+
     if original_native_assets_count > new_balances.len() {
         return Err(ContractError::FlashLoanLoss {});
     }

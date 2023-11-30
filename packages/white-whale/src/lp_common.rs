@@ -4,7 +4,7 @@
     feature = "injective"
 ))]
 use cosmwasm_std::{coins, Coin};
-use cosmwasm_std::{Addr, CosmosMsg, StdResult, Uint128, WasmMsg, to_json_binary};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cfg(any(
     feature = "token_factory",

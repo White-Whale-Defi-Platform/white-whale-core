@@ -12,6 +12,7 @@ use cosmwasm_std::{
 
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
+/// Queries the balance for a native denom for the given account.
 pub fn query_balance(
     querier: &QuerierWrapper,
     account_addr: Addr,
@@ -25,6 +26,7 @@ pub fn query_balance(
     Ok(balance.amount.amount)
 }
 
+/// Queries the balances of all native denom for the given account.
 pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdResult<Vec<Coin>> {
     // load price form the oracle
     let all_balances: AllBalanceResponse =
@@ -34,6 +36,7 @@ pub fn query_all_balances(querier: &QuerierWrapper, account_addr: Addr) -> StdRe
     Ok(all_balances.amount)
 }
 
+/// Queries the balances of a cw20 token for the given account.
 pub fn query_token_balance(
     querier: &QuerierWrapper,
     contract_addr: Addr,
