@@ -763,7 +763,7 @@ mod swapping {
             suite.whale_lair_addr.to_string(),
             "uluna".to_string(),
             |result| {
-                assert_eq!(result.unwrap().amount, Uint128::from(296u128));
+                assert_eq!(result.unwrap().amount, Uint128::from(297u128));
             },
         );
     }

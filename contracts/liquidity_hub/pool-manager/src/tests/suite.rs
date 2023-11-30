@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{contract::Cw20HookMsg, liquidity};
+use white_whale::pool_manager::Cw20HookMsg;
 use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
 
 use anyhow::{Ok, Result as AnyResult};

@@ -1,4 +1,32 @@
-use white_whale::pool_network::pair;
+use std::collections::HashMap;
+
+use cosmwasm_std::{DepsMut, Env, Addr, Uint128, Decimal, Response, StdError, Deps, CosmosMsg, WasmMsg, to_binary, StdResult, Coin, MessageInfo};
+use cw20::Cw20ExecuteMsg;
+use white_whale::{pool_network::{pair, asset::{AssetInfo, Asset}}, pool_manager::{SwapOperation, ExecuteMsg, NPairInfo}};
+
+use crate::{ContractError, state::{MANAGER_CONFIG, get_pair_by_identifier, Config}};
+
+fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
+    let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
+    for operation in operations.iter() {
+        let (offer_asset, ask_asset, pool_identifier) = match operation {
+            SwapOperation::WhaleSwap {
+                token_in_info: offer_asset_info,
+                token_out_info: ask_asset_info,
+                pool_identifier,
+            } => (offer_asset_info.clone(), ask_asset_info.clone(), pool_identifier.clone()),
+        };
+
+        ask_asset_map.remove(&offer_asset.to_string());
+        ask_asset_map.insert(ask_asset.to_string(), true);
+    }
+
+    if ask_asset_map.keys().len() != 1 {
+        return Err(ContractError::MultipleOutputToken {});
+    }
+
+    Ok(())
+}
 
 pub fn execute_swap_operations(
     deps: DepsMut,
@@ -87,9 +115,12 @@ pub fn execute_swap_operation(
             let config: Config = MANAGER_CONFIG.load(deps.as_ref().storage)?;
             let pair_info: NPairInfo = get_pair_by_identifier(
                 &deps.as_ref(),
-                pool_identifier,
+                pool_identifier.clone(),
             )?;
-            let mut offer_asset: Asset; 
+            let mut offer_asset: Asset = Asset {
+                info: token_in_info.clone(),
+                amount: Uint128::zero(),
+            };
             // Return the offer_asset from pair_info.assets that matches token_in_info
             for asset in pair_info.assets {
                 if asset.info.equal(&token_in_info) {
@@ -99,10 +130,10 @@ pub fn execute_swap_operation(
 
             vec![asset_into_swap_msg(
                 deps.as_ref(),
-                Addr::unchecked(pair_info.contract_addr),
+                env.contract.address,
                 offer_asset,
                 token_out_info,
-                pair_identifier,
+                pool_identifier,
                 max_spread,
                 to,
             )?]
@@ -155,7 +186,7 @@ pub fn asset_into_swap_msg(
     }
 }
 
-fn assert_minimum_receive(
+pub fn assert_minimum_receive(
     deps: Deps,
     asset_info: AssetInfo,
     prev_balance: Uint128,

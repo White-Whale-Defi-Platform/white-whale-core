@@ -3,7 +3,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, Uint128,
+    StdResult, Uint128, Api,
 };
 use cw20::Cw20ReceiveMsg;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -13,8 +13,8 @@ use white_whale::pool_network::pair::{self, FeatureToggle};
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
-use crate::{liquidity, manager, queries, swap};
-use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::{liquidity, manager, queries, swap, router};
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg, Cw20HookMsg};
 /*
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pool-manager";
@@ -148,21 +148,67 @@ pub fn execute(
             )
         }
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
+        ExecuteMsg::AssertMinimumReceive { asset_info, prev_balance, minimum_receive, receiver } => {
+            router::commands::assert_minimum_receive(
+                deps.as_ref(),
+                asset_info,
+                prev_balance,
+                minimum_receive,
+                deps.api.addr_validate(&receiver)?,
+            )
+            
+        },
+        ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive,
+            to,
+            max_spread,
+        } => {
+            let api = deps.api;
+            router::commands::execute_swap_operations(
+                deps,
+                env,
+                info.sender,
+                operations,
+                minimum_receive,
+                optional_addr_validate(api, to)?,
+                max_spread,
+            )
+        }
+        ExecuteMsg::ExecuteSwapOperation {
+            operation,
+            to,
+            max_spread,
+        } => {
+            let api = deps.api;
+            router::commands::execute_swap_operation(
+                deps,
+                env,
+                info,
+                operation,
+                optional_addr_validate(api, to)?.map(|v| v.to_string()),
+                max_spread,
+            )
+        }
+        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+            Ok(Response::new())
+        }
     }
 }
 
-#[cw_serde]
-pub enum Cw20HookMsg {
-    /// Sell a given amount of asset
-    Swap {
-        ask_asset: AssetInfo,
-        belief_price: Option<Decimal>,
-        max_spread: Option<Decimal>,
-        to: Option<String>,
-        pair_identifier: String,
-    },
-    /// Withdraws liquidity
-    WithdrawLiquidity { pair_identifier: String },
+
+// Came from router can probably go 
+fn optional_addr_validate(
+    api: &dyn Api,
+    addr: Option<String>,
+) -> Result<Option<Addr>, ContractError> {
+    let addr = if let Some(addr) = addr {
+        Some(api.addr_validate(&addr)?)
+    } else {
+        None
+    };
+
+    Ok(addr)
 }
 
 /// Receives cw20 tokens. Used to swap and withdraw from the pool.

@@ -32,6 +32,17 @@ pub enum ContractError {
     #[error("The provided assets are both the same")]
     SameAsset {},
 
+    #[error("Invalid operations; multiple output token")]
+    MultipleOutputToken {},
+
+    #[error(
+        "Assertion failed; minimum receive amount: {minimum_receive}, swap amount: {swap_amount}"
+    )]
+    MinimumReceiveAssertion {
+        minimum_receive: Uint128,
+        swap_amount: Uint128,
+    },
+
     #[error(
         "The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault"
     )]
