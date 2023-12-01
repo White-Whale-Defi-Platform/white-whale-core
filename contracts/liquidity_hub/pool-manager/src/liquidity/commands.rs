@@ -37,52 +37,6 @@ use white_whale::pool_network::{
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
-fn get_pair_key_from_assets(
-    assets: &[AssetInfo],
-    deps: &DepsMut<'_>,
-) -> Result<Vec<u8>, ContractError> {
-    let raw_infos: Vec<AssetInfoRaw> = assets
-        .iter()
-        .map(|asset| asset.to_raw(deps.api))
-        .collect::<Result<_, _>>()?;
-    let pair_key = pair_key(&raw_infos);
-    Ok(pair_key)
-}
-
-// ProvideLiquidity works based on two patterns so far and eventually 3.
-// Constant Product which is used for 2 assets
-// StableSwap which is used for 3 assets
-// Eventually concentrated liquidity will be offered but this can be assume to all be done in a well documented module we call into
-
-fn get_pools_and_deposits(
-    assets: &[Asset],
-    deps: &DepsMut,
-    env: &Env,
-) -> Result<(Vec<Asset>, Vec<Uint128>), ContractError> {
-    let mut pools = Vec::new();
-    let mut deposits = Vec::new();
-
-    for asset in assets.iter() {
-        let amount =
-            asset
-                .info
-                .query_balance(&deps.querier, deps.api, env.contract.address.clone())?;
-        pools.push(Asset {
-            info: asset.info.clone(),
-            amount,
-        });
-        deposits.push(
-            assets
-                .iter()
-                .find(|a| a.info.equal(&pools.last().unwrap().info))
-                .map(|a| a.amount)
-                .expect("Wrong asset info is given"),
-        );
-    }
-
-    Ok((pools, deposits))
-}
-
 /// Gets the protocol fee amount for the given asset_id
 pub fn get_protocol_fee_for_asset(
     collected_protocol_fees: Vec<Asset>,
@@ -99,28 +53,6 @@ pub fn get_protocol_fee_for_asset(
     } else {
         Uint128::zero()
     }
-}
-
-/// Builds a CW20 transfer message
-/// recipient: the address of the recipient
-/// token_contract_address: the address of the CW20 contract
-/// amount: the amount of tokens to transfer
-/// returns a CosmosMsg::Wasm(WasmMsg::Execute) message
-/// to transfer CW20 tokens
-///
-pub fn build_transfer_cw20_token_msg(
-    recipient: Addr,
-    token_contract_address: String,
-    amount: Uint128,
-) -> StdResult<CosmosMsg> {
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: token_contract_address,
-        msg: to_binary(&Cw20ExecuteMsg::Transfer {
-            recipient: recipient.into(),
-            amount,
-        })?,
-        funds: vec![],
-    }))
 }
 
 pub fn provide_liquidity(

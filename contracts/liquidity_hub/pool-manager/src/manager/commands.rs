@@ -161,18 +161,7 @@ pub fn create_pair(
         .map(|asset| asset.to_owned().get_label(&deps.as_ref()))
         .collect::<Result<Vec<_>, _>>()?
         .join("-");
-    // Convert asset_infos_vec into the type [AssetInfo; 2] to avoid the error expected array `[AssetInfo; 2]`
-    //   found struct `std::vec::Vec<AssetInfo>`
-    // Now instead of sending a SubMsg to create the pair we can just call the instantiate function for an LP token
-    // and save the info in PAIRS using pairkey as the key
-    let asset_labels: Result<Vec<String>, _> = asset_infos
-        .iter()
-        .map(|asset| asset.clone().get_label(&deps.as_ref()))
-        .collect();
 
-    let asset_label = asset_labels?.join("-"); // Handle the error if needed
-    let _lp_token_name = format!("{}-LP", asset_label);
-    // TODO: Add this
     let mut attributes = Vec::<Attribute>::new();
 
     // Convert all asset_infos into assets with 0 balances
@@ -192,7 +181,7 @@ pub fn create_pair(
         ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
 
-        let lp_symbol = format!("{asset_label}.vault.{identifier}.{LP_SYMBOL}");
+        let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };
 
@@ -228,7 +217,7 @@ pub fn create_pair(
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
             "{}{}{}{}",
-            asset_label,
+            pair_label,
             identifier,
             info.sender.into_string(),
             env.block.height
@@ -247,7 +236,6 @@ pub fn create_pair(
         };
         // Now, after generating an address using instantiate 2 we can save this into PAIRS
         // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
-        println!("Before save {}", lp_asset.clone());
 
         PAIRS.save(
             deps.storage,
@@ -265,7 +253,7 @@ pub fn create_pair(
 
         attributes.push(attr("lp_asset", lp_asset.to_string()));
 
-        let lp_token_name = format!("{asset_label}-LP");
+        let lp_token_name = format!("{pair_label}-LP");
 
         Ok::<CosmosMsg, ContractError>(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
             admin: None,
@@ -300,7 +288,6 @@ pub fn create_pair(
     attributes.push(attr("pair_type", pair_type.get_label()));
     attributes.push(attr("pair_identifier", identifier.as_str()));
 
-    // TODO: We need to store the lp addr before exiting
     Ok(Response::new()
         .add_attributes(attributes)
         .add_messages(messages))

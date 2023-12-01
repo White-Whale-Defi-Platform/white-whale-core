@@ -468,6 +468,253 @@ mod pair_creation_failures {
     }
 }
 
+
+mod router {
+    use super::*;
+    #[test]
+    fn basic_swap_operations_test() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and uluna
+
+        let first_pair = vec![
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+        ];
+
+        let second_pair = vec![
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            },
+        ];
+
+        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
+        let fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        // Create a pair
+        suite
+            .instantiate_with_cw20_lp_token()
+            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
+            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
+            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
+
+            .create_pair(
+                creator.clone(),
+                first_pair,
+                fees.clone(),
+                white_whale::pool_network::asset::PairType::ConstantProduct,
+                false,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pair(
+                creator.clone(),
+                second_pair,
+                fees,
+                white_whale::pool_network::asset::PairType::ConstantProduct,
+                false,
+                Some("uluna-uusd".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                }
+            },
+        );
+
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "uluna-uusd".to_string(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uusd".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            vec![
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                }
+            },
+        );
+
+        // Prepare teh swap operations, we want to go from WHALE -> UUSD
+        // We will use the uluna-uusd pair as the intermediary
+        // use this type white_whale::pool_manager::SwapOperation
+       
+        let swap_operations = vec![
+            white_whale::pool_manager::SwapOperation::WhaleSwap { 
+                token_in_info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                token_out_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                pool_identifier: "whale-uluna".to_string(),
+             },
+             white_whale::pool_manager::SwapOperation::WhaleSwap { 
+                token_in_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                token_out_info: AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                pool_identifier: "uluna-uusd".to_string(),
+             }
+        ];
+
+        suite.execute_swap_operations(
+            creator.clone(), swap_operations, None, None, None,vec![coin(1000u128, "uwhale".to_string())], |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                // assert_ne!(true,true);
+            });
+                
+            
+        // // Now lets try a swap
+        // suite.swap(
+        //     creator.clone(),
+        //     Asset {
+        //         info: AssetInfo::NativeToken {
+        //             denom: "uwhale".to_string(),
+        //         },
+        //         amount: Uint128::from(1000u128),
+        //     },
+        //     AssetInfo::NativeToken {
+        //         denom: "uluna".to_string(),
+        //     },
+        //     None,
+        //     None,
+        //     None,
+        //     "whale-uluna".to_string(),
+        //     vec![coin(1000u128, "uwhale".to_string())],
+        //     |result| {
+        //         // Find the key with 'offer_amount' and the key with 'return_amount'
+        //         // Ensure that the offer amount is 1000 and the return amount is greater than 0
+        //         let mut return_amount = String::new();
+        //         let mut offer_amount = String::new();
+
+        //         for event in result.unwrap().events {
+        //             if event.ty == "wasm" {
+        //                 for attribute in event.attributes {
+        //                     match attribute.key.as_str() {
+        //                         "return_amount" => return_amount = attribute.value,
+        //                         "offer_amount" => offer_amount = attribute.value,
+        //                         _ => {}
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
+        //         // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
+        //         // Expect 1000 give or take 0.002 difference
+        //         // Once fees are added and being deducted properly only the "0.002" should be changed.
+        //         assert_approx_eq!(
+        //             offer_amount.parse::<u128>().unwrap(),
+        //             return_amount.parse::<u128>().unwrap(),
+        //             "0.002"
+        //         );
+        //     },
+        // );
+    }
+}
+
 mod swapping {
     use cosmwasm_std::assert_approx_eq;
 

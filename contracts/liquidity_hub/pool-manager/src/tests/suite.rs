@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use white_whale::pool_manager::Cw20HookMsg;
+use white_whale::pool_manager::{Cw20HookMsg, SwapOperation};
 use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
 
 use anyhow::{Ok, Result as AnyResult};
@@ -386,6 +386,27 @@ impl TestingSuite {
             to,
             pair_identifier,
         };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn execute_swap_operations(
+        &mut self,
+        sender: Addr,
+        operations: Vec<SwapOperation>,
+        minimum_receive: Option<Uint128>,
+        to: Option<String>,
+        max_spread: Option<Decimal>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
 
         result(
             self.app
