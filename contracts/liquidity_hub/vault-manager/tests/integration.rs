@@ -536,6 +536,24 @@ fn deposit_withdraw() {
                 }
             },
         )
+        .withdraw(
+            other.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "factory/another_creator/uLP".to_string(),
+                },
+                amount: Uint128::new(2_000u128),
+            },
+            vec![coin(2_000u128, "factory/another_creator/uLP".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::NonExistentVault { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::NonExistentVault"),
+                }
+            },
+        )
         .update_config(
             creator.clone(),
             None,
@@ -1501,6 +1519,41 @@ pub fn unsuccessful_flashloan() {
                 match err {
                     ContractError::FlashLoanLoss { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::FlashLoanLoss"),
+                }
+            },
+        )
+        .flashloan(
+            other.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::new(50_000),
+            },
+            "whale_vault".to_string(),
+            vec![
+                // try to drain the cw20 token vault
+                CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: vault_manager.clone().to_string(),
+                    msg: to_json_binary(&white_whale::vault_manager::ExecuteMsg::Deposit {
+                        asset: Asset {
+                            info: AssetInfo::NativeToken {
+                                denom: "uwhale".to_string(),
+                            },
+                            amount: Uint128::new(50_000),
+                        },
+                        vault_identifier: "whale_vault".to_string(),
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }),
+            ],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
                 }
             },
         )

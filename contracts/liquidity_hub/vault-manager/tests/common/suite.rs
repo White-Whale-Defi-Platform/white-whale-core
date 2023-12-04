@@ -1,8 +1,9 @@
 use cosmwasm_std::{
     coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64,
+    WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
-use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, WasmKeeper};
+use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, Wasm, WasmKeeper};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::pair::ExecuteMsg::{ProvideLiquidity, Swap};
@@ -438,7 +439,14 @@ impl TestingSuite {
                 ));
             }
             AssetInfo::NativeToken { .. } => {
-                unimplemented!()
+                let msg = white_whale::vault_manager::ExecuteMsg::Withdraw {};
+
+                let vault_manager = self.vault_manager_addr.clone();
+
+                result(
+                    self.app
+                        .execute_contract(sender, vault_manager, &msg, &funds),
+                );
             }
         }
 
@@ -577,6 +585,7 @@ impl TestingSuite {
 
         self
     }
+
     #[track_caller]
     pub(crate) fn query_balance(
         &mut self,
