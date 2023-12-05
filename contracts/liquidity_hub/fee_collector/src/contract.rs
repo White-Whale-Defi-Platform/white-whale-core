@@ -111,7 +111,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CollectFees { collect_fees_for } => {
-            commands::collect_fees(deps, info, env, collect_fees_for)
+            commands::collect_fees(deps, collect_fees_for)
         }
         ExecuteMsg::UpdateConfig {
             owner,

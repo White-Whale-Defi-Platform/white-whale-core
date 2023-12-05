@@ -19,19 +19,7 @@ use crate::ContractError;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
-pub fn collect_fees(
-    deps: DepsMut,
-    info: MessageInfo,
-    env: Env,
-    collect_fees_for: FeesFor,
-) -> Result<Response, ContractError> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    // only the owner or the contract itself can aggregate the fees
-    if info.sender != config.owner && info.sender != env.contract.address {
-        return Err(ContractError::Unauthorized {});
-    }
-
+pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response, ContractError> {
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
     match collect_fees_for {
