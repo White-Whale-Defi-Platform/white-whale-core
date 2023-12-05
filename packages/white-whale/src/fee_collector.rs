@@ -10,12 +10,9 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
     /// Collects protocol fees based on the configuration indicated by [FeesFor]
     CollectFees { collect_fees_for: FeesFor },
-    /// Swaps the assets (fees) sitting in the fee collector into the given [AssetInfo] if possible.
-    /// A [SwapRoute] should be available at the router to be able to make the swaps.
-    AggregateFees {
-        asset_info: AssetInfo,
-        aggregate_fees_for: FeesFor,
-    },
+    /// Swaps the assets (fees) sitting in the fee collector into the distribution asset set by the
+    /// fee collector. A [SwapRoute] should be available at the router to be able to make the swaps.
+    AggregateFees { aggregate_fees_for: FeesFor },
     /// Forward fees to the fee distributor. This will collect and aggregate the fees, to send them back to the fee distributor.
     ForwardFees {
         epoch: Epoch,

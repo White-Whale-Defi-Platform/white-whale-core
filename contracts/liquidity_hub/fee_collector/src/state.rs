@@ -6,7 +6,7 @@ use white_whale::pool_network::asset::AssetInfo;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");
-pub const TMP_EPOCH: Item<(Epoch, AssetInfo)> = Item::new("tmp_epoch");
+pub const TMP_EPOCH: Item<Epoch> = Item::new("tmp_epoch");
 
 pub fn store_temporal_asset_info(deps: DepsMut, asset_info: AssetInfo) -> StdResult<()> {
     let key = asset_info

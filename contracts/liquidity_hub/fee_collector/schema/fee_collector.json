@@ -35,7 +35,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Swaps the assets (fees) sitting in the fee collector into the given [AssetInfo] if possible. A [SwapRoute] should be available at the router to be able to make the swaps.",
+        "description": "Swaps the assets (fees) sitting in the fee collector into the distribution asset set by the fee collector. A [SwapRoute] should be available at the router to be able to make the swaps.",
         "type": "object",
         "required": [
           "aggregate_fees"
@@ -44,15 +44,11 @@
           "aggregate_fees": {
             "type": "object",
             "required": [
-              "aggregate_fees_for",
-              "asset_info"
+              "aggregate_fees_for"
             ],
             "properties": {
               "aggregate_fees_for": {
                 "$ref": "#/definitions/FeesFor"
-              },
-              "asset_info": {
-                "$ref": "#/definitions/AssetInfo"
               }
             },
             "additionalProperties": false

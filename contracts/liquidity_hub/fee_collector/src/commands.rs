@@ -13,6 +13,7 @@ use white_whale::pool_network::router::SwapOperation;
 use white_whale::vault_network::vault_factory::VaultsResponse;
 
 use crate::contract::{FEES_AGGREGATION_REPLY_ID, FEES_COLLECTION_REPLY_ID};
+use crate::queries::query_distribution_asset;
 use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, CONFIG, TMP_EPOCH};
 use crate::ContractError;
 
@@ -171,21 +172,12 @@ pub fn update_config(
 pub fn aggregate_fees(
     mut deps: DepsMut,
     env: Env,
-    mut ask_asset_info: AssetInfo,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
-    // query fee collector
-    let fee_distributor_config: white_whale::fee_distributor::Config =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: config.fee_distributor.to_string(),
-            msg: to_binary(&white_whale::fee_distributor::QueryMsg::Config {})?,
-        }))?;
-
-    // This was done in order to make this function permissionless so anyone can trigger the fee aggregation
-    // The signature for `ExecuteMsg::AggregateFees` was kept the same to avoid migrating multiple contracts
-    ask_asset_info = fee_distributor_config.distribution_asset;
+    // query fee collector to get the distribution asset
+    let ask_asset_info = query_distribution_asset(deps.as_ref())?;
 
     let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
 
@@ -340,7 +332,6 @@ pub fn forward_fees(
     info: MessageInfo,
     env: Env,
     epoch: Epoch,
-    forward_fees_as: AssetInfo,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -397,7 +388,6 @@ pub fn forward_fees(
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::AggregateFees {
-                asset_info: forward_fees_as.clone(),
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
@@ -417,7 +407,6 @@ pub fn forward_fees(
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::AggregateFees {
-                asset_info: forward_fees_as.clone(),
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {
@@ -437,7 +426,7 @@ pub fn forward_fees(
     messages.push(pools_fee_aggregation_msg);
 
     // saving the epoch and the asset info to forward the fees as in temp storage
-    TMP_EPOCH.save(deps.storage, &(epoch, forward_fees_as))?;
+    TMP_EPOCH.save(deps.storage, &epoch)?;
 
     Ok(Response::new()
         .add_attribute("action", "forward_fees")
