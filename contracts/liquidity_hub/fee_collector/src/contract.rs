@@ -128,7 +128,7 @@ pub fn execute(
         ExecuteMsg::AggregateFees {
             asset_info,
             aggregate_fees_for,
-        } => commands::aggregate_fees(deps, info, env, asset_info, aggregate_fees_for),
+        } => commands::aggregate_fees(deps, env, asset_info, aggregate_fees_for),
         ExecuteMsg::ForwardFees {
             epoch,
             forward_fees_as,

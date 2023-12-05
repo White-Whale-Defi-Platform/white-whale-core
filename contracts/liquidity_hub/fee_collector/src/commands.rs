@@ -170,17 +170,22 @@ pub fn update_config(
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
     mut deps: DepsMut,
-    info: MessageInfo,
     env: Env,
-    ask_asset_info: AssetInfo,
+    mut ask_asset_info: AssetInfo,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
-    // only the owner or the contract itself can aggregate the fees
-    if info.sender != config.owner && info.sender != env.contract.address {
-        return Err(ContractError::Unauthorized {});
-    }
+    // query fee collector
+    let fee_distributor_config: white_whale::fee_distributor::Config =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: config.fee_distributor.to_string(),
+            msg: to_binary(&white_whale::fee_distributor::QueryMsg::Config {})?,
+        }))?;
+
+    // This was done in order to make this function permissionless so anyone can trigger the fee aggregation
+    // The signature for `ExecuteMsg::AggregateFees` was kept the same to avoid migrating multiple contracts
+    ask_asset_info = fee_distributor_config.distribution_asset;
 
     let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
 
