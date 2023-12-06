@@ -644,53 +644,15 @@ mod router {
              }
         ];
 
-        suite.execute_swap_operations(
-            creator.clone(), swap_operations, None, None, None,vec![coin(1000u128, "uwhale".to_string())], |result| {
-                // Find the key with 'offer_amount' and the key with 'return_amount'
-                // Ensure that the offer amount is 1000 and the return amount is greater than 0
-                let mut return_amount = String::new();
-                let mut offer_amount = String::new();
-
-                for event in result.unwrap().events {
-                    println!("{:?}", event);
-                    if event.ty == "wasm" {
-                        for attribute in event.attributes {
-                            match attribute.key.as_str() {
-                                "return_amount" => return_amount = attribute.value,
-                                "offer_amount" => offer_amount = attribute.value,
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-                // assert_ne!(true,true);
-            });
-                
-            
-        // // Now lets try a swap
-        // suite.swap(
-        //     creator.clone(),
-        //     Asset {
-        //         info: AssetInfo::NativeToken {
-        //             denom: "uwhale".to_string(),
-        //         },
-        //         amount: Uint128::from(1000u128),
-        //     },
-        //     AssetInfo::NativeToken {
-        //         denom: "uluna".to_string(),
-        //     },
-        //     None,
-        //     None,
-        //     None,
-        //     "whale-uluna".to_string(),
-        //     vec![coin(1000u128, "uwhale".to_string())],
-        //     |result| {
+        // suite.execute_swap_operations(
+        //     creator.clone(), swap_operations, None, None, None,vec![coin(1000u128, "uwhale".to_string())], |result| {
         //         // Find the key with 'offer_amount' and the key with 'return_amount'
         //         // Ensure that the offer amount is 1000 and the return amount is greater than 0
         //         let mut return_amount = String::new();
         //         let mut offer_amount = String::new();
 
         //         for event in result.unwrap().events {
+        //             println!("{:?}", event);
         //             if event.ty == "wasm" {
         //                 for attribute in event.attributes {
         //                     match attribute.key.as_str() {
@@ -701,17 +663,11 @@ mod router {
         //                 }
         //             }
         //         }
-        //         // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
-        //         // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
-        //         // Expect 1000 give or take 0.002 difference
-        //         // Once fees are added and being deducted properly only the "0.002" should be changed.
-        //         assert_approx_eq!(
-        //             offer_amount.parse::<u128>().unwrap(),
-        //             return_amount.parse::<u128>().unwrap(),
-        //             "0.002"
-        //         );
-        //     },
-        // );
+        //         // assert_ne!(true,true);
+        //     });
+                
+            
+       
     }
 }
 
@@ -767,6 +723,228 @@ mod swapping {
                 asset_infos,
                 fees,
                 white_whale::pool_network::asset::PairType::ConstantProduct,
+                false,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1000000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                }
+            },
+        );
+        let simulated_return_amount = RefCell::new(Uint128::zero());
+        suite.query_simulation("whale-uluna".to_string(), Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            amount: Uint128::from(1000u128),
+        }, 
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        }, |result| {
+            println!("{:?}", result);
+            *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
+        });
+
+        // Now lets try a swap
+        suite.swap(
+            creator.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+                amount: Uint128::from(1000u128),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+            None,
+            None,
+            None,
+            "whale-uluna".to_string(),
+            vec![coin(1000u128, "uwhale".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
+                // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
+                // Expect 1000 give or take 0.002 difference
+                // Once fees are added and being deducted properly only the "0.002" should be changed.
+                assert_approx_eq!(
+                    offer_amount.parse::<u128>().unwrap(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+                assert_approx_eq!(
+                    simulated_return_amount.borrow().u128(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+                
+            },
+        );
+
+        let simulated_offer_amount = RefCell::new(Uint128::zero());
+        suite.query_reverse_simulation("whale-uluna".to_string(), 
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            amount: Uint128::from(1000u128),
+        }
+        , |result| {
+            println!("{:?}", result);
+            *simulated_offer_amount.borrow_mut() = result.unwrap().offer_amount;
+        });
+        // Another swap but this time the other way around
+        // Now lets try a swap
+        suite.swap(
+            creator.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                amount: Uint128::from(simulated_offer_amount.borrow().u128()),
+            },
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            None,
+            None,
+            None,
+            "whale-uluna".to_string(),
+            vec![coin(simulated_offer_amount.borrow().u128(), "uluna".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                assert_approx_eq!(
+                    simulated_offer_amount.borrow().u128(),
+                    offer_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+
+                assert_approx_eq!(
+                    1000u128,
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.003"
+                );
+                
+            },
+        );
+    }
+
+
+    #[test]
+    fn basic_swapping_test_stable_swap() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and uluna
+
+        let asset_infos = vec![
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            AssetInfo::NativeToken {
+                denom: "uluna".to_string(),
+            },
+        ];
+
+        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
+        let fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        // Create a pair
+        suite
+            .instantiate_with_cw20_lp_token()
+            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
+            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
+            .create_pair(
+                creator.clone(),
+                asset_infos,
+                fees,
+                white_whale::pool_network::asset::PairType::StableSwap { amp: 100 },
                 false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],

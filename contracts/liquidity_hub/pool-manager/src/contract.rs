@@ -147,48 +147,48 @@ pub fn execute(
             )
         }
         ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        ExecuteMsg::AssertMinimumReceive { asset_info, prev_balance, minimum_receive, receiver } => {
-            router::commands::assert_minimum_receive(
-                deps.as_ref(),
-                asset_info,
-                prev_balance,
-                minimum_receive,
-                deps.api.addr_validate(&receiver)?,
-            )
+        // ExecuteMsg::AssertMinimumReceive { asset_info, prev_balance, minimum_receive, receiver } => {
+        //     router::commands::assert_minimum_receive(
+        //         deps.as_ref(),
+        //         asset_info,
+        //         prev_balance,
+        //         minimum_receive,
+        //         deps.api.addr_validate(&receiver)?,
+        //     )
             
-        },
-        ExecuteMsg::ExecuteSwapOperations {
-            operations,
-            minimum_receive,
-            to,
-            max_spread,
-        } => {
-            let api = deps.api;
-            router::commands::execute_swap_operations(
-                deps,
-                env,
-                info.sender,
-                operations,
-                minimum_receive,
-                optional_addr_validate(api, to)?,
-                max_spread,
-            )
-        }
-        ExecuteMsg::ExecuteSwapOperation {
-            operation,
-            to,
-            max_spread,
-        } => {
-            let api = deps.api;
-            router::commands::execute_swap_operation(
-                deps,
-                env,
-                info,
-                operation,
-                optional_addr_validate(api, to)?.map(|v| v.to_string()),
-                max_spread,
-            )
-        }
+        // },
+        // ExecuteMsg::ExecuteSwapOperations {
+        //     operations,
+        //     minimum_receive,
+        //     to,
+        //     max_spread,
+        // } => {
+        //     let api = deps.api;
+        //     router::commands::execute_swap_operations(
+        //         deps,
+        //         env,
+        //         info.sender,
+        //         operations,
+        //         minimum_receive,
+        //         optional_addr_validate(api, to)?,
+        //         max_spread,
+        //     )
+        // }
+        // ExecuteMsg::ExecuteSwapOperation {
+        //     operation,
+        //     to,
+        //     max_spread,
+        // } => {
+        //     let api = deps.api;
+        //     router::commands::execute_swap_operation(
+        //         deps,
+        //         env,
+        //         info,
+        //         operation,
+        //         optional_addr_validate(api, to)?.map(|v| v.to_string()),
+        //         max_spread,
+        //     )
+        // }
         ExecuteMsg::AddSwapRoutes { swap_routes: _ } => {
             Ok(Response::new())
         }
@@ -306,21 +306,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             offer_asset,
             pair_identifier,
         )?)?),
-        QueryMsg::SimulateSwapOperations {
-            offer_amount,
-            operations,
-        } => Ok(to_binary(&queries::simulate_swap_operations(
-            deps,
-            env,
-            offer_amount,
-            operations,
-        )?)?),
-        QueryMsg::ReverseSimulateSwapOperations {
-            ask_amount,
-            operations,
-        } => Ok(to_binary(&queries::reverse_simulate_swap_operations(
-            deps, env, ask_amount, operations,
-        )?)?),
+        // QueryMsg::SimulateSwapOperations {
+        //     offer_amount,
+        //     operations,
+        // } => Ok(to_binary(&queries::simulate_swap_operations(
+        //     deps,
+        //     env,
+        //     offer_amount,
+        //     operations,
+        // )?)?),
+        // QueryMsg::ReverseSimulateSwapOperations {
+        //     ask_amount,
+        //     operations,
+        // } => Ok(to_binary(&queries::reverse_simulate_swap_operations(
+        //     deps, env, ask_amount, operations,
+        // )?)?),
         QueryMsg::SwapRoute {
             offer_asset_info,
             ask_asset_info,

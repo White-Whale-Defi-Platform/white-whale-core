@@ -221,104 +221,105 @@ pub fn get_swap_route(
         })
 }
 
-pub fn simulate_swap_operations(
-    deps: Deps,
-    env: Env,
-    offer_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
+// TODO: May need to remove this for a new implementation, router swap operation queries 
+// pub fn simulate_swap_operations(
+//     deps: Deps,
+//     env: Env,
+//     offer_amount: Uint128,
+//     operations: Vec<SwapOperation>,
+// ) -> Result<SimulateSwapOperationsResponse, ContractError> {
+//     let operations_len = operations.len();
+//     if operations_len == 0 {
+//         return Err(ContractError::NoSwapOperationsProvided {});
+//     }
 
-    let mut offer_amount = offer_amount;
-    for operation in operations.into_iter() {
-        match operation {
-            SwapOperation::WhaleSwap {
-                token_in_info,
-                token_out_info,
-                pool_identifier,
-            } => {
-                let res: SimulationResponse = query_simulation(
-                    deps,
-                    env.clone(),
-                    Asset {
-                        info: token_in_info,
-                        amount: offer_amount,
-                    },
-                    Asset {
-                        info: token_out_info,
-                        amount: Uint128::zero(),
-                    },
-                    pool_identifier,
-                )?;
+//     let mut offer_amount = offer_amount;
+//     for operation in operations.into_iter() {
+//         match operation {
+//             SwapOperation::WhaleSwap {
+//                 token_in_info,
+//                 token_out_info,
+//                 pool_identifier,
+//             } => {
+//                 let res: SimulationResponse = query_simulation(
+//                     deps,
+//                     env.clone(),
+//                     Asset {
+//                         info: token_in_info,
+//                         amount: offer_amount,
+//                     },
+//                     Asset {
+//                         info: token_out_info,
+//                         amount: Uint128::zero(),
+//                     },
+//                     pool_identifier,
+//                 )?;
 
-                offer_amount = res.return_amount;
-            }
-        }
-    }
+//                 offer_amount = res.return_amount;
+//             }
+//         }
+//     }
 
-    Ok(SimulateSwapOperationsResponse {
-        amount: offer_amount,
-    })
-}
+//     Ok(SimulateSwapOperationsResponse {
+//         amount: offer_amount,
+//     })
+// }
 
-pub fn reverse_simulate_swap_operations(
-    deps: Deps,
-    env: Env,
-    ask_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
+// pub fn reverse_simulate_swap_operations(
+//     deps: Deps,
+//     env: Env,
+//     ask_amount: Uint128,
+//     operations: Vec<SwapOperation>,
+// ) -> Result<SimulateSwapOperationsResponse, ContractError> {
+//     let operations_len = operations.len();
+//     if operations_len == 0 {
+//         return Err(ContractError::NoSwapOperationsProvided {});
+//     }
 
-    let mut ask_amount = ask_amount;
-    for operation in operations.into_iter().rev() {
-        ask_amount = match operation {
-            SwapOperation::WhaleSwap {
-                token_in_info: offer_asset_info,
-                token_out_info: ask_asset_info,
-                pool_identifier,
-            } => reverse_simulate_return_amount(
-                deps,
-                env.clone(),
-                ask_amount,
-                offer_asset_info,
-                ask_asset_info,
-                pool_identifier,
-            )?,
-        }
-    }
+//     let mut ask_amount = ask_amount;
+//     for operation in operations.into_iter().rev() {
+//         ask_amount = match operation {
+//             SwapOperation::WhaleSwap {
+//                 token_in_info: offer_asset_info,
+//                 token_out_info: ask_asset_info,
+//                 pool_identifier,
+//             } => reverse_simulate_return_amount(
+//                 deps,
+//                 env.clone(),
+//                 ask_amount,
+//                 offer_asset_info,
+//                 ask_asset_info,
+//                 pool_identifier,
+//             )?,
+//         }
+//     }
 
-    Ok(SimulateSwapOperationsResponse { amount: ask_amount })
-}
+//     Ok(SimulateSwapOperationsResponse { amount: ask_amount })
+// }
 
-pub fn reverse_simulate_return_amount(
-    deps: Deps,
-    env: Env,
-    _ask_amount: Uint128,
-    offer_asset_info: AssetInfo,
-    ask_asset_info: AssetInfo,
-    pool_identifier: String,
-) -> Result<Uint128, ContractError> {
-    let _pair_info = get_pair_by_identifier(&deps, pool_identifier.clone())?;
+// pub fn reverse_simulate_return_amount(
+//     deps: Deps,
+//     env: Env,
+//     _ask_amount: Uint128,
+//     offer_asset_info: AssetInfo,
+//     ask_asset_info: AssetInfo,
+//     pool_identifier: String,
+// ) -> Result<Uint128, ContractError> {
+//     let _pair_info = get_pair_by_identifier(&deps, pool_identifier.clone())?;
 
-    let res: ReverseSimulationResponse = query_reverse_simulation(
-        deps,
-        env,
-        Asset {
-            info: ask_asset_info,
-            amount: Uint128::zero(),
-        },
-        Asset {
-            info: offer_asset_info,
-            amount: Uint128::zero(),
-        },
-        pool_identifier,
-    )?;
+//     let res: ReverseSimulationResponse = query_reverse_simulation(
+//         deps,
+//         env,
+//         Asset {
+//             info: ask_asset_info,
+//             amount: Uint128::zero(),
+//         },
+//         Asset {
+//             info: offer_asset_info,
+//             amount: Uint128::zero(),
+//         },
+//         pool_identifier,
+//     )?;
 
-    Ok(res.offer_amount)
-}
+//     Ok(res.offer_amount)
+// }

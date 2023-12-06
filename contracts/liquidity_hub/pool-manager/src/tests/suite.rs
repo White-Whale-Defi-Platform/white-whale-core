@@ -396,26 +396,26 @@ impl TestingSuite {
         self
     }
 
-    #[track_caller]
-    pub(crate) fn execute_swap_operations(
-        &mut self,
-        sender: Addr,
-        operations: Vec<SwapOperation>,
-        minimum_receive: Option<Uint128>,
-        to: Option<String>,
-        max_spread: Option<Decimal>,
-        funds: Vec<Coin>,
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
+    // #[track_caller]
+    // pub(crate) fn execute_swap_operations(
+    //     &mut self,
+    //     sender: Addr,
+    //     operations: Vec<SwapOperation>,
+    //     minimum_receive: Option<Uint128>,
+    //     to: Option<String>,
+    //     max_spread: Option<Decimal>,
+    //     funds: Vec<Coin>,
+    //     result: impl Fn(Result<AppResponse, anyhow::Error>),
+    // ) -> &mut Self {
+    //     let msg = white_whale::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
 
-        result(
-            self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
-        );
+    //     result(
+    //         self.app
+    //             .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+    //     );
 
-        self
-    }
+    //     self
+    // }
 
     #[track_caller]
     pub(crate) fn create_pair(
