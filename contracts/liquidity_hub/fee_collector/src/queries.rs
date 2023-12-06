@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
 
 use white_whale::fee_collector::{Config, ContractType, FactoryType, FeesFor};
 use white_whale::pool_network;
-use white_whale::pool_network::asset::Asset;
+use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::factory::PairsResponse;
 use white_whale::pool_network::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
 use white_whale::vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
@@ -142,4 +142,17 @@ fn query_fees_for_factory(
     }
 
     Ok(fees)
+}
+
+/// Queries the fee collector to get the distribution asset
+pub(crate) fn query_distribution_asset(deps: Deps) -> StdResult<AssetInfo> {
+    let config: Config = CONFIG.load(deps.storage)?;
+
+    let fee_distributor_config: white_whale::fee_distributor::Config =
+        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: config.fee_distributor.to_string(),
+            msg: to_binary(&white_whale::fee_distributor::QueryMsg::Config {})?,
+        }))?;
+
+    Ok(fee_distributor_config.distribution_asset)
 }
