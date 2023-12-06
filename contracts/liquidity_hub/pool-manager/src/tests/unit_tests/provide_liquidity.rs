@@ -15,7 +15,7 @@ use white_whale::pool_network;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgMint;
-use white_whale::pool_network::mock_querier::mock_dependencies;
+use crate::tests::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::PoolFee;
 // use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate};
@@ -33,7 +33,7 @@ fn provide_liquidity_cw20_lp() {
     // The effect is I can continue testing with instantiate2 but now an addr like liquidity0000 becomes TEMP_CONTRACT_ADDR
     // This likely breaks tests elsewhere
     let TEMP_CONTRACT_ADDR: String =
-        "contract6d4141504c2d7575736461646472303030303132333435".to_string();
+        "4j®Q¶õ\u{1c}¼\u{f}º\u{8d}N\u{7}SÈ¶ö\u{7}©³8\u{7f}j¼Þp\u{9c}\u{1b}æù\u{a0}î".to_string();
 
     deps.querier.with_token_balances(&[
         (
@@ -76,10 +76,8 @@ fn provide_liquidity_cw20_lp() {
         },
     ];
 
-    let assets: NAssets = NAssets::TWO(asset_infos.clone());
-
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: assets.clone(),
+        asset_infos: asset_infos.to_vec(),
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),
@@ -128,7 +126,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
-        pair_identifier: "1".to_string(),
+        pair_identifier: "0".to_string(),
     };
 
     let env = mock_env();
@@ -167,7 +165,7 @@ fn provide_liquidity_cw20_lp() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
-        pair_identifier: 1.to_string(),
+        pair_identifier: "0".to_string(),
     };
 
     let env = mock_env();
@@ -180,7 +178,7 @@ fn provide_liquidity_cw20_lp() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
 
-    assert_eq!(res.messages.len(), 3usize);
+    assert_eq!(res.messages.len(), 2usize);
 
     let transfer_from_msg = res.messages.get(0).expect("no message");
     let mint_initial_lp_msg = res.messages.get(1).expect("no message");
@@ -615,10 +613,8 @@ fn provide_liquidity_zero_amount() {
         },
     ];
 
-    let assets: NAssets = NAssets::TWO(asset_infos.clone());
-
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: assets.clone(),
+        asset_infos: asset_infos.to_vec(),
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),
@@ -641,7 +637,7 @@ fn provide_liquidity_zero_amount() {
         "addr0000",
         &[Coin {
             denom: "uusd".to_string(),
-            amount: Uint128::new(1u128),
+            amount: Uint128::new(1000000u128),
         }],
     );
 
@@ -684,7 +680,7 @@ fn provide_liquidity_zero_amount() {
         .to_vec(),
         slippage_tolerance: None,
         receiver: None,
-        pair_identifier: 1.to_string(),
+        pair_identifier: "0".to_string(),
     };
 
     let env = mock_env();
@@ -700,7 +696,8 @@ fn provide_liquidity_zero_amount() {
     match res {
         Ok(_) => panic!("should return ContractError::InvalidZeroAmount"),
         Err(ContractError::InvalidZeroAmount {}) => {}
-        _ => panic!("should return ContractError::InvalidZeroAmount"),
+        _ => {
+            panic!("should return ContractError::InvalidZeroAmount")},
     }
 }
 
@@ -754,10 +751,8 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         },
     ];
 
-    let assets: NAssets = NAssets::TWO(asset_infos.clone());
-
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: assets.clone(),
+        asset_infos: asset_infos.to_vec(),
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::percent(1u64),
@@ -779,7 +774,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
         "addr0000",
         &[Coin {
             denom: "uusd".to_string(),
-            amount: Uint128::new(1u128),
+            amount: Uint128::new(1000000u128),
         }],
     );
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();

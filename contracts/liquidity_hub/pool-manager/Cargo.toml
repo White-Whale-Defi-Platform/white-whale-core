@@ -66,3 +66,4 @@ anyhow.workspace = true
 test-case = "1.1"
 bech32.workspace = true
 whale-lair.workspace = true
+sha256.workspace = true

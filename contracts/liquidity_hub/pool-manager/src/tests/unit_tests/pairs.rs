@@ -34,11 +34,11 @@ mod pair_creation_tests {
     use cosmwasm_std::{coin, coins, Binary, Decimal, DepsMut, Uint128};
     use cw20::MinterResponse;
     use white_whale::pool_network::asset::Asset;
-    use white_whale::pool_network::mock_querier::{
-        mock_dependencies, mock_dependencies_trio, WasmMockQuerier, WasmMockTrioQuerier,
-    };
+    use crate::tests::mock_querier::mock_dependencies;
+
     // use crate::msg::{AssetInfo, ExecuteMsg, Fee, PairType, PoolFee};
     use white_whale::pool_manager::ExecuteMsg;
+    use white_whale::pool_network::pair;
     use crate::state::{add_allow_native_token};
     use crate::token::InstantiateMsg as TokenInstantiateMsg;
     use cosmwasm_std::attr;
@@ -84,10 +84,9 @@ mod pair_creation_tests {
             },
         ];
 
-        let assets: NAssets = NAssets::TWO(asset_infos.clone());
 
         let msg = ExecuteMsg::CreatePair {
-            asset_infos: assets.clone(),
+            asset_infos: asset_infos.to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::percent(1u64),
@@ -109,7 +108,7 @@ mod pair_creation_tests {
             "addr0000",
             &[Coin {
                 denom: "uusd".to_string(),
-                amount: Uint128::new(1u128),
+                amount: Uint128::new(1000000u128),
             }],
         );
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
@@ -196,10 +195,9 @@ mod pair_creation_tests {
                 contract_addr: "asset0001".to_string(),
             },
         ];
-        let assets: NAssets = NAssets::TWO(asset_infos.clone());
 
         let msg = ExecuteMsg::CreatePair {
-            asset_infos: assets.clone(),
+            asset_infos: asset_infos.to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::percent(1u64),
@@ -217,7 +215,10 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[]);
+        let info = mock_info("addr0000", &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1000000u128),
+        }]);
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         let seed = format!(
             "{}{}{}",
@@ -332,7 +333,7 @@ mod pair_creation_tests {
         ];
 
         let msg = ExecuteMsg::CreatePair {
-            asset_infos: NAssets::TWO(asset_infos.clone()),
+            asset_infos: asset_infos.to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::percent(1u64),
@@ -350,7 +351,10 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[]);
+        let info = mock_info("addr0000", &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1000000u128),
+        }]);
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         assert_eq!(
             res.attributes,
@@ -409,6 +413,14 @@ mod pair_creation_tests {
                 "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2".to_string(),
             ),
         ]);
+        let pair_creation_fee = Asset {
+            amount: Uint128::new(1000000u128),
+            info: AssetInfo::NativeToken {
+                denom: "uusd".to_string(),
+            }
+        };
+
+        
 
         // Instantiate contract
         let msg = SingleSwapInstantiateMsg {
@@ -416,12 +428,7 @@ mod pair_creation_tests {
             owner: "owner".to_string(),
             pair_code_id: 10u64,
             token_code_id: 11u64,
-            pool_creation_fee: Asset {
-                amount: Uint128::new(1000000u128),
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
-            },
+            pool_creation_fee: pair_creation_fee.clone(),
         };
         let env = mock_env();
         let info = mock_info("owner", &[]);
@@ -457,7 +464,7 @@ mod pair_creation_tests {
         ];
 
         let msg = ExecuteMsg::CreatePair {
-            asset_infos: NAssets::TWO(asset_infos.clone()),
+            asset_infos: asset_infos.to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::percent(1u64),
@@ -473,9 +480,9 @@ mod pair_creation_tests {
             token_factory_lp: false,
             pair_identifier: None,
         };
-
+        
         let env = mock_env();
-        let info = mock_info("addr0000", &[]);
+        let info = mock_info("addr0000", &[coin(1000000u128, "uusd".to_string())]);
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         assert_eq!(
             res.attributes,
@@ -541,7 +548,7 @@ mod pair_creation_tests {
                 "fail_to_create_pair_with_inactive_denoms"
     )]
     fn test_failures(asset1: AssetInfo, asset2: AssetInfo, expected_error: ContractError) {
-        let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
+        let mut deps = mock_dependencies(&[coin(10000000u128, "uusd".to_string())]);
         // deps = init(deps);
         // Instantiate contract
         let msg = SingleSwapInstantiateMsg {
@@ -567,10 +574,8 @@ mod pair_creation_tests {
             &"asset0001".to_string(),
             &[(&"addr0000".to_string(), &Uint128::new(1000000u128))],
         )]);
-        let asset_infos = NAssets::TWO([asset1, asset2]);
-
         let msg = white_whale::pool_manager::ExecuteMsg::CreatePair {
-            asset_infos,
+            asset_infos: [asset1, asset2].to_vec(),
             pool_fees: PoolFee {
                 protocol_fee: Fee {
                     share: Decimal::percent(1u64),
@@ -588,7 +593,10 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[]);
+        let info = mock_info("addr0000", &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1000000u128),
+        }]);
 
         if let ContractError::ExistingPair { .. } = expected_error {
             // Create the pair so when we try again below we get ExistingPair provided the error checking is behaving properly

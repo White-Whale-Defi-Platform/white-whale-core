@@ -15,7 +15,7 @@ use white_whale::pool_network;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgMint;
-use white_whale::pool_network::mock_querier::mock_dependencies;
+use crate::tests::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::PoolFee;
 // use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate};
@@ -84,10 +84,8 @@ fn try_native_to_token() {
         },
     ];
 
-    let assets: NAssets = NAssets::TWO(asset_infos.clone());
-
     let msg = ExecuteMsg::CreatePair {
-        asset_infos: assets.clone(),
+        asset_infos: asset_infos.to_vec(),
         pool_fees: PoolFee {
             protocol_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
@@ -108,11 +106,10 @@ fn try_native_to_token() {
 
     let info = mock_info(
         "addr0000",
-        // &[Coin {
-        //     denom: "uusd".to_string(),
-        //     amount: Uint128::new(1u128),
-        // }],
-        &[],
+        &[Coin {
+            denom: "uusd".to_string(),
+            amount: Uint128::new(1000000u128),
+        }],
     );
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
@@ -131,7 +128,7 @@ fn try_native_to_token() {
         belief_price: None,
         max_spread: Some(Decimal::percent(5)),
         to: None,
-        pair_identifier: 1.to_string(),
+        pair_identifier: "0".to_string(),
     };
     let env = mock_env();
     let info = mock_info(

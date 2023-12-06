@@ -12,6 +12,7 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
     WasmKeeper,
 };
+use white_whale::pool_network::pair::{SimulationResponse, ReverseSimulationResponse};
 use white_whale::{
     fee::Fee,
     pool_network::{
@@ -537,6 +538,54 @@ impl TestingSuite {
             &self.vault_manager_addr,
             &white_whale::pool_manager::QueryMsg::Pair {
                 pair_identifier: pair_identifier,
+            },
+        );
+
+        result(pair_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_simulation(
+        &mut self,
+        pair_identifier: String,
+        offer_asset: Asset,
+        ask_asset: AssetInfo,
+        result: impl Fn(StdResult<SimulationResponse>),
+    ) -> &mut Self {
+        let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale::pool_manager::QueryMsg::Simulation {
+                offer_asset,
+                ask_asset: Asset{
+                    amount: Uint128::zero(),
+                    info: ask_asset,
+                },
+                pair_identifier,
+            },
+        );
+
+        result(pair_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_reverse_simulation(
+        &mut self,
+        pair_identifier: String,
+        offer_asset: AssetInfo,
+        ask_asset: Asset,
+        result: impl Fn(StdResult<ReverseSimulationResponse>),
+    ) -> &mut Self {
+        let pair_info_response: StdResult<ReverseSimulationResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale::pool_manager::QueryMsg::ReverseSimulation {
+                offer_asset: Asset{
+                    amount: Uint128::zero(),
+                    info: offer_asset,
+                },
+                ask_asset,
+                pair_identifier,
             },
         );
 

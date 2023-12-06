@@ -23,7 +23,7 @@ use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
-use cosmwasm_std::{Decimal};
+use cosmwasm_std::Decimal;
 
 // Stuff like Swap, Swap through router and any other stuff related to swapping
 pub fn swap(
@@ -46,12 +46,6 @@ pub fn swap(
 
     offer_asset.assert_sent_native_token_balance(&info)?;
 
-    // let asset_infos = [ask_asset.clone(), offer_asset.info.clone()];
-    // let ask_asset = Asset {
-    //     info: ask_asset,
-    //     amount: Uint128::zero(),
-    // };
-
     let mut pair_info = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
     let pools = pair_info.assets.clone();
     // determine what's the offer and ask pool based on the offer_asset
@@ -60,7 +54,6 @@ pub fn swap(
     let offer_decimal: u8;
     let ask_decimal: u8;
     let decimals = get_decimals(&pair_info);
-    println!("After decimals");
     // We now have the pools and pair info; we can now calculate the swap
     // Verify the pool
     if offer_asset.info.equal(&pools[0].info) {
@@ -85,7 +78,6 @@ pub fn swap(
 
     let receiver = to.unwrap_or_else(|| sender.clone());
 
-    // TODO: Add the swap logic here
     let offer_amount = offer_asset.amount;
     let pool_fees = pair_info.pool_fees.clone();
 
@@ -116,7 +108,6 @@ pub fn swap(
         ask_decimal,
     )?;
 
-    // TODO; add the swap messages
     if !swap_computation.return_amount.is_zero() {
         messages.push(return_asset.into_msg(receiver.clone())?);
     }

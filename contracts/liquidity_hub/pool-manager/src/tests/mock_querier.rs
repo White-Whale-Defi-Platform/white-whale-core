@@ -9,10 +9,11 @@ use cosmwasm_std::{
     OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-
+use white_whale::pool_network::temp_mock_api::MockSimpleApi;
+use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType, TrioInfo};
 use white_whale::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
-use white_whale::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg};
+use white_whale::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg, self};
 use white_whale::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale::pool_network::trio;
 use white_whale::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
@@ -20,13 +21,13 @@ use white_whale::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
     contract_balance: &[Coin],
-) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+) -> OwnedDeps<MockStorage, MockSimpleApi, WasmMockQuerier> {
     let custom_querier: WasmMockQuerier =
         WasmMockQuerier::new(MockQuerier::new(&[(MOCK_CONTRACT_ADDR, contract_balance)]));
 
     OwnedDeps {
         storage: MockStorage::default(),
-        api: MockApi::default(),
+        api: MockSimpleApi::default(),
         querier: custom_querier,
         custom_query_type: PhantomData,
     }
@@ -38,11 +39,6 @@ pub struct WasmMockQuerier {
     pool_factory_querier: PoolFactoryQuerier,
 }
 
-pub struct WasmMockTrioQuerier {
-    base: MockQuerier,
-    token_querier: TokenQuerier,
-    pool_factory_querier: PoolFactoryQuerier,
-}
 
 #[derive(Clone, Default)]
 pub struct TokenQuerier {
@@ -90,10 +86,9 @@ impl PoolFactoryQuerier {
 
 pub fn pairs_to_map(pairs: &[(&String, &PairInfo)]) -> HashMap<String, PairInfo> {
     let mut pairs_map: HashMap<String, PairInfo> = HashMap::new();
+    // Key is the pool_identifer
     for (key, pair) in pairs.iter() {
-        let mut sort_key: Vec<char> = key.chars().collect();
-        sort_key.sort_by(|a, b| b.cmp(a));
-        pairs_map.insert(String::from_iter(sort_key.iter()), (**pair).clone());
+        pairs_map.insert(key.to_string(), (**pair).clone());
     }
     pairs_map
 }
@@ -128,14 +123,12 @@ impl WasmMockQuerier {
         match &request {
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
                 match from_binary(msg) {
-                    Ok(FactoryQueryMsg::Pair { asset_infos }) => {
-                        let key = [asset_infos[0].to_string(), asset_infos[1].to_string()].join("");
-                        let mut sort_key: Vec<char> = key.chars().collect();
-                        sort_key.sort_by(|a, b| b.cmp(a));
+                    Ok(white_whale::pool_manager::QueryMsg::Pair { pair_identifier }) => {
+                        
                         match self
                             .pool_factory_querier
                             .pairs
-                            .get(&String::from_iter(sort_key.iter()))
+                            .get(&pair_identifier)
                         {
                             Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
                             None => SystemResult::Err(SystemError::InvalidRequest {
@@ -144,7 +137,7 @@ impl WasmMockQuerier {
                             }),
                         }
                     }
-                    Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
+                    Ok(white_whale::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
                         match self.pool_factory_querier.native_token_decimals.get(&denom) {
                             Some(decimals) => SystemResult::Ok(ContractResult::Ok(
                                 to_binary(&NativeTokenDecimalsResponse {
@@ -159,44 +152,8 @@ impl WasmMockQuerier {
                         }
                     }
                     _ => match from_binary(msg) {
-                        Ok(PairQueryMsg::Pool {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&PairPoolResponse {
-                                assets: vec![
-                                    Asset {
-                                        info: AssetInfo::NativeToken {
-                                            denom: "uluna".to_string(),
-                                        },
-                                        amount: Uint128::new(1_000_000_000u128),
-                                    },
-                                    Asset {
-                                        info: AssetInfo::NativeToken {
-                                            denom: "ujuno".to_string(),
-                                        },
-                                        amount: Uint128::new(1_000_000_000u128),
-                                    },
-                                ],
-                                total_share: Uint128::new(2_000_000_000u128),
-                            })))
-                        }
-                        Ok(PairQueryMsg::Pair {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&PairInfo {
-                                asset_infos: [
-                                    AssetInfo::NativeToken {
-                                        denom: "uluna".to_string(),
-                                    },
-                                    AssetInfo::NativeToken {
-                                        denom: "uluna".to_string(),
-                                    },
-                                ],
-                                asset_decimals: [6u8, 6u8],
-                                contract_addr: "pair0000".to_string(),
-                                liquidity_token: AssetInfo::Token {
-                                    contract_addr: "liquidity0000".to_string(),
-                                },
-                                pair_type: PairType::ConstantProduct,
-                            })))
-                        }
-                        Ok(PairQueryMsg::Simulation { offer_asset }) => {
+                       
+                        Ok(white_whale::pool_manager::QueryMsg::Simulation { offer_asset, ask_asset, pair_identifier }) => {
                             SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
@@ -205,7 +162,7 @@ impl WasmMockQuerier {
                                 burn_fee_amount: Uint128::zero(),
                             })))
                         }
-                        Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
+                        Ok(white_whale::pool_manager::QueryMsg::ReverseSimulation { ask_asset, offer_asset, pair_identifier }) => SystemResult::Ok(
                             ContractResult::from(to_binary(&ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
@@ -282,32 +239,32 @@ impl WasmMockQuerier {
                     },
                 }
             }
-            // QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
-            //     let mut contract_info_response = ContractInfoResponse::default();
-            //     contract_info_response.code_id = 0u64;
-            //     contract_info_response.creator = "creator".to_string();
-            //     contract_info_response.admin = Some("creator".to_string());
+            QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
+                let mut contract_info_response = ContractInfoResponse::default();
+                contract_info_response.code_id = 0u64;
+                contract_info_response.creator = "creator".to_string();
+                contract_info_response.admin = Some("creator".to_string());
 
-            //     SystemResult::Ok(ContractResult::Ok(
-            //         to_binary(&contract_info_response).unwrap(),
-            //     ))
-            // },
-            // QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
-            //     let mut default = CodeInfoResponse::default();
+                SystemResult::Ok(ContractResult::Ok(
+                    to_binary(&contract_info_response).unwrap(),
+                ))
+            },
+            QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
+                let mut default = CodeInfoResponse::default();
 
-            //     match code_id {
-            //         11 => {
-            //             default.code_id = 67;
-            //             default.creator = Addr::unchecked("creator").to_string();
-            //             default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
-            //             .unwrap();
-            //             SystemResult::Ok(to_binary(&default).into())
-            //         }
-            //         _ => {
-            //             return SystemResult::Err(SystemError::Unknown {});
-            //         }
-            //     }
-            // }
+                match code_id {
+                    11 => {
+                        default.code_id = 67;
+                        default.creator = Addr::unchecked("creator").to_string();
+                        default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
+                        .unwrap();
+                        SystemResult::Ok(to_binary(&default).into())
+                    }
+                    _ => {
+                        return SystemResult::Err(SystemError::Unknown {});
+                    }
+                }
+            }
             _ => self.base.handle_query(request),
         }
     }
@@ -316,36 +273,6 @@ impl WasmMockQuerier {
 impl WasmMockQuerier {
     pub fn new(base: MockQuerier) -> Self {
         WasmMockQuerier {
-            base,
-            token_querier: TokenQuerier::default(),
-            pool_factory_querier: PoolFactoryQuerier::default(),
-        }
-    }
-
-    // configure the mint whitelist mock querier
-    pub fn with_token_balances(&mut self, balances: &[(&String, &[(&String, &Uint128)])]) {
-        self.token_querier = TokenQuerier::new(balances);
-    }
-
-    // configure the pair
-    pub fn with_pool_factory(
-        &mut self,
-        pairs: &[(&String, &PairInfo)],
-        native_token_decimals: &[(String, u8)],
-    ) {
-        self.pool_factory_querier = PoolFactoryQuerier::new(pairs, native_token_decimals);
-    }
-
-    pub fn with_balance(&mut self, balances: &[(&String, Vec<Coin>)]) {
-        for (addr, balance) in balances {
-            self.base.update_balance(addr.to_string(), balance.clone());
-        }
-    }
-}
-
-impl WasmMockTrioQuerier {
-    pub fn new(base: MockQuerier) -> Self {
-        WasmMockTrioQuerier {
             base,
             token_querier: TokenQuerier::default(),
             pool_factory_querier: PoolFactoryQuerier::default(),
@@ -395,15 +322,8 @@ mod mock_exception {
     fn none_factory_pair_will_err() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&FactoryQueryMsg::Pair {
-            asset_infos: [
-                AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "ulunc".to_string(),
-                },
-            ],
+        let msg = to_binary(&white_whale::pool_manager::QueryMsg::Pair {
+            pair_identifier: "pair0000".to_string(),
         })
         .unwrap();
         assert_eq!(

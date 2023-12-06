@@ -13,7 +13,6 @@ use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
     state::{
         get_decimals, get_pair_by_identifier, ALLOW_NATIVE_TOKENS,
-        COLLECTABLE_PROTOCOL_FEES,
     },
     ContractError,
 };
@@ -28,9 +27,6 @@ pub fn query_native_token_decimal(
 
     Ok(NativeTokenDecimalsResponse { decimals })
 }
-
-// TODO: Might be handy for organisation to have a couple of sub-modules here
-// Simulation with only stuff for that, swap routes and so on. Otherwise this file might become massive with all the queries
 
 // Simulate a swap with the provided asset to determine the amount of the other asset that would be received
 pub fn query_simulation(
@@ -96,19 +92,13 @@ pub fn query_reverse_simulation(
     pair_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info = get_pair_by_identifier(&deps, pair_identifier.clone())?;
-    let pools = pair_info.assets.clone();
-    
-    
-
-    
+    let pools = pair_info.assets.clone();    
     
     let decimals = get_decimals(&pair_info);
     let offer_pool: Asset = pools[0].clone();
     let offer_decimal = decimals[0];
     let ask_pool: Asset = pools[1].clone();
     let ask_decimal = decimals[1];
-    let _collected_protocol_fees =
-        COLLECTABLE_PROTOCOL_FEES.load(deps.storage, &pair_info.liquidity_token.to_string())?;
     let pool_fees = pair_info.pool_fees;
 
     match pair_info.pair_type {

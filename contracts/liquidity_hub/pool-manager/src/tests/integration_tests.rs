@@ -716,6 +716,8 @@ mod router {
 }
 
 mod swapping {
+    use std::cell::RefCell;
+
     use cosmwasm_std::assert_approx_eq;
 
     use super::*;
@@ -808,6 +810,19 @@ mod swapping {
                 }
             },
         );
+        let simulated_return_amount = RefCell::new(Uint128::zero());
+        suite.query_simulation("whale-uluna".to_string(), Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            amount: Uint128::from(1000u128),
+        }, 
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        }, |result| {
+            println!("{:?}", result);
+            *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
+        });
 
         // Now lets try a swap
         suite.swap(
@@ -852,6 +867,78 @@ mod swapping {
                     return_amount.parse::<u128>().unwrap(),
                     "0.002"
                 );
+                assert_approx_eq!(
+                    simulated_return_amount.borrow().u128(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+                
+            },
+        );
+
+        let simulated_offer_amount = RefCell::new(Uint128::zero());
+        suite.query_reverse_simulation("whale-uluna".to_string(), 
+        AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            amount: Uint128::from(1000u128),
+        }
+        , |result| {
+            println!("{:?}", result);
+            *simulated_offer_amount.borrow_mut() = result.unwrap().offer_amount;
+        });
+        // Another swap but this time the other way around
+        // Now lets try a swap
+        suite.swap(
+            creator.clone(),
+            Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                amount: Uint128::from(simulated_offer_amount.borrow().u128()),
+            },
+            AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            None,
+            None,
+            None,
+            "whale-uluna".to_string(),
+            vec![coin(simulated_offer_amount.borrow().u128(), "uluna".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    println!("{:?}", event);
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                assert_approx_eq!(
+                    simulated_offer_amount.borrow().u128(),
+                    offer_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+
+                assert_approx_eq!(
+                    1000u128,
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.003"
+                );
+                
             },
         );
     }

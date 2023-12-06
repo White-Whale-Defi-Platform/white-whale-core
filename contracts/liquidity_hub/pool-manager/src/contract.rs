@@ -306,20 +306,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             offer_asset,
             pair_identifier,
         )?)?),
-        // QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
-        //     deps,
-        //     asset_id,
-        //     all_time,
-        //     COLLECTED_PROTOCOL_FEES,
-        //     Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
-        // )?)?),
-        // QueryMsg::BurnedFees { asset_id } => Ok(to_binary(&queries::query_fees(
-        //     deps,
-        //     asset_id,
-        //     None,
-        //     ALL_TIME_BURNED_FEES,
-        //     None,
-        // )?)?),
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,

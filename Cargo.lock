@@ -1149,6 +1149,7 @@ dependencies = [
  "cw20-base",
  "serde",
  "sha2 0.10.8",
+ "sha256",
  "test-case",
  "thiserror",
  "whale-lair",
