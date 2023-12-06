@@ -10,7 +10,7 @@ use white_whale::pool_network::{
 };
 
 use crate::{
-    helpers::{self, fill_rewards_msg},
+    helpers::{fill_rewards_msg},
     state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER},
     token::InstantiateMsg as TokenInstantiateMsg,
 };
@@ -173,7 +173,7 @@ pub fn create_pair(
         })
         .collect::<Vec<_>>();
 
-    let pair_creation_msg = if token_factory_lp == true {
+    let pair_creation_msg = if token_factory_lp {
         #[cfg(all(
             not(feature = "token_factory"),
             not(feature = "osmosis_token_factory"),
@@ -193,7 +193,7 @@ pub fn create_pair(
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
-                pool_fees: pool_fees,
+                pool_fees,
                 assets,
                 balances: vec![Uint128::zero(); asset_infos.len()],
             },
@@ -246,7 +246,7 @@ pub fn create_pair(
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 assets,
-                pool_fees: pool_fees,
+                pool_fees,
                 balances: vec![Uint128::zero(); asset_infos.len()],
             },
         )?;

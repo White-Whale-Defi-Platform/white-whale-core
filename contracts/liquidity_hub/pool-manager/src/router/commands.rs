@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{DepsMut, Env, Addr, Uint128, Decimal, Response, StdError, Deps, CosmosMsg, WasmMsg, to_binary, StdResult, Coin, MessageInfo};
 use cw20::Cw20ExecuteMsg;
-use white_whale::{pool_network::{pair, asset::{AssetInfo, Asset}}, pool_manager::{SwapOperation, ExecuteMsg, NPairInfo}};
+use white_whale::{pool_network::{asset::{AssetInfo, Asset}}, pool_manager::{SwapOperation, ExecuteMsg, NPairInfo}};
 
 use crate::{ContractError, state::{MANAGER_CONFIG, get_pair_by_identifier, Config}};
 
 fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
     let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
     for operation in operations.iter() {
-        let (offer_asset, ask_asset, pool_identifier) = match operation {
+        let (offer_asset, ask_asset, _pool_identifier) = match operation {
             SwapOperation::WhaleSwap {
                 token_in_info: offer_asset_info,
                 token_out_info: ask_asset_info,
@@ -112,7 +112,7 @@ pub fn execute_swap_operation(
             token_out_info,
             pool_identifier,
         } => {
-            let config: Config = MANAGER_CONFIG.load(deps.as_ref().storage)?;
+            let _config: Config = MANAGER_CONFIG.load(deps.as_ref().storage)?;
             let pair_info: NPairInfo = get_pair_by_identifier(
                 &deps.as_ref(),
                 pool_identifier.clone(),
@@ -164,8 +164,8 @@ pub fn asset_into_swap_msg(
                 belief_price: None,
                 max_spread,
                 to,
-                ask_asset: ask_asset,
-                pair_identifier: pair_identifier,
+                ask_asset,
+                pair_identifier,
             })?,
         })),
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {

@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Deps, Order, QuerierWrapper, StdError, StdResult, Storage, Uint128};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
+use cosmwasm_std::{Addr, Api, Deps, Order, StdError, StdResult, Storage, Uint128};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale::pool_manager::{NPairInfo, SwapOperation};
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairInfo, PairType};
-use white_whale::pool_network::pair::{FeatureToggle, PoolFee};
+use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
+use white_whale::pool_network::pair::{FeatureToggle};
 
 use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
@@ -45,7 +45,7 @@ pub fn get_pair_by_identifier(
 ) -> Result<NPairInfo, ContractError> {
     PAIRS
         .may_load(deps.storage, vault_identifier.clone())?
-        .ok_or_else(|| ContractError::ExistingPair {})
+        .ok_or(ContractError::ExistingPair {})
 }
 
 // Used for PAIRS

@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use thiserror::Error;
-use white_whale::pool_network::asset::AssetInfo;
+
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

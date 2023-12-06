@@ -3,11 +3,11 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_json_binary, CosmosMsg, Decimal, Decimal256, DepsMut, StdError, StdResult, Storage, Uint128,
+    to_json_binary, CosmosMsg, Decimal, Decimal256, StdError, StdResult, Storage, Uint128,
     Uint256, WasmMsg,
 };
 
-use cw_storage_plus::Item;
+
 
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, ToCoins};
 #[cfg(feature = "token_factory")]
@@ -19,8 +19,8 @@ use white_whale::whale_lair;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::state::PAIRS;
-use white_whale::pool_manager::NPairInfo;
+
+
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 

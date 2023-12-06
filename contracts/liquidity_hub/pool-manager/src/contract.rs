@@ -1,13 +1,12 @@
-use cosmwasm_schema::cw_serde;
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
-    StdResult, Uint128, Api,
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, Api,
 };
 use cw20::Cw20ReceiveMsg;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::pair::{self, FeatureToggle};
+use white_whale::pool_network::pair::{FeatureToggle};
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -124,7 +123,7 @@ pub fn execute(
             )
         }
         ExecuteMsg::WithdrawLiquidity {
-            assets,
+            assets: _,
             pair_identifier,
         } => liquidity::commands::withdraw_liquidity(
             deps,
@@ -190,7 +189,7 @@ pub fn execute(
                 max_spread,
             )
         }
-        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+        ExecuteMsg::AddSwapRoutes { swap_routes: _ } => {
             Ok(Response::new())
         }
     }

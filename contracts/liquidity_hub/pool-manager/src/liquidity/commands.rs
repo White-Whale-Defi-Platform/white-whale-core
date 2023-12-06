@@ -1,16 +1,16 @@
-use std::error::Error;
+
 
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, WasmMsg,
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::{
     helpers::{self},
     state::{get_pair_by_identifier, COLLECTABLE_PROTOCOL_FEES},
 };
 use crate::{
-    state::{pair_key, MANAGER_CONFIG, PAIRS},
+    state::{MANAGER_CONFIG, PAIRS},
     ContractError,
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
@@ -28,7 +28,7 @@ use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
 use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
-use cosmwasm_std::{Decimal, OverflowError, StdResult, Uint128};
+use cosmwasm_std::{Decimal, OverflowError, Uint128};
 use cw20::Cw20ExecuteMsg;
 use white_whale::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
@@ -106,7 +106,7 @@ pub fn provide_liquidity(
     // TODO: Replace with fill rewards msg
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
         .load(deps.storage, &pair.liquidity_token.to_string())
-        .unwrap_or(vec![]);
+        .unwrap_or_default();
     for pool in pool_assets.iter_mut() {
         let protocol_fee =
             get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
@@ -233,7 +233,7 @@ pub fn provide_liquidity(
 /// the swap fees accrued by its share of the pool.
 pub fn withdraw_liquidity(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     sender: Addr,
     amount: Uint128,
     pair_identifier: String,

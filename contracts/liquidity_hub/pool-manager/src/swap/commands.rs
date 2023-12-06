@@ -23,16 +23,16 @@ use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
-use cosmwasm_std::{Decimal, Uint128};
+use cosmwasm_std::{Decimal};
 
 // Stuff like Swap, Swap through router and any other stuff related to swapping
 pub fn swap(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     sender: Addr,
     offer_asset: Asset,
-    ask_asset: AssetInfo,
+    _ask_asset: AssetInfo,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
@@ -78,10 +78,8 @@ pub fn swap(
         return Err(ContractError::AssetMismatch {});
     }
     println!("Found pools");
-    let _attributes = vec![
-        ("action", "swap"),
-        ("pair_type", pair_info.pair_type.get_label()),
-    ];
+    let _attributes = [("action", "swap"),
+        ("pair_type", pair_info.pair_type.get_label())];
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
