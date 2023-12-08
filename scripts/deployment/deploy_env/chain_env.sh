@@ -83,6 +83,10 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/orai.env)
     ;;
 
+  lunc)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/lunc.env)
+    ;;
+
   *)
     echo "Network $chain not defined"
     exit 1
