@@ -4,21 +4,21 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, Api,
 };
+use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::pair::{FeatureToggle};
-// use cw2::set_contract_version;
-
+use semver::Version;
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, swap, router};
-use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg, Cw20HookMsg};
-/*
+use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg, Cw20HookMsg};
+
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:pool-manager";
+const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
+
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -27,7 +27,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    // set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config: Config = Config {
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         owner: deps.api.addr_validate(&msg.owner)?,
@@ -335,6 +335,28 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             Ok(to_binary(&PAIRS.load(deps.storage, pair_identifier)?)?)
         }
     }
+}
+
+#[cfg(not(tarpaulin_include))]
+#[entry_point]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use cw2::get_contract_version;
+    use white_whale::{migrate_guards::check_contract_name};
+
+    check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
+
+    let version: Version = CONTRACT_VERSION.parse()?;
+    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
+
+    if storage_version >= version {
+        return Err(ContractError::MigrateInvalidVersion {
+            current_version: storage_version,
+            new_version: version,
+        });
+    }
+
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    Ok(Response::default())
 }
 
 #[cfg(test)]

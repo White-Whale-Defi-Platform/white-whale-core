@@ -95,6 +95,14 @@ pub enum Fee {
     FlashLoanFees,
     Custom(String),
 }
+#[cw_serde]
+
+pub struct StableSwapParams {
+    pub initial_amp: String,
+    pub future_amp: String,
+    pub initial_amp_block: String,
+    pub future_amp_block: String
+}
 
 // Store PairInfo to N
 // We define a custom struct for which allows for dynamic but defined pairs
@@ -107,6 +115,7 @@ pub struct NPairInfo {
     pub assets: Vec<Asset>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
+    pub stable_swap_params: Option<StableSwapParams>
 }
 impl NPairInfo {}
 
@@ -119,6 +128,10 @@ pub struct InstantiateMsg {
     pub owner: String,
     pub pool_creation_fee: Asset,
 }
+
+/// The migrate message
+#[cw_serde]
+pub struct MigrateMsg {}
 
 #[cw_ownable_execute]
 #[cw_serde]

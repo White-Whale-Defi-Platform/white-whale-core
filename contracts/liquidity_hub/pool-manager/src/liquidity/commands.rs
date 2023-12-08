@@ -202,6 +202,7 @@ pub fn provide_liquidity(
         }
         PairType::StableSwap { amp: _ } => {
             // TODO: Handle stableswap
+            
 
             Uint128::one()
         }

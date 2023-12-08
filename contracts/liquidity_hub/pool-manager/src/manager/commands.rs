@@ -140,6 +140,7 @@ pub fn create_pair(
 
     let pair_id = PAIR_COUNTER.load(deps.storage)?;
     // if no identifier is provided, use the vault counter (id) as identifier
+    // TODO: Review, do we really want this or just use the pair_id? Pair_id is simple u64 values while identifier is a string
     let identifier = pair_identifier.unwrap_or(pair_id.to_string());
 
     // check if there is an existing vault with the given identifier

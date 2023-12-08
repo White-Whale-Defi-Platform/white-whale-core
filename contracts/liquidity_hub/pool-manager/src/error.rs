@@ -5,6 +5,7 @@ use cosmwasm_std::{
 };
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
+use semver::Version;
 use thiserror::Error;
 
 
@@ -25,6 +26,10 @@ pub enum ContractError {
     #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
 
+    // Handle Upgrade/Migrate related semver errors
+    #[error("Semver parsing error: {0}")]
+    SemVer(String),
+
     #[error("Unauthorized")]
     Unauthorized {},
     // Add any other custom errors you like here.
@@ -34,6 +39,12 @@ pub enum ContractError {
 
     #[error("Invalid operations; multiple output token")]
     MultipleOutputToken {},
+
+    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
+    MigrateInvalidVersion {
+        new_version: Version,
+        current_version: Version,
+    },
 
     #[error(
         "Assertion failed; minimum receive amount: {minimum_receive}, swap amount: {swap_amount}"
@@ -130,4 +141,10 @@ pub enum ContractError {
         amount: cosmwasm_std::Uint128,
         expected: cosmwasm_std::Uint128,
     },
+}
+
+impl From<semver::Error> for ContractError {
+    fn from(err: semver::Error) -> Self {
+        Self::SemVer(err.to_string())
+    }
 }
