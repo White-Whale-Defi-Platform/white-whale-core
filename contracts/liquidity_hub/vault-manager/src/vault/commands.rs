@@ -22,13 +22,8 @@ pub fn deposit(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // check that deposits are enabled
-    if !config.deposit_enabled {
-        return Err(ContractError::Unauthorized {});
-    }
-
-    // check that we are not currently in a flash-loan
-    if ONGOING_FLASHLOAN.load(deps.storage)? {
+    // check that deposits are enabled and if that there's a flash-loan ongoing
+    if !config.deposit_enabled || ONGOING_FLASHLOAN.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
@@ -142,8 +137,8 @@ pub fn withdraw(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    // check that withdrawals are enabled
-    if !config.withdraw_enabled {
+    // check that withdrawals are enabled and if that there's a flash-loan ongoing
+    if !config.withdraw_enabled || ONGOING_FLASHLOAN.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
     }
 
