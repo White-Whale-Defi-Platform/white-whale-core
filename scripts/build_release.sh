@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 # Displays tool usage
@@ -78,3 +78,6 @@ echo "${docker_command[@]}"
 
 # Check generated wasm file sizes
 $projectRootPath/scripts/check_artifacts_size.sh
+
+# Check generated wasm file sizes
+$projectRootPath/scripts/get_artifacts_versions.sh
