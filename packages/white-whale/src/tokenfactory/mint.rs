@@ -10,7 +10,7 @@ use cosmwasm_std::{Addr, Coin, CosmosMsg};
 ))]
 pub fn mint(sender: Addr, coin: Coin) -> CosmosMsg {
     let message_data = MsgMint { coin };
-    create_msg(sender, message_data, MsgTypes::MsgMint.as_str())
+    create_msg(sender, message_data, MsgTypes::Mint.as_str())
 }
 
 pub(crate) struct MsgMint {

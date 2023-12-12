@@ -2,8 +2,8 @@
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64,
-    WasmQuery,
+    to_json_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp,
+    Uint64, WasmQuery,
 };
 use cw_storage_plus::Map;
 
@@ -47,7 +47,7 @@ pub fn migrate_to_v090(deps: DepsMut) -> Result<(), StdError> {
     // Query the current global index
     let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: bonding_contract_addr.to_string(),
-        msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+        msg: to_json_binary(&LairQueryMsg::GlobalIndex {})?,
     }))?;
 
     for epoch in epochs_v08 {

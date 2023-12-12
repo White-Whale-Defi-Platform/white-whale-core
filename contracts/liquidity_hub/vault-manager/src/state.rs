@@ -1,4 +1,3 @@
-use std::clone::Clone;
 use std::string::ToString;
 
 use cosmwasm_std::{Deps, Order, StdResult, Storage, Uint128};
@@ -119,6 +118,6 @@ pub fn get_vault_by_identifier(
     vault_identifier: String,
 ) -> Result<Vault, ContractError> {
     VAULTS
-        .may_load(deps.storage, vault_identifier.clone())?
-        .ok_or_else(|| ContractError::NonExistentVault {})
+        .may_load(deps.storage, vault_identifier)?
+        .ok_or(ContractError::NonExistentVault {})
 }

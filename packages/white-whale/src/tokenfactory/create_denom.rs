@@ -11,7 +11,7 @@ use crate::tokenfactory::common::{create_msg, EncodeMessage, MsgTypes};
 ))]
 pub fn create_denom(sender: Addr, subdenom: String) -> CosmosMsg {
     let message_data = MsgCreateDenom { subdenom };
-    create_msg(sender, message_data, MsgTypes::MsgCreateDenom.as_str())
+    create_msg(sender, message_data, MsgTypes::CreateDenom.as_str())
 }
 
 struct MsgCreateDenom {

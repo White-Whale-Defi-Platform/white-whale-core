@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    from_binary, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,
+    from_json, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,
 };
 use white_whale::epoch_manager::epoch_manager::EpochConfig;
 
@@ -173,7 +173,7 @@ impl TestingRobot {
             QueryMsg::CurrentEpoch {},
         )
         .unwrap();
-        let res: EpochResponse = from_binary(&query_res).unwrap();
+        let res: EpochResponse = from_json(&query_res).unwrap();
 
         response(Ok(res.epoch));
 
@@ -191,7 +191,7 @@ impl TestingRobot {
             QueryMsg::Epoch { id },
         )
         .unwrap();
-        let res: EpochResponse = from_binary(&query_res).unwrap();
+        let res: EpochResponse = from_json(&query_res).unwrap();
 
         response(Ok((self, res.epoch)));
 
@@ -221,7 +221,7 @@ impl TestingRobot {
             .unwrap()
         };
 
-        let res: ClaimableEpochsResponse = from_binary(&query_res).unwrap();
+        let res: ClaimableEpochsResponse = from_json(&query_res).unwrap();
 
         response(Ok((self, res.epochs)));
 
@@ -238,7 +238,7 @@ impl TestingRobot {
             QueryMsg::Config {},
         )
         .unwrap();
-        let config: Config = from_binary(&query_res).unwrap();
+        let config: Config = from_json(&query_res).unwrap();
 
         response(Ok((self, config)));
 

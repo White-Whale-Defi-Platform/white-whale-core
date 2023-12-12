@@ -160,7 +160,7 @@ pub fn withdraw(
     // asset to return
     let return_asset = Asset {
         info: vault.asset.info.clone(),
-        amount: withdraw_amount.clone(),
+        amount: withdraw_amount,
     };
     let messages: Vec<CosmosMsg> = vec![
         return_asset.clone().into_msg(sender)?,

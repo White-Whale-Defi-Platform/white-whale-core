@@ -8,8 +8,8 @@ use crate::pool_network::querier::{
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 
 use cosmwasm_std::{
-    coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg, Uint128,
-    WasmMsg,
+    coin, to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg,
+    Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -197,7 +197,7 @@ fn test_asset() {
             .unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(123123u128),
             })
@@ -212,7 +212,7 @@ fn test_asset() {
             .unwrap(),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(123123u128),
             })

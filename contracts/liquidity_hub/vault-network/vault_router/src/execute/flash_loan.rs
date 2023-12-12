@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
+use cosmwasm_std::{to_json_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
 
 use white_whale::pool_network::asset::Asset;
 use white_whale::vault_network::vault_router::ExecuteMsg;
@@ -51,9 +51,9 @@ pub fn flash_loan(
         messages.push(
             WasmMsg::Execute {
                 contract_addr: vault.to_string(),
-                msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
+                msg: to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                     amount: asset.amount,
-                    msg: to_binary(&ExecuteMsg::NextLoan {
+                    msg: to_json_binary(&ExecuteMsg::NextLoan {
                         initiator: info.sender,
                         source_vault: vault.to_string(),
                         source_vault_asset_info: asset.info.clone(),
@@ -76,7 +76,7 @@ pub fn flash_loan(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        coins, from_binary, to_binary, Attribute, BankMsg, CosmosMsg, Event, Response, Uint128,
+        coins, from_json, to_json_binary, Attribute, BankMsg, CosmosMsg, Event, Response, Uint128,
         WasmMsg,
     };
     use cw_multi_test::Executor;
@@ -110,7 +110,7 @@ mod tests {
 
         let payload = vec![WasmMsg::Execute {
             contract_addr: dummy_contract_addr.clone().into_string(),
-            msg: to_binary(&crate::tests::ExecuteMsg::Send {
+            msg: to_json_binary(&crate::tests::ExecuteMsg::Send {
                 to_address: router_addr.clone(),
                 amount: coins(transfer_amount, "uluna"),
             })
@@ -140,7 +140,7 @@ mod tests {
         // verify payload was executed
         let payload_amount = match payload.first().unwrap() {
             CosmosMsg::Wasm(WasmMsg::Execute { msg, .. }) => {
-                let msg: crate::tests::ExecuteMsg = from_binary(msg).unwrap();
+                let msg: crate::tests::ExecuteMsg = from_json(msg).unwrap();
                 match msg {
                     crate::tests::ExecuteMsg::Send { amount, .. } => amount,
                 }
@@ -296,7 +296,7 @@ mod tests {
 
         let payload = vec![WasmMsg::Execute {
             contract_addr: dummy_contract_addr.clone().into_string(),
-            msg: to_binary(&crate::tests::ExecuteMsg::Send {
+            msg: to_json_binary(&crate::tests::ExecuteMsg::Send {
                 to_address: router_addr.clone(),
                 amount: coins(transfer_amount, "uluna"),
             })
@@ -325,7 +325,7 @@ mod tests {
 
         let payload_amount = match payload.first().unwrap() {
             CosmosMsg::Wasm(WasmMsg::Execute { msg, .. }) => {
-                let msg: crate::tests::ExecuteMsg = from_binary(msg).unwrap();
+                let msg: crate::tests::ExecuteMsg = from_json(msg).unwrap();
                 match msg {
                     crate::tests::ExecuteMsg::Send { amount, .. } => amount,
                 }

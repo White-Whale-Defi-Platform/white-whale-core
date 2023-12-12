@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg, SubMsgResponse,
-    SubMsgResult, Uint128, WasmMsg,
+    attr, to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, Response, SubMsg,
+    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
@@ -107,7 +107,7 @@ fn withdraw_xyk_liquidity_cw20_lp() {
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -154,7 +154,7 @@ fn withdraw_xyk_liquidity_cw20_lp() {
         msg_refund_1,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: expected_token_refund_amount,
             })
@@ -166,7 +166,7 @@ fn withdraw_xyk_liquidity_cw20_lp() {
         msg_burn_liquidity,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Burn {
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                 amount: Uint128::from(100u128),
             })
             .unwrap(),
@@ -267,7 +267,7 @@ fn withdraw_stableswap_liquidity() {
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -308,7 +308,7 @@ fn withdraw_stableswap_liquidity() {
                 }),
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: "asset0000".to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                         recipient: "addr0000".to_string(),
                         amount: expected_token_refund_amount,
                     })
@@ -317,7 +317,7 @@ fn withdraw_stableswap_liquidity() {
                 }),
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: "liquidity0000".to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Burn {
+                    msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                         amount: Uint128::from(100u128),
                     })
                     .unwrap(),
@@ -385,7 +385,7 @@ fn test_withdrawal_unauthorized() {
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -451,7 +451,7 @@ fn test_withdrawal_wrong_message() {
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&"invalid_message").unwrap(),
+        msg: to_json_binary(&"invalid_message").unwrap(),
         amount: Uint128::from(100u128),
     });
 

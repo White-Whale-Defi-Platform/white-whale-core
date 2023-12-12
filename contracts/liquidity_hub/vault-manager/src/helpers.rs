@@ -11,7 +11,7 @@ use white_whale::vault_manager::Vault;
 pub(crate) fn query_balances(
     deps: Deps,
     contract_address: Addr,
-    vaults: &Vec<Vault>,
+    vaults: &[Vault],
 ) -> Result<HashMap<Vec<u8>, Uint128>, ContractError> {
     let mut balances = HashMap::new();
 
@@ -28,7 +28,7 @@ pub(crate) fn query_balances(
     let mut encountered_assets: HashSet<Vec<u8>> = HashSet::new();
 
     let filtered_vaults: Vec<Vault> = vaults
-        .into_iter()
+        .iter()
         .filter(|vault| {
             let is_duplicate =
                 !encountered_assets.insert(vault.asset.info.clone().get_reference().to_vec());

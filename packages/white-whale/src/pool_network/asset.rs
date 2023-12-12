@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
+    coins, to_json_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
@@ -50,7 +50,7 @@ impl Asset {
         match &self.info {
             AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: recipient.to_string(),
                     amount,
                 })?,
@@ -74,7 +74,7 @@ impl Asset {
         let burn_msg = match self.info {
             AssetInfo::Token { contract_addr } => CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::Burn {
+                msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                     amount: self.amount,
                 })?,
                 funds: vec![],
@@ -227,7 +227,7 @@ impl AssetInfo {
                 #[cfg(feature = "injective")]
                 {
                     if is_ethereum_bridged_asset(&denom) {
-                        return get_ethereum_bridged_asset_label(denom.clone());
+                        return get_ethereum_bridged_asset_label(denom);
                     }
                 }
                 if is_ibc_token(&denom) {

@@ -76,9 +76,9 @@ pub fn burn_lp_asset_msg(
     ))]
     if is_factory_token(liquidity_asset.as_str()) {
         return Ok(tokenfactory::burn::burn(
-            sender.clone(),
+            sender,
             Coin {
-                denom: liquidity_asset.clone(),
+                denom: liquidity_asset,
                 amount,
             },
         ));

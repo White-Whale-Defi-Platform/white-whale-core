@@ -10,5 +10,5 @@ use cosmwasm_std::{Addr, Coin, CosmosMsg};
 ))]
 pub fn burn(sender: Addr, coin: Coin) -> CosmosMsg {
     let message_data = MsgMint { coin };
-    create_msg(sender, message_data, MsgTypes::MsgBurn.as_str())
+    create_msg(sender, message_data, MsgTypes::Burn.as_str())
 }
