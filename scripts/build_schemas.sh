@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 # First argument, whether or not to run git diff and exit with an error on any json file diff, not used by default
 if [[ -z $1 ]]; then
