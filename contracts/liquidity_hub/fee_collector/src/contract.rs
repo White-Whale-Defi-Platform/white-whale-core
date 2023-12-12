@@ -13,6 +13,7 @@ use white_whale::fee_collector::{
 use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 use crate::error::ContractError;
+use crate::queries::query_distribution_asset;
 use crate::state::{CONFIG, TMP_EPOCH};
 use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, migrations, queries};
@@ -49,9 +50,11 @@ pub fn instantiate(
 #[entry_point]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     if msg.id == FEES_AGGREGATION_REPLY_ID {
-        let (mut epoch, asset_info) = TMP_EPOCH
+        let mut epoch = TMP_EPOCH
             .may_load(deps.storage)?
             .ok_or(ContractError::CannotReadEpoch {})?;
+
+        let asset_info = query_distribution_asset(deps.as_ref())?;
 
         let token_balance: Uint128 = match asset_info.clone() {
             AssetInfo::Token { .. } => {
@@ -108,7 +111,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CollectFees { collect_fees_for } => {
-            commands::collect_fees(deps, info, env, collect_fees_for)
+            commands::collect_fees(deps, collect_fees_for)
         }
         ExecuteMsg::UpdateConfig {
             owner,
@@ -125,14 +128,10 @@ pub fn execute(
             pool_factory,
             vault_factory,
         ),
-        ExecuteMsg::AggregateFees {
-            asset_info,
-            aggregate_fees_for,
-        } => commands::aggregate_fees(deps, info, env, asset_info, aggregate_fees_for),
-        ExecuteMsg::ForwardFees {
-            epoch,
-            forward_fees_as,
-        } => commands::forward_fees(deps, info, env, epoch, forward_fees_as),
+        ExecuteMsg::AggregateFees { aggregate_fees_for } => {
+            commands::aggregate_fees(deps, env, aggregate_fees_for)
+        }
+        ExecuteMsg::ForwardFees { epoch, .. } => commands::forward_fees(deps, info, env, epoch),
     }
 }
 

@@ -13,24 +13,13 @@ use white_whale::pool_network::router::SwapOperation;
 use white_whale::vault_network::vault_factory::VaultsResponse;
 
 use crate::contract::{FEES_AGGREGATION_REPLY_ID, FEES_COLLECTION_REPLY_ID};
+use crate::queries::query_distribution_asset;
 use crate::state::{read_temporal_asset_infos, store_temporal_asset_info, CONFIG, TMP_EPOCH};
 use crate::ContractError;
 
 /// Collects fees accrued by the pools and vaults. If a factory is provided then it only collects the
 /// fees from its children.
-pub fn collect_fees(
-    deps: DepsMut,
-    info: MessageInfo,
-    env: Env,
-    collect_fees_for: FeesFor,
-) -> Result<Response, ContractError> {
-    let config: Config = CONFIG.load(deps.storage)?;
-
-    // only the owner or the contract itself can aggregate the fees
-    if info.sender != config.owner && info.sender != env.contract.address {
-        return Err(ContractError::Unauthorized {});
-    }
-
+pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response, ContractError> {
     let mut collect_fees_messages: Vec<CosmosMsg> = Vec::new();
 
     match collect_fees_for {
@@ -170,17 +159,13 @@ pub fn update_config(
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
     mut deps: DepsMut,
-    info: MessageInfo,
     env: Env,
-    ask_asset_info: AssetInfo,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
 
-    // only the owner or the contract itself can aggregate the fees
-    if info.sender != config.owner && info.sender != env.contract.address {
-        return Err(ContractError::Unauthorized {});
-    }
+    // query fee collector to get the distribution asset
+    let ask_asset_info = query_distribution_asset(deps.as_ref())?;
 
     let mut aggregate_fees_messages: Vec<CosmosMsg> = Vec::new();
 
@@ -335,7 +320,6 @@ pub fn forward_fees(
     info: MessageInfo,
     env: Env,
     epoch: Epoch,
-    forward_fees_as: AssetInfo,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -392,7 +376,6 @@ pub fn forward_fees(
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::AggregateFees {
-                asset_info: forward_fees_as.clone(),
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
@@ -412,7 +395,6 @@ pub fn forward_fees(
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
             msg: to_binary(&ExecuteMsg::AggregateFees {
-                asset_info: forward_fees_as.clone(),
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {
@@ -432,7 +414,7 @@ pub fn forward_fees(
     messages.push(pools_fee_aggregation_msg);
 
     // saving the epoch and the asset info to forward the fees as in temp storage
-    TMP_EPOCH.save(deps.storage, &(epoch, forward_fees_as))?;
+    TMP_EPOCH.save(deps.storage, &epoch)?;
 
     Ok(Response::new()
         .add_attribute("action", "forward_fees")
