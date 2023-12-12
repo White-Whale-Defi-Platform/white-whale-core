@@ -336,10 +336,10 @@ mod tests {
         // verify messages where executed in the right order
         let events = res.events;
         let expected_events = vec![
-            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("execute").add_attribute("_contract_address", router_addr.to_string()),
             Event::new("wasm").add_attributes(vec![
                 Attribute {
-                    key: "_contract_addr".to_string(),
+                    key: "_contract_address".to_string(),
                     value: router_addr.to_string(),
                 },
                 Attribute {
@@ -347,10 +347,10 @@ mod tests {
                     value: "flash_loan".to_string(),
                 },
             ]),
-            Event::new("execute").add_attribute("_contract_addr", native_vault_addr.to_string()),
+            Event::new("execute").add_attribute("_contract_address", native_vault_addr.to_string()),
             Event::new("wasm").add_attributes(vec![
                 Attribute {
-                    key: "_contract_addr".to_string(),
+                    key: "_contract_address".to_string(),
                     value: native_vault_addr.to_string(),
                 },
                 Attribute {
@@ -362,10 +362,10 @@ mod tests {
                     value: flashloan_amount.to_string(),
                 },
             ]),
-            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("execute").add_attribute("_contract_address", router_addr.to_string()),
             Event::new("wasm").add_attributes(vec![
                 Attribute {
-                    key: "_contract_addr".to_string(),
+                    key: "_contract_address".to_string(),
                     value: router_addr.to_string(),
                 },
                 Attribute {
@@ -373,7 +373,8 @@ mod tests {
                     value: "next_loan".to_string(),
                 },
             ]),
-            Event::new("execute").add_attribute("_contract_addr", dummy_contract_addr.to_string()),
+            Event::new("execute")
+                .add_attribute("_contract_address", dummy_contract_addr.to_string()),
             Event::new("transfer").add_attributes(vec![
                 Attribute {
                     key: "recipient".to_string(),
@@ -388,10 +389,10 @@ mod tests {
                     value: payload_amount.first().unwrap().to_string(),
                 },
             ]),
-            Event::new("execute").add_attribute("_contract_addr", router_addr.to_string()),
+            Event::new("execute").add_attribute("_contract_address", router_addr.to_string()),
             Event::new("wasm").add_attributes(vec![
                 Attribute {
-                    key: "_contract_addr".to_string(),
+                    key: "_contract_address".to_string(),
                     value: router_addr.to_string(),
                 },
                 Attribute {
@@ -424,10 +425,10 @@ mod tests {
                         .to_string(),
                 },
             ]),
-            Event::new("execute").add_attribute("_contract_addr", native_vault_addr.to_string()),
+            Event::new("execute").add_attribute("_contract_address", native_vault_addr.to_string()),
             Event::new("wasm").add_attributes(vec![
                 Attribute {
-                    key: "_contract_addr".to_string(),
+                    key: "_contract_address".to_string(),
                     value: native_vault_addr.to_string(),
                 },
                 Attribute {
