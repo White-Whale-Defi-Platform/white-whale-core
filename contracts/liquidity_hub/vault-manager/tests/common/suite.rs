@@ -3,6 +3,7 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, Wasm, WasmKeeper};
 
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
@@ -17,8 +18,6 @@ use crate::common::suite_contracts::{
     cw20_token_contract, fee_collector_contract, pair_contract, vault_manager_contract,
     whale_lair_contract,
 };
-use crate::common::test_addresses::MockAddressGenerator;
-use crate::common::test_api::MockApiBech32;
 
 pub struct TestingSuite {
     app: App<BankKeeper, MockApiBech32>,

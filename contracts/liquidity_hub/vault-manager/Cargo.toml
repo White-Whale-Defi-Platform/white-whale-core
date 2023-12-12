@@ -51,4 +51,3 @@ terraswap-token.workspace = true
 terraswap-pair.workspace = true
 fee_collector.workspace = true
 anyhow.workspace = true
-bech32.workspace = true
