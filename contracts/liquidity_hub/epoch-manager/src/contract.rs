@@ -9,7 +9,7 @@ use white_whale::epoch_manager::epoch_manager::{
 use white_whale::migrate_guards::check_contract_name;
 
 use crate::error::ContractError;
-use crate::state::{ADMIN, CONFIG, EPOCH};
+use crate::state::{ADMIN, CONFIG, EPOCHS};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -35,7 +35,12 @@ pub fn instantiate(
     }
 
     ADMIN.set(deps.branch(), Some(info.sender))?;
-    EPOCH.save(deps.storage, &msg.start_epoch)?;
+    EPOCHS.save(
+        deps.storage,
+        &msg.start_epoch.id.to_be_bytes(),
+        &msg.start_epoch,
+    )?;
+
     CONFIG.save(
         deps.storage,
         &Config {
@@ -83,6 +88,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

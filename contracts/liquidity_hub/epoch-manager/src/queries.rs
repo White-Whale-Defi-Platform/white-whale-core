@@ -1,9 +1,9 @@
-use cosmwasm_std::{Addr, Deps, StdResult};
+use cosmwasm_std::{Addr, Deps, Order, StdError, StdResult};
 use cw_controllers::HooksResponse;
 
-use white_whale::epoch_manager::epoch_manager::{ConfigResponse, Epoch, EpochResponse};
+use white_whale::epoch_manager::epoch_manager::{ConfigResponse, EpochResponse};
 
-use crate::state::{ADMIN, CONFIG, EPOCH, HOOKS};
+use crate::state::{ADMIN, CONFIG, EPOCHS, HOOKS};
 
 /// Queries the config. Returns a [ConfigResponse].
 pub(crate) fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
@@ -18,28 +18,24 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
 /// Queries the current epoch. Returns an [EpochResponse].
 pub(crate) fn query_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
-    EPOCH
-        .load(deps.storage)
-        .map(|epoch| epoch.to_epoch_response())
+    let option = EPOCHS
+        .range(deps.storage, None, None, Order::Descending)
+        .next();
+
+    let epoch = match option {
+        Some(Ok((_, epoch))) => epoch,
+        _ => Err(StdError::generic_err("No epochs stored"))?,
+    };
+
+    Ok(EpochResponse { epoch })
 }
 
 /// Queries the current epoch. Returns an [EpochResponse].
 pub(crate) fn query_epoch(deps: Deps, id: u64) -> StdResult<EpochResponse> {
-    let current_epoch = EPOCH.load(deps.storage)?;
-
-    if current_epoch.id == id {
-        Ok(current_epoch.to_epoch_response())
-    } else {
-        let epoch_difference = current_epoch.id.saturating_sub(id);
-
-        let epoch = Epoch {
-            id,
-            start_time: current_epoch.start_time.minus_nanos(
-                CONFIG.load(deps.storage)?.epoch_config.duration.u64() * epoch_difference,
-            ),
-        };
-        Ok(epoch.to_epoch_response())
-    }
+    let epoch = EPOCHS
+        .may_load(deps.storage, &id.to_be_bytes())?
+        .ok_or_else(|| StdError::generic_err(format!("No epoch found with id {}", id)))?;
+    Ok(epoch.to_epoch_response())
 }
 
 /// Queries hooks. Returns a [HooksResponse].

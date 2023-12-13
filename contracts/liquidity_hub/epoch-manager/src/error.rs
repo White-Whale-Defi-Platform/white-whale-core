@@ -34,6 +34,9 @@ pub enum ContractError {
 
     #[error("genesis_epoch must be equal to start_epoch.start_time.")]
     EpochConfigMismatch,
+
+    #[error("No epoch found with id {0}.")]
+    NoEpochFound(u64),
 }
 
 impl From<semver::Error> for ContractError {

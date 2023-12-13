@@ -1,6 +1,5 @@
+use cosmwasm_std::from_json;
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_json, to_json_binary, CosmosMsg, WasmMsg};
-use cw_controllers::{AdminError, HookError};
 
 use epoch_manager::contract::{execute, query};
 use epoch_manager::ContractError;
@@ -54,10 +53,13 @@ fn create_new_epoch_successfully() {
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Epoch { id: 123 }).unwrap();
     let epoch_response: EpochResponse = from_json(&query_res).unwrap();
 
-    assert_eq!(epoch_response.epoch, Epoch {
-        id: 123,
-        start_time: next_epoch_time.minus_nanos(86400),
-    });
+    assert_eq!(
+        epoch_response.epoch,
+        Epoch {
+            id: 123,
+            start_time: next_epoch_time.minus_nanos(86400),
+        }
+    );
 }
 
 #[test]

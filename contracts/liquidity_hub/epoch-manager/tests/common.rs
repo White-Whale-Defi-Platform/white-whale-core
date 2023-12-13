@@ -6,7 +6,10 @@ use epoch_manager::ContractError;
 use white_whale::epoch_manager::epoch_manager::{Epoch, EpochConfig, ExecuteMsg, InstantiateMsg};
 
 /// Mocks contract instantiation.
-pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub(crate) fn mock_instantiation(
+    deps: DepsMut,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     let current_time = mock_env().block.time;
     let msg = InstantiateMsg {
         start_epoch: Epoch {
@@ -23,7 +26,7 @@ pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, 
 }
 
 /// Mocks hook addition.
-pub fn mock_add_hook(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub(crate) fn mock_add_hook(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = ExecuteMsg::AddHook {
         contract_addr: "hook_contract_1".to_string(),
     };
