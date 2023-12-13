@@ -1,4 +1,4 @@
-use cosmwasm_std::{entry_point, to_json_binary, StdError};
+use cosmwasm_std::{entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -9,7 +9,7 @@ use white_whale::epoch_manager::epoch_manager::{
 use white_whale::migrate_guards::check_contract_name;
 
 use crate::error::ContractError;
-use crate::state::{ADMIN, CONFIG, EPOCH};
+use crate::state::{ADMIN, CONFIG, EPOCHS};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -27,19 +27,20 @@ pub fn instantiate(
 
     // validate start_time for the initial epoch
     if msg.start_epoch.start_time < env.block.time {
-        return Err(ContractError::Std(StdError::generic_err(
-            "start_time must be in the future",
-        )));
+        return Err(ContractError::InvalidStartTime);
     }
 
     if msg.epoch_config.genesis_epoch.u64() != msg.start_epoch.start_time.nanos() {
-        return Err(ContractError::Std(StdError::generic_err(
-            "genesis_epoch must be equal to start_epoch.start_time",
-        )));
+        return Err(ContractError::EpochConfigMismatch);
     }
 
     ADMIN.set(deps.branch(), Some(info.sender))?;
-    EPOCH.save(deps.storage, &msg.start_epoch)?;
+    EPOCHS.save(
+        deps.storage,
+        &msg.start_epoch.id.to_be_bytes(),
+        &msg.start_epoch,
+    )?;
+
     CONFIG.save(
         deps.storage,
         &Config {
@@ -82,9 +83,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::CurrentEpoch {} => Ok(to_json_binary(&queries::query_current_epoch(deps)?)?),
         QueryMsg::Epoch { id } => Ok(to_json_binary(&queries::query_epoch(deps, id)?)?),
+        QueryMsg::Hooks {} => Ok(to_json_binary(&queries::query_hooks(deps)?)?),
+        QueryMsg::Hook { hook } => Ok(to_json_binary(&queries::query_hook(deps, hook)?)?),
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

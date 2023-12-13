@@ -3,7 +3,8 @@ use cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Response, SubMsg};
 use white_whale::epoch_manager::epoch_manager::EpochConfig;
 use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
 
-use crate::state::{ADMIN, CONFIG, EPOCH, HOOKS};
+use crate::queries::query_current_epoch;
+use crate::state::{ADMIN, CONFIG, EPOCHS, HOOKS};
 use crate::ContractError;
 
 /// Adds a new hook to the contract.
@@ -27,7 +28,7 @@ pub(crate) fn remove_hook(
 
 /// Creates a new epoch.
 pub fn create_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
-    let mut current_epoch = EPOCH.load(deps.storage)?;
+    let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
 
     if env
@@ -48,7 +49,11 @@ pub fn create_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractError> 
         .start_time
         .plus_nanos(config.epoch_config.duration.u64());
 
-    EPOCH.save(deps.storage, &current_epoch)?;
+    EPOCHS.save(
+        deps.storage,
+        &current_epoch.id.to_be_bytes(),
+        &current_epoch,
+    )?;
 
     let messages = HOOKS.prepare_hooks(deps.storage, |hook| {
         EpochChangedHookMsg {
