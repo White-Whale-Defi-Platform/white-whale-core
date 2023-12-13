@@ -23,3 +23,5 @@ artifacts
 /scripts/deployment/input/
 /scripts/testing/input/
 /scripts/testing/output/
+
+tarpaulin-report.html

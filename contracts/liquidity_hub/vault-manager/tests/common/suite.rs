@@ -1,6 +1,5 @@
 use cosmwasm_std::{
     coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64,
-    WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};

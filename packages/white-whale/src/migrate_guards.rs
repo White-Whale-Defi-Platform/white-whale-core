@@ -1,6 +1,7 @@
 use cosmwasm_std::{StdError, Storage};
 use cw2::CONTRACT;
 
+/// Checks the contract name matches the expected name
 pub fn check_contract_name(store: &dyn Storage, new_name: String) -> Result<(), StdError> {
     let stored_contract_name = CONTRACT.load(store)?.contract;
     // Prevent accidentally migrating to a different contract

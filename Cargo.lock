@@ -1952,6 +1952,7 @@ dependencies = [
  "anybuf",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-controllers",
  "cw-ownable",
  "cw-storage-plus",
  "cw2",
