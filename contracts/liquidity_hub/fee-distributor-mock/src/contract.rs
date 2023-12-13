@@ -9,14 +9,7 @@ use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::CURRENT_EPOCH;
 
-// use cw2::set_contract_version;
-
-/*
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:fee-distributor-mock";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
-
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -39,6 +32,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
@@ -62,6 +56,7 @@ pub fn execute(
     Ok(Response::default())
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(
     deps: Deps,
