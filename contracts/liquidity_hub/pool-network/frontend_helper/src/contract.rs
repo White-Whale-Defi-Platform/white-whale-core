@@ -1,7 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg, WasmMsg,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg,
+    WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -95,7 +96,7 @@ pub fn execute(
                     Ok::<_, ContractError>(vec![
                         WasmMsg::Execute {
                             contract_addr: token_contract_addr.clone(),
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.clone().into_string(),
                                 recipient: env.contract.address.clone().into_string(),
                                 amount: token_amount,
@@ -104,7 +105,7 @@ pub fn execute(
                         },
                         WasmMsg::Execute {
                             contract_addr: token_contract_addr,
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
                                 spender: pair_address.clone(),
                                 amount: token_amount,
                                 expires: None,
@@ -131,7 +132,7 @@ pub fn execute(
                     gas_limit: None,
                     msg: WasmMsg::Execute {
                         contract_addr: pair_address,
-                        msg: to_binary(
+                        msg: to_json_binary(
                             &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
                                 assets,
                                 slippage_tolerance,
@@ -186,7 +187,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&CONFIG.load(deps.storage)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&CONFIG.load(deps.storage)?)?),
     }
 }
 

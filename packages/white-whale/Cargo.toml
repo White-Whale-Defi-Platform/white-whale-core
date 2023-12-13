@@ -1,6 +1,6 @@
 [package]
 name = "white-whale"
-version = "1.1.1"
+version = "1.1.2"
 edition.workspace = true
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 description = "Common White Whale types and utils"
@@ -24,6 +24,7 @@ cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
 cosmwasm-schema.workspace = true
+cw-storage-plus.workspace = true
 cw20.workspace = true
 cw2.workspace = true
 protobuf.workspace = true
@@ -31,3 +32,5 @@ uint.workspace = true
 osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
+cw-ownable.workspace = true
+anybuf.workspace = true

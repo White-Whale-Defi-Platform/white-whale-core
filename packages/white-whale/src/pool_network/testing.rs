@@ -1,4 +1,6 @@
-use crate::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairType};
+use crate::pool_network::asset::{
+    is_factory_token, Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairType,
+};
 use crate::pool_network::mock_querier::mock_dependencies;
 use crate::pool_network::querier::{
     query_all_balances, query_balance, query_pair_info, query_token_balance, query_token_info,
@@ -6,8 +8,8 @@ use crate::pool_network::querier::{
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 
 use cosmwasm_std::{
-    coin, to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg, Uint128,
-    WasmMsg,
+    coin, to_json_binary, Addr, Api, BankMsg, Coin, CosmosMsg, MessageInfo, StdError, SubMsg,
+    Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
@@ -137,7 +139,7 @@ fn test_asset_info() {
 
     assert_eq!(
         token_info
-            .query_pool(
+            .query_balance(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
                 Addr::unchecked(MOCK_CONTRACT_ADDR),
@@ -147,7 +149,7 @@ fn test_asset_info() {
     );
     assert_eq!(
         native_token_info
-            .query_pool(
+            .query_balance(
                 &deps.as_ref().querier,
                 deps.as_ref().api,
                 Addr::unchecked(MOCK_CONTRACT_ADDR),
@@ -195,7 +197,7 @@ fn test_asset() {
             .unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(123123u128),
             })
@@ -210,7 +212,7 @@ fn test_asset() {
             .unwrap(),
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(123123u128),
             })
@@ -448,6 +450,7 @@ fn get_native_asset_label() {
     let asset_info = AssetInfo::NativeToken {
         denom: "factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB".to_string(),
     };
+    assert!(is_factory_token(&"factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB"));
     let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
     assert_eq!(asset_label, "factory/mig...pkl/Qwe...CVB");
 }

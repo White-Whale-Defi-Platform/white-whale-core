@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
+    coins, to_json_binary, Addr, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Deps, MessageInfo,
     QuerierWrapper, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
@@ -50,7 +50,7 @@ impl Asset {
         match &self.info {
             AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: recipient.to_string(),
                     amount,
                 })?,
@@ -74,7 +74,7 @@ impl Asset {
         let burn_msg = match self.info {
             AssetInfo::Token { contract_addr } => CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::Burn {
+                msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                     amount: self.amount,
                 })?,
                 funds: vec![],
@@ -170,21 +170,17 @@ impl AssetInfo {
             AssetInfo::Token { .. } => false,
         }
     }
-    pub fn query_pool(
+    pub fn query_balance(
         &self,
         querier: &QuerierWrapper,
         api: &dyn Api,
-        pool_addr: Addr,
+        addr: Addr,
     ) -> StdResult<Uint128> {
         match self {
-            AssetInfo::Token { contract_addr, .. } => query_token_balance(
-                querier,
-                api.addr_validate(contract_addr.as_str())?,
-                pool_addr,
-            ),
-            AssetInfo::NativeToken { denom, .. } => {
-                query_balance(querier, pool_addr, denom.to_string())
+            AssetInfo::Token { contract_addr, .. } => {
+                query_token_balance(querier, api.addr_validate(contract_addr.as_str())?, addr)
             }
+            AssetInfo::NativeToken { denom, .. } => query_balance(querier, addr, denom.to_string()),
         }
     }
 
@@ -231,7 +227,7 @@ impl AssetInfo {
                 #[cfg(feature = "injective")]
                 {
                     if is_ethereum_bridged_asset(&denom) {
-                        return get_ethereum_bridged_asset_label(denom.clone());
+                        return get_ethereum_bridged_asset_label(denom);
                     }
                 }
                 if is_ibc_token(&denom) {
@@ -471,11 +467,11 @@ impl PairInfoRaw {
         let info_1: AssetInfo = self.asset_infos[1].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_0.query_balance(querier, api, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, api, contract_addr)?,
+                amount: info_1.query_balance(querier, api, contract_addr)?,
                 info: info_1,
             },
         ])
@@ -603,15 +599,15 @@ impl TrioInfoRaw {
         let info_2: AssetInfo = self.asset_infos[2].to_normal(api)?;
         Ok([
             Asset {
-                amount: info_0.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_0.query_balance(querier, api, contract_addr.clone())?,
                 info: info_0,
             },
             Asset {
-                amount: info_1.query_pool(querier, api, contract_addr.clone())?,
+                amount: info_1.query_balance(querier, api, contract_addr.clone())?,
                 info: info_1,
             },
             Asset {
-                amount: info_2.query_pool(querier, api, contract_addr)?,
+                amount: info_2.query_balance(querier, api, contract_addr)?,
                 info: info_2,
             },
         ])
@@ -625,26 +621,14 @@ pub fn get_total_share(deps: &Deps, liquidity_asset: String) -> StdResult<Uint12
         feature = "osmosis_token_factory",
         feature = "injective"
     ))]
-    let total_share = if is_factory_token(liquidity_asset.as_str()) {
+    if is_factory_token(liquidity_asset.as_str()) {
         //bank query total
-        deps.querier.query_supply(&liquidity_asset)?.amount
-    } else {
-        query_token_info(
-            &deps.querier,
-            deps.api.addr_validate(liquidity_asset.as_str())?,
-        )?
-        .total_supply
-    };
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
-    let total_share = query_token_info(
+        return Ok(deps.querier.query_supply(&liquidity_asset)?.amount);
+    }
+
+    Ok(query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_asset.as_str())?,
     )?
-    .total_supply;
-
-    Ok(total_share)
+    .total_supply)
 }

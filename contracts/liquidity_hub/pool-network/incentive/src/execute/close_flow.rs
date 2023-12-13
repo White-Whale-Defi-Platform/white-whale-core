@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
+    coins, to_json_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult,
+    WasmMsg,
 };
 
 use white_whale::pool_network::asset::AssetInfo;
@@ -52,7 +53,7 @@ pub fn close_flow(
         .into(),
         AssetInfo::Token { contract_addr } => WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                 recipient: flow.flow_creator.clone().into_string(),
                 amount: amount_to_return,
             })?,

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use white_whale::vault_network::vault_router::ExecuteMsg;
@@ -44,9 +44,9 @@ pub fn next_loan(
             vec![WasmMsg::Execute {
                 contract_addr: vault.clone(),
                 funds: vec![],
-                msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
+                msg: to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                     amount: asset.amount,
-                    msg: to_binary(&ExecuteMsg::NextLoan {
+                    msg: to_json_binary(&ExecuteMsg::NextLoan {
                         initiator,
                         source_vault: vault.to_string(),
                         source_vault_asset_info: asset.info.clone(),
@@ -64,7 +64,7 @@ pub fn next_loan(
                 WasmMsg::Execute {
                     contract_addr: env.contract.address.to_string(),
                     funds: vec![],
-                    msg: to_binary(&ExecuteMsg::CompleteLoan {
+                    msg: to_json_binary(&ExecuteMsg::CompleteLoan {
                         initiator,
                         loaned_assets,
                     })?,
