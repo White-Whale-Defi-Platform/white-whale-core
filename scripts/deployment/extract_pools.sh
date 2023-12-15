@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -e
+
+# Import the deploy_liquidity_hub script
+deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+
+# Displays tool usage
+function display_usage() {
+  echo "WW Pool Deployer"
+  echo -e "\nUsage:./deploy_pool.sh [flags].\n"
+  echo -e "Available flags:\n"
+  echo -e "  -h \thelp"
+  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
+  echo -e "  -p \tPool configuration file to get deployment info from."
+}
+
+function generate_label() {
+  local assets=("$1" "$2")
+  local processed_assets=()
+
+  for asset in "${assets[@]}"; do
+    local processed_asset="$asset"
+    if [[ "$asset" == ibc/* ]]; then
+      denom_trace_result=$($BINARY q ibc-transfer denom-trace $asset --node $RPC -o json | jq -r '.denom_trace.base_denom')
+
+      if [[ "$denom_trace_result" == factory/* ]]; then
+        processed_asset=$(echo "$denom_trace_result" | awk -F'/' '{print $NF}')
+      elif [[ "$denom_trace_result" == factory:* ]]; then
+        processed_asset="${denom_trace_result##*:}"
+      else
+        processed_asset="$denom_trace_result"
+      fi
+
+    elif [[ "$asset" == factory/* ]]; then
+      processed_asset=$(basename "$asset")
+    elif [[ "$asset" == $chain* ]]; then
+      local query='{"token_info":{}}'
+      local symbol=$($BINARY query wasm contract-state smart $asset "$query" --node $RPC --output json | jq -r '.data.symbol')
+      processed_asset=$symbol
+    fi
+    processed_assets+=("$processed_asset")
+  done
+
+  echo "${processed_assets[0]}-${processed_assets[1]}"
+}
+
+function extract_asset_info() {
+  local asset_json="$1"
+  if echo "$asset_json" | jq -e '.native_token' &>/dev/null; then
+    echo $(echo "$asset_json" | jq -r '.native_token.denom')
+  elif echo "$asset_json" | jq -e '.token' &>/dev/null; then
+    echo $(echo "$asset_json" | jq -r '.token.contract_addr')
+  else
+    echo "unknown"
+  fi
+}
+
+function extract_pools() {
+  mkdir -p $project_root_path/scripts/deployment/output
+  output_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_pools.json
+  deployment_file=$project_root_path/scripts/deployment/output/"$CHAIN_ID"_liquidity_hub_contracts.json
+
+  if [[ ! -f "$output_file" ]]; then
+    # create file to dump results into
+    echo '{"pools": []}' | jq '.' >$output_file
+  fi
+
+  pool_factory_addr=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .contract_address' $deployment_file)
+  incentive_factory_addr=$(jq -r '.contracts[] | select (.wasm == "incentive_factory.wasm") | .contract_address' $deployment_file)
+
+  local limit=30
+  query='{"pairs":{"limit": '$limit'}}'
+  local pairs=$($BINARY query wasm contract-state smart $pool_factory_addr "$query" --node $RPC --output json | jq '.data.pairs')
+
+  pool_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_pair.wasm") | .code_id' $deployment_file)
+  lp_code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_token.wasm") | .code_id' $deployment_file)
+
+  echo -e "\nExtracting pools info...\n"
+  while IFS= read -r line; do
+    # Extracting asset information
+    asset1_info=$(extract_asset_info "$(echo $line | jq '.asset_infos[0]')")
+    asset2_info=$(extract_asset_info "$(echo $line | jq '.asset_infos[1]')")
+    lp_asset=$(echo $line | jq '.liquidity_token')
+
+    # Generate label for the pair
+    label=$(generate_label "$asset1_info" "$asset2_info")
+    query='{"incentive":{"lp_asset": '$lp_asset'}}'
+    local incentive=$($BINARY query wasm contract-state smart $incentive_factory_addr "$query" --node $RPC --output json | jq -r '.data')
+
+    pool_entry=$(jq --arg pool_code_id "$pool_code_id" --arg lp_code_id "$lp_code_id" --arg pair_label "$label" --arg incentive "$incentive" '{
+            pair: $pair_label,
+            assets: .asset_infos,
+            pool_address: .contract_addr,
+            lp_asset: .liquidity_token,
+            incentive_contract: $incentive,
+            pool_code_id: $pool_code_id,
+            lp_code_id: $lp_code_id
+        }' <<<"$line")
+    pools+=("$pool_entry")
+  done < <(echo "$pairs" | jq -c '.[]')
+
+  # Combine all pool entries into a single JSON array and write to the output file
+  jq -n --argjson pools "$(echo "${pools[@]}" | jq -s '.')" '{pools: $pools}' >"$output_file"
+
+  echo -e "\n**** Extracted pool data on $CHAIN_ID successfully ****\n"
+  jq '.' $output_file
+}
+
+if [ -z $1 ]; then
+  display_usage
+  exit 0
+fi
+
+# get args
+optstring=':c:h'
+while getopts $optstring arg; do
+  case "$arg" in
+  c)
+    chain=$OPTARG
+    source $deployment_script_dir/deploy_env/chain_env.sh
+    init_chain_env $OPTARG
+    if [[ "$chain" = "local" ]]; then
+      tx_delay=0.5
+    else
+      tx_delay=8
+    fi
+
+    extract_pools
+    ;;
+  h)
+    display_usage
+    exit 0
+    ;;
+  :)
+    echo "Must supply an argument to -$OPTARG" >&2
+    exit 1
+    ;;
+  ?)
+    echo "Invalid option: -${OPTARG}"
+    display_usage
+    exit 2
+    ;;
+  esac
+done
