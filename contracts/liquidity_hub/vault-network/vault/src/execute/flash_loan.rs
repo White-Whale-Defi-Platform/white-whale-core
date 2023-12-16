@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    coins, to_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
+    coins, to_json_binary, Binary, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
     StdError, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
@@ -54,7 +54,7 @@ pub fn flash_loan(
     if let AssetInfo::Token { contract_addr } = config.asset_info.clone() {
         let loan_msg = WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.clone().into_string(),
                 amount,
             })?,
@@ -84,7 +84,7 @@ pub fn flash_loan(
     messages.push(
         WasmMsg::Execute {
             contract_addr: env.contract.address.into_string(),
-            msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
+            msg: to_json_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
                 old_balance,
                 loan_amount: amount,
             }))?,
@@ -104,7 +104,7 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_dependencies_with_balance, mock_env},
-        to_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
+        to_json_binary, Addr, BankMsg, Response, Uint128, WasmMsg,
     };
     use white_whale::pool_network::asset::AssetInfo;
     use white_whale::vault_network::vault::Config;
@@ -147,7 +147,7 @@ mod test {
             mock_creator(),
             white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(5_000),
-                msg: to_binary(&BankMsg::Burn { amount: vec![] }).unwrap(),
+                msg: to_json_binary(&BankMsg::Burn { amount: vec![] }).unwrap(),
             },
         );
 
@@ -159,7 +159,7 @@ mod test {
         let mut deps = mock_dependencies_with_balance(&coins(10_000, "uluna"));
         let env = mock_env();
 
-        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+        let callback_msg = to_json_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
 
         instantiate(
             deps.as_mut(),
@@ -201,7 +201,7 @@ mod test {
         let mut deps = mock_dependencies_with_balance(&coins(10_000, "uluna"));
         let env = mock_env();
 
-        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+        let callback_msg = to_json_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
 
         instantiate(
             deps.as_mut(),
@@ -244,12 +244,14 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: env.contract.address.into_string(),
                         funds: vec![],
-                        msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::Callback(
-                            white_whale::vault_network::vault::CallbackMsg::AfterTrade {
-                                old_balance: Uint128::new(10_000),
-                                loan_amount: Uint128::new(5_000)
-                            }
-                        ))
+                        msg: to_json_binary(
+                            &white_whale::vault_network::vault::ExecuteMsg::Callback(
+                                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+                                    old_balance: Uint128::new(10_000),
+                                    loan_amount: Uint128::new(5_000)
+                                }
+                            )
+                        )
                         .unwrap()
                     }
                 ])
@@ -268,7 +270,7 @@ mod test {
             vec![],
         );
 
-        let callback_msg = to_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
+        let callback_msg = to_json_binary(&BankMsg::Burn { amount: vec![] }).unwrap();
 
         // inject config
         CONFIG
@@ -313,7 +315,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "vault_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                        msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                             recipient: mock_creator().sender.into_string(),
                             amount: Uint128::new(5_000)
                         })
@@ -327,12 +329,14 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: env.contract.address.into_string(),
                         funds: vec![],
-                        msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::Callback(
-                            white_whale::vault_network::vault::CallbackMsg::AfterTrade {
-                                old_balance: Uint128::new(10_000),
-                                loan_amount: Uint128::new(5_000)
-                            }
-                        ))
+                        msg: to_json_binary(
+                            &white_whale::vault_network::vault::ExecuteMsg::Callback(
+                                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+                                    old_balance: Uint128::new(10_000),
+                                    loan_amount: Uint128::new(5_000)
+                                }
+                            )
+                        )
                         .unwrap()
                     }
                 ])

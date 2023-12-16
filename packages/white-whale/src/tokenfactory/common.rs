@@ -8,6 +8,7 @@ enum Protocol {
 }
 
 impl Protocol {
+    #![allow(unreachable_code)]
     fn from_features() -> Self {
         #[cfg(feature = "injective")]
         {
@@ -34,17 +35,17 @@ impl Protocol {
 }
 
 pub(crate) enum MsgTypes {
-    MsgCreateDenom,
-    MsgMint,
-    MsgBurn,
+    CreateDenom,
+    Mint,
+    Burn,
 }
 
 impl MsgTypes {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::MsgCreateDenom => "MsgCreateDenom",
-            Self::MsgMint => "MsgMint",
-            Self::MsgBurn => "MsgBurn",
+            Self::CreateDenom => "MsgCreateDenom",
+            Self::Mint => "MsgMint",
+            Self::Burn => "MsgBurn",
         }
     }
 }

@@ -1,4 +1,3 @@
-use std::clone::Clone;
 use std::string::ToString;
 
 use cosmwasm_std::{Deps, Order, StdResult, Storage, Uint128};
@@ -47,9 +46,10 @@ impl<'a> IndexList<Vault> for VaultIndexes<'a> {
 }
 
 // settings for pagination
-pub(crate) const MAX_LIMIT: u32 = 50;
+pub(crate) const MAX_LIMIT: u32 = 1_000;
 const DEFAULT_LIMIT: u32 = 10;
 
+/// Gets the vaults in the contract
 pub fn get_vaults(
     storage: &dyn Storage,
     start_after: Option<Vec<u8>>,
@@ -118,12 +118,6 @@ pub fn get_vault_by_identifier(
     vault_identifier: String,
 ) -> Result<Vault, ContractError> {
     VAULTS
-        .may_load(deps.storage, vault_identifier.clone())?
-        .ok_or_else(|| ContractError::NonExistentVault {})
-    // Ok(VAULTS
-    //     .idx
-    //     .identifier
-    //     .item(deps.storage, vault_identifier)?
-    //     .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
-    //     .1)
+        .may_load(deps.storage, vault_identifier)?
+        .ok_or(ContractError::NonExistentVault {})
 }

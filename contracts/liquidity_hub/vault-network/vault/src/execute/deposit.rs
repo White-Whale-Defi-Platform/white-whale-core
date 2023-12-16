@@ -5,7 +5,7 @@
 ))]
 use cosmwasm_std::coins;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, Uint256, WasmMsg,
+    to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, Uint256, WasmMsg,
 };
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 
@@ -81,7 +81,7 @@ pub fn deposit(
         messages.push(
             WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.clone().into_string(),
                     recipient: env.contract.address.clone().into_string(),
                     amount,
@@ -192,7 +192,7 @@ fn mint_lp_token_msg(
     } else {
         Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_asset,
-            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+            msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
             funds: vec![],
         })])
     }
@@ -204,7 +204,7 @@ fn mint_lp_token_msg(
     ))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+        msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
         funds: vec![],
     })])
 }
@@ -214,7 +214,7 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, Addr, BankMsg, CosmosMsg, Response, Uint128, WasmMsg,
+        to_json_binary, Addr, BankMsg, CosmosMsg, Response, Uint128, WasmMsg,
     };
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
@@ -285,7 +285,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "lp_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&Cw20ExecuteMsg::Mint {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                             recipient: env.contract.address.to_string(),
                             amount: Uint128::new(1_000),
                         })
@@ -294,7 +294,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "lp_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&Cw20ExecuteMsg::Mint {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                             recipient: "creator".to_string(),
                             amount: Uint128::new(4_000),
                         })
@@ -361,7 +361,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "vault_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                             owner: "creator".to_string(),
                             recipient: env.contract.address.clone().into_string(),
                             amount: Uint128::new(5_000),
@@ -371,7 +371,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "lp_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&Cw20ExecuteMsg::Mint {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                             recipient: env.contract.address.into_string(),
                             amount: Uint128::new(1_000),
                         })
@@ -380,7 +380,7 @@ mod test {
                     WasmMsg::Execute {
                         contract_addr: "lp_token".to_string(),
                         funds: vec![],
-                        msg: to_binary(&Cw20ExecuteMsg::Mint {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                             recipient: "creator".to_string(),
                             amount: Uint128::new(4_000),
                         })

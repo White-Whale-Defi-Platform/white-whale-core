@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
+use cosmwasm_std::{to_json_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
 use cw_storage_plus::{Item, Map};
 
 use white_whale::fee_distributor::{ClaimableEpochsResponse, Config, Epoch, EpochResponse};
@@ -93,7 +93,7 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
         let bonded_response: BondedResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: bonding_contract.to_string(),
-                msg: to_binary(&QueryMsg::Bonded {
+                msg: to_json_binary(&QueryMsg::Bonded {
                     address: address.to_string(),
                 })?,
             }))?;

@@ -1,6 +1,6 @@
 use crate::tests::mock_info::mock_creator;
 use crate::tests::store_code::fee_distributor_mock_contract;
-use cosmwasm_std::{to_binary, Addr, Decimal, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Decimal, Uint128, WasmMsg};
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
 use white_whale::{
@@ -150,7 +150,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         mock_admin().sender,
         WasmMsg::Execute {
             contract_addr: incentive_factory.to_string(),
-            msg: to_binary(
+            msg: to_json_binary(
                 &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
                     lp_asset: lp_token.clone(),
                 },

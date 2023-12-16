@@ -4,7 +4,7 @@
     feature = "injective"
 ))]
 use cosmwasm_std::{coins, Coin};
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cfg(any(
     feature = "token_factory",
@@ -54,7 +54,7 @@ pub fn mint_lp_token_msg(
 
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&cw20::Cw20ExecuteMsg::Mint {
+        msg: to_json_binary(&cw20::Cw20ExecuteMsg::Mint {
             recipient: recipient.clone().into_string(),
             amount,
         })?,
@@ -76,9 +76,9 @@ pub fn burn_lp_asset_msg(
     ))]
     if is_factory_token(liquidity_asset.as_str()) {
         return Ok(tokenfactory::burn::burn(
-            sender.clone(),
+            sender,
             Coin {
-                denom: liquidity_asset.clone(),
+                denom: liquidity_asset,
                 amount,
             },
         ));
@@ -86,7 +86,7 @@ pub fn burn_lp_asset_msg(
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
+        msg: to_json_binary(&cw20::Cw20ExecuteMsg::Burn { amount })?,
         funds: vec![],
     }))
 }

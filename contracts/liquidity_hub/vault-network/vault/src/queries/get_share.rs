@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
+use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 
 use white_whale::pool_network::asset::{get_total_share, AssetInfo};
@@ -40,12 +40,12 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultE
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
     let asset_share = Decimal::from_ratio(amount, lp_amount) * balance;
-    Ok(to_binary(&asset_share)?)
+    Ok(to_json_binary(&asset_share)?)
 }
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{coins, from_binary, testing::mock_env, Addr, Uint128};
+    use cosmwasm_std::{coins, from_json, testing::mock_env, Addr, Uint128};
 
     use white_whale::pool_network::asset::{Asset, AssetInfo};
     use white_whale::vault_network::vault::Config;
@@ -112,7 +112,7 @@ mod test {
             )
             .unwrap();
 
-        let res: Uint128 = from_binary(
+        let res: Uint128 = from_json(
             &query(
                 deps.as_ref(),
                 env,
@@ -183,7 +183,7 @@ mod test {
             )
             .unwrap();
 
-        let res: Uint128 = from_binary(
+        let res: Uint128 = from_json(
             &query(
                 deps.as_ref(),
                 env,

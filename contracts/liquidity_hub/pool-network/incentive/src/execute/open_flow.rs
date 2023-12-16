@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError,
+    to_json_binary, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError,
     StdResult, Uint128, WasmMsg,
 };
 
@@ -177,7 +177,7 @@ pub fn open_flow(
             messages.push(
                 WasmMsg::Execute {
                     contract_addr: flow_fee_contract_addr,
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                    msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                         owner: info.sender.clone().into_string(),
                         recipient: incentive_factory_config.fee_collector_addr.into_string(),
                         amount: flow_fee.amount,
@@ -259,7 +259,7 @@ pub fn open_flow(
                         messages.push(
                             WasmMsg::Execute {
                                 contract_addr: flow_asset_contract_addr,
-                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
                                     amount: flow_asset.amount,
@@ -288,7 +288,7 @@ pub fn open_flow(
                         messages.push(
                             WasmMsg::Execute {
                                 contract_addr: flow_asset_contract_addr,
-                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
                                     amount: flow_asset.amount,
@@ -307,7 +307,7 @@ pub fn open_flow(
                     messages.push(
                         WasmMsg::Execute {
                             contract_addr: flow_asset_contract_addr,
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.clone().into_string(),
                                 recipient: env.contract.address.into_string(),
                                 amount: flow_asset.amount,

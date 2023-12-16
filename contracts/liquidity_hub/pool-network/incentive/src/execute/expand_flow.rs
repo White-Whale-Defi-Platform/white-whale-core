@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, OverflowError, OverflowOperation,
+    to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, OverflowError, OverflowOperation,
     Response, StdResult, Uint128, WasmMsg,
 };
 
@@ -72,7 +72,7 @@ pub fn expand_flow(
                 messages.push(
                     WasmMsg::Execute {
                         contract_addr,
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                        msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                             owner: info.sender.into_string(),
                             recipient: env.contract.address.into_string(),
                             amount: flow_asset.amount,

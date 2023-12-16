@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
-    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
+    to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response,
+    StdError, SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
 use white_whale::epoch_manager::epoch_manager::EpochConfig;
 
@@ -59,7 +59,7 @@ pub fn create_new_epoch(deps: DepsMut, env: Env) -> Result<Response, ContractErr
             id: EPOCH_CREATION_REPLY_ID,
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: config.fee_collector_addr.to_string(),
-                msg: to_binary(&white_whale::fee_collector::ExecuteMsg::ForwardFees {
+                msg: to_json_binary(&white_whale::fee_collector::ExecuteMsg::ForwardFees {
                     epoch: new_epoch.clone(),
                     forward_fees_as: config.distribution_asset,
                 })?,
@@ -89,7 +89,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
         let bonding_weight_response: BondingWeightResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: config.bonding_contract_addr.to_string(),
-                msg: to_binary(&QueryMsg::Weight {
+                msg: to_json_binary(&QueryMsg::Weight {
                     address: info.sender.to_string(),
                     timestamp: Some(epoch.start_time),
                     global_index: Some(epoch.global_index.clone()),

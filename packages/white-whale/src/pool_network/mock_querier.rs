@@ -5,8 +5,8 @@ use std::panic;
 
 use cosmwasm_std::testing::{MockQuerier, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
+    from_json, to_json_binary, Coin, ContractInfoResponse, ContractResult, Empty, OwnedDeps,
+    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -125,7 +125,7 @@ pub fn native_token_decimals_to_map(native_token_decimals: &[(String, u8)]) -> H
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<Empty> = match from_slice(bin_request) {
+        let request: QueryRequest<Empty> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -141,7 +141,7 @@ impl Querier for WasmMockQuerier {
 impl Querier for WasmMockTrioQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<Empty> = match from_slice(bin_request) {
+        let request: QueryRequest<Empty> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -157,41 +157,41 @@ impl Querier for WasmMockTrioQuerier {
 impl WasmMockQuerier {
     pub fn handle_query(&self, request: &QueryRequest<Empty>) -> QuerierResult {
         match &request {
-            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
-                match from_binary(msg) {
-                    Ok(FactoryQueryMsg::Pair { asset_infos }) => {
-                        let key = [asset_infos[0].to_string(), asset_infos[1].to_string()].join("");
-                        let mut sort_key: Vec<char> = key.chars().collect();
-                        sort_key.sort_by(|a, b| b.cmp(a));
-                        match self
-                            .pool_factory_querier
-                            .pairs
-                            .get(&String::from_iter(sort_key.iter()))
-                        {
-                            Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No pair info exists".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_json(msg) {
+                Ok(FactoryQueryMsg::Pair { asset_infos }) => {
+                    let key = [asset_infos[0].to_string(), asset_infos[1].to_string()].join("");
+                    let mut sort_key: Vec<char> = key.chars().collect();
+                    sort_key.sort_by(|a, b| b.cmp(a));
+                    match self
+                        .pool_factory_querier
+                        .pairs
+                        .get(&String::from_iter(sort_key.iter()))
+                    {
+                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_json_binary(v).unwrap())),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No pair info exists".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
-                        match self.pool_factory_querier.native_token_decimals.get(&denom) {
-                            Some(decimals) => SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&NativeTokenDecimalsResponse {
-                                    decimals: *decimals,
-                                })
-                                .unwrap(),
-                            )),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No decimal info exist".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+                }
+                Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
+                    match self.pool_factory_querier.native_token_decimals.get(&denom) {
+                        Some(decimals) => SystemResult::Ok(ContractResult::Ok(
+                            to_json_binary(&NativeTokenDecimalsResponse {
+                                decimals: *decimals,
+                            })
+                            .unwrap(),
+                        )),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No decimal info exist".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    _ => match from_binary(msg) {
-                        Ok(PairQueryMsg::Pool {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&PairPoolResponse {
+                }
+                _ => {
+                    match from_json(msg) {
+                        Ok(PairQueryMsg::Pool {}) => SystemResult::Ok(ContractResult::from(
+                            to_json_binary(&PairPoolResponse {
                                 assets: vec![
                                     Asset {
                                         info: AssetInfo::NativeToken {
@@ -207,10 +207,10 @@ impl WasmMockQuerier {
                                     },
                                 ],
                                 total_share: Uint128::new(2_000_000_000u128),
-                            })))
-                        }
+                            }),
+                        )),
                         Ok(PairQueryMsg::Pair {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&PairInfo {
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&PairInfo {
                                 asset_infos: [
                                     AssetInfo::NativeToken {
                                         denom: "uluna".to_string(),
@@ -227,17 +227,17 @@ impl WasmMockQuerier {
                                 pair_type: PairType::ConstantProduct,
                             })))
                         }
-                        Ok(PairQueryMsg::Simulation { offer_asset }) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
+                        Ok(PairQueryMsg::Simulation { offer_asset }) => SystemResult::Ok(
+                            ContractResult::from(to_json_binary(&SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })))
-                        }
+                            })),
+                        ),
                         Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&ReverseSimulationResponse {
+                            ContractResult::from(to_json_binary(&ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
@@ -245,7 +245,7 @@ impl WasmMockQuerier {
                                 burn_fee_amount: Uint128::zero(),
                             })),
                         ),
-                        _ => match from_binary(msg).unwrap() {
+                        _ => match from_json(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
                                 match self.token_querier.balances.get(contract_addr) {
@@ -268,7 +268,7 @@ impl WasmMockQuerier {
                                 }
 
                                 SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&TokenInfoResponse {
+                                    to_json_binary(&TokenInfoResponse {
                                         name: "mAAPL".to_string(),
                                         symbol: "mAAPL".to_string(),
                                         decimals: 8,
@@ -295,7 +295,7 @@ impl WasmMockQuerier {
                                     Some(v) => *v,
                                     None => {
                                         return SystemResult::Ok(ContractResult::Ok(
-                                            to_binary(&Cw20BalanceResponse {
+                                            to_json_binary(&Cw20BalanceResponse {
                                                 balance: Uint128::zero(),
                                             })
                                             .unwrap(),
@@ -304,15 +304,15 @@ impl WasmMockQuerier {
                                 };
 
                                 SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&Cw20BalanceResponse { balance }).unwrap(),
+                                    to_json_binary(&Cw20BalanceResponse { balance }).unwrap(),
                                 ))
                             }
 
                             _ => panic!("DO NOT ENTER HERE"),
                         },
-                    },
+                    }
                 }
-            }
+            },
             QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
                 let mut contract_info_response = ContractInfoResponse::default();
                 contract_info_response.code_id = 0u64;
@@ -320,7 +320,7 @@ impl WasmMockQuerier {
                 contract_info_response.admin = Some("creator".to_string());
 
                 SystemResult::Ok(ContractResult::Ok(
-                    to_binary(&contract_info_response).unwrap(),
+                    to_json_binary(&contract_info_response).unwrap(),
                 ))
             },
             QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
@@ -347,108 +347,108 @@ impl WasmMockQuerier {
 impl WasmMockTrioQuerier {
     pub fn handle_query(&self, request: &QueryRequest<Empty>) -> QuerierResult {
         match &request {
-            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
-                match from_binary(msg) {
-                    Ok(FactoryQueryMsg::Trio { asset_infos }) => {
-                        let key = [
-                            asset_infos[0].to_string(),
-                            asset_infos[1].to_string(),
-                            asset_infos[2].to_string(),
-                        ]
-                        .join("");
-                        let mut sort_key: Vec<char> = key.chars().collect();
-                        sort_key.sort_by(|a, b| b.cmp(a));
-                        match self
-                            .pool_factory_querier
-                            .pairs
-                            .get(&String::from_iter(sort_key.iter()))
-                        {
-                            Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No trio info exists".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_json(msg) {
+                Ok(FactoryQueryMsg::Trio { asset_infos }) => {
+                    let key = [
+                        asset_infos[0].to_string(),
+                        asset_infos[1].to_string(),
+                        asset_infos[2].to_string(),
+                    ]
+                    .join("");
+                    let mut sort_key: Vec<char> = key.chars().collect();
+                    sort_key.sort_by(|a, b| b.cmp(a));
+                    match self
+                        .pool_factory_querier
+                        .pairs
+                        .get(&String::from_iter(sort_key.iter()))
+                    {
+                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_json_binary(v).unwrap())),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No trio info exists".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
-                        match self.pool_factory_querier.native_token_decimals.get(&denom) {
-                            Some(decimals) => SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&NativeTokenDecimalsResponse {
-                                    decimals: *decimals,
-                                })
-                                .unwrap(),
-                            )),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No decimal info exist".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+                }
+                Ok(FactoryQueryMsg::NativeTokenDecimals { denom }) => {
+                    match self.pool_factory_querier.native_token_decimals.get(&denom) {
+                        Some(decimals) => SystemResult::Ok(ContractResult::Ok(
+                            to_json_binary(&NativeTokenDecimalsResponse {
+                                decimals: *decimals,
+                            })
+                            .unwrap(),
+                        )),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No decimal info exist".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    _ => match from_binary(msg) {
-                        Ok(TrioQueryMsg::Pool {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&TrioPoolResponse {
-                                assets: vec![
-                                    Asset {
-                                        info: AssetInfo::NativeToken {
-                                            denom: "uluna".to_string(),
-                                        },
-                                        amount: Uint128::new(1_000_000_000u128),
-                                    },
-                                    Asset {
-                                        info: AssetInfo::NativeToken {
-                                            denom: "ujuno".to_string(),
-                                        },
-                                        amount: Uint128::new(1_000_000_000u128),
-                                    },
-                                    Asset {
-                                        info: AssetInfo::NativeToken {
-                                            denom: "uatom".to_string(),
-                                        },
-                                        amount: Uint128::new(1_000_000_000u128),
-                                    },
-                                ],
-                                total_share: Uint128::new(3_000_000_000u128),
-                            })))
-                        }
-                        Ok(TrioQueryMsg::Trio {}) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&TrioInfo {
-                                asset_infos: [
-                                    AssetInfo::NativeToken {
+                }
+                _ => match from_json(msg) {
+                    Ok(TrioQueryMsg::Pool {}) => {
+                        SystemResult::Ok(ContractResult::from(to_json_binary(&TrioPoolResponse {
+                            assets: vec![
+                                Asset {
+                                    info: AssetInfo::NativeToken {
                                         denom: "uluna".to_string(),
                                     },
-                                    AssetInfo::NativeToken {
-                                        denom: "uluna".to_string(),
+                                    amount: Uint128::new(1_000_000_000u128),
+                                },
+                                Asset {
+                                    info: AssetInfo::NativeToken {
+                                        denom: "ujuno".to_string(),
                                     },
-                                    AssetInfo::NativeToken {
+                                    amount: Uint128::new(1_000_000_000u128),
+                                },
+                                Asset {
+                                    info: AssetInfo::NativeToken {
                                         denom: "uatom".to_string(),
                                     },
-                                ],
-                                asset_decimals: [6u8, 6u8, 10u8],
-                                contract_addr: "trio0000".to_string(),
-                                liquidity_token: AssetInfo::Token {
-                                    contract_addr: "liquidity0000".to_string(),
+                                    amount: Uint128::new(1_000_000_000u128),
                                 },
-                            })))
-                        }
-                        Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&trio::SimulationResponse {
-                                return_amount: offer_asset.amount,
-                                swap_fee_amount: Uint128::zero(),
-                                spread_amount: Uint128::zero(),
-                                protocol_fee_amount: Uint128::zero(),
-                                burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
-                        Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&trio::ReverseSimulationResponse {
-                                offer_amount: ask_asset.amount,
-                                swap_fee_amount: Uint128::zero(),
-                                spread_amount: Uint128::zero(),
-                                protocol_fee_amount: Uint128::zero(),
-                                burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
-                        _ => match from_binary(msg).unwrap() {
+                            ],
+                            total_share: Uint128::new(3_000_000_000u128),
+                        })))
+                    }
+                    Ok(TrioQueryMsg::Trio {}) => {
+                        SystemResult::Ok(ContractResult::from(to_json_binary(&TrioInfo {
+                            asset_infos: [
+                                AssetInfo::NativeToken {
+                                    denom: "uluna".to_string(),
+                                },
+                                AssetInfo::NativeToken {
+                                    denom: "uluna".to_string(),
+                                },
+                                AssetInfo::NativeToken {
+                                    denom: "uatom".to_string(),
+                                },
+                            ],
+                            asset_decimals: [6u8, 6u8, 10u8],
+                            contract_addr: "trio0000".to_string(),
+                            liquidity_token: AssetInfo::Token {
+                                contract_addr: "liquidity0000".to_string(),
+                            },
+                        })))
+                    }
+                    Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => SystemResult::Ok(
+                        ContractResult::from(to_json_binary(&trio::SimulationResponse {
+                            return_amount: offer_asset.amount,
+                            swap_fee_amount: Uint128::zero(),
+                            spread_amount: Uint128::zero(),
+                            protocol_fee_amount: Uint128::zero(),
+                            burn_fee_amount: Uint128::zero(),
+                        })),
+                    ),
+                    Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => SystemResult::Ok(
+                        ContractResult::from(to_json_binary(&trio::ReverseSimulationResponse {
+                            offer_amount: ask_asset.amount,
+                            swap_fee_amount: Uint128::zero(),
+                            spread_amount: Uint128::zero(),
+                            protocol_fee_amount: Uint128::zero(),
+                            burn_fee_amount: Uint128::zero(),
+                        })),
+                    ),
+                    _ => {
+                        match from_json(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
                                 match self.token_querier.balances.get(contract_addr) {
@@ -470,7 +470,7 @@ impl WasmMockTrioQuerier {
                                 }
 
                                 SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&TokenInfoResponse {
+                                    to_json_binary(&TokenInfoResponse {
                                         name: "mAAPL".to_string(),
                                         symbol: "mAAPL".to_string(),
                                         decimals: 8,
@@ -497,7 +497,7 @@ impl WasmMockTrioQuerier {
                                     Some(v) => *v,
                                     None => {
                                         return SystemResult::Ok(ContractResult::Ok(
-                                            to_binary(&Cw20BalanceResponse {
+                                            to_json_binary(&Cw20BalanceResponse {
                                                 balance: Uint128::zero(),
                                             })
                                             .unwrap(),
@@ -506,15 +506,15 @@ impl WasmMockTrioQuerier {
                                 };
 
                                 SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&Cw20BalanceResponse { balance }).unwrap(),
+                                    to_json_binary(&Cw20BalanceResponse { balance }).unwrap(),
                                 ))
                             }
 
                             _ => panic!("DO NOT ENTER HERE"),
-                        },
-                    },
-                }
-            }
+                        }
+                    }
+                },
+            },
             QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
                 let mut contract_info_response = ContractInfoResponse::default();
                 contract_info_response.code_id = 0u64;
@@ -522,7 +522,7 @@ impl WasmMockTrioQuerier {
                 contract_info_response.admin = Some("creator".to_string());
 
                 SystemResult::Ok(ContractResult::Ok(
-                    to_binary(&contract_info_response).unwrap(),
+                    to_json_binary(&contract_info_response).unwrap(),
                 ))
             }
             _ => self.base.handle_query(request),
@@ -612,7 +612,7 @@ mod mock_exception {
     fn none_factory_pair_will_err() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&FactoryQueryMsg::Pair {
+        let msg = to_json_binary(&FactoryQueryMsg::Pair {
             asset_infos: [
                 AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
@@ -640,7 +640,7 @@ mod mock_exception {
     fn none_tokens_info_will_err() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&Cw20QueryMsg::TokenInfo {}).unwrap();
+        let msg = to_json_binary(&Cw20QueryMsg::TokenInfo {}).unwrap();
 
         assert_eq!(
             deps.querier
@@ -659,7 +659,7 @@ mod mock_exception {
     fn none_tokens_balance_will_err() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&Cw20QueryMsg::Balance {
+        let msg = to_json_binary(&Cw20QueryMsg::Balance {
             address: "address0000".to_string(),
         })
         .unwrap();
@@ -682,7 +682,7 @@ mod mock_exception {
     fn none_tokens_minter_will_panic() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&Cw20QueryMsg::Minter {}).unwrap();
+        let msg = to_json_binary(&Cw20QueryMsg::Minter {}).unwrap();
 
         deps.querier
             .handle_query(&QueryRequest::Wasm(WasmQuery::Smart {

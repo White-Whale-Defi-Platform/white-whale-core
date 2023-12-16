@@ -21,16 +21,16 @@ pub(crate) fn query_vault(
     filter_by: FilterVaultBy,
 ) -> Result<VaultsResponse, ContractError> {
     let vaults = match filter_by {
-        FilterVaultBy::AssetInfo(params) => get_vaults_by_asset_info(
+        FilterVaultBy::Asset(params) => get_vaults_by_asset_info(
             deps.storage,
             params.asset_info,
             params.start_after,
             params.limit,
         )?,
-        FilterVaultBy::Identifier(params) => {
-            vec![get_vault_by_identifier(&deps, params.identifier)?]
+        FilterVaultBy::Identifier(identifier) => {
+            vec![get_vault_by_identifier(&deps, identifier)?]
         }
-        FilterVaultBy::LpAsset(params) => vec![get_vault_by_lp(&deps, &params.lp_asset)?],
+        FilterVaultBy::LpAsset(lp_asset) => vec![get_vault_by_lp(&deps, &lp_asset)?],
     };
 
     Ok(VaultsResponse { vaults })

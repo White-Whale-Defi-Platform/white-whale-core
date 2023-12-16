@@ -72,7 +72,7 @@ mod tests {
             if event.ty == "wasm" {
                 let expected_attributes = vec![
                     Attribute {
-                        key: "_contract_addr".to_string(),
+                        key: "_contract_address".to_string(),
                         value: factory_addr.clone().to_string(),
                     },
                     Attribute {

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, StdError, StdResult, Storage};
 use cw_storage_plus::Item;
 
-/// Validates that the given address matches the address stored in the given owner_item.
+/// Validates that the given address matches the address stored in the given `owner_item`.
 pub fn validate_owner(
     storage: &dyn Storage,
     owner_item: Item<Addr>,

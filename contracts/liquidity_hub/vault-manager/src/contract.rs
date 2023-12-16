@@ -1,5 +1,5 @@
-use cosmwasm_std::{entry_point, from_binary};
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
+use cosmwasm_std::{entry_point, from_json, to_json_binary};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::one_coin;
 use semver::Version;
@@ -42,6 +42,7 @@ pub fn instantiate(
         deposit_enabled: true,
         withdraw_enabled: true,
     };
+
     CONFIG.save(deps.storage, &config)?;
 
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
@@ -120,7 +121,7 @@ pub fn execute(
             let vault = get_vault_by_lp(&deps.as_ref(), &lp_asset)?;
             assert_asset(&vault.lp_asset, &lp_asset)?;
 
-            match from_binary(&msg.msg)? {
+            match from_json(&msg.msg)? {
                 Cw20HookMsg::Withdraw => {
                     vault::commands::withdraw(deps, env, msg.sender, msg.amount, vault)
                 }
@@ -149,23 +150,25 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_manager_config(deps)?)?),
-        QueryMsg::Vault { filter_by } => Ok(to_binary(&queries::query_vault(deps, filter_by)?)?),
-        QueryMsg::Vaults { start_after, limit } => Ok(to_binary(&queries::query_vaults(
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_manager_config(deps)?)?),
+        QueryMsg::Vault { filter_by } => {
+            Ok(to_json_binary(&queries::query_vault(deps, filter_by)?)?)
+        }
+        QueryMsg::Vaults { start_after, limit } => Ok(to_json_binary(&queries::query_vaults(
             deps,
             start_after,
             limit,
         )?)?),
-        QueryMsg::Share { lp_share } => Ok(to_binary(&queries::get_share(deps, lp_share)?)?),
+        QueryMsg::Share { lp_share } => Ok(to_json_binary(&queries::get_share(deps, lp_share)?)?),
         QueryMsg::PaybackAmount {
             asset,
             vault_identifier,
-        } => Ok(to_binary(&queries::get_payback_amount(
+        } => Ok(to_json_binary(&queries::get_payback_amount(
             deps,
             asset,
             vault_identifier,
         )?)?),
-        QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
     }
 }
 

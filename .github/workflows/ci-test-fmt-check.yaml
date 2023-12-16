@@ -59,7 +59,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --locked -- -D warnings
+          args: --features "token_factory" --locked -- -D warnings
 
       #- name: Run cosmwasm linter
       #  run: cargo dylint cw_lint --workspace
@@ -73,12 +73,12 @@ jobs:
       - name: Generate Schemas and Exit on uncommitted changes
         run: |
           chmod +x ./scripts/build_schemas.sh
-          ./scripts/build_schemas.sh true
+          ./scripts/build_schemas.sh -f token_factory -d true
         shell: bash
 
   test_and_check-token_injective_feature:
     name: Test and check Injective feature
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latestq
 
     steps:
       # Cancel any existing runs to save on CI time
@@ -115,7 +115,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --locked -- -D warnings
+          args: --features "injective" --locked -- -D warnings
 
       #- name: Run cosmwasm linter
       #  run: cargo dylint cw_lint --workspace

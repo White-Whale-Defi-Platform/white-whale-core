@@ -1,6 +1,6 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
 };
 
 use white_whale::fee_distributor::EpochResponse;
@@ -9,14 +9,7 @@ use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::CURRENT_EPOCH;
 
-// use cw2::set_contract_version;
-
-/*
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:fee-distributor-mock";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-*/
-
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -39,6 +32,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
@@ -62,6 +56,7 @@ pub fn execute(
     Ok(Response::default())
 }
 
+#[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(
     deps: Deps,
@@ -71,7 +66,7 @@ pub fn query(
     match msg {
         white_whale::fee_distributor::QueryMsg::Config {} => {}
         white_whale::fee_distributor::QueryMsg::CurrentEpoch {} => {
-            return to_binary(&EpochResponse {
+            return to_json_binary(&EpochResponse {
                 epoch: CURRENT_EPOCH.load(deps.storage)?,
             });
         }
@@ -80,5 +75,5 @@ pub fn query(
         white_whale::fee_distributor::QueryMsg::Claimable { .. } => {}
     }
 
-    to_binary(&"")
+    to_json_binary(&"")
 }

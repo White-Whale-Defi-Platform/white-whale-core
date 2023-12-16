@@ -1,17 +1,13 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
+use cosmwasm_std::{from_json, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version, ContractVersion};
 use std::env;
-use white_whale::pool_network::asset::AssetInfo;
 
 use crate::contract::{execute, instantiate, migrate, query};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 
 use crate::ContractError;
-use white_whale::fee_collector::ExecuteMsg::AggregateFees;
-use white_whale::fee_collector::{
-    Config, ExecuteMsg, FeesFor, InstantiateMsg, MigrateMsg, QueryMsg,
-};
+use white_whale::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = InstantiateMsg {};
@@ -28,29 +24,8 @@ fn proper_initialization() {
     instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!("owner".to_string(), config_res.owner);
-}
-
-#[test]
-fn collect_fees_unsuccessfully_unauthorized() {
-    let mut deps = mock_dependencies(&[]);
-    let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info).unwrap();
-
-    // unauthorized tries collecting fees
-    let info = mock_info("unauthorized", &[]);
-    let msg = ExecuteMsg::CollectFees {
-        collect_fees_for: FeesFor::Contracts { contracts: vec![] },
-    };
-
-    let res = execute(deps.as_mut(), mock_env(), info, msg);
-
-    match res {
-        Ok(_) => panic!("should return ContractError::Unauthorized"),
-        Err(ContractError::Unauthorized {}) => (),
-        _ => panic!("should return ContractError::Unauthorized"),
-    }
 }
 
 #[test]
@@ -60,7 +35,7 @@ fn test_update_config_successfully() {
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
     let msg = ExecuteMsg::UpdateConfig {
@@ -74,7 +49,7 @@ fn test_update_config_successfully() {
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
     assert_eq!(config_res.pool_router, Addr::unchecked("new_router"));
 }
@@ -86,7 +61,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
     mock_instantiation(deps.as_mut(), info).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
     let info = mock_info("unauthorized", &[]);
@@ -147,28 +122,5 @@ fn test_migration() {
             );
         }
         _ => panic!("should return ContractError::Std"),
-    }
-}
-
-#[test]
-fn test_aggregate_fee_for_contracts_err() {
-    let mut deps = mock_dependencies(&[]);
-    let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
-
-    // should error, can't collect fees for contracts
-    let msg = AggregateFees {
-        asset_info: AssetInfo::NativeToken {
-            denom: "uluna".to_string(),
-        },
-        aggregate_fees_for: FeesFor::Contracts { contracts: vec![] },
-    };
-
-    let res = execute(deps.as_mut(), mock_env(), info, msg);
-
-    match res {
-        Ok(_) => panic!("should return ContractError::InvalidContractsFeeAggregation"),
-        Err(ContractError::InvalidContractsFeeAggregation {}) => (),
-        _ => panic!("should return ContractError::InvalidContractsFeeAggregation"),
     }
 }

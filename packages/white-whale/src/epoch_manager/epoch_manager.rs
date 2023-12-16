@@ -1,25 +1,27 @@
 #![allow(clippy::module_inception)]
+
 use std::fmt;
 use std::fmt::Display;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Timestamp, Uint64};
+use cw_controllers::HooksResponse;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub start_epoch: EpochV2,
+    pub start_epoch: Epoch,
     pub epoch_config: EpochConfig,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    /// Creates a new epoch, triggering the hooks.
     CreateEpoch {},
-    AddHook {
-        contract_addr: String,
-    },
-    RemoveHook {
-        contract_addr: String,
-    },
+    /// Adds a new hook to the registry.
+    AddHook { contract_addr: String },
+    /// Removes a hook from the registry.
+    RemoveHook { contract_addr: String },
+    /// Updates the contract configuration.
     UpdateConfig {
         owner: Option<String>,
         epoch_config: Option<EpochConfig>,
@@ -29,7 +31,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Returns the current epoch, which is the last on the EPOCHS map.
+    /// Returns the config of the contract.
     #[returns(ConfigResponse)]
     Config {},
 
@@ -40,6 +42,14 @@ pub enum QueryMsg {
     /// Returns the epoch with the given id.
     #[returns(EpochResponse)]
     Epoch { id: u64 },
+
+    /// Returns the hooks in the registry.
+    #[returns(HooksResponse)]
+    Hooks {},
+
+    /// Returns whether or not a hook has been registered.
+    #[returns(bool)]
+    Hook { hook: String },
 }
 
 #[cw_serde]
@@ -67,12 +77,12 @@ pub struct ConfigResponse {
 
 #[cw_serde]
 pub struct EpochResponse {
-    pub epoch: EpochV2,
+    pub epoch: Epoch,
 }
 
 #[cw_serde]
 pub struct ClaimableEpochsResponse {
-    pub epochs: Vec<EpochV2>,
+    pub epochs: Vec<Epoch>,
 }
 
 #[cw_serde]
@@ -95,20 +105,20 @@ impl Display for EpochConfig {
 
 #[cw_serde]
 #[derive(Default)]
-pub struct EpochV2 {
+pub struct Epoch {
     // Epoch identifier
     pub id: u64,
     // Epoch start time
     pub start_time: Timestamp,
 }
 
-impl EpochV2 {
+impl Epoch {
     pub fn to_epoch_response(self) -> EpochResponse {
         EpochResponse { epoch: self }
     }
 }
 
-impl Display for EpochV2 {
+impl Display for Epoch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

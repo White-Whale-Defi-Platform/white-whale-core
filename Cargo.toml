@@ -39,17 +39,14 @@ prost = {version = "0.11.9", default-features = false, features = ["prost-derive
 prost-types = {version = "0.11.9", default-features = false}
 white-whale = { path = "./packages/white-whale" }
 white-whale-testing = { path = "./packages/white-whale-testing" }
-cw-multi-test = { version = "0.18.0", features = ["cosmwasm_1_2", "stargate"] }
-sha2 = "^0.10"
+cw-multi-test = { version = "0.20.0", features = ["cosmwasm_1_2"] }
 uint = { version = "0.9.5"}
 integer-sqrt = { version = "0.1.5"}
 anyhow = { version = "1.0.71"}
 cw-controllers = { version = "1.1.0"}
 cw-ownable = { version = "0.5.1"}
 anybuf = { version = "0.3.0"}
-sha256 = "1.4.0"
-bech32 = "0.9.1"
-
+sha2 = { version = "0.10.8"}
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
@@ -58,6 +55,7 @@ fee_distributor = { path = "./contracts/liquidity_hub/fee_distributor" }
 fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock" }
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
+terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

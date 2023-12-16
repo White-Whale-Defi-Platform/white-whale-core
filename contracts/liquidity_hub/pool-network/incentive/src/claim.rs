@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal256, DepsMut, MessageInfo, StdError, Uint128,
+    to_json_binary, BankMsg, Coin, CosmosMsg, Decimal256, DepsMut, MessageInfo, StdError, Uint128,
     Uint256, WasmMsg,
 };
 
@@ -203,7 +203,7 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
                 AssetInfo::Token { contract_addr } => messages.push(
                     WasmMsg::Execute {
                         contract_addr: contract_addr.to_owned(),
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                        msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                             recipient: address.clone().into_string(),
                             amount: user_reward_at_epoch,
                         })?,

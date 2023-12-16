@@ -1,8 +1,9 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Attribute, Binary, CodeInfoResponse, CosmosMsg, DepsMut,
-    Env, MessageInfo, Response, StdError, Uint128, WasmMsg,
+    attr, instantiate2_address, to_json_binary, Attribute, Binary, CodeInfoResponse, CosmosMsg,
+    DepsMut, Env, MessageInfo, Response, StdError, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
+use sha2::{Digest, Sha256};
 
 use white_whale::constants::LP_SYMBOL;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -15,9 +16,9 @@ use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale::tokenfactory;
 use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
 
-use crate::helpers::fill_rewards_msg;
 use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
 use crate::ContractError;
+use white_whale::whale_lair::fill_rewards_msg;
 
 /// Creates a new vault
 pub fn create_vault(
@@ -122,12 +123,14 @@ pub fn create_vault(
         let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
         let seed = format!(
             "{}{}{}{}",
-            asset_info,
+            asset_label,
             identifier,
             info.sender.into_string(),
             env.block.height
         );
-        let salt = Binary::from(seed.as_bytes());
+        let mut hasher = Sha256::new();
+        hasher.update(seed.as_bytes());
+        let salt: Binary = hasher.finalize().to_vec().into();
 
         let vault_lp_address = deps.api.addr_humanize(
             &instantiate2_address(&checksum, &creator, &salt)
@@ -160,7 +163,7 @@ pub fn create_vault(
             admin: None,
             code_id,
             label: lp_token_name.to_owned(),
-            msg: to_binary(&TokenInstantiateMsg {
+            msg: to_json_binary(&TokenInstantiateMsg {
                 name: lp_token_name,
                 symbol: LP_SYMBOL.to_string(),
                 decimals: 6,

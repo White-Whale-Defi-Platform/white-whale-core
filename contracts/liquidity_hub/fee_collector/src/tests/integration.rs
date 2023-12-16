@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    coin, coins, to_binary, Addr, BankMsg, BlockInfo, Coin, Decimal, Timestamp, Uint128, Uint256,
-    Uint64,
+    coin, coins, to_json_binary, Addr, BankMsg, BlockInfo, Coin, Decimal, Timestamp, Uint128,
+    Uint256, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
@@ -43,6 +43,7 @@ fn collect_all_factories_cw20_fees_successfully() {
     let creator = mock_creator();
 
     let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
@@ -255,7 +256,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -272,7 +273,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(20u64)),
                     to: None,
@@ -380,6 +381,43 @@ fn collect_all_factories_cw20_fees_successfully() {
     let ask_asset = AssetInfo::Token {
         contract_addr: cw20_tokens[0].to_string(),
     };
+
+    // init fee distributor
+
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: "whale_lair".clone().to_string(),
+                fee_collector_addr: fee_collector_address.clone().to_string(),
+                grace_period: Uint64::new(1),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86_400_000_000_000u64), // a day
+                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                },
+                distribution_asset: ask_asset.clone(),
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &white_whale::fee_collector::ExecuteMsg::UpdateConfig {
+            owner: None,
+            pool_router: None,
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: None,
+            vault_factory: None,
+        },
+        &[],
+    )
+    .unwrap();
+
     let mut ask_asset_original_balance = Uint128::zero();
     for (asset_addr, asset) in assets_collected.clone() {
         let balance_res: BalanceResponse = app
@@ -458,7 +496,6 @@ fn collect_all_factories_cw20_fees_successfully() {
         creator.sender,
         fee_collector_address.clone(),
         &AggregateFees {
-            asset_info: ask_asset,
             aggregate_fees_for: FeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
                 factory_type: FactoryType::Pool {
@@ -712,7 +749,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
                 amount: Uint128::new(100_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(30u64)),
                     to: None,
@@ -729,7 +766,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(30u64)),
                     to: None,
@@ -941,6 +978,7 @@ fn collect_pools_native_fees_successfully() {
     let mut app = mock_app_with_balance(balances);
 
     let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
     let pair_id = store_pair_code(&mut app);
@@ -1191,7 +1229,7 @@ fn collect_pools_native_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1285,6 +1323,41 @@ fn collect_pools_native_fees_successfully() {
     let ask_asset = AssetInfo::Token {
         contract_addr: cw20_tokens[0].to_string(),
     };
+
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: "whale_lair".clone().to_string(),
+                fee_collector_addr: fee_collector_address.clone().to_string(),
+                grace_period: Uint64::new(1),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86_400_000_000_000u64), // a day
+                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                },
+                distribution_asset: ask_asset.clone(),
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &white_whale::fee_collector::ExecuteMsg::UpdateConfig {
+            owner: None,
+            pool_router: None,
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: None,
+            vault_factory: None,
+        },
+        &[],
+    )
+    .unwrap();
+
     let mut ask_asset_original_balance = Uint128::zero();
     for (asset_id, asset) in assets_collected.clone() {
         if asset_id == "native" {
@@ -1435,7 +1508,6 @@ fn collect_pools_native_fees_successfully() {
         creator.sender,
         fee_collector_address.clone(),
         &AggregateFees {
-            asset_info: ask_asset,
             aggregate_fees_for: FeesFor::Factory {
                 factory_addr: pool_factory_address.to_string(),
                 factory_type: FactoryType::Pool {
@@ -1696,7 +1768,7 @@ fn collect_fees_with_pagination_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(40u64)),
                     to: None,
@@ -2016,7 +2088,7 @@ fn collect_fees_for_vault() {
             vaults[i].clone(),
             &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
-                msg: to_binary(&BankMsg::Send {
+                msg: to_json_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
                     // return a higher amount than the flashloan + fees
                     amount: coins(return_flash_loan_value, coin.denom.clone()),
@@ -2154,6 +2226,7 @@ fn aggregate_fees_for_vault() {
     let mut app = mock_app_with_balance(balances);
 
     let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
     let vault_factory_id = store_vault_factory_code(&mut app);
     let pool_factory_id = store_pool_factory_code(&mut app);
     let pool_router_id = store_pool_router_code(&mut app);
@@ -2173,6 +2246,42 @@ fn aggregate_fees_for_vault() {
             None,
         )
         .unwrap();
+
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: "whale_lair".clone().to_string(),
+                fee_collector_addr: fee_collector_address.clone().to_string(),
+                grace_period: Uint64::new(1),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86_400_000_000_000u64), // a day
+                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                },
+                distribution_asset: AssetInfo::NativeToken {
+                    denom: "uatom".to_string(),
+                },
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &white_whale::fee_collector::ExecuteMsg::UpdateConfig {
+            owner: None,
+            pool_router: None,
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: None,
+            vault_factory: None,
+        },
+        &[],
+    )
+    .unwrap();
 
     let vault_factory_address = app
         .instantiate_contract(
@@ -2383,7 +2492,7 @@ fn aggregate_fees_for_vault() {
             vaults[i].clone(),
             &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
-                msg: to_binary(&BankMsg::Send {
+                msg: to_json_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
                     // return a higher amount than the flashloan + fees
                     amount: coins(return_flash_loan_value, coin.denom.clone()),
@@ -2512,7 +2621,6 @@ fn aggregate_fees_for_vault() {
         creator.sender.clone(),
         fee_collector_address.clone(),
         &AggregateFees {
-            asset_info: ask_asset.clone(),
             aggregate_fees_for: FeesFor::Factory {
                 factory_addr: vault_factory_address.to_string(),
                 factory_type: FactoryType::Vault {
@@ -2650,7 +2758,6 @@ fn aggregate_fees_for_vault() {
         creator.sender,
         fee_collector_address.clone(),
         &AggregateFees {
-            asset_info: ask_asset.clone(),
             aggregate_fees_for: FeesFor::Factory {
                 factory_addr: vault_factory_address.to_string(),
                 factory_type: FactoryType::Vault {
@@ -5748,6 +5855,7 @@ fn aggregate_fees_unsuccessfully() {
     let mut app = mock_app();
 
     let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
 
     let fee_collector_address = app
         .instantiate_contract(
@@ -5760,15 +5868,48 @@ fn aggregate_fees_unsuccessfully() {
         )
         .unwrap();
 
-    // try to aggregate fees from an unauthorized address
-    let err = app
-        .execute_contract(
-            Addr::unchecked("unauthorized"),
-            fee_collector_address.clone(),
-            &AggregateFees {
-                asset_info: AssetInfo::NativeToken {
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: "whale_lair".to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
+                grace_period: Uint64::new(5),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86400000000000),
+                    genesis_epoch: Default::default(),
+                },
+                distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
                 },
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    // update the fee_distributor_address on fee collector
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &UpdateConfig {
+            owner: None,
+            pool_router: None,
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: None,
+            vault_factory: None,
+        },
+        &[],
+    )
+    .unwrap();
+
+    let err = app
+        .execute_contract(
+            Addr::unchecked("anyone"),
+            fee_collector_address.clone(),
+            &AggregateFees {
                 aggregate_fees_for: FeesFor::Contracts { contracts: vec![] },
             },
             &[],
@@ -5777,7 +5918,7 @@ fn aggregate_fees_unsuccessfully() {
 
     assert_eq!(
         err.downcast::<ContractError>().unwrap(),
-        ContractError::Unauthorized {}
+        ContractError::InvalidContractsFeeAggregation {}
     );
 }
 
