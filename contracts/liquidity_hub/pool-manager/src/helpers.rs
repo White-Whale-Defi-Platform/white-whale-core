@@ -1,33 +1,22 @@
+use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
-use cosmwasm_std::CosmosMsg;
-use cosmwasm_std::{
-    to_json_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
-    Storage, SubMsg, Uint128, Uint256, WasmMsg,
-};
-use cw20::MinterResponse;
-use cw_storage_plus::Item;
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale::pool_network::pair::PoolFee;
 
-use crate::contract::INSTANTIATE_REPLY_ID;
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::state::{LP_SYMBOL, PAIR_INFO};
+
+pub const INSTANTIATE_REPLY_ID: u64 = 1;
+
+pub const LP_SYMBOL: &str = "uLP";
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
@@ -327,6 +316,75 @@ pub struct OfferAmountComputation {
     pub burn_fee_amount: Uint128,
 }
 
+/// If `belief_price` and `max_spread` both are given,
+/// we compute new spread else we just use pool network
+/// spread to check `max_spread`
+pub fn assert_max_spread(
+    belief_price: Option<Decimal>,
+    max_spread: Option<Decimal>,
+    offer_asset: Asset,
+    return_asset: Asset,
+    spread_amount: Uint128,
+    offer_decimal: u8,
+    return_decimal: u8,
+) -> Result<(), ContractError> {
+    let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
+        match offer_decimal.cmp(&return_decimal) {
+            Ordering::Greater => {
+                let diff_decimal = 10u64.pow((offer_decimal - return_decimal).into());
+
+                (
+                    offer_asset.amount.into(),
+                    return_asset
+                        .amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                    spread_amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                )
+            }
+            Ordering::Less => {
+                let diff_decimal = 10u64.pow((return_decimal - offer_decimal).into());
+
+                (
+                    offer_asset
+                        .amount
+                        .checked_mul(Uint128::from(diff_decimal))?
+                        .into(),
+                    return_asset.amount.into(),
+                    spread_amount.into(),
+                )
+            }
+            Ordering::Equal => (
+                offer_asset.amount.into(),
+                return_asset.amount.into(),
+                spread_amount.into(),
+            ),
+        };
+
+    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
+        let belief_price: Decimal256 = belief_price.into();
+        let max_spread: Decimal256 = max_spread.into();
+
+        let expected_return = offer_amount * (Decimal256::one() / belief_price);
+        let spread_amount = expected_return.saturating_sub(return_amount);
+
+        if return_amount < expected_return
+            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
+        {
+            return Err(ContractError::MaxSpreadAssertion {});
+        }
+    } else if let Some(max_spread) = max_spread {
+        let max_spread: Decimal256 = max_spread.into();
+        if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
+            return Err(ContractError::MaxSpreadAssertion {});
+        }
+    }
+
+    Ok(())
+}
+
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
@@ -400,10 +458,12 @@ pub fn instantiate_fees(
     storage: &mut dyn Storage,
     asset_info_0: AssetInfo,
     asset_info_1: AssetInfo,
-    fee_storage_item: Item<Vec<Asset>>,
+    pair_key: &Vec<u8>,
+    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], std::vec::Vec<Asset>>,
 ) -> StdResult<()> {
     fee_storage_item.save(
         storage,
+        pair_key,
         &vec![
             Asset {
                 info: asset_info_0,
@@ -415,62 +475,4 @@ pub fn instantiate_fees(
             },
         ],
     )
-}
-
-/// Creates a new LP token for this pool
-pub fn  create_lp_token(
-    deps: DepsMut,
-    env: &Env,
-    msg: &InstantiateMsg,
-    lp_token_name: &String,
-) -> Result<Response, ContractError> {
-    if msg.token_factory_lp {
-        // create native LP token
-        PAIR_INFO.update(deps.storage, |mut pair_info| -> StdResult<_> {
-            let denom = format!("{}/{}/{}", "factory", env.contract.address, LP_SYMBOL);
-            pair_info.liquidity_token = AssetInfoRaw::NativeToken { denom };
-
-            Ok(pair_info)
-        })?;
-
-        #[cfg(any(
-            feature = "token_factory",
-            feature = "osmosis_token_factory",
-            feature = "injective"
-        ))]
-        return Ok(
-            Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
-                MsgCreateDenom {
-                    sender: env.contract.address.to_string(),
-                    subdenom: LP_SYMBOL.to_string(),
-                },
-            )),
-        );
-        #[allow(unreachable_code)]
-        Err(ContractError::TokenFactoryNotEnabled {})
-    } else {
-        Ok(Response::new().add_submessage(SubMsg {
-            // Create LP token
-            msg: WasmMsg::Instantiate {
-                admin: None,
-                code_id: msg.token_code_id,
-                msg: to_json_binary(&TokenInstantiateMsg {
-                    name: lp_token_name.to_owned(),
-                    symbol: LP_SYMBOL.to_string(),
-                    decimals: 6,
-                    initial_balances: vec![],
-                    mint: Some(MinterResponse {
-                        minter: env.contract.address.to_string(),
-                        cap: None,
-                    }),
-                })?,
-                funds: vec![],
-                label: lp_token_name.to_owned(),
-            }
-            .into(),
-            gas_limit: None,
-            id: INSTANTIATE_REPLY_ID,
-            reply_on: ReplyOn::Success,
-        }))
-    }
 }

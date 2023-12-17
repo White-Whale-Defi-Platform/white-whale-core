@@ -8,6 +8,7 @@ members = [
 	"contracts/liquidity_hub/fee-distributor-mock",
 	"contracts/liquidity_hub/whale_lair",
 	"contracts/liquidity_hub/vault-network/*",
+	"contracts/liquidity_hub/pool-manager",
 	"contracts/liquidity_hub/epoch-manager",
 	"contracts/liquidity_hub/vault-manager",
 ]
@@ -46,6 +47,7 @@ cw-controllers = { version = "1.1.0"}
 cw-ownable = { version = "0.5.1"}
 anybuf = { version = "0.3.0"}
 sha2 = { version = "0.10.8"}
+sha256 = { version = "1.4.0"}
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }

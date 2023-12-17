@@ -18,7 +18,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 injective = ["token_factory"]
 token_factory = ["cosmwasm-std/stargate", "cosmwasm-std/cosmwasm_1_1"]
 osmosis_token_factory = ["token_factory"] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
-
+instantiatetwo = ["cosmwasm-std/cosmwasm_1_2"]
 [dependencies]
 cosmwasm-std.workspace = true
 schemars.workspace = true
@@ -35,3 +35,4 @@ prost-types.workspace = true
 cw-ownable.workspace = true
 anybuf.workspace = true
 cw-controllers.workspace = true
+sha256.workspace = true

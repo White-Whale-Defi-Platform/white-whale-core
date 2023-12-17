@@ -15,6 +15,7 @@ pub mod router;
 pub mod swap;
 pub mod token;
 pub mod trio;
+pub mod temp_mock_api;
 
 #[cfg(test)]
 mod testing;
