@@ -1,8 +1,4 @@
-
-
-use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
-};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::{
@@ -86,7 +82,7 @@ pub fn provide_liquidity(
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
                     recipient: env.contract.address.clone().to_string(),
                     amount: pool.amount,
@@ -202,7 +198,6 @@ pub fn provide_liquidity(
         }
         PairType::StableSwap { amp: _ } => {
             // TODO: Handle stableswap
-            
 
             Uint128::one()
         }
@@ -212,8 +207,6 @@ pub fn provide_liquidity(
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     pair.assets = pool_assets.clone();
     PAIRS.save(deps.storage, pair_identifier, &pair)?;
-    println!("Before resp");
-    println!("{:?}", messages);
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "provide_liquidity"),
         ("sender", info.sender.as_str()),

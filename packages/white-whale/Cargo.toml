@@ -33,6 +33,6 @@ osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 cw-ownable.workspace = true
-sha256.workspace = true
 anybuf.workspace = true
 cw-controllers.workspace = true
+sha256.workspace = true

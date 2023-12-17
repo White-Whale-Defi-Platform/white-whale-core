@@ -11,9 +11,7 @@ use white_whale::pool_network::{
 
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
-    state::{
-        get_decimals, get_pair_by_identifier, ALLOW_NATIVE_TOKENS,
-    },
+    state::{get_decimals, get_pair_by_identifier, ALLOW_NATIVE_TOKENS},
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
@@ -92,8 +90,8 @@ pub fn query_reverse_simulation(
     pair_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pair_info = get_pair_by_identifier(&deps, pair_identifier.clone())?;
-    let pools = pair_info.assets.clone();    
-    
+    let pools = pair_info.assets.clone();
+
     let decimals = get_decimals(&pair_info);
     let offer_pool: Asset = pools[0].clone();
     let offer_decimal = decimals[0];
@@ -221,7 +219,7 @@ pub fn get_swap_route(
         })
 }
 
-// TODO: May need to remove this for a new implementation, router swap operation queries 
+// TODO: May need to remove this for a new implementation, router swap operation queries
 // pub fn simulate_swap_operations(
 //     deps: Deps,
 //     env: Env,

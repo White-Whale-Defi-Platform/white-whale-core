@@ -10,7 +10,7 @@ use cosmwasm_std::{
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 use white_whale::pool_network::temp_mock_api::MockSimpleApi;
-use super::MockAPIBech32::{MockAddressGenerator, MockApiBech32};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType, TrioInfo};
 use white_whale::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
 use white_whale::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg, self};

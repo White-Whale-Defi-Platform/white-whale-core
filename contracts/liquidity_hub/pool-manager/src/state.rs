@@ -3,12 +3,10 @@ use cosmwasm_std::{Addr, Api, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale::pool_manager::{NPairInfo, SwapOperation};
 use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
-use white_whale::pool_network::pair::{FeatureToggle};
+use white_whale::pool_network::pair::FeatureToggle;
 
 use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
-// Pairs are respresented as a Map of <&[u8], PairInfoRaw> where the key is the pair_key, which is a Vec<u8> of the two asset_infos sorted by their byte representation. This is done to ensure that the same pair is always represented by the same key, regardless of the order of the asset_infos.
-// pub const PAIRS: Map<&[u8], NPairInfo> = Map::new("pair_info");
 pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
     "pairs",
     PairIndexes {
@@ -133,4 +131,3 @@ pub struct Config {
     //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
 }
-

@@ -1,24 +1,22 @@
-
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, Api,
-};
-use cw2::set_contract_version;
-use cw20::Cw20ReceiveMsg;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::pair::{FeatureToggle};
-use semver::Version;
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
-use crate::{liquidity, manager, queries, swap, router};
-use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg, Cw20HookMsg};
+use crate::{liquidity, manager, queries, router, swap};
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_json, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+};
+use cw2::set_contract_version;
+use cw20::Cw20ReceiveMsg;
+use semver::Version;
+use white_whale::pool_manager::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale::pool_network::pair::FeatureToggle;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -155,7 +153,7 @@ pub fn execute(
         //         minimum_receive,
         //         deps.api.addr_validate(&receiver)?,
         //     )
-            
+
         // },
         // ExecuteMsg::ExecuteSwapOperations {
         //     operations,
@@ -189,14 +187,11 @@ pub fn execute(
         //         max_spread,
         //     )
         // }
-        ExecuteMsg::AddSwapRoutes { swap_routes: _ } => {
-            Ok(Response::new())
-        }
+        ExecuteMsg::AddSwapRoutes { swap_routes: _ } => Ok(Response::new()),
     }
 }
 
-
-// Came from router can probably go 
+// Came from router can probably go
 fn optional_addr_validate(
     api: &dyn Api,
     addr: Option<String>,
@@ -220,7 +215,7 @@ pub fn receive_cw20(
     let contract_addr = info.sender.clone();
     let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
 
-    match from_binary(&cw20_msg.msg) {
+    match from_json(&cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
             ask_asset,
             belief_price,
@@ -281,14 +276,14 @@ pub fn receive_cw20(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::NativeTokenDecimals { denom } => Ok(to_binary(
+        QueryMsg::NativeTokenDecimals { denom } => Ok(to_json_binary(
             &queries::query_native_token_decimal(deps, denom)?,
         )?),
         QueryMsg::Simulation {
             offer_asset,
             ask_asset,
             pair_identifier,
-        } => Ok(to_binary(&queries::query_simulation(
+        } => Ok(to_json_binary(&queries::query_simulation(
             deps,
             env,
             offer_asset,
@@ -299,7 +294,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             ask_asset,
             offer_asset,
             pair_identifier,
-        } => Ok(to_binary(&queries::query_reverse_simulation(
+        } => Ok(to_json_binary(&queries::query_reverse_simulation(
             deps,
             env,
             ask_asset,
@@ -324,15 +319,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::SwapRoute {
             offer_asset_info,
             ask_asset_info,
-        } => Ok(to_binary(&get_swap_route(
+        } => Ok(to_json_binary(&get_swap_route(
             deps,
             offer_asset_info,
             ask_asset_info,
         )?)?),
-        QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
-        QueryMsg::Ownership {} => Ok(to_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
+        QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
         QueryMsg::Pair { pair_identifier } => {
-            Ok(to_binary(&PAIRS.load(deps.storage, pair_identifier)?)?)
+            Ok(to_json_binary(&PAIRS.load(deps.storage, pair_identifier)?)?)
         }
     }
 }
@@ -341,7 +336,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use cw2::get_contract_version;
-    use white_whale::{migrate_guards::check_contract_name};
+    use white_whale::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

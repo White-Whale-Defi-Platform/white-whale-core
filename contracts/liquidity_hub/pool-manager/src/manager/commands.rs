@@ -1,16 +1,18 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_binary, Attribute, CodeInfoResponse, CosmosMsg, DepsMut, Env,
-    MessageInfo, Response, Uint128, WasmMsg,
+    attr, instantiate2_address, to_json_binary, Attribute, CodeInfoResponse, CosmosMsg, DepsMut,
+    Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
-use white_whale::pool_network::{
-    asset::{Asset, AssetInfo, PairType},
-    pair::PoolFee,
+use white_whale::{
+    pool_network::{
+        asset::{Asset, AssetInfo, PairType},
+        pair::PoolFee,
+    },
+    whale_lair::fill_rewards_msg,
 };
 
 use crate::{
-    helpers::{fill_rewards_msg},
     state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER},
     token::InstantiateMsg as TokenInstantiateMsg,
 };
@@ -260,7 +262,7 @@ pub fn create_pair(
             admin: None,
             code_id,
             label: lp_token_name.to_owned(),
-            msg: to_binary(&TokenInstantiateMsg {
+            msg: to_json_binary(&TokenInstantiateMsg {
                 name: lp_token_name,
                 symbol: LP_SYMBOL.to_string(),
                 decimals: 6,

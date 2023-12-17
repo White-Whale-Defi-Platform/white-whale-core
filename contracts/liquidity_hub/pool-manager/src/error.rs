@@ -8,7 +8,6 @@ use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
-
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     // Handle all normal errors from the StdError

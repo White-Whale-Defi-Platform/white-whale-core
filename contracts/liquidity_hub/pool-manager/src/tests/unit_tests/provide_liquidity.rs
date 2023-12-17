@@ -106,7 +106,6 @@ fn provide_liquidity_cw20_lp() {
 
     let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
-    println!("res: {:?}", res);
     // unsuccessfully providing liquidity since share becomes zero, MINIMUM_LIQUIDITY_AMOUNT provided
     let msg = ExecuteMsg::ProvideLiquidity {
         assets: [
@@ -343,7 +342,6 @@ fn provide_liquidity_cw20_lp() {
             "Native token balance mismatch between the argument and the transferred".to_string()
         ),
         _ => {
-            println!("{:?}", res);
             panic!("Must return generic error");
         }
     }

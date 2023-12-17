@@ -8,7 +8,6 @@ use crate::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
-    router::{SimulateSwapOperationsResponse},
 };
 
 
@@ -115,7 +114,8 @@ pub struct NPairInfo {
     pub assets: Vec<Asset>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
-    pub stable_swap_params: Option<StableSwapParams>
+    // TODO: Add stable swap params
+    // pub stable_swap_params: Option<StableSwapParams>
 }
 impl NPairInfo {}
 

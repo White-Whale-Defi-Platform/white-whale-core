@@ -25,7 +25,6 @@ pub const LP_SYMBOL: &str = "uLP";
 
 use cosmwasm_std::Decimal;
 
-// Stuff like Swap, Swap through router and any other stuff related to swapping
 pub fn swap(
     deps: DepsMut,
     _env: Env,
@@ -70,9 +69,6 @@ pub fn swap(
     } else {
         return Err(ContractError::AssetMismatch {});
     }
-    println!("Found pools");
-    let _attributes = [("action", "swap"),
-        ("pair_type", pair_info.pair_type.get_label())];
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -153,7 +149,6 @@ pub fn swap(
 
         messages.push(swap_fee_asset.into_msg(config.fee_collector_addr)?);
     }
-    println!("After fees");
 
     // 1. send collateral token from the contract to a user
     // 2. stores the protocol fees

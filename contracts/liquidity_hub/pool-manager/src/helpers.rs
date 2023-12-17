@@ -2,25 +2,17 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    to_json_binary, CosmosMsg, Decimal, Decimal256, StdError, StdResult, Storage, Uint128,
-    Uint256, WasmMsg,
-};
+use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
-
-
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, ToCoins};
+use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
 use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale::pool_network::pair::PoolFee;
-use white_whale::whale_lair;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-
-
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -31,20 +23,6 @@ const NEWTON_ITERATIONS: u64 = 32;
 
 // the number of pools in the pair
 const N_COINS: Uint256 = Uint256::from_u128(2);
-
-/// Creates a message to fill rewards on the whale lair contract.
-pub(crate) fn fill_rewards_msg(
-    contract_addr: String,
-    assets: Vec<Asset>,
-) -> Result<CosmosMsg, ContractError> {
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr,
-        msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewards {
-            assets: assets.clone(),
-        })?,
-        funds: assets.to_coins()?,
-    }))
-}
 
 fn calculate_stableswap_d(
     offer_pool: Decimal256,
@@ -415,13 +393,11 @@ pub fn assert_slippage_tolerance(
     amount: Uint128,
     pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
-    println!("assert_slippage_tolerance");
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let slippage_tolerance: Decimal256 = slippage_tolerance.into();
         if slippage_tolerance > Decimal256::one() {
             return Err(StdError::generic_err("slippage_tolerance cannot bigger than 1").into());
         }
-        println!("slippage_tolerance: {}", slippage_tolerance);
 
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
         let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
@@ -450,22 +426,6 @@ pub fn assert_slippage_tolerance(
                         * one_minus_slippage_tolerance
                         > Decimal256::from_ratio(pools[1], pools[0])
                 {
-                    println!(
-                        "max {:?}",
-                        [
-                            Decimal256::from_ratio(deposits[0], deposits[1])
-                                * one_minus_slippage_tolerance,
-                            Decimal256::from_ratio(pools[0], pools[1])
-                        ]
-                    );
-                    println!(
-                        "max {:?}",
-                        [
-                            Decimal256::from_ratio(deposits[1], deposits[0])
-                                * one_minus_slippage_tolerance,
-                            Decimal256::from_ratio(pools[1], pools[0])
-                        ]
-                    );
                     return Err(ContractError::MaxSlippageAssertion {});
                 }
             }
