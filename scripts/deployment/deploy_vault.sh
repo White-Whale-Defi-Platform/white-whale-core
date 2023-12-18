@@ -22,6 +22,7 @@ function display_usage() {
 #  "protocol_fee": "0.01",
 #  "flash_loan_fee": "0.02",
 #  "burn_fee": "0.02",
+#  "token_factory_lp": true,
 #  "is_native": true //or false
 # }
 #
@@ -38,6 +39,7 @@ function read_vault_config() {
   flash_loan_fee=$(jq -r '.flash_loan_fee' $vault)
   burn_fee=$(jq -r '.burn_fee' $vault)
   is_native=$(jq -r '.is_native' $vault)
+  token_factory_lp=$(jq -r '.token_factory_lp' $vault)
 }
 
 function create_vault() {
@@ -58,7 +60,7 @@ function create_vault() {
     asset_info='{"token":{"contract_addr":"'$asset'"}}'
   fi
 
-  create_vault_msg='{"create_vault":{"asset_info":'$asset_info',"fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"flash_loan_fee":{"share":"'$flash_loan_fee'"}}}}'
+  create_vault_msg='{"create_vault":{"token_factory_lp": '$token_factory_lp',"asset_info":'$asset_info',"fees":{"protocol_fee":{"share":"'$protocol_fee'"},"burn_fee":{"share":"'$burn_fee'"},"flash_loan_fee":{"share":"'$flash_loan_fee'"}}}}'
 
   echo "Creating vault with the following configuration:"
   echo "Asset: $asset"
