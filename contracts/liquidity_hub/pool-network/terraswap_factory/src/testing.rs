@@ -1241,26 +1241,6 @@ fn failed_add_allow_native_token_with_non_admin() {
 }
 
 #[test]
-fn failed_add_allow_native_token_with_zero_factory_balance() {
-    let mut deps = mock_dependencies(&[coin(0u128, "uluna".to_string())]);
-    deps = init(deps);
-
-    let msg = ExecuteMsg::AddNativeTokenDecimals {
-        denom: "uluna".to_string(),
-        decimals: 6u8,
-    };
-
-    let info = mock_info("addr0000", &[]);
-
-    let res = execute(deps.as_mut(), mock_env(), info, msg);
-    match res {
-        Ok(_) => panic!("should return ContractError::InvalidVerificationBalance"),
-        Err(ContractError::InvalidVerificationBalance {}) => (),
-        _ => panic!("should return ContractError::InvalidVerificationBalance"),
-    }
-}
-
-#[test]
 fn append_add_allow_native_token_with_already_exist_token() {
     let mut deps = mock_dependencies(&[coin(1u128, "uluna".to_string())]);
     deps = init(deps);

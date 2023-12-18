@@ -105,7 +105,7 @@ pub fn execute(
         ExecuteMsg::RemovePair { asset_infos } => commands::remove_pair(deps, env, asset_infos),
         ExecuteMsg::RemoveTrio { asset_infos } => commands::remove_trio(deps, env, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            commands::add_native_token_decimals(deps, env, denom, decimals)
+            commands::add_native_token_decimals(deps, denom, decimals)
         }
         ExecuteMsg::MigratePair { contract, code_id } => {
             commands::execute_migrate_pair(deps, contract, code_id)

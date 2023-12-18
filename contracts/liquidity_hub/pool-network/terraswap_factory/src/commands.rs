@@ -1,10 +1,9 @@
 use cosmwasm_std::{
-    CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, to_binary, wasm_execute,
+    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
 };
 
 use white_whale::pool_network;
-use white_whale::pool_network::{pair, trio};
 use white_whale::pool_network::asset::{AssetInfo, PairType};
 use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
@@ -13,12 +12,13 @@ use white_whale::pool_network::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
     MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
+use white_whale::pool_network::{pair, trio};
 
 use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 use crate::error::ContractError;
 use crate::state::{
-    add_allow_native_token, Config, CONFIG, pair_key, PAIRS, TMP_PAIR_INFO, TMP_TRIO_INFO, TmpPairInfo,
-    TmpTrioInfo, trio_key, TRIOS,
+    add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
+    TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
 };
 
 /// Updates the contract's [Config]
@@ -367,7 +367,6 @@ pub fn remove_trio(
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
     deps: DepsMut,
-    env: Env,
     denom: String,
     decimals: u8,
 ) -> Result<Response, ContractError> {
