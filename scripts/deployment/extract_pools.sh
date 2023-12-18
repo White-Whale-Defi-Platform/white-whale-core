@@ -15,33 +15,46 @@ function display_usage() {
   echo -e "  -p \tPool configuration file to get deployment info from."
 }
 
+# Generates the label for the given asset pair
 function generate_label() {
   local assets=("$1" "$2")
   local processed_assets=()
 
   for asset in "${assets[@]}"; do
     local processed_asset="$asset"
+
+    # first of, check if the asset is an ibc token. An IBC token can be a native token on the chain it came from, or a token factory token
     if [[ "$asset" == ibc/* ]]; then
+      # do denom trace to get the real denom
       denom_trace_result=$($BINARY q ibc-transfer denom-trace $asset --node $RPC -o json | jq -r '.denom_trace.base_denom')
 
+      # if the denom trace has the pattern factory/* ... This is the factory token model adopted by most token factories
       if [[ "$denom_trace_result" == factory/* ]]; then
         processed_asset=$(echo "$denom_trace_result" | awk -F'/' '{print $NF}')
+
+      # if the denom trace has the pattern factory:*... this is the factory token model adopted by the kujira token factory
       elif [[ "$denom_trace_result" == factory:* ]]; then
         processed_asset="${denom_trace_result##*:}"
-      else
+      else # else, just use the denom trace result. This can be the case of native tokens being transferred to another chain, i.e. uwhale on terra
         processed_asset="$denom_trace_result"
       fi
 
+    # Else, check if the asset is a token factory token, i.e. say the asset is ampWHALE on the Migaloo blockchain. The denom will start with factory/*...
     elif [[ "$asset" == factory/* ]]; then
       processed_asset=$(basename "$asset")
+
+    # Else, check if the asset is a cw20 token. This checks if the asset starts with the name of the chain. i.e. terra*, migaloo*...
     elif [[ "$asset" == $chain* ]]; then
       local query='{"token_info":{}}'
       local symbol=$($BINARY query wasm contract-state smart $asset "$query" --node $RPC --output json | jq -r '.data.symbol')
       processed_asset=$symbol
     fi
+
+    # append the $processed_asset into the $processed_assets array
     processed_assets+=("$processed_asset")
   done
 
+  # print the label as asset1_label-asset2_label
   echo "${processed_assets[0]}-${processed_assets[1]}"
 }
 
@@ -88,6 +101,7 @@ function extract_pools() {
     query='{"incentive":{"lp_asset": '$lp_asset'}}'
     local incentive=$($BINARY query wasm contract-state smart $incentive_factory_addr "$query" --node $RPC --output json | jq -r '.data')
 
+    # create the pool entry and append it to the pools array
     pool_entry=$(jq --arg pool_code_id "$pool_code_id" --arg lp_code_id "$lp_code_id" --arg pair_label "$label" --arg incentive "$incentive" '{
             pair: $pair_label,
             assets: .asset_infos,
