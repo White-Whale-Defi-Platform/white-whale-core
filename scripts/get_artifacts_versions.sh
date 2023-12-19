@@ -10,6 +10,6 @@ for artifact in artifacts/*.wasm; do
   version=$(cat ''"$contract_path"'/Cargo.toml' | awk -F= '/^version/ { print $2 }')
   version="${version//\"/}"
 
-  printf "%-20s %s\n" "$(basename $artifact)" ":$version"
+  printf "%-25s %s\n" "$(basename $artifact)" ": $version"
 done
 echo -e "\n"

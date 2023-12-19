@@ -17,7 +17,11 @@ jobs:
         run: |
           $GITHUB_WORKSPACE/scripts/build_release.sh
           tar -zcvf cosmwasm-artifacts.tar.gz artifacts
+      - name: Get Artifacts Versions
+        run: $GITHUB_WORKSPACE/scripts/get_artifacts_versions.sh > artifact_versions.txt
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: cosmwasm-artifacts.tar.gz
+          files: |
+            cosmwasm-artifacts.tar.gz
+            artifact_versions.txt
