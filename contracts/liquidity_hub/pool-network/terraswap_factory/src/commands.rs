@@ -1,5 +1,3 @@
-use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
-
 use cosmwasm_std::{
     to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
@@ -10,13 +8,13 @@ use white_whale::pool_network::asset::{AssetInfo, PairType};
 use white_whale::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::pool_network::querier::query_balance;
 use white_whale::pool_network::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
     MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
 use white_whale::pool_network::{pair, trio};
 
+use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 use crate::error::ContractError;
 use crate::state::{
     add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
@@ -369,15 +367,9 @@ pub fn remove_trio(
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
     deps: DepsMut,
-    env: Env,
     denom: String,
     decimals: u8,
 ) -> Result<Response, ContractError> {
-    let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
-    if balance.is_zero() {
-        return Err(ContractError::InvalidVerificationBalance {});
-    }
-
     add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
 
     Ok(Response::new().add_attributes(vec![
