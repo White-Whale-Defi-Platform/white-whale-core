@@ -21,6 +21,8 @@ jobs:
           tar -zcvf cosmwasm-artifacts_injective.tar.gz artifacts
           $GITHUB_WORKSPACE/scripts/build_release.sh -c terra
           tar -zcvf cosmwasm-artifacts_osmosis-token-factory.tar.gz artifacts
+          $GITHUB_WORKSPACE/scripts/build_release.sh -c chihuahua
+          tar -zcvf cosmwasm-artifacts_no-token-factory.tar.gz artifacts
       - name: Get Artifacts Versions
         run: $GITHUB_WORKSPACE/scripts/get_artifacts_versions.sh > artifact_versions.txt
       - name: Create Release
@@ -30,4 +32,5 @@ jobs:
             cosmwasm-artifacts_cosmwasm-token-factory.tar.gz
             cosmwasm-artifacts_osmosis-token-factory.tar.gz
             cosmwasm-artifacts_injective.tar.gz
+            cosmwasm-artifacts_no-token-factory.tar.gz
             artifact_versions.txt
