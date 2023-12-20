@@ -32,10 +32,43 @@ function extract_vaults() {
 
   echo -e "\nExtracting vaults info...\n"
 
-  jq '[.[] | {vault: .vault, asset_info: .asset_info}]' <<<"$vaults" >$output_file
-  jq --arg vault_factory_addr "$vault_factory_addr" \
+  echo ${vaults[@]}
+
+  modified_vaults=()
+  while IFS= read -r line; do
+    vault=$(echo $line | jq -r '.vault')
+    asset_info=$(echo $line | jq -c '.asset_info')
+
+    # Generate label for the pair
+    query='{"config":{}}'
+    local lp_asset=$($BINARY query wasm contract-state smart $vault "$query" --node $RPC --output json | jq -c '.data.lp_asset')
+
+    # Create the vault entry
+    vault_entry=$(jq --argjson asset_info "$asset_info" --arg vault "$vault" --arg vault_code_id "$vault_code_id" --arg lp_code_id "$lp_code_id" --argjson lp_asset "$lp_asset" -n '{
+        vault: $vault,
+        asset: $asset_info,
+        lp_asset: $lp_asset,
+        vault_code_id: $vault_code_id,
+        lp_code_id: $lp_code_id
+    }')
+
+    # Append the vault entry to the modified_vaults array
+    modified_vaults+=("$vault_entry")
+  done < <(echo "$vaults" | jq -c '.[]')
+
+  # Combine all modified vault entries into a single JSON array and write to the output file
+  jq -n \
+    --argjson vaults "$(echo "${modified_vaults[@]}" | jq -s '.')" \
+    --arg vault_factory_addr "$vault_factory_addr" \
     --arg chain "$CHAIN_ID" \
-    '{chain: $chain, vault_factory_addr: $vault_factory_addr, vaults: [.[] | {vault: .vault, asset_info: .asset_info}]}' <<<$vaults >$output_file
+    '{chain: $chain, vault_factory_addr: $vault_factory_addr, vaults: $vaults}' \
+    >"$output_file"
+
+  #
+  #  jq '[.[] | {vault: .vault, asset_info: .asset_info}]' <<<"$vaults" >$output_file
+  #  jq --arg vault_factory_addr "$vault_factory_addr" \
+  #    --arg chain "$CHAIN_ID" \
+  #    '{chain: $chain, vault_factory_addr: $vault_factory_addr, vaults: [.[] | {vault: .vault, asset_info: .asset_info}]}' <<<$vaults >$output_file
 
   echo -e "\n**** Extracted vault data on $CHAIN_ID successfully ****\n"
   jq '.' $output_file
