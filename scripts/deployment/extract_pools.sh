@@ -7,12 +7,11 @@ project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 
 # Displays tool usage
 function display_usage() {
-  echo "WW Pool Deployer"
-  echo -e "\nUsage:./deploy_pool.sh [flags].\n"
+  echo "WW Pool Extractor"
+  echo -e "\nUsage:./extract_pools.sh [flags].\n"
   echo -e "Available flags:\n"
   echo -e "  -h \thelp"
-  echo -e "  -c \tThe chain where you want to deploy (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
-  echo -e "  -p \tPool configuration file to get deployment info from."
+  echo -e "  -c \tThe chain where you want to extract pools on (juno|juno-testnet|terra|terra-testnet|... check chain_env.sh for the complete list of supported chains)"
 }
 
 # Generates the label for the given asset pair
@@ -21,6 +20,8 @@ function generate_label() {
   local processed_assets=()
 
   for asset in "${assets[@]}"; do
+    # reload the original chain env in case it gets overriden by the cw20:* asset case
+    init_chain_env $chain
     local processed_asset="$asset"
 
     # first of, check if the asset is an ibc token. An IBC token can be a native token on the chain it came from, or a token factory token
@@ -35,6 +36,22 @@ function generate_label() {
       # if the denom trace has the pattern factory:*... this is the factory token model adopted by the kujira token factory
       elif [[ "$denom_trace_result" == factory:* ]]; then
         processed_asset="${denom_trace_result##*:}"
+
+      # if the denom trace has the pattern cw20:*...
+      elif [[ "$denom_trace_result" == cw20:* ]]; then
+        denom_trace_result=${denom_trace_result#*:}
+
+        # remove the cw20: prefix and load the chain env for the chain the token is on
+        if [[ $denom_trace_result =~ ([a-zA-Z]+)1 ]]; then
+          x=${BASH_REMATCH[1]}
+          init_chain_env $x
+        else
+          continue
+        fi
+
+        local query='{"token_info":{}}'
+        local symbol=$($BINARY query wasm contract-state smart $denom_trace_result "$query" --node $RPC --output json | jq -r '.data.symbol')
+        processed_asset=$symbol
       else # else, just use the denom trace result. This can be the case of native tokens being transferred to another chain, i.e. uwhale on terra
         processed_asset="$denom_trace_result"
       fi
@@ -115,7 +132,12 @@ function extract_pools() {
   done < <(echo "$pairs" | jq -c '.[]')
 
   # Combine all pool entries into a single JSON array and write to the output file
-  jq -n --argjson pools "$(echo "${pools[@]}" | jq -s '.')" '{pools: $pools}' >"$output_file"
+  jq -n \
+    --argjson pools "$(echo "${pools[@]}" | jq -s '.')" \
+    --arg pool_factory_addr "$pool_factory_addr" \
+    --arg chain "$CHAIN_ID" \
+    '{chain: $chain, pool_factory_addr: $pool_factory_addr, pools: $pools }' \
+    >"$output_file"
 
   echo -e "\n**** Extracted pool data on $CHAIN_ID successfully ****\n"
   jq '.' $output_file
@@ -134,12 +156,6 @@ while getopts $optstring arg; do
     chain=$OPTARG
     source $deployment_script_dir/deploy_env/chain_env.sh
     init_chain_env $OPTARG
-    if [[ "$chain" = "local" ]]; then
-      tx_delay=0.5
-    else
-      tx_delay=8
-    fi
-
     extract_pools
     ;;
   h)
