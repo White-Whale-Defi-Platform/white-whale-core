@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use incentive_manager::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::incentive_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 fn main() {
     write_api! {

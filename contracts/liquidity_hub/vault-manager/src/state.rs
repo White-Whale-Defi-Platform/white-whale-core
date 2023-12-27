@@ -71,8 +71,8 @@ pub fn get_vaults(
 
 /// Calculates the item at which to start the range
 fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
-    start_after.map(|asset_info| {
-        let mut v = asset_info;
+    start_after.map(|item| {
+        let mut v = item;
         v.push(1);
         v
     })
