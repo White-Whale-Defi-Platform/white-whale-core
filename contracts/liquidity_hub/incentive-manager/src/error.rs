@@ -20,6 +20,9 @@ pub enum ContractError {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
+    #[error("An incentive with the given identifier already exists")]
+    IncentiveAlreadyExists,
+
     #[error("max_concurrent_flows cannot be set to zero")]
     UnspecifiedConcurrentIncentives,
 

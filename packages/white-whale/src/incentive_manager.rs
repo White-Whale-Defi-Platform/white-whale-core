@@ -1,7 +1,8 @@
+use std::collections::{BTreeMap, HashMap};
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-use std::collections::{BTreeMap, HashMap};
 
 use crate::pool_network::asset::{Asset, AssetInfo};
 
@@ -30,8 +31,11 @@ pub struct InstantiateMsg {
 #[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Creates a new incentive contract tied to the `lp_asset` specified.
-    CreateIncentive { params: IncentiveParams },
+    /// Manages an incentive based on the action, which can be:
+    /// - Create: Creates a new incentive.
+    /// - Close: Closes an existing incentive.
+    /// - Extend: Extends an existing incentive.
+    ManageIncentive { action: IncentiveAction },
 }
 
 /// The migrate message
@@ -84,6 +88,13 @@ pub struct IncentiveParams {
     pub incentive_asset: Asset,
     /// If set, it  will be used to identify the incentive.
     pub incentive_indentifier: Option<String>,
+}
+
+#[cw_serde]
+pub enum IncentiveAction {
+    Create { params: IncentiveParams },
+    Close { incentive_identifier: String },
+    Extend { params: IncentiveParams },
 }
 
 /// Represents an incentive.

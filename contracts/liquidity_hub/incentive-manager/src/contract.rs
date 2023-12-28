@@ -2,7 +2,9 @@ use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Respons
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::incentive_manager::{Config, ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale::incentive_manager::{
+    Config, ExecuteMsg, IncentiveAction, InstantiateMsg, QueryMsg,
+};
 use white_whale::vault_manager::MigrateMsg;
 
 use crate::error::ContractError;
@@ -80,9 +82,15 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateIncentive { params } => {
-            manager::commands::create_incentive(deps, env, info, params)
-        }
+        ExecuteMsg::ManageIncentive { action } => match action {
+            IncentiveAction::Create { params } => {
+                manager::commands::create_incentive(deps, env, info, params)
+            }
+            IncentiveAction::Close {
+                incentive_identifier,
+            } => manager::commands::close_incentive(deps, info, incentive_identifier),
+            IncentiveAction::Extend { params } => Ok(Response::default()),
+        },
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(

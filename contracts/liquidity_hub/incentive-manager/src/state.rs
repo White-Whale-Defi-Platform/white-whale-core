@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Order, StdResult, Storage};
+use cosmwasm_std::{Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex};
 
 use white_whale::incentive_manager::{Config, Incentive};
@@ -115,10 +115,10 @@ pub fn get_incentive_by_asset(
 
 /// Gets the incentive given its identifier
 pub fn get_incentive_by_identifier(
-    deps: &Deps,
-    incentive_identifier: String,
+    storage: &dyn Storage,
+    incentive_identifier: &String,
 ) -> Result<Incentive, ContractError> {
     INCENTIVES
-        .may_load(deps.storage, incentive_identifier)?
+        .may_load(storage, incentive_identifier.clone())?
         .ok_or(ContractError::NonExistentIncentive {})
 }

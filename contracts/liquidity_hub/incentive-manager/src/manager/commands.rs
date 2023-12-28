@@ -1,11 +1,14 @@
-use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 use std::collections::HashMap;
+
+use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
 use white_whale::epoch_manager::epoch_manager::EpochResponse;
 use white_whale::incentive_manager::{Curve, Incentive, IncentiveParams};
 
 use crate::helpers::{assert_incentive_asset, process_incentive_creation_fee};
-use crate::state::{get_incentives_by_lp_asset, CONFIG, INCENTIVE_COUNTER};
+use crate::state::{
+    get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
+};
 use crate::ContractError;
 
 /// Minimum amount of an asset to create an incentive with
@@ -66,7 +69,6 @@ pub(crate) fn create_incentive(
     )?);
 
     // assert epoch params are correctly set
-
     let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
         config.epoch_manager_addr.into_string(),
         &white_whale::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
@@ -104,6 +106,12 @@ pub(crate) fn create_incentive(
         .incentive_indentifier
         .unwrap_or(incentive_id.to_string());
 
+    // make sure another incentive with the same identifier doesn't exist
+    match get_incentive_by_identifier(deps.storage, &incentive_identifier) {
+        Ok(_) => return Err(ContractError::IncentiveAlreadyExists {}),
+        Err(_) => {} // the incentive does not exist, all good, continue
+    }
+
     // create the incentive
     let incentive = Incentive {
         incentive_identifier,
@@ -128,4 +136,39 @@ pub(crate) fn create_incentive(
         ("incentive_asset", incentive.incentive_asset.to_string()),
         ("lp_asset", incentive.lp_asset.to_string()),
     ]))
+}
+
+/// Closes an incentive
+pub(crate) fn close_incentive(
+    deps: DepsMut,
+    info: MessageInfo,
+    incentive_identifier: String,
+) -> Result<Response, ContractError> {
+    // validate that user is allowed to close the incentive. Only the incentive creator or the owner of the contract can close an incentive
+    let mut incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
+    if !(incentive.incentive_creator == info.sender
+        || cw_ownable::is_owner(deps.storage, &info.sender)?)
+    {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // remove the incentive from the storage
+    INCENTIVES.remove(deps.storage, incentive_identifier.clone())?;
+
+    // return the available asset, i.e. the amount that hasn't been claimed
+    incentive.incentive_asset.amount = incentive
+        .incentive_asset
+        .amount
+        .saturating_sub(incentive.claimed_amount);
+
+    Ok(Response::default()
+        .add_message(
+            incentive
+                .incentive_asset
+                .into_msg(incentive.incentive_creator)?,
+        )
+        .add_attributes(vec![
+            ("action", "close_incentive".to_string()),
+            ("incentive_identifier", incentive_identifier),
+        ]))
 }
