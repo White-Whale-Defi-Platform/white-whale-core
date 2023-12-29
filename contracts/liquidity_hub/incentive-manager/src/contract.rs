@@ -89,7 +89,9 @@ pub fn execute(
             IncentiveAction::Close {
                 incentive_identifier,
             } => manager::commands::close_incentive(deps, info, incentive_identifier),
-            IncentiveAction::Extend { params } => Ok(Response::default()),
+            IncentiveAction::Extend { params } => {
+                manager::commands::expand_incentive(deps, env, info, params)
+            }
         },
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(

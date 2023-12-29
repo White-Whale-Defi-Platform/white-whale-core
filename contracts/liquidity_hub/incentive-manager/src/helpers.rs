@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Deps, Env, MessageInfo};
 
-use white_whale::incentive_manager::{Config, IncentiveParams};
+use white_whale::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::ContractError;
@@ -166,4 +166,37 @@ pub(crate) fn assert_incentive_asset(
     }
 
     Ok(messages)
+}
+
+/// Asserts the incentive epochs are valid. Returns a tuple of (start_epoch, end_epoch) for the incentive
+pub(crate) fn assert_incentive_epochs(
+    params: &IncentiveParams,
+    current_epoch: u64,
+    max_incentive_epoch_buffer: u64,
+) -> Result<(u64, u64), ContractError> {
+    // assert epoch params are correctly set
+    let end_epoch = params.end_epoch.unwrap_or(
+        current_epoch
+            .checked_add(DEFAULT_INCENTIVE_DURATION)
+            .ok_or(ContractError::InvalidEndEpoch {})?,
+    );
+
+    // ensure the incentive is set to end in a future epoch
+    if current_epoch > end_epoch {
+        return Err(ContractError::IncentiveEndsInPast);
+    }
+
+    let start_epoch = params.start_epoch.unwrap_or(current_epoch);
+
+    // ensure that start date is before end date
+    if start_epoch > end_epoch {
+        return Err(ContractError::IncentiveStartTimeAfterEndTime);
+    }
+
+    // ensure that start date is set within buffer
+    if start_epoch > current_epoch + max_incentive_epoch_buffer {
+        return Err(ContractError::IncentiveStartTooFar);
+    }
+
+    Ok((start_epoch, end_epoch))
 }

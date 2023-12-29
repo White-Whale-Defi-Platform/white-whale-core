@@ -123,6 +123,13 @@ pub struct Incentive {
     pub asset_history: BTreeMap<u64, (Uint128, u64)>,
 }
 
+impl Incentive {
+    /// Returns true if the incentive is expired at the given epoch.
+    pub fn is_expired(&self, epoch: u64) -> bool {
+        epoch > self.end_epoch + DEFAULT_INCENTIVE_DURATION
+    }
+}
+
 #[cw_serde]
 pub enum Curve {
     /// A linear curve that releases assets uniformly over time.
@@ -136,3 +143,6 @@ impl std::fmt::Display for Curve {
         }
     }
 }
+
+/// Default incentive duration in epochs
+pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
