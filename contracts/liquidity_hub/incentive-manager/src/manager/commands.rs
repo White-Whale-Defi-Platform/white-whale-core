@@ -2,18 +2,19 @@ use std::collections::HashMap;
 
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
 
+use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale::incentive_manager::{
-    Curve, Incentive, IncentiveParams, DEFAULT_INCENTIVE_DURATION,
+    Curve, Incentive, IncentiveParams,
 };
 
+use crate::ContractError;
 use crate::helpers::{
     assert_incentive_asset, assert_incentive_epochs, process_incentive_creation_fee,
 };
 use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
-    get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
+    CONFIG, get_incentive_by_identifier, get_incentives_by_lp_asset, INCENTIVE_COUNTER, INCENTIVES,
 };
-use crate::ContractError;
 
 /// Creates an incentive with the given params
 pub(crate) fn create_incentive(
@@ -146,7 +147,7 @@ pub(crate) fn close_incentive(
 
     if !(!incentive.is_expired(current_epoch)
         && (incentive.incentive_creator == info.sender
-            || cw_ownable::is_owner(deps.storage, &info.sender)?))
+        || cw_ownable::is_owner(deps.storage, &info.sender)?))
     {
         return Err(ContractError::Unauthorized {});
     }
@@ -193,5 +194,24 @@ pub(crate) fn expand_incentive(
     info: MessageInfo,
     params: IncentiveParams,
 ) -> Result<Response, ContractError> {
+    Ok(Response::default())
+}
+
+/// EpochChanged hook implementation
+
+pub(crate) fn on_epoch_changed(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msg: EpochChangedHookMsg,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    // only the epoch manager can trigger this
+    if info.sender != config.epoch_manager_addr {
+        return Err(ContractError::Unauthorized {});
+    }
+
+
     Ok(Response::default())
 }

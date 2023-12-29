@@ -104,6 +104,9 @@ pub fn execute(
                 )?,
             )
         }
+        ExecuteMsg::EpochChangedHook(msg) => {
+            manager::commands::on_epoch_changed(deps, env, info, msg)
+        }
     }
 }
 

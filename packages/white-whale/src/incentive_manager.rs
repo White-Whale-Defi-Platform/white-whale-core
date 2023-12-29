@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
+use crate::epoch_manager::hooks::EpochChangedHookMsg;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -36,6 +37,8 @@ pub enum ExecuteMsg {
     /// - Close: Closes an existing incentive.
     /// - Extend: Extends an existing incentive.
     ManageIncentive { action: IncentiveAction },
+    /// Gets triggered by the epoch manager when a new epoch is created
+    EpochChangedHook(EpochChangedHookMsg),
 }
 
 /// The migrate message
