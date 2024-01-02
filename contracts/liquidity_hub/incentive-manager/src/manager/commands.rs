@@ -3,21 +3,41 @@ use std::collections::HashMap;
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
 
 use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
-use white_whale::incentive_manager::{
-    Curve, Incentive, IncentiveParams,
-};
+use white_whale::incentive_manager::{Curve, Incentive, IncentiveParams};
 
-use crate::ContractError;
 use crate::helpers::{
     assert_incentive_asset, assert_incentive_epochs, process_incentive_creation_fee,
 };
 use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
-    CONFIG, get_incentive_by_identifier, get_incentives_by_lp_asset, INCENTIVE_COUNTER, INCENTIVES,
+    get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
 };
+use crate::ContractError;
+
+pub(crate) fn fill_incentive(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    params: IncentiveParams,
+) -> Result<Response, ContractError> {
+    // if an incentive_identifier was passed in the params, check if an incentive with such identifier
+    // exists and if the sender is allow to refill it, otherwise create a new incentive
+    if let Some(incentive_indentifier) = params.clone().incentive_indentifier {
+        let incentive_result = get_incentive_by_identifier(deps.storage, &incentive_indentifier);
+        match incentive_result {
+            // the incentive exists, try to expand it
+            Ok(incentive) => return expand_incentive(deps, env, info, incentive, params),
+            // the incentive does not exist, try to create it
+            Err(_) => {}
+        }
+    }
+
+    // if no identifier was passed in the params or if the incentive does not exist, try to create the incentive
+    create_incentive(deps, env, info, params)
+}
 
 /// Creates an incentive with the given params
-pub(crate) fn create_incentive(
+fn create_incentive(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -105,22 +125,22 @@ pub(crate) fn create_incentive(
 
     // create the incentive
     let incentive = Incentive {
-        incentive_identifier,
+        identifier: incentive_identifier,
         start_epoch,
         end_epoch,
-        emitted_tokens: HashMap::new(),
+        //emitted_tokens: HashMap::new(),
         curve: params.curve.unwrap_or(Curve::Linear),
         incentive_asset: params.incentive_asset,
         lp_asset: params.lp_asset,
-        incentive_creator: info.sender,
+        owner: info.sender,
         claimed_amount: Uint128::zero(),
-        asset_history: Default::default(),
+        expansion_history: Default::default(),
     };
 
     Ok(Response::default().add_attributes(vec![
         ("action", "create_incentive".to_string()),
-        ("incentive_creator", incentive.incentive_creator.to_string()),
-        ("incentive_identifier", incentive.incentive_identifier),
+        ("incentive_creator", incentive.owner.to_string()),
+        ("incentive_identifier", incentive.identifier),
         ("start_epoch", incentive.start_epoch.to_string()),
         ("end_epoch", incentive.end_epoch.to_string()),
         ("curve", incentive.curve.to_string()),
@@ -146,8 +166,7 @@ pub(crate) fn close_incentive(
     let mut incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
 
     if !(!incentive.is_expired(current_epoch)
-        && (incentive.incentive_creator == info.sender
-        || cw_ownable::is_owner(deps.storage, &info.sender)?))
+        && (incentive.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?))
     {
         return Err(ContractError::Unauthorized {});
     }
@@ -161,7 +180,7 @@ pub(crate) fn close_incentive(
 }
 
 /// Closes a list of incentives. Does not validate the sender, do so before calling this function.
-pub(crate) fn close_incentives(
+fn close_incentives(
     storage: &mut dyn Storage,
     incentives: Vec<Incentive>,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
@@ -169,7 +188,7 @@ pub(crate) fn close_incentives(
 
     for mut incentive in incentives {
         // remove the incentive from the storage
-        INCENTIVES.remove(storage, incentive.incentive_identifier.clone())?;
+        INCENTIVES.remove(storage, incentive.identifier.clone())?;
 
         // return the available asset, i.e. the amount that hasn't been claimed
         incentive.incentive_asset.amount = incentive
@@ -177,24 +196,31 @@ pub(crate) fn close_incentives(
             .amount
             .saturating_sub(incentive.claimed_amount);
 
-        messages.push(
-            incentive
-                .incentive_asset
-                .into_msg(incentive.incentive_creator)?,
-        );
+        messages.push(incentive.incentive_asset.into_msg(incentive.owner)?);
     }
 
     Ok(messages)
 }
 
 /// Expands an incentive with the given params
-pub(crate) fn expand_incentive(
+fn expand_incentive(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
+    incentive: Incentive,
     params: IncentiveParams,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
+    // only the incentive owner can expand it
+    if incentive.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    // validate the params are correct and the incentive can actually be expanded
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", "close_incentive".to_string()),
+        ("incentive_identifier", incentive.identifier),
+    ]))
 }
 
 /// EpochChanged hook implementation
@@ -211,7 +237,6 @@ pub(crate) fn on_epoch_changed(
     if info.sender != config.epoch_manager_addr {
         return Err(ContractError::Unauthorized {});
     }
-
 
     Ok(Response::default())
 }

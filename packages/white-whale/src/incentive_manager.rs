@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
-use crate::epoch_manager::hooks::EpochChangedHookMsg;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
+use crate::epoch_manager::hooks::EpochChangedHookMsg;
 use crate::pool_network::asset::{Asset, AssetInfo};
 
 /// The instantiation message
@@ -33,12 +33,17 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Manages an incentive based on the action, which can be:
-    /// - Create: Creates a new incentive.
+    /// - Fill: Creates or expands an incentive.
     /// - Close: Closes an existing incentive.
-    /// - Extend: Extends an existing incentive.
     ManageIncentive { action: IncentiveAction },
+    /// Manages a position based on the action, which can be:
+    /// - Fill: Creates or expands a position.
+    /// - Close: Closes an existing position.
+    ManagePosition { action: PositionAction },
     /// Gets triggered by the epoch manager when a new epoch is created
     EpochChangedHook(EpochChangedHookMsg),
+    /// Gets triggered by the epoch manager when a new epoch is created
+    Claim(),
 }
 
 /// The migrate message
@@ -95,18 +100,59 @@ pub struct IncentiveParams {
 
 #[cw_serde]
 pub enum IncentiveAction {
-    Create { params: IncentiveParams },
-    Close { incentive_identifier: String },
-    Extend { params: IncentiveParams },
+    /// Fills an incentive. If the incentive doesn't exist, it creates a new one. If it exists already,
+    /// it expands it given the sender created the original incentive and the params are correct.
+    Fill {
+        /// The parameters for the incentive to fill.
+        params: IncentiveParams
+    },
+    //// Closes an incentive with the given identifier. If the incentive has expired, anyone can
+    // close it. Otherwise, only the incentive creator or the owner of the contract can close an incentive.
+    Close {
+        /// The incentive identifier to close.
+        incentive_identifier: String
+    },
 }
+
+#[cw_serde]
+pub enum PositionAction {
+    /// Fills a position. If the position doesn't exist, it opens it. If it exists already,
+    /// it expands it given the sender opened the original position and the params are correct.
+    Fill {
+        /// The parameters for the position to fill.
+        params: PositionParams
+    },
+    /// Closes an existing position. The position stops earning incentive rewards.
+    Close {
+        /// The unbonding duration of the position to close.
+        unbonding_duration: u64
+    },
+}
+
+
+/// Parameters for creating incentive
+#[cw_serde]
+pub struct PositionParams {
+    /// The amount to add to the position.
+    amount: Uint128,
+    /// The unbond completion timestamp to identify the position to add to. In nanoseconds.
+    unbonding_duration: u64,
+    /// The receiver for the position.
+    /// If left empty, defaults to the message sender.
+    receiver: Option<String>,
+}
+
+
+// type for the epoch id
+pub type EpochId = u64;
 
 /// Represents an incentive.
 #[cw_serde]
 pub struct Incentive {
     /// The ID of the incentive.
-    pub incentive_identifier: String,
+    pub identifier: String,
     /// The account which opened the incentive and can manage it.
-    pub incentive_creator: Addr,
+    pub owner: Addr,
     /// The LP asset to create the incentive for.
     pub lp_asset: AssetInfo,
     /// The asset the incentive was created to distribute.
@@ -116,14 +162,14 @@ pub struct Incentive {
     /// The type of curve the incentive has.
     pub curve: Curve,
     /// The epoch at which the incentive starts.
-    pub start_epoch: u64,
+    pub start_epoch: EpochId,
     /// The epoch at which the incentive ends.
-    pub end_epoch: u64,
+    pub end_epoch: EpochId,
     /// emitted tokens
-    pub emitted_tokens: HashMap<u64, Uint128>,
+    //pub emitted_tokens: HashMap<u64, Uint128>,
     /// A map containing the amount of tokens it was expanded to at a given epoch. This is used
     /// to calculate the right amount of tokens to distribute at a given epoch when a incentive is expanded.
-    pub asset_history: BTreeMap<u64, (Uint128, u64)>,
+    pub expansion_history: BTreeMap<EpochId, Uint128>,
 }
 
 impl Incentive {
@@ -149,3 +195,13 @@ impl std::fmt::Display for Curve {
 
 /// Default incentive duration in epochs
 pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
+
+
+/// Represents an LP position.
+#[cw_serde]
+pub struct Position {
+    /// The amount of LP tokens that are put up to earn incentives.
+    pub amount: Uint128,
+    /// Represents the amount of time in seconds the user must wait after unbonding for the LP tokens to be released.
+    pub unbonding_duration: u64,
+}

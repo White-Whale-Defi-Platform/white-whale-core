@@ -91,6 +91,9 @@ pub enum ContractError {
         new_version: Version,
         current_version: Version,
     },
+
+    #[error("The sender doesn't have open positions to qualify for incentive rewards")]
+    NoOpenPositions,
 }
 
 impl From<semver::Error> for ContractError {

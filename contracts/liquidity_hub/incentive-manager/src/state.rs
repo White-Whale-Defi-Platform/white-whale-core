@@ -1,13 +1,24 @@
-use cosmwasm_std::{Order, StdResult, Storage};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex};
+use cosmwasm_std::{Addr, Order, StdResult, Storage};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
-use white_whale::incentive_manager::{Config, Incentive};
+use white_whale::incentive_manager::{Config, EpochId, Incentive, Position};
 use white_whale::pool_network::asset::AssetInfo;
 
 use crate::ContractError;
 
 // Contract's config
 pub const CONFIG: Item<Config> = Item::new("config");
+
+/// All open positions that a user have. Open positions accumulate rewards, and a user can have
+/// multiple open positions active at once.
+pub const OPEN_POSITIONS: Map<&Addr, Vec<Position>> = Map::new("open_positions");
+
+/// All closed positions that users have. Closed positions don't accumulate rewards, and the
+/// underlying tokens are claimable after `unbonding_duration`.
+pub const CLOSED_POSITIONS: Map<&Addr, Vec<Position>> = Map::new("closed_positions");
+
+/// The last epoch an address claimed rewards
+pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch");
 
 /// An monotonically increasing counter to generate unique incentive identifiers.
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");

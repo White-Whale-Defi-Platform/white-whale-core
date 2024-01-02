@@ -3,13 +3,13 @@ use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
 use white_whale::incentive_manager::{
-    Config, ExecuteMsg, IncentiveAction, InstantiateMsg, QueryMsg,
+    Config, ExecuteMsg, IncentiveAction, InstantiateMsg, PositionAction, QueryMsg,
 };
 use white_whale::vault_manager::MigrateMsg;
 
 use crate::error::ContractError;
-use crate::manager;
 use crate::state::CONFIG;
+use crate::{incentive, manager, position};
 
 const CONTRACT_NAME: &str = "crates.io:incentive-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -83,15 +83,12 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::ManageIncentive { action } => match action {
-            IncentiveAction::Create { params } => {
-                manager::commands::create_incentive(deps, env, info, params)
+            IncentiveAction::Fill { params } => {
+                manager::commands::fill_incentive(deps, env, info, params)
             }
             IncentiveAction::Close {
                 incentive_identifier,
             } => manager::commands::close_incentive(deps, info, incentive_identifier),
-            IncentiveAction::Extend { params } => {
-                manager::commands::expand_incentive(deps, env, info, params)
-            }
         },
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
@@ -107,6 +104,15 @@ pub fn execute(
         ExecuteMsg::EpochChangedHook(msg) => {
             manager::commands::on_epoch_changed(deps, env, info, msg)
         }
+        ExecuteMsg::Claim() => incentive::commands::claim(deps, env, info),
+        ExecuteMsg::ManagePosition { action } => match action {
+            PositionAction::Fill { params } => {
+                position::commands::fill_position(deps, env, info, params)
+            }
+            PositionAction::Close { unbonding_duration } => {
+                position::commands::close_position(deps, env, info, unbonding_duration)
+            }
+        },
     }
 }
 
