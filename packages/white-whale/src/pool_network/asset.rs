@@ -184,6 +184,13 @@ impl AssetInfo {
         }
     }
 
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            AssetInfo::NativeToken { denom } => denom.as_bytes(),
+            AssetInfo::Token { contract_addr } => contract_addr.as_bytes(),
+        }
+    }
+
     pub fn is_native_token(&self) -> bool {
         match self {
             AssetInfo::NativeToken { .. } => true,

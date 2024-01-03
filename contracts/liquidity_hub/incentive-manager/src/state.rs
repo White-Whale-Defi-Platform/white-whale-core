@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 use white_whale::incentive_manager::{Config, EpochId, Incentive, Position};
@@ -19,6 +19,16 @@ pub const CLOSED_POSITIONS: Map<&Addr, Vec<Position>> = Map::new("closed_positio
 
 /// The last epoch an address claimed rewards
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch");
+
+/// The total weight (sum of all individual weights) of an LP asset
+pub const LP_WEIGHTS: Map<&[u8], Uint128> = Map::new("lp_weights");
+
+/// The weights for individual accounts
+pub const ADDRESS_LP_WEIGHT: Map<(&Addr, &[u8]), Uint128> = Map::new("address_lp_weight");
+
+/// The address lp weight history, i.e. how much lp weight an address had at a given epoch
+pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
+    Map::new("address_lp_weight_history");
 
 /// An monotonically increasing counter to generate unique incentive identifiers.
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");

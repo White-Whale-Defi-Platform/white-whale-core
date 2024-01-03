@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::Formatter;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
@@ -22,9 +23,9 @@ pub struct InstantiateMsg {
     pub max_concurrent_incentives: u32,
     /// New incentives are allowed to start up to `current_epoch + start_epoch_buffer` into the future.
     pub max_incentive_epoch_buffer: u32,
-    /// The minimum amount of time that a user can bond their tokens for. In nanoseconds.
+    /// The minimum amount of time that a user can bond their tokens for. In seconds.
     pub min_unbonding_duration: u64,
-    /// The maximum amount of time that a user can bond their tokens for. In nanoseconds.
+    /// The maximum amount of time that a user can bond their tokens for. In seconds.
     pub max_unbonding_duration: u64,
 }
 
@@ -73,9 +74,9 @@ pub struct Config {
     pub max_concurrent_incentives: u32,
     /// The maximum amount of epochs in the future a new incentive is allowed to start in.
     pub max_incentive_epoch_buffer: u32,
-    /// The minimum amount of time that a user can bond their tokens for. In nanoseconds.
+    /// The minimum amount of time that a user can bond their tokens for. In seconds.
     pub min_unbonding_duration: u64,
-    /// The maximum amount of time that a user can bond their tokens for. In nanoseconds.
+    /// The maximum amount of time that a user can bond their tokens for. In seconds.
     pub max_unbonding_duration: u64,
 }
 
@@ -104,13 +105,13 @@ pub enum IncentiveAction {
     /// it expands it given the sender created the original incentive and the params are correct.
     Fill {
         /// The parameters for the incentive to fill.
-        params: IncentiveParams
+        params: IncentiveParams,
     },
     //// Closes an incentive with the given identifier. If the incentive has expired, anyone can
     // close it. Otherwise, only the incentive creator or the owner of the contract can close an incentive.
     Close {
         /// The incentive identifier to close.
-        incentive_identifier: String
+        incentive_identifier: String,
     },
 }
 
@@ -120,28 +121,38 @@ pub enum PositionAction {
     /// it expands it given the sender opened the original position and the params are correct.
     Fill {
         /// The parameters for the position to fill.
-        params: PositionParams
+        params: PositionParams,
     },
     /// Closes an existing position. The position stops earning incentive rewards.
     Close {
         /// The unbonding duration of the position to close.
-        unbonding_duration: u64
+        unbonding_duration: u64,
     },
 }
-
 
 /// Parameters for creating incentive
 #[cw_serde]
 pub struct PositionParams {
-    /// The amount to add to the position.
-    amount: Uint128,
-    /// The unbond completion timestamp to identify the position to add to. In nanoseconds.
-    unbonding_duration: u64,
+    /// The asset to add to the position.
+    pub lp_asset: Asset,
+    /// The unbond completion timestamp to identify the position to add to. In seconds.
+    pub unbonding_duration: u64,
     /// The receiver for the position.
     /// If left empty, defaults to the message sender.
-    receiver: Option<String>,
+    pub receiver: Option<String>,
 }
 
+impl std::fmt::Display for PositionParams {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "lp_asset: {}, unbonding_duration: {}, receiver: {}",
+            self.lp_asset,
+            self.unbonding_duration,
+            self.receiver.as_ref().unwrap_or(&"".to_string())
+        )
+    }
+}
 
 // type for the epoch id
 pub type EpochId = u64;
@@ -196,12 +207,11 @@ impl std::fmt::Display for Curve {
 /// Default incentive duration in epochs
 pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
 
-
 /// Represents an LP position.
 #[cw_serde]
 pub struct Position {
     /// The amount of LP tokens that are put up to earn incentives.
-    pub amount: Uint128,
+    pub lp_asset: Asset,
     /// Represents the amount of time in seconds the user must wait after unbonding for the LP tokens to be released.
     pub unbonding_duration: u64,
 }

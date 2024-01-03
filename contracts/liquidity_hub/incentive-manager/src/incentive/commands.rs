@@ -5,6 +5,8 @@ use crate::ContractError;
 
 /// Claims pending rewards for incentives where the user has LP
 pub(crate) fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+
     // check if the user has any open LP positions
     let mut open_positions = OPEN_POSITIONS
         .may_load(deps.storage, &info.sender.clone())?

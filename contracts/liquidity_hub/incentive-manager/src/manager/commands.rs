@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
 
 use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale::incentive_manager::{Curve, Incentive, IncentiveParams};
 
 use crate::helpers::{
-    assert_incentive_asset, assert_incentive_epochs, process_incentive_creation_fee,
+    assert_incentive_asset, process_incentive_creation_fee, validate_incentive_epochs,
 };
 use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
@@ -104,7 +102,7 @@ fn create_incentive(
     )?);
 
     // assert epoch params are correctly set
-    let (start_epoch, end_epoch) = assert_incentive_epochs(
+    let (start_epoch, end_epoch) = validate_incentive_epochs(
         &params,
         current_epoch,
         u64::from(config.max_incentive_epoch_buffer),
@@ -156,6 +154,8 @@ pub(crate) fn close_incentive(
     info: MessageInfo,
     incentive_identifier: String,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+
     // validate that user is allowed to close the incentive. Only the incentive creator or the owner of the contract can close an incentive
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
@@ -231,6 +231,8 @@ pub(crate) fn on_epoch_changed(
     info: MessageInfo,
     msg: EpochChangedHookMsg,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
+
     let config = CONFIG.load(deps.storage)?;
 
     // only the epoch manager can trigger this

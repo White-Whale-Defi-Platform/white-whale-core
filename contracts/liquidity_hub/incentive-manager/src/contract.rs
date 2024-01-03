@@ -91,6 +91,8 @@ pub fn execute(
             } => manager::commands::close_incentive(deps, info, incentive_identifier),
         },
         ExecuteMsg::UpdateOwnership(action) => {
+            cw_utils::nonpayable(&info)?;
+
             Ok(
                 cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
                     |ownership| {

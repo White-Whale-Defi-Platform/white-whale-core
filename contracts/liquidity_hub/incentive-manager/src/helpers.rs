@@ -2,7 +2,9 @@ use std::cmp::Ordering;
 
 use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Deps, Env, MessageInfo};
 
-use white_whale::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
+use white_whale::incentive_manager::{
+    Config, IncentiveParams, PositionParams, DEFAULT_INCENTIVE_DURATION,
+};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::ContractError;
@@ -168,8 +170,8 @@ pub(crate) fn assert_incentive_asset(
     Ok(messages)
 }
 
-/// Asserts the incentive epochs are valid. Returns a tuple of (start_epoch, end_epoch) for the incentive
-pub(crate) fn assert_incentive_epochs(
+/// Validates the incentive epochs. Returns a tuple of (start_epoch, end_epoch) for the incentive.
+pub(crate) fn validate_incentive_epochs(
     params: &IncentiveParams,
     current_epoch: u64,
     max_incentive_epoch_buffer: u64,
@@ -199,4 +201,24 @@ pub(crate) fn assert_incentive_epochs(
     }
 
     Ok((start_epoch, end_epoch))
+}
+
+//todo maybe move this to position helpers??
+/// Validates the `unbonding_duration` specified in the position params is within the range specified
+/// in the config.
+pub(crate) fn validate_unbonding_duration(
+    config: &Config,
+    params: &PositionParams,
+) -> Result<(), ContractError> {
+    if params.unbonding_duration < config.min_unbonding_duration
+        || params.unbonding_duration > config.max_unbonding_duration
+    {
+        return Err(ContractError::InvalidUnbondingDuration {
+            min: config.min_unbonding_duration,
+            max: config.max_unbonding_duration,
+            specified: params.unbonding_duration,
+        });
+    }
+
+    Ok(())
 }

@@ -1,5 +1,9 @@
-use cosmwasm_std::{OverflowError, StdError, Uint128};
+use cosmwasm_std::{
+    CheckedFromRatioError, ConversionOverflowError, DivideByZeroError, OverflowError, StdError,
+    Uint128,
+};
 use cw_ownable::OwnershipError;
+use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
@@ -15,10 +19,22 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("{0}")]
+    PaymentError(#[from] PaymentError),
+
+    #[error("{0}")]
     OwnershipError(#[from] OwnershipError),
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
+
+    #[error("{0}")]
+    CheckedFromRatioError(#[from] CheckedFromRatioError),
+
+    #[error("{0}")]
+    ConversionOverflowError(#[from] ConversionOverflowError),
+
+    #[error("{0}")]
+    DivideByZeroError(#[from] DivideByZeroError),
 
     #[error("An incentive with the given identifier already exists")]
     IncentiveAlreadyExists,
@@ -94,6 +110,37 @@ pub enum ContractError {
 
     #[error("The sender doesn't have open positions to qualify for incentive rewards")]
     NoOpenPositions,
+
+    #[error(
+        "Invalid unbonding duration of {specified} specified, must be between {min} and {max}"
+    )]
+    InvalidUnbondingDuration {
+        /// The minimum amount of seconds that a user must bond for.
+        min: u64,
+        /// The maximum amount of seconds that a user can bond for.
+        max: u64,
+        /// The amount of seconds the user attempted to bond for.
+        specified: u64,
+    },
+
+    #[error("Attempt to create a position with {deposited_amount}, but only {allowance_amount} was set in allowance")]
+    MissingPositionDeposit {
+        /// The actual amount that the contract has an allowance for.
+        allowance_amount: Uint128,
+        /// The amount the account attempted to open a position with
+        deposited_amount: Uint128,
+    },
+
+    #[error("Attempt to create a position with {desired_amount}, but {paid_amount} was sent")]
+    MissingPositionDepositNative {
+        /// The amount the user intended to deposit.
+        desired_amount: Uint128,
+        /// The amount that was actually deposited.
+        paid_amount: Uint128,
+    },
+
+    #[error("Attempt to compute the weight of a duration of {unbonding_duration} which is outside the allowed bounds")]
+    InvalidWeight { unbonding_duration: u64 },
 }
 
 impl From<semver::Error> for ContractError {
