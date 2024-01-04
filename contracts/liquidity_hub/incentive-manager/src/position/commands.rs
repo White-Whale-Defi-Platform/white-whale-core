@@ -15,7 +15,6 @@ pub(crate) fn fill_position(
     info: MessageInfo,
     params: PositionParams,
 ) -> Result<Response, ContractError> {
-    // check if
     let config = CONFIG.load(deps.storage)?;
 
     // validate unbonding duration
@@ -48,52 +47,64 @@ pub(crate) fn fill_position(
         })
         .unwrap_or_else(|| info.clone());
 
-    // check if there's an existing position with the given `unbonding_time`
-    let position_option = OPEN_POSITIONS
-        .may_load(deps.storage, &receiver.sender.clone())?
+    // check if there's an existing position with the given `unbonding_time`, get the index of it
+    // on the vector
+    let position_index = OPEN_POSITIONS
+        .may_load(deps.storage, &receiver.sender)?
         .unwrap_or_default()
-        .into_iter()
-        .find(|position| position.unbonding_duration == params.unbonding_duration);
+        .iter()
+        .enumerate()
+        .find(|(_, position)| position.unbonding_duration == params.unbonding_duration)
+        .map(|(index, _)| index);
 
-    // if the position exist, expand it
-    if let Some(existing_position) = position_option {
-        expand_position(deps, &env, &receiver, &params, &existing_position)
-    } else {
-        // otherwise, open it
-        open_position(deps, &env, &receiver, &params)
-    }
-}
-
-/// Expands an existing position
-fn expand_position(
-    deps: DepsMut,
-    env: &Env,
-    receiver: &MessageInfo,
-    params: &PositionParams,
-    existing_position: &Position,
-) -> Result<Response, ContractError> {
-    Ok(Response::default().add_attributes(vec![("action", "expand_position".to_string())]))
-}
-
-/// Opens a position
-fn open_position(
-    deps: DepsMut,
-    env: &Env,
-    receiver: &MessageInfo,
-    params: &PositionParams,
-) -> Result<Response, ContractError> {
-    // add the position to the user's open positions
-    OPEN_POSITIONS.update::<_, StdError>(deps.storage, &receiver.sender, |positions| {
+    // update the position
+    OPEN_POSITIONS.update::<_, ContractError>(deps.storage, &receiver.sender, |positions| {
         let mut positions = positions.unwrap_or_default();
-        positions.push(Position {
-            lp_asset: params.clone().lp_asset,
-            unbonding_duration: params.unbonding_duration,
-        });
+
+        // if the position exists, expand it. Otherwise, create a new position by adding it to the vector
+        match position_index {
+            Some(index) => {
+                // Update the existing position at the given index
+                if let Some(pos) = positions.get_mut(index) {
+                    if pos.lp_asset.info != params.lp_asset.info {
+                        return Err(ContractError::AssetMismatch);
+                    }
+                    pos.lp_asset.amount =
+                        pos.lp_asset.amount.checked_add(params.lp_asset.amount)?;
+                }
+            }
+            None => {
+                positions.push(Position {
+                    lp_asset: params.clone().lp_asset,
+                    unbonding_duration: params.unbonding_duration,
+                });
+            }
+        }
 
         Ok(positions)
     })?;
 
-    // update the LP weight
+    // Update weights for the LP and the user
+    update_weights(deps, &receiver, &params)?;
+
+    let action = match position_index {
+        Some(_) => "expand_position",
+        None => "open_position",
+    };
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", action.to_string()),
+        ("receiver", receiver.sender.to_string()),
+        ("params", params.clone().to_string()),
+    ]))
+}
+
+/// Updates the weights when managing a position
+fn update_weights(
+    deps: DepsMut,
+    receiver: &MessageInfo,
+    params: &PositionParams,
+) -> Result<(), ContractError> {
     let weight = calculate_weight(params)?;
     LP_WEIGHTS.update::<_, StdError>(
         deps.storage,
@@ -127,11 +138,7 @@ fn open_position(
         |_| Ok(address_lp_weight),
     )?;
 
-    Ok(Response::default().add_attributes(vec![
-        ("action", "open_position".to_string()),
-        ("receiver", receiver.sender.to_string()),
-        ("params", params.clone().to_string()),
-    ]))
+    Ok(())
 }
 
 /// Closes an existing position
