@@ -31,7 +31,7 @@ flag=""
 
 case $chain in
 
-juno | terra)
+juno | terra | osmosis)
   flag="-osmosis_token_factory"
   ;;
 migaloo)
