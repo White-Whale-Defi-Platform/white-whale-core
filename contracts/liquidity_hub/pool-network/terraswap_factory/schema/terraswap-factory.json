@@ -172,7 +172,7 @@
               "feature_toggle": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/FeatureToggle"
+                    "$ref": "#/definitions/FeatureToggle2"
                   },
                   {
                     "type": "null"
@@ -194,7 +194,7 @@
               "pool_fees": {
                 "anyOf": [
                   {
-                    "$ref": "#/definitions/PoolFee"
+                    "$ref": "#/definitions/PoolFee2"
                   },
                   {
                     "type": "null"
@@ -287,7 +287,7 @@
                 "minItems": 3
               },
               "pool_fees": {
-                "$ref": "#/definitions/PoolFee"
+                "$ref": "#/definitions/PoolFee2"
               },
               "token_factory_lp": {
                 "description": "If true, the pair will use the token factory to create the LP token. If false, it will use a cw20 token instead.",
@@ -515,6 +515,27 @@
         },
         "additionalProperties": false
       },
+      "FeatureToggle2": {
+        "description": "Pool feature toggle",
+        "type": "object",
+        "required": [
+          "deposits_enabled",
+          "swaps_enabled",
+          "withdrawals_enabled"
+        ],
+        "properties": {
+          "deposits_enabled": {
+            "type": "boolean"
+          },
+          "swaps_enabled": {
+            "type": "boolean"
+          },
+          "withdrawals_enabled": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "Fee": {
         "type": "object",
         "required": [
@@ -562,6 +583,27 @@
         ]
       },
       "PoolFee": {
+        "description": "Fees used by the pools on the pool network",
+        "type": "object",
+        "required": [
+          "burn_fee",
+          "protocol_fee",
+          "swap_fee"
+        ],
+        "properties": {
+          "burn_fee": {
+            "$ref": "#/definitions/Fee"
+          },
+          "protocol_fee": {
+            "$ref": "#/definitions/Fee"
+          },
+          "swap_fee": {
+            "$ref": "#/definitions/Fee"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PoolFee2": {
         "description": "Fees used by the pools on the pool network",
         "type": "object",
         "required": [
