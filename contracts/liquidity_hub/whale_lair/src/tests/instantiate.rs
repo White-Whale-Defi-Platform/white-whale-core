@@ -20,7 +20,7 @@ fn test_instantiate_successfully() {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            &vec![],
+            &[],
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
@@ -57,7 +57,7 @@ fn test_instantiate_unsuccessfully() {
                 denom: "uwhale".to_string(),
             },
         ],
-        &vec![],
+        &[],
         |error| {
             println!("1 --{error:?}");
             println!("2 --{:?}", error.root_cause());
@@ -75,7 +75,7 @@ fn test_instantiate_unsuccessfully() {
         vec![AssetInfo::Token {
             contract_addr: "contract123".to_string(),
         }],
-        &vec![],
+        &[],
         |error| {
             println!("1 --{error:?}");
             println!("2 --{:?}", error.root_cause());

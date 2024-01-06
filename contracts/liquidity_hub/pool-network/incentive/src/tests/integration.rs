@@ -288,7 +288,7 @@ fn try_open_more_flows_than_allowed() {
                 amount: Uint128::new(i * 2_000u128),
             },
             None,
-            &vec![coin(i * 2_000u128, "uwhale".to_string())],
+            &[coin(i * 2_000u128, "uwhale".to_string())],
             |result| {
                 if i > 7 {
                     // this should fail as only 7 incentives can be opened as specified in `instantiate_default`
@@ -401,16 +401,16 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(past_epoch.clone()),
+            Some(past_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -425,17 +425,17 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            Some(future_future_epoch.clone()),
-            Some(future_epoch.clone()),
+            Some(future_future_epoch),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -457,12 +457,12 @@ fn try_open_flows_with_wrong_epochs() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -476,16 +476,16 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(future_epoch.clone()),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -536,12 +536,12 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(0u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -560,12 +560,12 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee + MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -583,12 +583,12 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(100u128, "uwhale".to_string())],
+            &[coin(100u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee + MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -606,12 +606,12 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(500u128, "uwhale".to_string())],
+            &[coin(500u128, "uwhale".to_string())],
             |result| {
                 // this should fail as we didn't send enough funds to cover for the fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -629,12 +629,12 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -747,12 +747,12 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as MIN_FLOW_AMOUNT is not met
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -771,12 +771,12 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -794,15 +794,13 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
-                coin(1_000u128, "uwhale".to_string()),
-                coin(500u128, "ampWHALE".to_string()),
-            ],
+            &[coin(1_000u128, "uwhale".to_string()),
+                coin(500u128, "ampWHALE".to_string())],
             |result| {
                 // this should fail as the flow asset amount doesn't match the one sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -820,15 +818,13 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
-                coin(100u128, "uwhale".to_string()),
-                coin(1_00u128, "ampWHALE".to_string()),
-            ],
+            &[coin(100u128, "uwhale".to_string()),
+                coin(1_00u128, "ampWHALE".to_string())],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -846,15 +842,13 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
-                coin(1_000u128, "uwhale".to_string()),
-                coin(1_000u128, "ampWHALE".to_string()),
-            ],
+            &[coin(1_000u128, "uwhale".to_string()),
+                coin(1_000u128, "ampWHALE".to_string())],
             |result| {
                 // this should succeed as both the fee was paid in full and the flow asset amount
                 // matches the one sent to the contract
@@ -943,7 +937,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .query_funds(
             carol.clone(),
             AssetInfo::NativeToken {
-                denom: "uwhale".clone().to_string(),
+                denom: "uwhale".to_string(),
             },
             |result| {
                 *carol_original_uwhale_funds.borrow_mut() = result;
@@ -958,15 +952,13 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
-                coin(50_000u128, "uwhale".to_string()),
-                coin(1_000u128, "ampWHALE".to_string()),
-            ],
+            &[coin(50_000u128, "uwhale".to_string()),
+                coin(1_000u128, "ampWHALE".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -975,7 +967,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .query_funds(
             carol.clone(),
             AssetInfo::NativeToken {
-                denom: "uwhale".clone().to_string(),
+                denom: "uwhale".to_string(),
             },
             |result| {
                 // the current balance should be the original minus the fee only, which is 1_000uwhale
@@ -1040,7 +1032,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as MIN_FLOW_AMOUNT is not met
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1062,7 +1054,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent, i.e. Allowance was not increased
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1090,7 +1082,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as the allowance was increased
                 result.unwrap();
@@ -1215,7 +1207,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1237,7 +1229,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1266,7 +1258,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(1_500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee and MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1294,7 +1286,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should succeed as enough funds were sent to cover for fee and MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -1401,7 +1393,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1423,7 +1415,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the asset to pay for the fee was not transferred
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1452,7 +1444,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1481,7 +1473,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover the flow asset
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1510,7 +1502,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should succeed as both the fee was paid in full and the flow asset amount
                 // matches the one sent to the contract
@@ -1638,7 +1630,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1662,7 +1654,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the asset to pay for the fee was not transferred
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1693,7 +1685,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1724,7 +1716,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the flow asset was not sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1748,7 +1740,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(900u128, "usdc".to_string())],
+            &[coin(900u128, "usdc".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1772,7 +1764,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "usdc".to_string())],
+            &[coin(1_000u128, "usdc".to_string())],
             |result| {
                 // this should succeed as the flow asset was sent to the contract
                 result.unwrap();
@@ -1900,12 +1892,12 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -1918,12 +1910,12 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(11_000u128),
             },
             None,
-            &vec![coin(11_000u128, "uwhale".to_string())],
+            &[coin(11_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2122,12 +2114,12 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(5_000u128),
             },
             None,
-            &vec![coin(5_000u128, "uwhale".to_string())],
+            &[coin(5_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2217,7 +2209,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2239,7 +2231,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(10_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2417,7 +2409,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(5_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2694,7 +2686,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3103,7 +3095,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale")],
+            &[coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3325,10 +3317,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![
-                coin(1_000_000_000u128, "ampWHALE"),
-                coin(1_000u128, "uwhale"),
-            ],
+            &[coin(1_000_000_000u128, "ampWHALE"),
+                coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3344,7 +3334,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(10_000_000_000u128),
             },
             None,
-            &vec![coin(10_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3860,8 +3850,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone() + 4,
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration + 4,
             None,
             vec![],
             |result| {
@@ -3879,8 +3869,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone(),
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4152,8 +4142,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .open_incentive_position(
             bob.clone(),
             incentive_addr.clone().into_inner(),
-            bob_position_2.amount.clone(),
-            bob_position_2.unbonding_duration.clone(),
+            bob_position_2.amount,
+            bob_position_2.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4233,7 +4223,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     .flow_asset
                     .amount;
                 let claimed = flow_response.clone().unwrap().flow.unwrap().claimed_amount;
-                let expected_claimed = total_rewards.clone();
+                let expected_claimed = total_rewards;
 
                 assert!(total_rewards > claimed);
                 assert!(expected_claimed >= claimed);
@@ -4391,10 +4381,8 @@ fn open_expand_position_with_optional_receiver() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![
-                coin(1_000_000_000u128, "ampWHALE"),
-                coin(1_000u128, "uwhale"),
-            ],
+            &[coin(1_000_000_000u128, "ampWHALE"),
+                coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -4534,7 +4522,7 @@ fn close_position_if_empty_rewards() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "ampWHALE"), coin(1_000u128, "uwhale")],
+            &[coin(1_000u128, "ampWHALE"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -4879,12 +4867,12 @@ fn open_expand_flow_with_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5187,7 +5175,7 @@ fn open_expand_flow_with_cw20_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5455,7 +5443,7 @@ fn fail_expand_ended_flow() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5598,7 +5586,7 @@ fn open_expand_flow_with_default_values() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -5961,7 +5949,7 @@ fn open_expand_flow_verify_rewards() {
                 amount: Uint128::new(10_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -6466,7 +6454,7 @@ fn open_expand_flow_over_expand_limit() {
                 amount: Uint128::new(10_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },

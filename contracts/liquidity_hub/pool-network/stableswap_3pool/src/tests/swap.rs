@@ -156,7 +156,7 @@ fn try_native_to_token() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     //Expected return on a stable swap should about the same as input,
     // swap fee will be approximately 1_500_000_000 * 0.003   4_500_000
@@ -641,7 +641,7 @@ fn try_token_to_native() {
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     let expected_spread_amount = Uint128::new(830_233u128);
     //Expected return on a stable swap should about the same as input,

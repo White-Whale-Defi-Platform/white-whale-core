@@ -376,7 +376,7 @@ impl StableSwap {
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,
-    clippy::integer_arithmetic,
+    clippy::arithmetic_side_effects,
     clippy::too_many_arguments
 )]
 mod tests {
@@ -634,7 +634,7 @@ mod tests {
                 start_ramp_ts: ZERO_TS,
                 stop_ramp_ts: ZERO_TS
             };
-            let mut t = SwapTest { stable_swap: stable_swap, swap_reserve_balance_a: MAX_TOKENS_IN, swap_reserve_balance_b: MAX_TOKENS_IN,
+            let mut t = SwapTest { stable_swap, swap_reserve_balance_a: MAX_TOKENS_IN, swap_reserve_balance_b: MAX_TOKENS_IN,
                 swap_reserve_balance_c: MAX_TOKENS_IN,
                 user_token_balance_a: Uint128::new(initial_user_token_a_amount),
                 user_token_balance_b:Uint128::new(initial_user_token_b_amount),
@@ -680,7 +680,7 @@ mod tests {
         };
 
         let mut t = SwapTest {
-            stable_swap: stable_swap,
+            stable_swap,
             swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
@@ -712,7 +712,7 @@ mod tests {
         };
 
         let mut t = SwapTest {
-            stable_swap: stable_swap,
+            stable_swap,
             swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
@@ -743,7 +743,7 @@ mod tests {
         };
 
         let mut t = SwapTest {
-            stable_swap: stable_swap,
+            stable_swap,
             swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
             swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
@@ -773,14 +773,6 @@ mod tests {
             swap_token_c_amount in 0..MAX_TOKENS_IN.u128(),
             pool_token_supply in 0..MAX_TOKENS_IN.u128(),
         ) {
-            let deposit_amount_a = deposit_amount_a;
-            let deposit_amount_b = deposit_amount_b;
-            let deposit_amount_c = deposit_amount_c;
-            let swap_token_a_amount = swap_token_a_amount;
-            let swap_token_b_amount = swap_token_b_amount;
-            let swap_token_c_amount = swap_token_c_amount;
-            let pool_token_supply = pool_token_supply;
-
             let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
             let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
             let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);

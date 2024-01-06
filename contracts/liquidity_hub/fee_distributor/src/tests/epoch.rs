@@ -43,10 +43,10 @@ fn test_create_genesis_epoch() {
     };
     let epoch_config = EpochConfig {
         duration: Uint64::new(86_400_000_000_000u64), // a day
-        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+        genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
     };
 
-    robot.env.block.time = Timestamp::from_nanos(1678802300_000000000u64); // before genesis epoch
+    robot.env.block.time = Timestamp::from_nanos(1_678_802_300_000_000_000_u64); // before genesis epoch
 
     robot
         .instantiate(
@@ -63,7 +63,7 @@ fn test_create_genesis_epoch() {
         });
 
     // set the time at genesis epoch
-    robot.env.block.time = Timestamp::from_nanos(1678802400_000000000u64); // before genesis epoch
+    robot.env.block.time = Timestamp::from_nanos(1_678_802_400_000_000_000_u64); // before genesis epoch
 
     robot.create_new_epoch(mock_info("owner", &[]), |res| {
         // all good now

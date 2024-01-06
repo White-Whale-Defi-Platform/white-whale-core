@@ -57,7 +57,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -229,6 +229,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate(
         &mut self,
         fee_collector_addr: String,
@@ -261,6 +262,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate_err(
         &mut self,
         fee_collector_addr: String,
@@ -347,16 +349,15 @@ impl TestingSuite {
             lp_asset: lp_address,
         };
 
-        result(self.app.execute_contract(
-            sender,
-            self.incentive_factory_addr.clone(),
-            &msg,
-            &vec![],
-        ));
+        result(
+            self.app
+                .execute_contract(sender, self.incentive_factory_addr.clone(), &msg, &[]),
+        );
 
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn open_incentive_flow(
         &mut self,
         sender: Addr,
@@ -366,7 +367,7 @@ impl TestingSuite {
         curve: Option<Curve>,
         flow_asset: Asset,
         flow_label: Option<String>,
-        funds: &Vec<Coin>,
+        funds: &[Coin],
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenFlow {
@@ -394,14 +395,12 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::CloseFlow { flow_identifier };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn open_incentive_position(
         &mut self,
         sender: Addr,
@@ -436,14 +435,12 @@ impl TestingSuite {
         let msg =
             white_whale::pool_network::incentive::ExecuteMsg::ClosePosition { unbonding_duration };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn expand_incentive_position(
         &mut self,
         sender: Addr,
@@ -476,10 +473,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::Claim {};
         println!("-------------- claiming {}", sender);
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -491,10 +485,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::Withdraw {};
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -512,7 +503,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
 
@@ -540,7 +531,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
         }
@@ -559,12 +550,13 @@ impl TestingSuite {
             self.senders[0].clone(),
             incentive_addr.clone(),
             &msg,
-            &vec![],
+            &[],
         ));
 
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn expand_flow(
         &mut self,
         sender: Addr,
@@ -650,7 +642,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let global_weight_response: StdResult<GlobalWeightResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
+                incentive_addr,
                 &white_whale::pool_network::incentive::QueryMsg::GlobalWeight { epoch_id },
             );
 
@@ -667,7 +659,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let current_epoch_rewards_share: StdResult<RewardsShareResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
+                incentive_addr,
                 &white_whale::pool_network::incentive::QueryMsg::CurrentEpochRewardsShare {
                     address: address.to_string(),
                 },

@@ -159,7 +159,7 @@ fn provide_liquidity_cw20_lp() {
 
     assert_eq!(res.messages.len(), 3usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_initial_lp_msg = res.messages.get(1).expect("no message");
     let mint_msg = res.messages.get(2).expect("no message");
     assert_eq!(
@@ -255,7 +255,7 @@ fn provide_liquidity_cw20_lp() {
     let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_msg = res.messages.get(1).expect("no message");
     assert_eq!(
         transfer_from_msg,

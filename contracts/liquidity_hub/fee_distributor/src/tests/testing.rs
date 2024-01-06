@@ -17,7 +17,7 @@ fn instantiate_successfully() {
     };
     let epoch_config = EpochConfig {
         duration: Uint64::new(86_400_000_000_000u64), // a day
-        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+        genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
     };
 
     robot
@@ -48,7 +48,7 @@ fn instantiate_unsuccessfully() {
     };
     let epoch_config = EpochConfig {
         duration: Uint64::new(86_400_000_000_000u64), // a day
-        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+        genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
     };
 
     robot.instantiate_err(
@@ -78,7 +78,7 @@ fn instantiate_unsuccessfully() {
         Uint64::one(),
         EpochConfig {
             duration: invalid_epoch_duration,                    // a day
-            genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+            genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
         },
         distribution_asset.clone(),
     );
@@ -95,7 +95,7 @@ fn test_update_config() {
         grace_period: Uint64::new(3),
         epoch_config: EpochConfig {
             duration: Uint64::new(86_400_000_000_000u64), // a day
-            genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+            genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
         },
         distribution_asset: AssetInfo::NativeToken {
             denom: "uwhale".to_string(),

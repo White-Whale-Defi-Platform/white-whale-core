@@ -87,7 +87,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
                 grace_period: Uint64::one(),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86400_000000000u64),
-                    genesis_epoch: Uint64::new(1685458800_000000000u64),
+                    genesis_epoch: Uint64::new(1_685_458_800_000_000_000_u64),
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),

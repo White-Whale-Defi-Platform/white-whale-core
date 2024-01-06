@@ -74,7 +74,7 @@ impl TestingRobot {
                     denom: "bWHALE".to_string(),
                 },
             ],
-            &vec![],
+            &[],
         )
     }
 
@@ -83,7 +83,7 @@ impl TestingRobot {
         unbonding_period: Uint64,
         growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
-        funds: &Vec<Coin>,
+        funds: &[Coin],
     ) -> &mut Self {
         let fee_collector_id = store_fee_collector_code(&mut self.app);
         let fee_distributor_id = store_fee_distributor_code(&mut self.app);
@@ -116,7 +116,7 @@ impl TestingRobot {
                     grace_period: Uint64::new(1),
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                        genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                     },
                     distribution_asset: AssetInfo::NativeToken {
                         denom: "uwhale".to_string(),
@@ -148,7 +148,7 @@ impl TestingRobot {
         unbonding_period: Uint64,
         growth_rate: Decimal,
         bonding_assets: Vec<AssetInfo>,
-        funds: &Vec<Coin>,
+        funds: &[Coin],
         error: impl Fn(anyhow::Error),
     ) -> &mut Self {
         error(
@@ -237,7 +237,7 @@ fn instantiate_contract(
     unbonding_period: Uint64,
     growth_rate: Decimal,
     bonding_assets: Vec<AssetInfo>,
-    funds: &Vec<Coin>,
+    funds: &[Coin],
 ) -> anyhow::Result<Addr> {
     let msg = InstantiateMsg {
         unbonding_period,

@@ -146,7 +146,7 @@ fn try_native_to_token() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
@@ -607,7 +607,7 @@ fn try_token_to_native() {
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
@@ -1169,7 +1169,7 @@ fn stableswap_with_different_precisions() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     let expected_spread_amount = Uint128::new(0);
     let expected_swap_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.25%
