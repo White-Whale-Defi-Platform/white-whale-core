@@ -1,5 +1,5 @@
 use cosmwasm_std::{entry_point, Addr};
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 use white_whale::pool_network::asset::AssetInfo;
@@ -99,21 +99,21 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
-        QueryMsg::Bonded { address } => to_binary(&queries::query_bonded(deps, address)?),
+        QueryMsg::Config {} => to_json_binary(&queries::query_config(deps)?),
+        QueryMsg::Bonded { address } => to_json_binary(&queries::query_bonded(deps, address)?),
         QueryMsg::Unbonding {
             address,
             denom,
             start_after,
             limit,
-        } => to_binary(&queries::query_unbonding(
+        } => to_json_binary(&queries::query_unbonding(
             deps,
             address,
             denom,
             start_after,
             limit,
         )?),
-        QueryMsg::Withdrawable { address, denom } => to_binary(&queries::query_withdrawable(
+        QueryMsg::Withdrawable { address, denom } => to_json_binary(&queries::query_withdrawable(
             deps,
             env.block.time,
             address,
@@ -128,15 +128,15 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let timestamp = timestamp.unwrap_or(env.block.time);
 
             // TODO: Make better timestamp handling
-            to_binary(&queries::query_weight(
+            to_json_binary(&queries::query_weight(
                 deps,
                 timestamp,
                 address,
                 global_index,
             )?)
         }
-        QueryMsg::TotalBonded {} => to_binary(&queries::query_total_bonded(deps)?),
-        QueryMsg::GlobalIndex {} => to_binary(&queries::query_global_index(deps)?),
+        QueryMsg::TotalBonded {} => to_json_binary(&queries::query_total_bonded(deps)?),
+        QueryMsg::GlobalIndex {} => to_json_binary(&queries::query_global_index(deps)?),
     }
 }
 

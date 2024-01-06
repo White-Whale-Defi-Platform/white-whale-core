@@ -1,6 +1,7 @@
 // osmosis-std-derive needs a `::crate::shim` to work
 // we rip this file from `osmosis-std` package:
 // https://github.com/osmosis-labs/osmosis-rust/blob/main/packages/osmosis-std/src/shim.rs
+
 #[derive(Clone, PartialEq, Eq, ::prost::Message, schemars::JsonSchema)]
 pub struct Any {
     /// A URL/resource name that uniquely identifies the type of the serialized
@@ -63,27 +64,3 @@ macro_rules! impl_prost_types_exact_conversion {
 }
 
 impl_prost_types_exact_conversion! { Any | type_url, value }
-
-// depended on by cosmwasm.rs
-pub mod as_str {
-    use serde::{de, Deserialize, Deserializer, Serializer};
-    use std::{fmt::Display, str::FromStr};
-
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        T: FromStr,
-        T::Err: Display,
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        T::from_str(&s).map_err(de::Error::custom)
-    }
-
-    pub fn serialize<S, T>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Display,
-    {
-        serializer.serialize_str(&value.to_string())
-    }
-}

@@ -110,7 +110,7 @@ mod tests {
     use crate::contract::{execute, instantiate, query};
     use crate::error::ContractError;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Addr, Uint128};
+    use cosmwasm_std::{from_json, Addr, Uint128};
     use white_whale::pool_network::asset::{Asset, AssetInfo};
     use white_whale::pool_network::incentive_factory::ExecuteMsg::UpdateConfig;
     use white_whale::pool_network::incentive_factory::{Config, InstantiateMsg, QueryMsg};
@@ -138,7 +138,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
         assert_eq!(
             config,
@@ -181,7 +181,7 @@ mod tests {
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
         assert_eq!(
             config,

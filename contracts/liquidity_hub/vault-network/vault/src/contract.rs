@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    attr, entry_point, to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, ReplyOn,
+    attr, entry_point, to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, ReplyOn,
     Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -153,7 +153,7 @@ pub fn instantiate(
             msg: WasmMsg::Instantiate {
                 admin: None,
                 code_id: msg.token_id,
-                msg: to_binary(&white_whale::pool_network::token::InstantiateMsg {
+                msg: to_json_binary(&white_whale::pool_network::token::InstantiateMsg {
                     name: lp_label.clone(),
                     symbol: lp_symbol,
                     decimals: 6,

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Order, Response, StdResult, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Order, Response, StdResult, WasmMsg};
 
 use crate::error::ContractError;
 use crate::state::INCENTIVE_MAPPINGS;
@@ -48,7 +48,7 @@ fn migrate_incentive_msg(incentive_address: Addr, new_code_id: u64) -> StdResult
     Ok(CosmosMsg::Wasm(WasmMsg::Migrate {
         contract_addr: incentive_address.to_string(),
         new_code_id,
-        msg: to_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
+        msg: to_json_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
     }))
 }
 

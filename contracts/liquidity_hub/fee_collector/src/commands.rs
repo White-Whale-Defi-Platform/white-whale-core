@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut, Env,
+    to_json_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut, Env,
     MessageInfo, QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
@@ -49,10 +49,10 @@ pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response
 fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> StdResult<CosmosMsg> {
     let collect_protocol_fees_msg = match contract_type {
         ContractType::Vault {} => {
-            to_binary(&white_whale::vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
+            to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
         }
         ContractType::Pool {} => {
-            to_binary(&white_whale::pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
+            to_json_binary(&white_whale::pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
         }
     };
 
@@ -76,7 +76,7 @@ fn collect_fees_for_factory(
             let response: VaultsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
-                    msg: to_binary(
+                    msg: to_json_binary(
                         &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
                             start_after,
                             limit,
@@ -95,7 +95,7 @@ fn collect_fees_for_factory(
             let response: PairsResponse =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
-                    msg: to_binary(&QueryMsg::Pairs { start_after, limit })?,
+                    msg: to_json_binary(&QueryMsg::Pairs { start_after, limit })?,
                 }))?;
 
             for pair in response.pairs {
@@ -182,7 +182,7 @@ pub fn aggregate_fees(
                     let response: VaultsResponse =
                         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                             contract_addr: factory.to_string(),
-                            msg: to_binary(
+                            msg: to_json_binary(
                                 &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
                                     start_after,
                                     limit,
@@ -198,7 +198,7 @@ pub fn aggregate_fees(
                     let response: PairsResponse =
                         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                             contract_addr: factory.to_string(),
-                            msg: to_binary(&QueryMsg::Pairs { start_after, limit })?,
+                            msg: to_json_binary(&QueryMsg::Pairs { start_after, limit })?,
                         }))?;
 
                     for pair in response.pairs {
@@ -224,7 +224,7 @@ pub fn aggregate_fees(
                 let balance_response: cw20::BalanceResponse =
                     deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                         contract_addr: contract_addr.to_string(),
-                        msg: to_binary(&Cw20QueryMsg::Balance {
+                        msg: to_json_binary(&Cw20QueryMsg::Balance {
                             address: env.contract.address.to_string(),
                         })?,
                     }))?;
@@ -234,7 +234,7 @@ pub fn aggregate_fees(
                     // Increase the allowance for the cw20 token so the router can perform the swap
                     aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: contract_addr.to_string(),
-                        msg: to_binary(&Cw20ExecuteMsg::IncreaseAllowance {
+                        msg: to_json_binary(&Cw20ExecuteMsg::IncreaseAllowance {
                             spender: config.pool_router.to_string(),
                             amount: balance_response.balance,
                             expires: None,
@@ -261,7 +261,7 @@ pub fn aggregate_fees(
             let operations_res: StdResult<Vec<SwapOperation>> =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: config.pool_router.to_string(),
-                    msg: to_binary(&router::QueryMsg::SwapRoute {
+                    msg: to_json_binary(&router::QueryMsg::SwapRoute {
                         offer_asset_info: offer_asset_info.clone(),
                         ask_asset_info: ask_asset_info.clone(),
                     })?,
@@ -270,7 +270,7 @@ pub fn aggregate_fees(
             match operations_res {
                 Ok(operations) => {
                     let execute_swap_operations_msg =
-                        to_binary(&router::ExecuteMsg::ExecuteSwapOperations {
+                        to_json_binary(&router::ExecuteMsg::ExecuteSwapOperations {
                             operations,
                             minimum_receive: None,
                             to: None,
@@ -282,7 +282,7 @@ pub fn aggregate_fees(
                             aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                                 contract_addr,
                                 funds: vec![],
-                                msg: to_binary(&Cw20ExecuteMsg::Send {
+                                msg: to_json_binary(&Cw20ExecuteMsg::Send {
                                     contract: config.pool_router.to_string(),
                                     amount: balance,
                                     msg: execute_swap_operations_msg,
@@ -336,7 +336,7 @@ pub fn forward_fees(
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
-            msg: to_binary(&ExecuteMsg::CollectFees {
+            msg: to_json_binary(&ExecuteMsg::CollectFees {
                 collect_fees_for: FeesFor::Factory {
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
@@ -355,7 +355,7 @@ pub fn forward_fees(
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
-            msg: to_binary(&ExecuteMsg::CollectFees {
+            msg: to_json_binary(&ExecuteMsg::CollectFees {
                 collect_fees_for: FeesFor::Factory {
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {
@@ -375,7 +375,7 @@ pub fn forward_fees(
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
-            msg: to_binary(&ExecuteMsg::AggregateFees {
+            msg: to_json_binary(&ExecuteMsg::AggregateFees {
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
@@ -394,7 +394,7 @@ pub fn forward_fees(
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
-            msg: to_binary(&ExecuteMsg::AggregateFees {
+            msg: to_json_binary(&ExecuteMsg::AggregateFees {
                 aggregate_fees_for: FeesFor::Factory {
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {

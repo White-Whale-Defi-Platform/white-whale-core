@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
+    from_json, to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
     Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
@@ -48,7 +48,7 @@ pub fn receive_cw20(
     let contract_addr = info.sender.clone();
     let feature_toggle: FeatureToggle = CONFIG.load(deps.storage)?.feature_toggle;
 
-    match from_binary(&cw20_msg.msg) {
+    match from_json(cw20_msg.msg) {
         Ok(Cw20HookMsg::Swap {
             ask_asset,
             belief_price,
@@ -177,7 +177,7 @@ pub fn provide_liquidity(
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.to_string(),
-                msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.to_string(),
                     recipient: env.contract.address.to_string(),
                     amount: deposits[i],
@@ -708,7 +708,7 @@ fn mint_lp_token_msg(
     } else {
         Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_token,
-            msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+            msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
             funds: vec![],
         })])
     }
@@ -720,7 +720,7 @@ fn mint_lp_token_msg(
     ))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
-        msg: to_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
+        msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
         funds: vec![],
     })])
 }
@@ -748,7 +748,7 @@ fn burn_lp_token_msg(
     } else {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_token,
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
             funds: vec![],
         }))
     }
@@ -760,7 +760,7 @@ fn burn_lp_token_msg(
     ))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
-        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+        msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
         funds: vec![],
     }))
 }

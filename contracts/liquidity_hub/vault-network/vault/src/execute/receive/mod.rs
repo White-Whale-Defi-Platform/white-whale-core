@@ -1,4 +1,4 @@
-use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{from_json, DepsMut, Env, MessageInfo, Response};
 
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault::{Cw20HookMsg, Cw20ReceiveMsg};
@@ -27,14 +27,14 @@ pub fn receive(
         return Err(VaultError::ExternalCallback {});
     }
 
-    match from_binary(&msg.msg)? {
+    match from_json(msg.msg)? {
         Cw20HookMsg::Withdraw {} => withdraw(deps, env, msg.sender, msg.amount),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{to_binary, Addr, Uint128};
+    use cosmwasm_std::{to_json_binary, Addr, Uint128};
 
     #[cfg(any(
         feature = "token_factory",
@@ -89,7 +89,7 @@ mod test {
             white_whale::vault_network::vault::Cw20ReceiveMsg {
                 sender: mock_creator().sender.into_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
         );
@@ -136,7 +136,7 @@ mod test {
             white_whale::vault_network::vault::Cw20ReceiveMsg {
                 sender: mock_creator().sender.into_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
         );

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Binary, Deps, StdError};
+use cosmwasm_std::{to_json_binary, Binary, Deps, StdError};
 use cw_storage_plus::Item;
 
 use white_whale::pool_network::asset::Asset;
@@ -15,19 +15,19 @@ pub fn get_fees(
 ) -> Result<Binary, VaultError> {
     if all_time {
         let fees = all_time_fees_storage_item.load(deps.storage)?;
-        return Ok(to_binary(&ProtocolFeesResponse { fees })?);
+        return Ok(to_json_binary(&ProtocolFeesResponse { fees })?);
     }
 
     let fees = fees_storage_item
         .ok_or_else(|| StdError::generic_err("fees_storage_item was None"))?
         .load(deps.storage)?;
-    Ok(to_binary(&ProtocolFeesResponse { fees })?)
+    Ok(to_json_binary(&ProtocolFeesResponse { fees })?)
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        from_binary,
+        from_json,
         testing::{mock_dependencies, mock_env},
         Uint128,
     };
@@ -68,8 +68,8 @@ mod test {
             )
             .unwrap();
 
-        let res: ProtocolFeesResponse = from_binary(
-            &query(
+        let res: ProtocolFeesResponse = from_json(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::ProtocolFees { all_time: false },
@@ -115,8 +115,8 @@ mod test {
             )
             .unwrap();
 
-        let res: ProtocolFeesResponse = from_binary(
-            &query(
+        let res: ProtocolFeesResponse = from_json(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::ProtocolFees { all_time: true },
@@ -154,8 +154,7 @@ mod test {
             .unwrap();
 
         let res: ProtocolFeesResponse =
-            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap())
-                .unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap()).unwrap();
         assert_eq!(
             res,
             ProtocolFeesResponse {

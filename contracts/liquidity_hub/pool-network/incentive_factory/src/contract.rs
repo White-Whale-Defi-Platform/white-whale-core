@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -143,10 +143,12 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::get_config(deps)?),
-        QueryMsg::Incentive { lp_asset } => to_binary(&queries::get_incentive(deps, lp_asset)?),
+        QueryMsg::Config {} => to_json_binary(&queries::get_config(deps)?),
+        QueryMsg::Incentive { lp_asset } => {
+            to_json_binary(&queries::get_incentive(deps, lp_asset)?)
+        }
         QueryMsg::Incentives { start_after, limit } => {
-            to_binary(&queries::get_incentives(deps, start_after, limit)?)
+            to_json_binary(&queries::get_incentives(deps, start_after, limit)?)
         }
     }
 }

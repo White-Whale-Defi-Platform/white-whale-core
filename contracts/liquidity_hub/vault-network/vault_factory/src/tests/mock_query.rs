@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    from_binary,
+    from_json,
     testing::{MockApi, MockQuerier, MockStorage},
     Env, OwnedDeps,
 };
@@ -20,7 +20,7 @@ where
 {
     let (deps, env) = mock_instantiate(vault_id, token_id);
 
-    let res = from_binary(&query(deps.as_ref(), env.clone(), query_msg).unwrap()).unwrap();
+    let res = from_json(query(deps.as_ref(), env.clone(), query_msg).unwrap()).unwrap();
 
     (res, deps, env)
 }

@@ -1,7 +1,7 @@
 use crate::contract::{execute, instantiate};
 use crate::error::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{to_binary, Coin, Decimal, Uint128};
+use cosmwasm_std::{to_json_binary, Coin, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo};
@@ -111,7 +111,7 @@ fn test_feature_toggle_swap_disabled() {
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
         amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
+        msg: to_json_binary(&Cw20HookMsg::Swap {
             ask_asset: AssetInfo::Token {
                 contract_addr: "asset0000".to_string(),
             },
@@ -205,7 +205,7 @@ fn test_feature_toggle_withdrawals_disabled() {
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 

@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128, Uint64,
-    WasmQuery,
+    to_json_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    Uint64, WasmQuery,
 };
 use cw_storage_plus::Bound;
 
@@ -64,7 +64,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     let config: white_whale::fee_distributor::Config =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: fee_distributor_addr.to_string(),
-            msg: to_binary(&QueryMsg::Config {})?,
+            msg: to_json_binary(&QueryMsg::Config {})?,
         }))?;
     let epoch_config = config.epoch_config;
     let first_bonded_epoch_id = helpers::calculate_epoch(epoch_config, first_bond_timestamp)?;
@@ -102,8 +102,8 @@ pub(crate) fn query_unbonding(
         .collect::<StdResult<Vec<Bond>>>()?;
 
     // aggregate all the amounts in unbonding vec and return uint128
-    let unbonding_amount = unbonding.iter().fold(Ok(Uint128::zero()), |acc, bond| {
-        acc.and_then(|acc| acc.checked_add(bond.asset.amount))
+    let unbonding_amount = unbonding.iter().try_fold(Uint128::zero(), |acc, bond| {
+        acc.checked_add(bond.asset.amount)
     })?;
 
     Ok(UnbondingResponse {

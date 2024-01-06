@@ -46,7 +46,7 @@ pub fn update_config(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{from_binary, testing::mock_info, Addr, Response};
+    use cosmwasm_std::{from_json, testing::mock_info, Addr, Response};
     use white_whale::vault_network::vault_factory::{Config, ExecuteMsg, QueryMsg};
 
     use crate::{
@@ -83,7 +83,7 @@ mod tests {
 
         // check query
         let config: Config =
-            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config.owner, Addr::unchecked("other_acc"));
 
         // check storage
@@ -118,7 +118,7 @@ mod tests {
 
         // check query
         let config: Config =
-            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config.fee_collector_addr, Addr::unchecked("other_acc"));
 
         // check storage
@@ -160,7 +160,7 @@ mod tests {
         };
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config, desired_config);
 
         // check storage
@@ -202,7 +202,7 @@ mod tests {
         };
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config, desired_config);
 
         // check storage

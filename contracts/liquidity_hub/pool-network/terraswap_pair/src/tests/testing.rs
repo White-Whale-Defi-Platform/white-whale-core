@@ -2,7 +2,7 @@ use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    from_json, to_json_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
@@ -69,7 +69,7 @@ fn proper_initialization_cw20_lp() {
         vec![SubMsg {
             msg: WasmMsg::Instantiate {
                 code_id: 10u64,
-                msg: to_binary(&TokenInstantiateMsg {
+                msg: to_json_binary(&TokenInstantiateMsg {
                     name: "uusd-mAAPL-LP".to_string(),
                     symbol: "uLP".to_string(),
                     decimals: 6,
@@ -614,7 +614,7 @@ fn test_update_config_successful() {
     instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     let config: Config =
-        from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for original config
     assert_eq!(config.owner, Addr::unchecked("addr0000"));
@@ -641,7 +641,7 @@ fn test_update_config_successful() {
     execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     let config: Config =
-        from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for new config
     assert_eq!(config.owner, Addr::unchecked("new_admin"));

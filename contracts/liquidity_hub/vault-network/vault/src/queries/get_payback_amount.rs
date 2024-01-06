@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Binary, Deps, Uint128, Uint256};
+use cosmwasm_std::{to_json_binary, Binary, Deps, Uint128, Uint256};
 use white_whale::vault_network::vault::PaybackAmountResponse;
 
 use crate::error::VaultError;
@@ -18,7 +18,7 @@ pub fn get_payback_amount(deps: Deps, amount: Uint128) -> Result<Binary, VaultEr
         .checked_add(flash_loan_fee)?
         .checked_add(burn_fee)?;
 
-    Ok(to_binary(&PaybackAmountResponse {
+    Ok(to_json_binary(&PaybackAmountResponse {
         payback_amount: required_amount,
         protocol_fee,
         flash_loan_fee,
@@ -32,7 +32,7 @@ mod test {
     use crate::state::CONFIG;
     use crate::tests::mock_creator;
     use cosmwasm_std::testing::{mock_dependencies, mock_env};
-    use cosmwasm_std::{from_binary, Addr, Decimal, Uint128};
+    use cosmwasm_std::{from_json, Addr, Decimal, Uint128};
     use white_whale::fee::{Fee, VaultFee};
     use white_whale::pool_network::asset::AssetInfo;
     use white_whale::vault_network::vault::{Config, PaybackAmountResponse, QueryMsg};
@@ -71,8 +71,8 @@ mod test {
             )
             .unwrap();
 
-        let res: PaybackAmountResponse = from_binary(
-            &query(
+        let res: PaybackAmountResponse = from_json(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::GetPaybackAmount {

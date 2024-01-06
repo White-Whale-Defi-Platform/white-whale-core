@@ -63,7 +63,7 @@ pub fn delete_weight_history_for_user(
 pub fn get_flow_asset_amount_at_epoch(flow: &Flow, epoch: u64) -> Uint128 {
     let mut asset_amount = flow.flow_asset.amount;
 
-    if let Some((_, &(change_amount, _))) = flow.asset_history.range(..=epoch).rev().next() {
+    if let Some((_, &(change_amount, _))) = flow.asset_history.range(..=epoch).next_back() {
         asset_amount = change_amount;
     }
 
@@ -85,7 +85,7 @@ pub fn get_flow_end_epoch(flow: &Flow) -> u64 {
 pub fn get_flow_current_end_epoch(flow: &Flow, epoch: u64) -> u64 {
     let mut end_epoch = flow.end_epoch;
 
-    if let Some((_, &(_, current_end_epoch))) = flow.asset_history.range(..=epoch).rev().next() {
+    if let Some((_, &(_, current_end_epoch))) = flow.asset_history.range(..=epoch).next_back() {
         end_epoch = current_end_epoch;
     }
 

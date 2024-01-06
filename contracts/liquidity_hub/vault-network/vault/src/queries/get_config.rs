@@ -1,16 +1,16 @@
-use cosmwasm_std::{to_binary, Binary, Deps};
+use cosmwasm_std::{to_json_binary, Binary, Deps};
 
 use crate::error::VaultError;
 use crate::state::CONFIG;
 
 pub fn get_config(deps: Deps) -> Result<Binary, VaultError> {
-    Ok(to_binary(&CONFIG.load(deps.storage)?)?)
+    Ok(to_json_binary(&CONFIG.load(deps.storage)?)?)
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        from_binary,
+        from_json,
         testing::{mock_dependencies, mock_env},
         Addr,
     };
@@ -45,8 +45,8 @@ mod test {
 
         CONFIG.save(&mut deps.storage, &config).unwrap();
 
-        let res: Config = from_binary(
-            &query(
+        let res: Config = from_json(
+            query(
                 deps.as_ref(),
                 env,
                 white_whale::vault_network::vault::QueryMsg::Config {},
