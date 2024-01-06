@@ -27,16 +27,16 @@ cw20 = "1.1.2"
 cw20-base = { version = "1.1.2", features = ["library"] }
 cw-storage-plus = "1.2.0"
 cw-utils = "1.0.3"
-protobuf = { version = "3.2.0", features = ["with-bytes"] }
+protobuf = { version = "3.3.0", features = ["with-bytes"] }
 schemars = "0.8.16"
 semver = "1.0.21"
 serde = { version = "1.0.195", default-features = false, features = ["derive"] }
 thiserror = "1.0.56"
 osmosis-std-derive = "0.20.1"
-prost = { version = "0.11.9", default-features = false, features = [
+prost = { version = "0.12.3", default-features = false, features = [
 	"prost-derive",
 ] }
-prost-types = { version = "0.11.9", default-features = false }
+prost-types = { version = "0.12.3", default-features = false }
 white-whale = { path = "./packages/white-whale" }
 white-whale-testing = { path = "./packages/white-whale-testing" }
 cw-multi-test = { version = "0.20.0" }
