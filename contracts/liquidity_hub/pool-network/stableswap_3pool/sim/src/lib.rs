@@ -1,7 +1,4 @@
 //! Simulations of the StableSwap invariant compared to Curve's reference implementation.
-#![allow(deprecated)]
-#![allow(deprecated)]
-
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 use std::fs::File;
@@ -79,79 +76,69 @@ impl Model {
     }
 
     pub fn sim_d(&self) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call0(gil.python(), "D")
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| self.call0(gil, "D").unwrap().extract(gil).unwrap())
     }
 
     pub fn sim_dy(&self, i: u128, j: u128, dx: u128) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(gil.python(), "dy", (i, j, dx))
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| {
+            self.call1(gil, "dy", (i, j, dx))
+                .unwrap()
+                .extract(gil)
+                .unwrap()
+        })
     }
 
     pub fn sim_exchange(&self, i: u128, j: u128, dx: u128) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(gil.python(), "exchange", (i, j, dx))
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| {
+            self.call1(gil, "exchange", (i, j, dx))
+                .unwrap()
+                .extract(gil)
+                .unwrap()
+        })
     }
 
     pub fn sim_xp(&self) -> Vec<u128> {
-        let gil = Python::acquire_gil();
-        return self
-            .call0(gil.python(), "xp")
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| self.call0(gil, "xp").unwrap().extract(gil).unwrap())
     }
 
     pub fn sim_y(&self, i: u128, j: u128, x: u128) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(gil.python(), "y", (i, j, x))
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| {
+            self.call1(gil, "y", (i, j, x))
+                .unwrap()
+                .extract(gil)
+                .unwrap()
+        })
     }
 
     pub fn sim_y_d(&self, i: u128, d: u128) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(gil.python(), "y_D", (i, d))
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| {
+            self.call1(gil, "y_D", (i, d))
+                .unwrap()
+                .extract(gil)
+                .unwrap()
+        })
     }
 
     pub fn sim_remove_liquidity_imbalance(&self, amounts: Vec<u128>) -> u128 {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(
-                gil.python(),
+        Python::with_gil(|gil| {
+            self.call1(
+                gil,
                 "remove_liquidity_imbalance",
-                PyTuple::new(gil.python(), amounts.to_vec()),
+                PyTuple::new(gil, amounts.to_vec()),
             )
             .unwrap()
-            .extract(gil.python())
-            .unwrap();
+            .extract(gil)
+            .unwrap()
+        })
     }
 
     pub fn sim_calc_withdraw_one_coin(&self, token_amount: u128, i: u128) -> (u128, u128) {
-        let gil = Python::acquire_gil();
-        return self
-            .call1(gil.python(), "calc_withdraw_one_coin", (token_amount, i))
-            .unwrap()
-            .extract(gil.python())
-            .unwrap();
+        Python::with_gil(|gil| {
+            self.call1(gil, "calc_withdraw_one_coin", (token_amount, i))
+                .unwrap()
+                .extract(gil)
+                .unwrap()
+        })
     }
 
     fn call0(&self, py: Python, method_name: &str) -> Result<PyObject, PyErr> {
