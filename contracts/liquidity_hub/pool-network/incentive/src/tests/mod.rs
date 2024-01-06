@@ -15,5 +15,4 @@ pub mod store_code;
 mod suite;
 mod suite_contracts;
 
-
 pub use mock_info::mock_creator;

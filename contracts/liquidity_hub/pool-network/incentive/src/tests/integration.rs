@@ -799,8 +799,10 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &[coin(1_000u128, "uwhale".to_string()),
-                coin(500u128, "ampWHALE".to_string())],
+            &[
+                coin(1_000u128, "uwhale".to_string()),
+                coin(500u128, "ampWHALE".to_string()),
+            ],
             |result| {
                 // this should fail as the flow asset amount doesn't match the one sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -823,8 +825,10 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &[coin(100u128, "uwhale".to_string()),
-                coin(1_00u128, "ampWHALE".to_string())],
+            &[
+                coin(100u128, "uwhale".to_string()),
+                coin(1_00u128, "ampWHALE".to_string()),
+            ],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -847,8 +851,10 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &[coin(1_000u128, "uwhale".to_string()),
-                coin(1_000u128, "ampWHALE".to_string())],
+            &[
+                coin(1_000u128, "uwhale".to_string()),
+                coin(1_000u128, "ampWHALE".to_string()),
+            ],
             |result| {
                 // this should succeed as both the fee was paid in full and the flow asset amount
                 // matches the one sent to the contract
@@ -957,8 +963,10 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &[coin(50_000u128, "uwhale".to_string()),
-                coin(1_000u128, "ampWHALE".to_string())],
+            &[
+                coin(50_000u128, "uwhale".to_string()),
+                coin(1_000u128, "ampWHALE".to_string()),
+            ],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -3317,8 +3325,10 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &[coin(1_000_000_000u128, "ampWHALE"),
-                coin(1_000u128, "uwhale")],
+            &[
+                coin(1_000_000_000u128, "ampWHALE"),
+                coin(1_000u128, "uwhale"),
+            ],
             |result| {
                 result.unwrap();
             },
@@ -4381,8 +4391,10 @@ fn open_expand_position_with_optional_receiver() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &[coin(1_000_000_000u128, "ampWHALE"),
-                coin(1_000u128, "uwhale")],
+            &[
+                coin(1_000_000_000u128, "ampWHALE"),
+                coin(1_000u128, "uwhale"),
+            ],
             |result| {
                 result.unwrap();
             },
