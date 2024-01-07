@@ -107,7 +107,7 @@ fn create_incentive_cw20_lp_with_duplicate() {
             assert!(incentive.is_some());
         })
         // this should error cuz the incentive for that lp was already created
-        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
+        .create_incentive(creator.clone(), lp_asset_1, |result| {
             let err = result
                 .unwrap_err()
                 .downcast::<incentive_factory::error::ContractError>()
@@ -120,7 +120,7 @@ fn create_incentive_cw20_lp_with_duplicate() {
                 ),
             }
         })
-        .create_incentive(creator.clone(), lp_asset_2, |result| {
+        .create_incentive(creator, lp_asset_2, |result| {
             result.unwrap();
         })
         .query_incentives(None, None, |result| {
@@ -200,7 +200,7 @@ fn create_incentive_native_lp_with_duplicate() {
             assert!(incentive.is_some());
         })
         // this should error cuz the incentive for that lp was already created
-        .create_incentive(creator.clone(), lp_asset_1.clone(), |result| {
+        .create_incentive(creator.clone(), lp_asset_1, |result| {
             let err = result
                 .unwrap_err()
                 .downcast::<incentive_factory::error::ContractError>()
@@ -213,7 +213,7 @@ fn create_incentive_native_lp_with_duplicate() {
                 ),
             }
         })
-        .create_incentive(creator.clone(), lp_asset_2, |result| {
+        .create_incentive(creator, lp_asset_2, |result| {
             result.unwrap();
         })
         .query_incentives(None, None, |result| {
@@ -267,7 +267,7 @@ fn try_open_more_flows_than_allowed() {
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -306,7 +306,7 @@ fn try_open_more_flows_than_allowed() {
     }
 
     let incentive_flows = RefCell::new(vec![]);
-    suite.query_flows(incentive_addr.clone().into_inner(), None, None, |result| {
+    suite.query_flows(incentive_addr.into_inner(), None, None, |result| {
         let flows = result.unwrap();
 
         *incentive_flows.borrow_mut() = flows.clone();
@@ -374,7 +374,7 @@ fn try_open_flows_with_wrong_epochs() {
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -453,7 +453,7 @@ fn try_open_flows_with_wrong_epochs() {
             Some(
                 current_epoch.clone().into_inner() + max_flow_epoch_buffer.clone().into_inner() + 1,
             ),
-            Some(current_epoch.clone().into_inner() + 100),
+            Some(current_epoch.into_inner() + 100),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -473,8 +473,8 @@ fn try_open_flows_with_wrong_epochs() {
             },
         )
         .open_incentive_flow(
-            alice.clone(),
-            incentive_addr.clone().into_inner(),
+            alice,
+            incentive_addr.into_inner(),
             None,
             Some(future_epoch),
             Some(Curve::Linear),
@@ -510,10 +510,10 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+        .create_incentive(alice, lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -625,7 +625,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 9),
+            Some(current_epoch.into_inner() + 9),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -691,7 +691,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(5u64),
             |result| {
                 // this should not work as there is no flow with id 5
@@ -721,10 +721,10 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+        .create_incentive(alice, lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -952,7 +952,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         // create another incentive overpaying the fee, and check if the excees went back to carol
         .open_incentive_flow(
             carol.clone(),
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             None,
             Some(current_epoch.clone().into_inner() + 9),
             Some(Curve::Linear),
@@ -1013,10 +1013,10 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
+        .create_incentive(alice, lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -1075,7 +1075,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
         )
         .increase_allowance(
             carol.clone(),
-            cw20_incentive_address.clone(),
+            cw20_incentive_address,
             Uint128::new(1_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -1136,7 +1136,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(1u64),
             |result| {
                 let flow_response = result.unwrap();
@@ -1186,10 +1186,10 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), lp_address_last.clone(), |result| {
+        .create_incentive(alice, lp_address_last.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_last.clone(), |result| {
+        .query_incentive(lp_address_last, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
 
@@ -1279,7 +1279,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
         )
         .increase_allowance(
             carol.clone(),
-            cw20_asset_addr.clone(),
+            cw20_asset_addr,
             Uint128::new(2_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -1322,7 +1322,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(1u64),
             |result| {
                 let flow_response = result.unwrap();
@@ -1374,7 +1374,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), cw20_fee_asset.clone(), |result| {
+        .create_incentive(alice, cw20_fee_asset.clone(), |result| {
             result.unwrap();
         })
         .query_incentive(cw20_fee_asset.clone(), |result| {
@@ -1466,7 +1466,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
         // increase allowance for the fee asset
         .increase_allowance(
             carol.clone(),
-            cw20_fee_asset_addr.clone(),
+            cw20_fee_asset_addr,
             Uint128::new(1_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -1495,7 +1495,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
         // increase allowance for the flow asset
         .increase_allowance(
             carol.clone(),
-            cw20_asset_addr.clone(),
+            cw20_asset_addr,
             Uint128::new(1_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -1546,7 +1546,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
         )
         .query_funds(
             fee_collector_addr.clone().into_inner(),
-            cw20_fee_asset.clone(),
+            cw20_fee_asset,
             |funds| {
                 // cw20_fee_asset funds on the fee collector
                 assert_eq!(funds, Uint128::new(1_000u128));
@@ -1578,7 +1578,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(5u64),
             |result| {
                 // this should not work as there is no flow with id 5
@@ -1609,7 +1609,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), cw20_fee_asset.clone(), |result| {
+        .create_incentive(alice, cw20_fee_asset.clone(), |result| {
             result.unwrap();
         })
         .query_incentive(cw20_fee_asset.clone(), |result| {
@@ -1707,7 +1707,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
         // incerase allowance for the fee asset, enough to cover the fee
         .increase_allowance(
             carol.clone(),
-            cw20_fee_asset_addr.clone(),
+            cw20_fee_asset_addr,
             Uint128::new(1u128),
             incentive_addr.clone().into_inner(),
         )
@@ -1811,7 +1811,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
         )
         .query_funds(
             fee_collector_addr.clone().into_inner(),
-            cw20_fee_asset.clone(),
+            cw20_fee_asset,
             |funds| {
                 // cw20_fee_asset funds on the fee collector
                 assert_eq!(funds, Uint128::new(1_000u128));
@@ -1845,7 +1845,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(5u64),
             |result| {
                 // this should not work as there is no flow with id 5
@@ -1878,7 +1878,7 @@ fn close_native_token_flows() {
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -2100,7 +2100,7 @@ fn close_native_token_flows() {
         })
         // try closing a flow that doesn't exist
         .close_incentive_flow(
-            bob.clone(),
+            bob,
             incentive_addr.clone().into_inner(),
             FlowIdentifier::Id(3u64),
             |result| {
@@ -2132,7 +2132,7 @@ fn close_native_token_flows() {
                 result.unwrap();
             },
         )
-        .query_flows(incentive_addr.clone().into_inner(), None, None, |result| {
+        .query_flows(incentive_addr.into_inner(), None, None, |result| {
             let flows = result.unwrap();
 
             assert_eq!(flows.len(), 1usize);
@@ -2187,7 +2187,7 @@ fn close_cw20_token_flows() {
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -2386,7 +2386,7 @@ fn close_cw20_token_flows() {
         })
         // try closing a flow that doesn't exist
         .close_incentive_flow(
-            bob.clone(),
+            bob,
             incentive_addr.clone().into_inner(),
             FlowIdentifier::Id(3u64),
             |result| {
@@ -2402,7 +2402,7 @@ fn close_cw20_token_flows() {
         )
         .increase_allowance(
             alice.clone(),
-            cw20_asset_addr.clone(),
+            cw20_asset_addr,
             Uint128::new(5_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -2422,7 +2422,7 @@ fn close_cw20_token_flows() {
                 result.unwrap();
             },
         )
-        .query_flows(incentive_addr.clone().into_inner(), None, None, |result| {
+        .query_flows(incentive_addr.into_inner(), None, None, |result| {
             let flows = result.unwrap();
 
             assert_eq!(flows.len(), 1usize);
@@ -2682,10 +2682,10 @@ fn open_flow_positions_and_claim_native_token_incentive() {
     println!("CURRENT_EPOCH  -> {:?}", current_epoch);
     suite
         .open_incentive_flow(
-            alice.clone(),
+            alice,
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 10),
+            Some(current_epoch.into_inner() + 10),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -2857,15 +2857,11 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                 );
             },
         )
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                // There's nothing left to claim
-                let result = result.unwrap();
-                assert!(result.rewards.is_empty());
-            },
-        );
+        .query_rewards(incentive_addr.into_inner(), carol, |result| {
+            // There's nothing left to claim
+            let result = result.unwrap();
+            assert!(result.rewards.is_empty());
+        });
 }
 
 #[test]

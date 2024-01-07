@@ -186,7 +186,7 @@ fn get_filtered_flow_cases() {
     assert_eq!(filtered_flow.emitted_tokens.len(), 20usize);
     assert_eq!(filtered_flow.asset_history.len(), 20usize);
 
-    let filtered_flow = get_filtered_flow(flow.clone(), None, Some(50u64)).unwrap();
+    let filtered_flow = get_filtered_flow(flow, None, Some(50u64)).unwrap();
     assert!(filtered_flow.asset_history.get(&1).is_some());
     assert_eq!(filtered_flow.emitted_tokens.len(), 50usize);
     assert_eq!(filtered_flow.asset_history.len(), 50usize);

@@ -3219,7 +3219,7 @@ fn collect_and_distribute_fees_successfully() {
     let fee_distributor_current_epoch_query: EpochResponse = app
         .wrap()
         .query_wasm_smart(
-            fee_distributor_address.clone(),
+            fee_distributor_address,
             &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
         )
         .unwrap();
@@ -6066,8 +6066,8 @@ fn decrease_grace_period_fee_distributor() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: whale_lair_address.clone().to_string(),
-                fee_collector_addr: fee_collector_address.clone().to_string(),
+                bonding_contract_addr: whale_lair_address.to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
                 grace_period: Uint64::new(2),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -6086,7 +6086,7 @@ fn decrease_grace_period_fee_distributor() {
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
         creator.sender.clone(),
-        fee_collector_address.clone(),
+        fee_collector_address,
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
@@ -6323,8 +6323,8 @@ fn decrease_grace_period_fee_distributor() {
     // try updating the grace_period on the config to 1, cannot be decreased
     let err = app
         .execute_contract(
-            creator.sender.clone(),
-            fee_distributor_address.clone(),
+            creator.sender,
+            fee_distributor_address,
             &white_whale::fee_distributor::ExecuteMsg::UpdateConfig {
                 owner: None,
                 bonding_contract_addr: None,
@@ -6425,7 +6425,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
             vault_factory_id,
             creator.clone().sender,
             &vault_network::vault_factory::InstantiateMsg {
-                owner: creator.clone().sender.to_string(),
+                owner: creator.sender.to_string(),
                 vault_id,
                 token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -6463,8 +6463,8 @@ fn users_cannot_claim_rewards_from_past_epochs() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: whale_lair_address.clone().to_string(),
-                fee_collector_addr: fee_collector_address.clone().to_string(),
+                bonding_contract_addr: whale_lair_address.to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -6496,7 +6496,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
         creator.sender.clone(),
-        fee_collector_address.clone(),
+        fee_collector_address,
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
@@ -6778,8 +6778,8 @@ fn users_cannot_claim_rewards_from_past_epochs() {
 
     // bond with the other account at epoch 2. He shouldn't have anything claimable
     app.execute_contract(
-        Addr::unchecked("other").clone(),
-        whale_lair_address.clone(),
+        Addr::unchecked("other"),
+        whale_lair_address,
         &white_whale::whale_lair::ExecuteMsg::Bond {
             asset: Asset {
                 info: AssetInfo::NativeToken {
@@ -6875,9 +6875,9 @@ fn users_cannot_claim_rewards_from_past_epochs() {
     let claimable_epochs_res: ClaimableEpochsResponse = app
         .wrap()
         .query_wasm_smart(
-            fee_distributor_address.clone(),
+            fee_distributor_address,
             &white_whale::fee_distributor::QueryMsg::Claimable {
-                address: creator.sender.clone().to_string(),
+                address: creator.sender.to_string(),
             },
         )
         .unwrap();
@@ -6967,7 +6967,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
             vault_factory_id,
             creator.clone().sender,
             &vault_network::vault_factory::InstantiateMsg {
-                owner: creator.clone().sender.to_string(),
+                owner: creator.sender.to_string(),
                 vault_id,
                 token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -7005,8 +7005,8 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: whale_lair_address.clone().to_string(),
-                fee_collector_addr: fee_collector_address.clone().to_string(),
+                bonding_contract_addr: whale_lair_address.to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -7038,7 +7038,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
         creator.sender.clone(),
-        fee_collector_address.clone(),
+        fee_collector_address,
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
@@ -7213,7 +7213,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
     .unwrap();
 
     app.execute_contract(
-        Addr::unchecked("other").clone(),
+        Addr::unchecked("other"),
         whale_lair_address.clone(),
         &white_whale::whale_lair::ExecuteMsg::Bond {
             asset: Asset {
@@ -7420,7 +7420,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
     // let's unbond everything with creator"
     app.execute_contract(
         creator.sender.clone(),
-        whale_lair_address.clone(),
+        whale_lair_address,
         &white_whale::whale_lair::ExecuteMsg::Unbond {
             asset: Asset {
                 info: AssetInfo::NativeToken {
@@ -7463,7 +7463,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
 
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_distributor_address.clone(),
         &NewEpoch {},
         &[],
@@ -7512,7 +7512,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
         .unwrap();
     app.execute_contract(
         Addr::unchecked("creator"),
-        fee_distributor_address.clone(),
+        fee_distributor_address,
         &white_whale::fee_distributor::ExecuteMsg::Claim {},
         &[],
     )
@@ -7601,7 +7601,7 @@ fn user_weight_accounts_for_unbondings() {
             vault_factory_id,
             creator.clone().sender,
             &vault_network::vault_factory::InstantiateMsg {
-                owner: creator.clone().sender.to_string(),
+                owner: creator.sender.to_string(),
                 vault_id,
                 token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -7639,8 +7639,8 @@ fn user_weight_accounts_for_unbondings() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: whale_lair_address.clone().to_string(),
-                fee_collector_addr: fee_collector_address.clone().to_string(),
+                bonding_contract_addr: whale_lair_address.to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -7672,7 +7672,7 @@ fn user_weight_accounts_for_unbondings() {
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
         creator.sender.clone(),
-        fee_collector_address.clone(),
+        fee_collector_address,
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
@@ -7867,7 +7867,7 @@ fn user_weight_accounts_for_unbondings() {
     .unwrap();
 
     app.execute_contract(
-        Addr::unchecked("other").clone(),
+        Addr::unchecked("other"),
         whale_lair_address.clone(),
         &white_whale::whale_lair::ExecuteMsg::Bond {
             asset: Asset {
@@ -8245,7 +8245,7 @@ fn user_weight_accounts_for_unbondings() {
     //now unbond partially, check if weight is computed correctly
     app.execute_contract(
         creator.sender.clone(),
-        whale_lair_address.clone(),
+        whale_lair_address,
         &white_whale::whale_lair::ExecuteMsg::Unbond {
             asset: Asset {
                 info: AssetInfo::NativeToken {
@@ -8292,7 +8292,7 @@ fn user_weight_accounts_for_unbondings() {
 
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_distributor_address.clone(),
         &NewEpoch {},
         &[],
@@ -8323,7 +8323,7 @@ fn user_weight_accounts_for_unbondings() {
     let epoch_res: EpochResponse = app
         .wrap()
         .query_wasm_smart(
-            fee_distributor_address.clone(),
+            fee_distributor_address,
             &white_whale::fee_distributor::QueryMsg::Epoch {
                 id: Uint64::new(4u64),
             },
@@ -8433,7 +8433,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
             vault_factory_id,
             creator.clone().sender,
             &vault_network::vault_factory::InstantiateMsg {
-                owner: creator.clone().sender.to_string(),
+                owner: creator.sender.to_string(),
                 vault_id,
                 token_id,
                 fee_collector_addr: fee_collector_address.to_string(),
@@ -8471,8 +8471,8 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: whale_lair_address.clone().to_string(),
-                fee_collector_addr: fee_collector_address.clone().to_string(),
+                bonding_contract_addr: whale_lair_address.to_string(),
+                fee_collector_addr: fee_collector_address.to_string(),
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -8504,7 +8504,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     // add pool router address to the fee collector to be able to aggregate fees
     app.execute_contract(
         creator.sender.clone(),
-        fee_collector_address.clone(),
+        fee_collector_address,
         &UpdateConfig {
             owner: None,
             pool_router: Some(pool_router_address.to_string()),
@@ -8779,7 +8779,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     // should error because of the restriction we added on bonding/unbonding
     let err = app
         .execute_contract(
-            Addr::unchecked("other").clone(),
+            Addr::unchecked("other"),
             whale_lair_address.clone(),
             &white_whale::whale_lair::ExecuteMsg::Bond {
                 asset: Asset {
@@ -8803,7 +8803,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
 
     // Create new epoch, which triggers fee collection, aggregation and distribution
     app.execute_contract(
-        creator.sender.clone(),
+        creator.sender,
         fee_distributor_address.clone(),
         &NewEpoch {},
         &[],
@@ -8814,7 +8814,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     let new_epoch_res: EpochResponse = app
         .wrap()
         .query_wasm_smart(
-            fee_distributor_address.clone(),
+            fee_distributor_address,
             &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
         )
         .unwrap();
@@ -8830,8 +8830,8 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
 
     // bond now with other
     app.execute_contract(
-        Addr::unchecked("other").clone(),
-        whale_lair_address.clone(),
+        Addr::unchecked("other"),
+        whale_lair_address,
         &white_whale::whale_lair::ExecuteMsg::Bond {
             asset: Asset {
                 info: AssetInfo::NativeToken {
