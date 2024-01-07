@@ -136,7 +136,7 @@ fn test_unbond_successfully() {
             },
         )
         .bond(
-            another_sender.clone(),
+            another_sender,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "bWHALE".to_string(),
@@ -202,7 +202,7 @@ fn test_unbond_all_successfully() {
             },
         )
         .unbond(
-            sender.clone(),
+            sender,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),

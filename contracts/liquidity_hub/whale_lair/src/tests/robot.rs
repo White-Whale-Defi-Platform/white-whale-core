@@ -111,8 +111,8 @@ impl TestingRobot {
                 fee_distributor_id,
                 self.sender.clone(),
                 &white_whale::fee_distributor::InstantiateMsg {
-                    bonding_contract_addr: whale_lair_addr.clone().to_string(),
-                    fee_collector_addr: fee_collector_address.clone().to_string(),
+                    bonding_contract_addr: whale_lair_addr.to_string(),
+                    fee_collector_addr: fee_collector_address.to_string(),
                     grace_period: Uint64::new(1),
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
@@ -130,7 +130,7 @@ impl TestingRobot {
         // Now set the fee distributor on the config of the whale lair
         // So that we can check claims before letting them bond/unbond
         let msg = ExecuteMsg::UpdateConfig {
-            fee_distributor_addr: Some(fee_distributor_address.clone().to_string()),
+            fee_distributor_addr: Some(fee_distributor_address.to_string()),
             owner: None,
             unbonding_period: None,
             growth_rate: None,

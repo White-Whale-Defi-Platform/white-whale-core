@@ -108,7 +108,7 @@ fn test_withdraw_unsuccessfully() {
             //assert error is NothingToWithdraw
         })
         .fast_forward(999u64) //unbonding period is 1000
-        .withdraw(sender.clone(), "bWHALE".to_string(), |res| {
+        .withdraw(sender, "bWHALE".to_string(), |res| {
             println!("{:?}", res.unwrap_err().root_cause());
             //assert error is NothingToWithdraw
         })
