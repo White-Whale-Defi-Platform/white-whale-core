@@ -194,13 +194,7 @@ fn test_feature_toggle_withdrawals_disabled() {
         }),
         amp_factor: None,
     };
-    execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    )
-    .unwrap();
+    execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -281,13 +275,7 @@ fn test_feature_toggle_deposits_disabled() {
         }),
         amp_factor: None,
     };
-    execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    )
-    .unwrap();
+    execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     // provide liquidity should fail
     let msg = ExecuteMsg::ProvideLiquidity {

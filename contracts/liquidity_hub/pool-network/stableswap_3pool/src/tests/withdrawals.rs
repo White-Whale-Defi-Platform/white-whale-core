@@ -116,7 +116,7 @@ fn withdraw_liquidity_cw20_lp() {
 
     let env = mock_env();
     let info = mock_info("liquidity0000", &[]);
-    let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), env, info, msg).unwrap();
     let log_withdrawn_share = res.attributes.get(2).expect("no log");
     let log_refund_assets = res.attributes.get(3).expect("no log");
     let msg_refund_0 = res.messages.first().expect("no message");
@@ -470,7 +470,7 @@ fn test_withdrawal_unauthorized() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    instantiate(deps.as_mut(), env, info, msg).unwrap();
 
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
@@ -543,7 +543,7 @@ fn test_withdrawal_wrong_message() {
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+    instantiate(deps.as_mut(), env, info, msg).unwrap();
 
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
