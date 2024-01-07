@@ -66,7 +66,7 @@ fn instantiate_unsuccessfully() {
         "bonding_contract_addr".to_string(),
         "fee_collector_addr".to_string(),
         invalid_grace_period,
-        epoch_config.clone(),
+        epoch_config,
         distribution_asset.clone(),
     );
 
@@ -80,7 +80,7 @@ fn instantiate_unsuccessfully() {
             duration: invalid_epoch_duration,                          // a day
             genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
         },
-        distribution_asset.clone(),
+        distribution_asset,
     );
 }
 

@@ -54,8 +54,8 @@ fn test_create_genesis_epoch() {
             "bonding_contract_addr".to_string(),
             "fee_collector_addr".to_string(),
             grace_period,
-            epoch_config.clone(),
-            distribution_asset.clone(),
+            epoch_config,
+            distribution_asset,
         )
         .create_new_epoch(mock_info("owner", &[]), |res| {
             let err = res.unwrap_err();
