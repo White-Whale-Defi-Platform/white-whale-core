@@ -239,7 +239,7 @@ mod tests {
             max_unbonding_duration: None,
         };
 
-        let err = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap_err();
+        let err = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap_err();
         match err {
             ContractError::Unauthorized => {}
             _ => panic!("should return ContractError::Unauthorized"),
@@ -265,7 +265,7 @@ mod tests {
             max_unbonding_duration: None,
         };
 
-        let err = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap_err();
+        let err = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap_err();
         match err {
             ContractError::InvalidUnbondingRange { .. } => {}
             _ => panic!("should return ContractError::InvalidUnbondingRange"),
@@ -283,7 +283,7 @@ mod tests {
             max_unbonding_duration: Some(1000u64),
         };
 
-        let err = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap_err();
+        let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
         match err {
             ContractError::InvalidUnbondingRange { .. } => {}
             _ => panic!("should return ContractError::InvalidUnbondingRange"),
