@@ -150,5 +150,5 @@ fn test_update_config() {
             },
         )
         .update_config(mock_info("owner", &[]), new_config.clone(), |_| {})
-        .asset_config(new_config.clone());
+        .asset_config(new_config);
 }
