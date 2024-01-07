@@ -579,7 +579,7 @@ mod test {
             )
             .unwrap();
 
-        let lp_token_addr = match config.lp_asset.clone() {
+        let lp_token_addr = match config.lp_asset {
             AssetInfo::Token { contract_addr } => contract_addr,
             AssetInfo::NativeToken { .. } => "".to_string(),
         };
@@ -645,7 +645,7 @@ mod test {
         // third depositor deposits 8,000 uluna
         app.execute_contract(
             third_depositor.clone(),
-            vault_addr.clone(),
+            vault_addr,
             &white_whale::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(8_000),
             },
@@ -659,7 +659,7 @@ mod test {
         let cw20_balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
-                lp_token_addr.clone(),
+                lp_token_addr,
                 &cw20::Cw20QueryMsg::Balance {
                     address: third_depositor.to_string(),
                 },

@@ -284,7 +284,7 @@ mod tests {
             )
             .unwrap();
 
-        let lp_token_addr = match config.lp_asset.clone() {
+        let lp_token_addr = match config.lp_asset {
             AssetInfo::Token { contract_addr } => contract_addr,
             AssetInfo::NativeToken { .. } => "".to_string(),
         };
@@ -327,7 +327,7 @@ mod tests {
         let cw20_balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
-                lp_token_addr.clone(),
+                lp_token_addr,
                 &cw20::Cw20QueryMsg::Balance {
                     address: mock_creator().sender.into_string(),
                 },
@@ -378,7 +378,7 @@ mod tests {
             )
             .unwrap();
 
-        let lp_token_addr = match config.lp_asset.clone() {
+        let lp_token_addr = match config.lp_asset {
             AssetInfo::Token { contract_addr } => contract_addr,
             AssetInfo::NativeToken { .. } => "".to_string(),
         };
@@ -438,7 +438,7 @@ mod tests {
         let cw20_balance: cw20::BalanceResponse = app
             .wrap()
             .query_wasm_smart(
-                lp_token_addr.clone(),
+                lp_token_addr,
                 &cw20::Cw20QueryMsg::Balance {
                     address: mock_creator().sender.into_string(),
                 },

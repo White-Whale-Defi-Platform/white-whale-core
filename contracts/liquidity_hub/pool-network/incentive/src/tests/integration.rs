@@ -3024,7 +3024,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
     suite
         .increase_allowance(
             carol.clone(),
-            incentive_asset_addr.clone(),
+            incentive_asset_addr,
             Uint128::new(2_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -3084,15 +3084,15 @@ fn open_flow_positions_claim_cw20_token_incentive() {
     suite
         .increase_allowance(
             alice.clone(),
-            flow_asset_addr.clone(),
+            flow_asset_addr,
             Uint128::new(1_000_000_000u128),
             incentive_addr.clone().into_inner(),
         )
         .open_incentive_flow(
-            alice.clone(),
+            alice,
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 10),
+            Some(current_epoch.into_inner() + 10),
             Some(Curve::Linear),
             Asset {
                 info: flow_asset.clone(),
@@ -3241,15 +3241,11 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                     .unwrap(),
             );
         })
-        .query_rewards(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                // There's nothing left to claim, returns an empty vector
-                let response = result.unwrap();
-                assert!(response.rewards.is_empty());
-            },
-        );
+        .query_rewards(incentive_addr.into_inner(), carol, |result| {
+            // There's nothing left to claim, returns an empty vector
+            let response = result.unwrap();
+            assert!(response.rewards.is_empty());
+        });
 }
 
 /// this test tries to recreate a scenario with multiple parties involved in flows.
@@ -3959,7 +3955,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     .unwrap()
                     .flow_asset
                     .amount;
-                let claimed = flow_response.clone().unwrap().flow.unwrap().claimed_amount;
+                let claimed = flow_response.unwrap().flow.unwrap().claimed_amount;
                 let expected_claimed = total_rewards - Uint128::new(100_000_000u128);
                 assert!(total_rewards > claimed);
                 assert!(expected_claimed >= claimed);
@@ -4003,7 +3999,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 result.unwrap();
             },
         )
-        .query_funds(alice.clone(), flow_asset_1.clone(), |result| {
+        .query_funds(alice.clone(), flow_asset_1, |result| {
             println!("the funds that were remaining in the flow went back to alice");
             assert_eq!(
                 result,
@@ -4141,7 +4137,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
     suite
         .increase_allowance(
             bob.clone(),
-            incentive_asset_addr.clone(),
+            incentive_asset_addr,
             Uint128::new(2_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -4187,7 +4183,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .claim(incentive_addr.clone().into_inner(), bob.clone(), |result| {
             result.unwrap();
         })
-        .query_funds(bob.clone(), flow_asset_2.clone(), |result| {
+        .query_funds(bob, flow_asset_2.clone(), |result| {
             assert_eq!(
                 result,
                 bob_usdc_funds
@@ -4228,7 +4224,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     .unwrap()
                     .flow_asset
                     .amount;
-                let claimed = flow_response.clone().unwrap().flow.unwrap().claimed_amount;
+                let claimed = flow_response.unwrap().flow.unwrap().claimed_amount;
                 let expected_claimed = total_rewards;
 
                 assert!(total_rewards > claimed);
@@ -4266,14 +4262,10 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
             *carol_incentive_asset_funds.borrow_mut() = result;
         })
         // try withdrawing again, nothing should happen as she doesn't have more closed positions
-        .withdraw(
-            incentive_addr.clone().into_inner(),
-            carol.clone(),
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_funds(carol.clone(), incentive_asset.clone(), |result| {
+        .withdraw(incentive_addr.into_inner(), carol.clone(), |result| {
+            result.unwrap();
+        })
+        .query_funds(carol, incentive_asset, |result| {
             assert_eq!(result, carol_incentive_asset_funds.clone().into_inner(),);
         });
 }
@@ -4292,10 +4284,10 @@ fn take_global_weight_snapshot() {
     let incentive_addr = RefCell::new(Addr::unchecked(""));
 
     suite
-        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+        .create_incentive(alice, incentive_asset.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(incentive_asset.clone(), |result| {
+        .query_incentive(incentive_asset, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -4355,7 +4347,7 @@ fn open_expand_position_with_optional_receiver() {
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(incentive_asset.clone(), |result| {
+        .query_incentive(incentive_asset, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -4379,11 +4371,11 @@ fn open_expand_position_with_optional_receiver() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            None,                                          //epoch 11
-            Some(current_epoch.clone().into_inner() + 10), // epoch 21
+            None,                                  //epoch 11
+            Some(current_epoch.into_inner() + 10), // epoch 21
             Some(Curve::Linear),
             Asset {
-                info: flow_asset_1.clone(),
+                info: flow_asset_1,
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
@@ -4412,7 +4404,7 @@ fn open_expand_position_with_optional_receiver() {
     suite
         .increase_allowance(
             alice.clone(),
-            incentive_asset_addr.clone(),
+            incentive_asset_addr,
             Uint128::new(2_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -4452,7 +4444,7 @@ fn open_expand_position_with_optional_receiver() {
         .create_epochs_on_fee_distributor_without_snapshot_on_incentive(3u64)
         .claim(
             incentive_addr.clone().into_inner(),
-            alice.clone(),
+            alice,
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -4464,7 +4456,7 @@ fn open_expand_position_with_optional_receiver() {
                 }
             },
         )
-        .query_incentive_global_weight(incentive_addr.clone().into_inner(), 100u64, |result| {
+        .query_incentive_global_weight(incentive_addr.into_inner(), 100u64, |result| {
             assert_eq!(result.unwrap_err().to_string().rsplit_once(": ").unwrap().1, (ContractError::GlobalWeightSnapshotNotTakenForEpoch { epoch: 100u64 }).to_string());
         });
 }
@@ -4497,7 +4489,7 @@ fn close_position_if_empty_rewards() {
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(incentive_asset.clone(), |result| {
+        .query_incentive(incentive_asset, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -4584,7 +4576,7 @@ fn close_position_if_empty_rewards() {
         )
         .increase_allowance(
             carol.clone(),
-            incentive_asset_addr.clone(),
+            incentive_asset_addr,
             Uint128::new(3_000u128),
             incentive_addr.clone().into_inner(),
         )
@@ -4797,7 +4789,7 @@ fn close_position_if_empty_rewards() {
 
     suite
         .close_incentive_position(
-            carol.clone(),
+            carol,
             incentive_addr.clone().into_inner(),
             carol_position.unbonding_duration,
             |result| {
@@ -4822,8 +4814,8 @@ fn close_position_if_empty_rewards() {
             },
         )
         .close_incentive_position(
-            bob.clone(),
-            incentive_addr.clone().into_inner(),
+            bob,
+            incentive_addr.into_inner(),
             carol_position.unbonding_duration,
             |result| {
                 result.unwrap();
@@ -4852,7 +4844,7 @@ fn open_expand_flow_with_native_token() {
         .create_incentive(alice.clone(), lp_address_1.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(lp_address_1.clone(), |result| {
+        .query_incentive(lp_address_1, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -4871,7 +4863,7 @@ fn open_expand_flow_with_native_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 9),
+            Some(current_epoch.into_inner() + 9),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -4910,7 +4902,7 @@ fn open_expand_flow_with_native_token() {
             );
         })
         .expand_flow(
-            alice.clone(),
+            alice,
             incentive_addr.clone().into_inner(),
             FlowIdentifier::Id(5u64), // invalid flow id
             Some(19u64),
@@ -5099,7 +5091,7 @@ fn open_expand_flow_with_native_token() {
                 result.unwrap();
             },
         )
-        .query_flow(incentive_addr.clone().into_inner(), FlowIdentifier::Id(1u64), |result| {
+        .query_flow(incentive_addr.into_inner(), FlowIdentifier::Id(1u64), |result| {
             let flow_response = result.unwrap();
             assert_eq!(
                 flow_response.unwrap().flow,
@@ -5151,7 +5143,7 @@ fn open_expand_flow_with_cw20_token() {
         .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(incentive_asset.clone(), |result| {
+        .query_incentive(incentive_asset, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -5176,7 +5168,7 @@ fn open_expand_flow_with_cw20_token() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 9),
+            Some(current_epoch.into_inner() + 9),
             Some(Curve::Linear),
             Asset {
                 info: flow_asset.clone(),
@@ -5215,7 +5207,7 @@ fn open_expand_flow_with_cw20_token() {
             },
         )
         .expand_flow(
-            alice.clone(),
+            alice,
             incentive_addr.clone().into_inner(),
             FlowIdentifier::Id(5u64), // invalid flow id
             Some(19u64),
@@ -5344,7 +5336,7 @@ fn open_expand_flow_with_cw20_token() {
         )
         .increase_allowance(
             carol.clone(),
-            flow_asset_addr.clone(),
+            flow_asset_addr,
             Uint128::new(1_000u128), // enough allowance
             incentive_addr.clone().into_inner(),
         )
@@ -5363,7 +5355,7 @@ fn open_expand_flow_with_cw20_token() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(1u64),
             |result| {
                 let flow_response = result.unwrap();
@@ -5416,10 +5408,10 @@ fn fail_expand_ended_flow() {
     let flow_asset_addr = suite.cw20_tokens.last().unwrap().clone();
 
     suite
-        .create_incentive(alice.clone(), incentive_asset.clone(), |result| {
+        .create_incentive(alice, incentive_asset.clone(), |result| {
             result.unwrap();
         })
-        .query_incentive(incentive_asset.clone(), |result| {
+        .query_incentive(incentive_asset, |result| {
             let incentive = result.unwrap();
             assert!(incentive.is_some());
             *incentive_addr.borrow_mut() = incentive.unwrap();
@@ -5436,7 +5428,7 @@ fn fail_expand_ended_flow() {
     suite
         .increase_allowance(
             carol.clone(),
-            flow_asset_addr.clone(),
+            flow_asset_addr,
             Uint128::new(2_000u128), // enough allowance
             incentive_addr.clone().into_inner(),
         )
@@ -5444,7 +5436,7 @@ fn fail_expand_ended_flow() {
             carol.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(current_epoch.clone().into_inner() + 9),
+            Some(current_epoch.into_inner() + 9),
             Some(Curve::Linear),
             Asset {
                 info: flow_asset.clone(),
@@ -5485,7 +5477,7 @@ fn fail_expand_ended_flow() {
         .create_epochs_on_fee_distributor(20u64, vec![])
         .expand_flow(
             carol.clone(),
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(1u64),
             Some(50u64),
             Asset {
@@ -5648,7 +5640,7 @@ fn open_expand_flow_with_default_values() {
             },
         )
         .expand_flow(
-            carol.clone(),
+            carol,
             incentive_addr.clone().into_inner(),
             FlowIdentifier::Id(1u64),
             None,
@@ -5804,7 +5796,7 @@ fn open_expand_flow_with_default_values() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Id(1u64),
             |result| {
                 let flow = result.unwrap().unwrap().flow.unwrap();
@@ -6308,7 +6300,7 @@ fn open_expand_flow_verify_rewards() {
             },
         )
         .query_funds(
-            carol.clone(),
+            carol,
             AssetInfo::NativeToken {
                 denom: "usdc".to_string(),
             },
@@ -6333,13 +6325,9 @@ fn open_expand_flow_verify_rewards() {
                 *alice_usdc_funds.borrow_mut() = result;
             },
         )
-        .claim(
-            incentive_addr.clone().into_inner(),
-            alice.clone(),
-            |result| {
-                result.unwrap();
-            },
-        )
+        .claim(incentive_addr.into_inner(), alice.clone(), |result| {
+            result.unwrap();
+        })
         .query_funds(
             alice.clone(),
             AssetInfo::NativeToken {
@@ -6525,7 +6513,7 @@ fn open_expand_flow_over_expand_limit() {
                 FlowIdentifier::Id(1u64),
                 |result| {
                     let flow = result.unwrap().unwrap().flow.unwrap();
-                    *flow_ref.borrow_mut() = flow.clone();
+                    *flow_ref.borrow_mut() = flow;
                 },
             );
 
@@ -6597,7 +6585,7 @@ fn open_expand_flow_over_expand_limit() {
             },
         )
         .query_flow(
-            incentive_addr.clone().into_inner(),
+            incentive_addr.into_inner(),
             FlowIdentifier::Label("alias".to_string()),
             |result| {
                 let flow_response = result.unwrap();

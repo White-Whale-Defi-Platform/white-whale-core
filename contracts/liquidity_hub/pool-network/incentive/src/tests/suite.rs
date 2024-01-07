@@ -90,7 +90,7 @@ impl TestingSuite {
         let balances = vec![
             (sender_1.clone(), initial_balance.clone()),
             (sender_2.clone(), initial_balance.clone()),
-            (sender_3.clone(), initial_balance.clone()),
+            (sender_3.clone(), initial_balance),
         ];
 
         let app = AppBuilder::new()
@@ -146,7 +146,7 @@ impl TestingSuite {
         )
         .unwrap();
 
-        self.cw20_tokens = vec![cw20_token.clone()];
+        self.cw20_tokens = vec![cw20_token];
 
         // 17 May 2023 17:00:00 UTC
         let timestamp = Timestamp::from_seconds(1684342800u64);
@@ -546,12 +546,10 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale::pool_network::incentive::ExecuteMsg::TakeGlobalWeightSnapshot {};
 
-        result(self.app.execute_contract(
-            self.senders[0].clone(),
-            incentive_addr.clone(),
-            &msg,
-            &[],
-        ));
+        result(
+            self.app
+                .execute_contract(self.senders[0].clone(), incentive_addr, &msg, &[]),
+        );
 
         self
     }
@@ -575,7 +573,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, incentive_addr.clone(), &msg, &funds),
+                .execute_contract(sender, incentive_addr, &msg, &funds),
         );
 
         self
