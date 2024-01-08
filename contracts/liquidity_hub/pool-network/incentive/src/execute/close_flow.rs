@@ -1,9 +1,9 @@
 use classic_bindings::TerraQuery;
 
-use white_whale::pool_network::asset::Asset;
 use cosmwasm_std::{
     coins, to_binary, BankMsg, CosmosMsg, DepsMut, MessageInfo, Order, Response, StdResult, WasmMsg,
 };
+use white_whale::pool_network::asset::Asset;
 
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::pool_network::incentive::{Flow, FlowIdentifier};

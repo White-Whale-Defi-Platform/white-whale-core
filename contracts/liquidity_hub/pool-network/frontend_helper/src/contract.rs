@@ -1,7 +1,10 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, to_binary, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    SubMsg, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
@@ -122,9 +125,7 @@ pub fn execute(
 
             for coin in info.funds.clone() {
                 let asset = Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: coin.denom,
-                    },
+                    info: AssetInfo::NativeToken { denom: coin.denom },
                     amount: coin.amount,
                 };
 
@@ -157,7 +158,7 @@ pub fn execute(
                         )?,
                         funds: taxed_funds,
                     }
-                        .into(),
+                    .into(),
                 }))
         }
         ExecuteMsg::UpdateConfig {
@@ -193,30 +194,44 @@ pub fn execute(
 
 #[cfg(test)]
 mod x {
-    use std::marker::PhantomData;
-    use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coin, coins, OwnedDeps, Uint128};
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::pool_network::frontend_helper::ExecuteMsg;
     use crate::contract::{execute, instantiate};
     use crate::helpers::mock_dependencies;
+    use cosmwasm_std::testing::{
+        mock_env, mock_info, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
+    };
+    use cosmwasm_std::{coin, coins, OwnedDeps, Uint128};
+    use std::marker::PhantomData;
+    use white_whale::pool_network::asset::{Asset, AssetInfo};
+    use white_whale::pool_network::frontend_helper::ExecuteMsg;
 
     #[test]
     fn can_deposit() {
         let mut deps = mock_dependencies();
 
-        deps.querier.set_bank_balances(&[coin(1000000000000000, "uluna"), coin(1000000000000000, "uwhale")]);
+        deps.querier.set_bank_balances(&[
+            coin(1000000000000000, "uluna"),
+            coin(1000000000000000, "uwhale"),
+        ]);
 
         let msg = ExecuteMsg::Deposit {
             pair_address: "pair_address".to_string(),
             assets: [
-                Asset{ info: AssetInfo::NativeToken {denom: "uluna".to_string()}, amount: Uint128::new(100) },
-                Asset{ info: AssetInfo::NativeToken {denom: "uwhale".to_string()}, amount: Uint128::new(100) }
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::new(100),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::new(100),
+                },
             ],
             slippage_tolerance: None,
             unbonding_duration: 86400,
         };
-
 
         println!("{:?}", msg);
 
@@ -225,7 +240,6 @@ mod x {
         let res = execute(deps.as_mut(), env, info, msg);
 
         println!("{:?}", res);
-
     }
 }
 

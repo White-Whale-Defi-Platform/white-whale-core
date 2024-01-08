@@ -13,8 +13,9 @@ pub fn deduct_tax_vec(
         let mut discounted_asset = asset.clone();
 
         if let AssetInfo::NativeToken { .. } = &discounted_asset.info {
-            discounted_asset.amount =
-                discounted_asset.amount.checked_sub(discounted_asset.compute_tax(querier)?)?;
+            discounted_asset.amount = discounted_asset
+                .amount
+                .checked_sub(discounted_asset.compute_tax(querier)?)?;
         }
 
         discounted_assets.push(discounted_asset);

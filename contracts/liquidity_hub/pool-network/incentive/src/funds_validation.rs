@@ -51,7 +51,7 @@ pub fn validate_funds_sent(
                 })?,
                 funds: vec![],
             })
-        },
+        }
         AssetInfo::NativeToken { denom } => {
             let paid_amount = cw_utils::must_pay(&info, &denom)?;
             if paid_amount != amount {

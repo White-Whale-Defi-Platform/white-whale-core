@@ -74,10 +74,7 @@ pub fn complete_loan(
                 }
             })?;
 
-            attributes.push(attr(
-                "payback_amount",
-                payback_amount.to_string(),
-            ));
+            attributes.push(attr("payback_amount", payback_amount.to_string()));
             attributes.push(attr("profit_amount", profit_amount.to_string()));
 
             let mut response_messages: Vec<CosmosMsg> = vec![];

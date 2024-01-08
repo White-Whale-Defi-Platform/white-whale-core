@@ -1,7 +1,7 @@
 #![cfg(not(tarpaulin_include))]
 
-use std::collections::{BTreeMap, HashMap};
 use classic_bindings::TerraQuery;
+use std::collections::{BTreeMap, HashMap};
 
 use cosmwasm_schema::cw_serde;
 // currently a stub file
