@@ -1,6 +1,7 @@
 #![cfg(not(tarpaulin_include))]
 
 use std::collections::{BTreeMap, HashMap};
+use classic_bindings::TerraQuery;
 
 use cosmwasm_schema::cw_serde;
 // currently a stub file
@@ -14,7 +15,7 @@ use white_whale::pool_network::incentive::{Curve, Flow};
 use crate::state::{EpochId, FlowId, FLOWS};
 
 /// Migrates to version 1.0.6, which introduces the [Flow] field asset_history.
-pub(crate) fn migrate_to_v106(deps: DepsMut) -> Result<(), StdError> {
+pub(crate) fn migrate_to_v106(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     #[cw_serde]
     pub struct FlowV104 {
         /// A unique identifier of the flow.

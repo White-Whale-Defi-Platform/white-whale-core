@@ -161,7 +161,7 @@ pub fn query(deps: Deps<TerraQuery>, env: Env, msg: QueryMsg) -> Result<Binary, 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(
-    deps: DepsMut<TerraQuery>,
+    mut deps: DepsMut<TerraQuery>,
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {

@@ -369,7 +369,6 @@ pub fn remove_trio(
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
     deps: DepsMut<TerraQuery>,
-    env: Env,
     denom: String,
     decimals: u8,
 ) -> Result<Response, ContractError> {

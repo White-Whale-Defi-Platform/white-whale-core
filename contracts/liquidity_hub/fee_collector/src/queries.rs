@@ -158,7 +158,7 @@ fn query_fees_for_factory(
 }
 
 /// Queries the fee collector to get the distribution asset
-pub(crate) fn query_distribution_asset(deps: Deps) -> StdResult<AssetInfo> {
+pub(crate) fn query_distribution_asset(deps: Deps<TerraQuery>) -> StdResult<AssetInfo> {
     let config: Config = CONFIG.load(deps.storage)?;
 
     let fee_distributor_config: white_whale::fee_distributor::Config =

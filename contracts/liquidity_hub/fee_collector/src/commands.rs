@@ -172,7 +172,6 @@ pub fn update_config(
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
     mut deps: DepsMut<TerraQuery>,
-    info: MessageInfo,
     env: Env,
     aggregate_fees_for: FeesFor,
 ) -> Result<Response, ContractError> {

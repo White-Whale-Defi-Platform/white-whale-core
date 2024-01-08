@@ -1,3 +1,4 @@
+use classic_bindings::TerraQuery;
 use cosmwasm_std::{
     to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, OverflowError, OverflowOperation,
     Response, StdResult, Uint128, WasmMsg,
@@ -22,7 +23,7 @@ const FLOW_EXPANSION_LIMIT: u64 = 180u64;
 
 /// Expands a flow with the given id. Can be done by anyone.
 pub fn expand_flow(
-    deps: DepsMut,
+    deps: DepsMut<TerraQuery>,
     info: MessageInfo,
     env: Env,
     flow_identifier: FlowIdentifier,
