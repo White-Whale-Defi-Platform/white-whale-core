@@ -228,23 +228,49 @@ impl WasmMockQuerier {
                             })))
                         }
                         Ok(PairQueryMsg::Simulation { offer_asset }) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })))
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = SimulationResponse {
+                                return_amount: offer_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_binary(&data)))
                         }
-                        Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&ReverseSimulationResponse {
+                        Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = ReverseSimulationResponse {
+                                offer_amount: ask_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_binary(&data)))
+                        }
                         _ => match from_binary(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
@@ -413,24 +439,50 @@ impl WasmMockTrioQuerier {
                                 },
                             })))
                         }
-                        Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&trio::SimulationResponse {
+                        Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = trio::SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
-                        Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&trio::ReverseSimulationResponse {
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = trio::SimulationResponse {
+                                return_amount: offer_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_binary(&data)))
+                        }
+                        Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = trio::ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = trio::ReverseSimulationResponse {
+                                offer_amount: ask_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_binary(&data)))
+                        }
                         _ => match from_binary(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =

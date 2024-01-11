@@ -89,6 +89,7 @@ pub fn instantiate(
         ))));
     }
     // Set owner and initial pool fees
+    #[cfg(not(feature = "osmosis"))]
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
@@ -103,6 +104,25 @@ pub fn instantiate(
         initial_amp_block: env.block.height,
         future_amp_block: env.block.height,
     };
+    #[cfg(feature = "osmosis")]
+    let config = Config {
+        owner: deps.api.addr_validate(info.sender.as_str())?,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+        osmosis_fee_collector_addr: deps
+            .api
+            .addr_validate(msg.osmosis_fee_collector_addr.as_str())?,
+        pool_fees: msg.pool_fees.clone(),
+        feature_toggle: FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: true,
+            swaps_enabled: true,
+        },
+        initial_amp: msg.amp_factor,
+        future_amp: msg.amp_factor,
+        initial_amp_block: env.block.height,
+        future_amp_block: env.block.height,
+    };
+
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
@@ -194,6 +214,7 @@ pub fn execute(
                 to_addr,
             )
         }
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
@@ -206,6 +227,26 @@ pub fn execute(
             info,
             owner,
             fee_collector_addr,
+            None,
+            pool_fees,
+            feature_toggle,
+            amp_factor,
+        ),
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdateConfig {
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            amp_factor,
+        } => commands::update_config(
+            deps,
+            env,
+            info,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
             pool_fees,
             feature_toggle,
             amp_factor,

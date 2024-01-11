@@ -245,7 +245,7 @@ pub fn update_trio_config(
             pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
-                //osmosis_fee_collector_addr,
+                osmosis_fee_collector_addr,
                 pool_fees,
                 feature_toggle,
                 amp_factor,
@@ -334,6 +334,29 @@ pub fn create_trio(
     let asset2_label = asset_infos[2].clone().get_label(&deps.as_ref())?;
     let trio_label = format!("{asset0_label}-{asset1_label}-{asset2_label} trio");
 
+    #[cfg(not(feature = "osmosis"))]
+    let instantiate_msg = TrioInstantiateMsg {
+        asset_infos,
+        token_code_id: config.token_code_id,
+        asset_decimals,
+        pool_fees,
+        fee_collector_addr: config.fee_collector_addr.to_string(),
+        amp_factor,
+        token_factory_lp,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let instantiate_msg = TrioInstantiateMsg {
+        asset_infos,
+        token_code_id: config.token_code_id,
+        asset_decimals,
+        pool_fees,
+        fee_collector_addr: config.fee_collector_addr.to_string(),
+        osmosis_fee_collector_addr: config.osmosis_fee_collector_addr.to_string(),
+        amp_factor,
+        token_factory_lp,
+    };
+
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_trio"),
@@ -351,15 +374,7 @@ pub fn create_trio(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
-                msg: to_binary(&TrioInstantiateMsg {
-                    asset_infos,
-                    token_code_id: config.token_code_id,
-                    asset_decimals,
-                    pool_fees,
-                    fee_collector_addr: config.fee_collector_addr.to_string(),
-                    amp_factor,
-                    token_factory_lp,
-                })?,
+                msg: to_binary(&instantiate_msg)?,
             }),
             reply_on: ReplyOn::Success,
         }))

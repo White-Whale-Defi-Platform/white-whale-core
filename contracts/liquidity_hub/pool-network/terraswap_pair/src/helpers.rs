@@ -383,11 +383,7 @@ pub fn compute_offer_amount(
     let before_spread_deduction: Uint256 =
         offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
 
-    let spread_amount = if before_spread_deduction > before_commission_deduction {
-        before_spread_deduction - before_commission_deduction
-    } else {
-        Uint256::zero()
-    };
+    let spread_amount = before_spread_deduction.saturating_sub(before_commission_deduction);
 
     let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(before_commission_deduction);
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(before_commission_deduction);
