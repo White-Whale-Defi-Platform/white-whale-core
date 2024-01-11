@@ -21,6 +21,7 @@ use crate::state::{
     TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
 };
 
+#[allow(unused_variables)]
 /// Updates the contract's [Config]
 pub fn update_config(
     deps: DepsMut,
@@ -68,6 +69,7 @@ pub fn update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
+#[allow(unused_variables)]
 /// Updates a pair config
 pub fn update_pair_config(
     deps: DepsMut,
@@ -215,6 +217,7 @@ pub fn create_pair(
         }))
 }
 
+#[allow(unused_variables)]
 /// Updates a trio config
 pub fn update_trio_config(
     deps: DepsMut,

@@ -542,6 +542,7 @@ pub fn swap(
     ]))
 }
 
+#[allow(unused_variables)]
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
 #[allow(clippy::too_many_arguments)]
 pub fn update_config(
