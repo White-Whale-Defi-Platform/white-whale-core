@@ -96,7 +96,7 @@ pub fn update_pair_config(
             pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
-               // osmosis_fee_collector_addr,
+                osmosis_fee_collector_addr,
                 pool_fees,
                 feature_toggle,
             }
@@ -171,6 +171,29 @@ pub fn create_pair(
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
     let pair_label = format!("{asset0_label}-{asset1_label} pair");
 
+    #[cfg(not(feature = "osmosis"))]
+    let instantiate_msg = PairInstantiateMsg {
+        asset_infos,
+        token_code_id: config.token_code_id,
+        asset_decimals,
+        pool_fees,
+        fee_collector_addr: config.fee_collector_addr.to_string(),
+        pair_type: pair_type.clone(),
+        token_factory_lp,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let instantiate_msg = PairInstantiateMsg {
+        asset_infos,
+        token_code_id: config.token_code_id,
+        asset_decimals,
+        pool_fees,
+        fee_collector_addr: config.fee_collector_addr.to_string(),
+        pair_type: pair_type.clone(),
+        token_factory_lp,
+        osmosis_fee_collector_addr: config.osmosis_fee_collector_addr.to_string(),
+    };
+
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
@@ -186,15 +209,7 @@ pub fn create_pair(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
-                msg: to_binary(&PairInstantiateMsg {
-                    asset_infos,
-                    token_code_id: config.token_code_id,
-                    asset_decimals,
-                    pool_fees,
-                    fee_collector_addr: config.fee_collector_addr.to_string(),
-                    pair_type,
-                    token_factory_lp,
-                })?,
+                msg: to_binary(&instantiate_msg)?,
             }),
             reply_on: ReplyOn::Success,
         }))

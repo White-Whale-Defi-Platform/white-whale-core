@@ -74,7 +74,7 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     #[cw_serde]
     struct ConfigV110 {
@@ -124,7 +124,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate to the StableSwap deployment
 ///
 /// Default to a ConstantProduct pool

@@ -34,7 +34,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     #[cfg(not(feature = "osmosis"))]
-        let config = Config {
+    let config = Config {
         owner: deps.api.addr_canonicalize(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
@@ -49,7 +49,9 @@ pub fn instantiate(
         pair_code_id: msg.pair_code_id,
         trio_code_id: msg.trio_code_id,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
-        osmosis_fee_collector_addr: deps.api.addr_validate(msg.osmosis_fee_collector_addr.as_str())?,
+        osmosis_fee_collector_addr: deps
+            .api
+            .addr_validate(msg.osmosis_fee_collector_addr.as_str())?,
     };
 
     CONFIG.save(deps.storage, &config)?;

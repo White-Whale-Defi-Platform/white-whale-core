@@ -66,6 +66,7 @@ pub fn instantiate(
     msg.pool_fees.is_valid()?;
 
     // Set owner and initial pool fees
+    #[cfg(not(feature = "osmosis"))]
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
@@ -76,6 +77,22 @@ pub fn instantiate(
             swaps_enabled: true,
         },
     };
+
+    #[cfg(feature = "osmosis")]
+    let config = Config {
+        owner: deps.api.addr_validate(info.sender.as_str())?,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+        osmosis_fee_collector_addr: deps
+            .api
+            .addr_validate(msg.osmosis_fee_collector_addr.as_str())?,
+        pool_fees: msg.pool_fees.clone(),
+        feature_toggle: FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: true,
+            swaps_enabled: true,
+        },
+    };
+
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
@@ -162,6 +179,7 @@ pub fn execute(
                 to_addr,
             )
         }
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
@@ -172,6 +190,23 @@ pub fn execute(
             info,
             owner,
             fee_collector_addr,
+            None,
+            pool_fees,
+            feature_toggle,
+        ),
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdateConfig {
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
             pool_fees,
             feature_toggle,
         ),
@@ -253,13 +288,13 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v13x(deps.branch())?;
     }
 
-    #[cfg(not(feature = "injective"))]
+    #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
     if storage_version <= Version::parse("1.0.4")? {
         migrations::migrate_to_v110(deps.branch())?;
     } else if storage_version == Version::parse("1.1.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
-    #[cfg(not(feature = "injective"))]
+    #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
     if storage_version == Version::parse("1.2.0")? {
         migrations::migrate_to_v130(deps.branch())?;
     }

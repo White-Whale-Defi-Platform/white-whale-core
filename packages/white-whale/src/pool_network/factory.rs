@@ -15,7 +15,7 @@ pub struct InstantiateMsg {
     pub token_code_id: u64,
     pub fee_collector_addr: String,
     #[cfg(feature = "osmosis")]
-    pub osmosis_fee_collector_addr: String
+    pub osmosis_fee_collector_addr: String,
 }
 
 #[cw_serde]

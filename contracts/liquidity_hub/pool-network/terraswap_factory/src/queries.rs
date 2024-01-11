@@ -21,7 +21,7 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     };
 
     #[cfg(feature = "osmosis")]
-        let resp = ConfigResponse {
+    let resp = ConfigResponse {
         owner: deps.api.addr_humanize(&config.owner)?.to_string(),
         token_code_id: config.token_code_id,
         pair_code_id: config.pair_code_id,

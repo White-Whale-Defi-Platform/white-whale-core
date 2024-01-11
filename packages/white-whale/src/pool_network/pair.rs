@@ -19,6 +19,8 @@ pub struct InstantiateMsg {
     /// If true, the pair will use the token factory to create the LP token. If false, it will
     /// use a cw20 token instead.
     pub token_factory_lp: bool,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_collector_addr: String,
 }
 
 #[cw_serde]
@@ -41,11 +43,21 @@ pub enum ExecuteMsg {
         to: Option<String>,
     },
     /// Updates the pair pool config
+    #[cfg(not(feature = "osmosis"))]
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
+    },
+    /// Updates the pair pool config
+    #[cfg(feature = "osmosis")]
+    UpdateConfig {
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        pool_fees: Option<PoolFee>,
+        feature_toggle: Option<FeatureToggle>,
+        osmosis_fee_collector_addr: Option<String>,
     },
     /// Collects the Protocol fees accrued by the pool
     CollectProtocolFees {},
@@ -110,6 +122,8 @@ pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
     pub burn_fee: Fee,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee: Fee,
 }
 
 impl PoolFee {
@@ -120,16 +134,54 @@ impl PoolFee {
         self.swap_fee.is_valid()?;
         self.burn_fee.is_valid()?;
 
-        if self
-            .protocol_fee
-            .share
-            .checked_add(self.swap_fee.share)?
-            .checked_add(self.burn_fee.share)?
-            >= Decimal::percent(100)
-        {
+        let total_fee = {
+            let base_fee = self
+                .protocol_fee
+                .share
+                .checked_add(self.swap_fee.share)?
+                .checked_add(self.burn_fee.share)?;
+
+            #[cfg(feature = "osmosis")]
+            {
+                self.osmosis_fee.is_valid()?;
+                base_fee.checked_add(self.osmosis_fee.share)?
+            }
+
+            #[cfg(not(feature = "osmosis"))]
+            {
+                base_fee
+            }
+        };
+
+        // Check if the total fee exceeds 100%
+        if total_fee >= Decimal::percent(100) {
             return Err(StdError::generic_err("Invalid fees"));
         }
+
         Ok(())
+    }
+
+    /// aggregates all the fees into a single decimal
+    pub fn aggregate(&self) -> StdResult<Decimal> {
+        let total_fee = {
+            let base_fee = self
+                .protocol_fee
+                .share
+                .checked_add(self.swap_fee.share)?
+                .checked_add(self.burn_fee.share)?;
+
+            #[cfg(feature = "osmosis")]
+            {
+                base_fee.checked_add(self.osmosis_fee.share)?
+            }
+
+            #[cfg(not(feature = "osmosis"))]
+            {
+                base_fee
+            }
+        };
+
+        Ok(total_fee)
     }
 }
 
@@ -137,6 +189,8 @@ impl PoolFee {
 pub struct Config {
     pub owner: Addr,
     pub fee_collector_addr: Addr,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
 }
@@ -158,6 +212,8 @@ pub struct SimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
@@ -174,6 +230,8 @@ pub struct ReverseSimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 /// We currently take no arguments for migrations
