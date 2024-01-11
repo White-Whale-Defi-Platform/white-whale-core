@@ -14,11 +14,14 @@ pub struct InstantiateMsg {
     pub trio_code_id: u64,
     pub token_code_id: u64,
     pub fee_collector_addr: String,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_collector_addr: String
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Updates contract's config, i.e. relevant code_ids, fee_collector address and owner
+    #[cfg(not(feature = "osmosis"))]
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
@@ -26,7 +29,18 @@ pub enum ExecuteMsg {
         pair_code_id: Option<u64>,
         trio_code_id: Option<u64>,
     },
+    /// Updates contract's config, i.e. relevant code_ids, fee_collector address and owner
+    #[cfg(feature = "osmosis")]
+    UpdateConfig {
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        osmosis_fee_collector_addr: Option<String>,
+        token_code_id: Option<u64>,
+        pair_code_id: Option<u64>,
+        trio_code_id: Option<u64>,
+    },
     /// Updates a pair config
+    #[cfg(not(feature = "osmosis"))]
     UpdatePairConfig {
         pair_addr: String,
         owner: Option<String>,
@@ -34,11 +48,32 @@ pub enum ExecuteMsg {
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
     },
+    #[cfg(feature = "osmosis")]
+    UpdatePairConfig {
+        pair_addr: String,
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        osmosis_fee_collector_addr: Option<String>,
+        pool_fees: Option<PoolFee>,
+        feature_toggle: Option<FeatureToggle>,
+    },
     /// Updates a trio config
+    #[cfg(not(feature = "osmosis"))]
     UpdateTrioConfig {
         trio_addr: String,
         owner: Option<String>,
         fee_collector_addr: Option<String>,
+        pool_fees: Option<TrioPoolFee>,
+        feature_toggle: Option<TrioFeatureToggle>,
+        amp_factor: Option<RampAmp>,
+    },
+    /// Updates a trio config
+    #[cfg(feature = "osmosis")]
+    UpdateTrioConfig {
+        trio_addr: String,
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        osmosis_fee_collector_addr: Option<String>,
         pool_fees: Option<TrioPoolFee>,
         feature_toggle: Option<TrioFeatureToggle>,
         amp_factor: Option<RampAmp>,
@@ -120,6 +155,8 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub owner: String,
     pub fee_collector_addr: String,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_collector_addr: String,
     pub pair_code_id: u64,
     pub trio_code_id: u64,
     pub token_code_id: u64,

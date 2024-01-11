@@ -9,6 +9,8 @@ use white_whale::pool_network::asset::{
 pub struct Config {
     pub owner: CanonicalAddr,
     pub fee_collector_addr: Addr,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_collector_addr: Addr,
     pub pair_code_id: u64,
     pub trio_code_id: u64,
     pub token_code_id: u64,

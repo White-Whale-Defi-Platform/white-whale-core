@@ -33,12 +33,23 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+    #[cfg(not(feature = "osmosis"))]
+        let config = Config {
+        owner: deps.api.addr_canonicalize(info.sender.as_str())?,
+        token_code_id: msg.token_code_id,
+        pair_code_id: msg.pair_code_id,
+        trio_code_id: msg.trio_code_id,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+    };
+
+    #[cfg(feature = "osmosis")]
     let config = Config {
         owner: deps.api.addr_canonicalize(info.sender.as_str())?,
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
         trio_code_id: msg.trio_code_id,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+        osmosis_fee_collector_addr: deps.api.addr_validate(msg.osmosis_fee_collector_addr.as_str())?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -60,6 +71,7 @@ pub fn execute(
     }
 
     match msg {
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
@@ -70,6 +82,24 @@ pub fn execute(
             deps,
             owner,
             fee_collector_addr,
+            None,
+            token_code_id,
+            pair_code_id,
+            trio_code_id,
+        ),
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdateConfig {
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            token_code_id,
+            pair_code_id,
+            trio_code_id,
+        } => commands::update_config(
+            deps,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
             token_code_id,
             pair_code_id,
             trio_code_id,
@@ -113,6 +143,7 @@ pub fn execute(
         ExecuteMsg::MigrateTrio { contract, code_id } => {
             commands::execute_migrate_trio(deps, contract, code_id)
         }
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdatePairConfig {
             pair_addr,
             owner,
@@ -124,9 +155,28 @@ pub fn execute(
             pair_addr,
             owner,
             fee_collector_addr,
+            None,
             pool_fees,
             feature_toggle,
         ),
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdatePairConfig {
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        } => commands::update_pair_config(
+            deps,
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+        ),
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdateTrioConfig {
             trio_addr,
             owner,
@@ -139,6 +189,26 @@ pub fn execute(
             trio_addr,
             owner,
             fee_collector_addr,
+            None,
+            pool_fees,
+            feature_toggle,
+            amp_factor,
+        ),
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdateTrioConfig {
+            trio_addr,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            amp_factor,
+        } => commands::update_trio_config(
+            deps,
+            trio_addr,
+            owner,
+            fee_collector_addr,
+            osmosis_fee_collector_addr,
             pool_fees,
             feature_toggle,
             amp_factor,
@@ -258,9 +328,11 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
+    #[cfg(not(feature = "osmosis"))]
     if storage_version <= Version::parse("1.0.8")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
+    #[cfg(not(feature = "osmosis"))]
     if storage_version <= Version::parse("1.2.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }

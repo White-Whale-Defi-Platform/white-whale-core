@@ -26,6 +26,7 @@ pub fn update_config(
     deps: DepsMut,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
+    osmosis_fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
     trio_code_id: Option<u64>,
@@ -55,6 +56,13 @@ pub fn update_config(
         config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
     }
 
+    #[cfg(feature = "osmosis")]
+    if let Some(osmosis_fee_collector_addr) = osmosis_fee_collector_addr {
+        config.osmosis_fee_collector_addr = deps
+            .api
+            .addr_validate(osmosis_fee_collector_addr.as_str())?;
+    }
+
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "update_config"))
@@ -66,20 +74,37 @@ pub fn update_pair_config(
     pair_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
+    osmosis_fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
 ) -> Result<Response, ContractError> {
-    Ok(Response::new()
-        .add_message(wasm_execute(
-            deps.api.addr_validate(pair_addr.as_str())?.to_string(),
-            &pool_network::pair::ExecuteMsg::UpdateConfig {
+    let validated_pair_addr = deps.api.addr_validate(&pair_addr)?.to_string();
+
+    let update_msg = {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
                 feature_toggle,
-            },
-            vec![],
-        )?)
+            }
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            pool_network::pair::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+               // osmosis_fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+            }
+        }
+    };
+
+    Ok(Response::default()
+        .add_message(wasm_execute(validated_pair_addr, &update_msg, vec![])?)
         .add_attribute("action", "update_pair_config"))
 }
 
@@ -181,22 +206,40 @@ pub fn update_trio_config(
     trio_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
+    osmosis_fee_collector_addr: Option<String>,
     pool_fees: Option<TrioPoolFee>,
     feature_toggle: Option<TrioFeatureToggle>,
     amp_factor: Option<RampAmp>,
 ) -> Result<Response, ContractError> {
-    Ok(Response::new()
-        .add_message(wasm_execute(
-            deps.api.addr_validate(trio_addr.as_str())?.to_string(),
-            &pool_network::trio::ExecuteMsg::UpdateConfig {
+    let validated_trio_addr = deps.api.addr_validate(&trio_addr)?.to_string();
+
+    let update_msg = {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
                 pool_fees,
                 feature_toggle,
                 amp_factor,
-            },
-            vec![],
-        )?)
+            }
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            pool_network::trio::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+                //osmosis_fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+                amp_factor,
+            }
+        }
+    };
+
+    Ok(Response::new()
+        .add_message(wasm_execute(validated_trio_addr, &update_msg, vec![])?)
         .add_attribute("action", "update_trio_config"))
 }
 
