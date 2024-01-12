@@ -133,7 +133,11 @@ pub fn compute_offer_amount(
         )
         .unwrap();
 
-    let spread_amount = before_commission_deduction.saturating_sub(offer_amount);
+    let spread_amount = if before_commission_deduction > offer_amount {
+        before_commission_deduction - offer_amount
+    } else {
+        offer_amount - before_commission_deduction
+    };
 
     let swap_fee_amount = pool_fees
         .swap_fee

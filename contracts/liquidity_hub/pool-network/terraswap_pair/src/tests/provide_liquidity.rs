@@ -30,6 +30,7 @@ use cosmwasm_std::coin;
 #[cfg(feature = "injective")]
 use cw_multi_test::Executor;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -500,6 +501,7 @@ fn provide_liquidity_cw20_lp() {
     let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_zero_amount() {
     let mut deps = mock_dependencies(&[Coin {
@@ -600,6 +602,7 @@ fn provide_liquidity_zero_amount() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_invalid_minimum_lp_amount() {
     let mut deps = mock_dependencies(&[Coin {

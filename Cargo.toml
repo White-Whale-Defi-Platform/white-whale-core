@@ -36,8 +36,7 @@ thiserror = "1.0.43"
 osmosis-std-derive = "0.15.3"
 prost = {version = "0.11.9", default-features = false, features = ["prost-derive"]}
 prost-types = {version = "0.11.9", default-features = false}
-#white-whale = { path = "./packages/white-whale", features = ["osmosis", "token_factory", "osmosis_token_factory", "injective"] }
-white-whale = { path = "./packages/white-whale" }
+white-whale = { path = "./packages/white-whale", features = ["token_factory", "osmosis_token_factory", "injective"] }
 white-whale-testing = { path = "./packages/white-whale-testing" }
 cw-multi-test = { version = "0.16.5" }
 uint = "0.9.5"

@@ -218,6 +218,7 @@ pub fn create_pair(
 }
 
 #[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
 /// Updates a trio config
 pub fn update_trio_config(
     deps: DepsMut,

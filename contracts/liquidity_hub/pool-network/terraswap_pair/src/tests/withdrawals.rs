@@ -22,6 +22,7 @@ use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_xyk_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -184,6 +185,7 @@ fn withdraw_xyk_liquidity_cw20_lp() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_stableswap_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
@@ -333,6 +335,7 @@ fn withdraw_stableswap_liquidity() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_unauthorized() {
     let mut deps = mock_dependencies(&[Coin {
@@ -399,6 +402,7 @@ fn test_withdrawal_unauthorized() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_wrong_message() {
     let mut deps = mock_dependencies(&[Coin {

@@ -231,7 +231,7 @@ impl AssetInfo {
                 #[cfg(feature = "injective")]
                 {
                     if is_ethereum_bridged_asset(&denom) {
-                        return get_ethereum_bridged_asset_label(denom.clone());
+                        return get_ethereum_bridged_asset_label(denom);
                     }
                 }
                 if is_ibc_token(&denom) {

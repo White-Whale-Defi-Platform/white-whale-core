@@ -18,6 +18,7 @@ use white_whale::pool_network::denom::MsgBurn;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -416,6 +417,7 @@ fn withdraw_liquidity_token_factory_lp_wrong_asset() {
     assert_eq!(err, ContractError::AssetMismatch {});
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_unauthorized() {
     let mut deps = mock_dependencies(&[Coin {
@@ -489,6 +491,7 @@ fn test_withdrawal_unauthorized() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_wrong_message() {
     let mut deps = mock_dependencies(&[Coin {

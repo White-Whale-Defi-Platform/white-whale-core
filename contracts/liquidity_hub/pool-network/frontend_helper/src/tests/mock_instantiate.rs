@@ -1,12 +1,14 @@
-use crate::tests::mock_info::mock_creator;
-use crate::tests::store_code::fee_distributor_mock_contract;
 use cosmwasm_std::{to_binary, Addr, Decimal, Uint128, WasmMsg};
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
+
 use white_whale::{
     fee::Fee,
     pool_network::asset::{Asset, AssetInfo, PairType},
 };
+
+use crate::tests::mock_info::mock_creator;
+use crate::tests::store_code::fee_distributor_mock_contract;
 
 use super::{
     mock_info::mock_admin,
@@ -69,30 +71,68 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         .try_into()
         .unwrap();
 
+    let instantiate_msg: white_whale::pool_network::pair::InstantiateMsg;
+    let pool_fee: white_whale::pool_network::pair::PoolFee;
+    #[cfg(not(feature = "osmosis"))]
+    {
+        pool_fee = white_whale::pool_network::pair::PoolFee {
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        instantiate_msg = white_whale::pool_network::pair::InstantiateMsg {
+            token_factory_lp: false,
+            token_code_id: token_id,
+            pool_fees: pool_fee.clone(),
+            pair_type: PairType::ConstantProduct,
+            fee_collector_addr: "fee_collector_addr".to_string(),
+            asset_decimals: [6, 6],
+            asset_infos: pool_assets.clone(),
+        }
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        pool_fee = white_whale::pool_network::pair::PoolFee {
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        instantiate_msg = white_whale::pool_network::pair::InstantiateMsg {
+            token_factory_lp: false,
+            token_code_id: token_id,
+            pool_fees: pool_fee.clone(),
+            pair_type: PairType::ConstantProduct,
+            fee_collector_addr: "fee_collector_addr".to_string(),
+            asset_decimals: [6, 6],
+            asset_infos: pool_assets.clone(),
+            osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
+        }
+    }
+
     // create the pair
     let pair = app
         .instantiate_contract(
             pair_id,
             mock_admin().sender,
-            &white_whale::pool_network::pair::InstantiateMsg {
-                token_factory_lp: false,
-                token_code_id: token_id,
-                pool_fees: white_whale::pool_network::pair::PoolFee {
-                    burn_fee: Fee {
-                        share: Decimal::zero(),
-                    },
-                    protocol_fee: Fee {
-                        share: Decimal::zero(),
-                    },
-                    swap_fee: Fee {
-                        share: Decimal::zero(),
-                    },
-                },
-                pair_type: PairType::ConstantProduct,
-                fee_collector_addr: "fee_collector_addr".to_string(),
-                asset_decimals: [6, 6],
-                asset_infos: pool_assets.clone(),
-            },
+            &instantiate_msg,
             &[],
             "mock pair",
             None,

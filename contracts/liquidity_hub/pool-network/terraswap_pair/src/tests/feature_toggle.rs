@@ -11,6 +11,7 @@ use white_whale::pool_network::pair::{
     Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee,
 };
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_feature_toggle_swap_disabled() {
     let mut deps = mock_dependencies(&[Coin {
@@ -118,6 +119,7 @@ fn test_feature_toggle_swap_disabled() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_feature_toggle_withdrawals_disabled() {
     let mut deps = mock_dependencies(&[Coin {
@@ -197,6 +199,7 @@ fn test_feature_toggle_withdrawals_disabled() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_feature_toggle_deposits_disabled() {
     let mut deps = mock_dependencies(&[Coin {

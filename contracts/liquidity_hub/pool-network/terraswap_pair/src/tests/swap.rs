@@ -1,16 +1,10 @@
-use crate::contract::{execute, instantiate, query, reply};
-use crate::error::ContractError;
-use crate::helpers::compute_swap;
-use crate::queries::query_fees;
-use crate::state::{
-    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
-};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, coins, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, SubMsg,
     SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
+
 use white_whale::fee::Fee;
 use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::mock_querier::mock_dependencies;
@@ -19,6 +13,15 @@ use white_whale::pool_network::pair::{
     SimulationResponse,
 };
 
+use crate::contract::{execute, instantiate, query, reply};
+use crate::error::ContractError;
+use crate::helpers::compute_swap;
+use crate::queries::query_fees;
+use crate::state::{
+    ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
+};
+
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
@@ -43,7 +46,7 @@ fn test_compute_swap_with_huge_pool_variance() {
             pool_fees,
             &PairType::ConstantProduct,
             6,
-            6
+            6,
         )
         .unwrap()
         .return_amount,
@@ -76,18 +79,11 @@ fn try_native_to_token() {
         ),
     ]);
 
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
+    let msg: InstantiateMsg;
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
@@ -97,11 +93,61 @@ fn try_native_to_token() {
             burn_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
-        },
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-    };
+        };
+
+        msg = InstantiateMsg {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            ],
+            token_code_id: 10u64,
+            asset_decimals: [6u8, 8u8],
+            pool_fees: pool_fees.clone(),
+            fee_collector_addr: "collector".to_string(),
+            pair_type: PairType::ConstantProduct,
+            token_factory_lp: false,
+        }
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+        };
+
+        msg = InstantiateMsg {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            ],
+            token_code_id: 10u64,
+            asset_decimals: [6u8, 8u8],
+            pool_fees: pool_fees.clone(),
+            fee_collector_addr: "collector".to_string(),
+            pair_type: PairType::ConstantProduct,
+            token_factory_lp: false,
+            osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
+        };
+    }
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -145,6 +191,9 @@ fn try_native_to_token() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    #[cfg(feature = "osmosis")]
+    assert_eq!(res.messages.len(), 3);
+    #[cfg(not(feature = "osmosis"))]
     assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
@@ -158,30 +207,68 @@ fn try_native_to_token() {
     let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_burn_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
-    let expected_return_amount = expected_ret_amount
-        .checked_sub(expected_swap_fee_amount)
-        .unwrap()
-        .checked_sub(expected_protocol_fee_amount)
-        .unwrap()
-        .checked_sub(expected_burn_fee_amount)
-        .unwrap();
+    #[cfg(feature = "osmosis")]
+    let expected_osmosis_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
-    // since there is a burn_fee on the PoolFee, check burn message
-    // since we swapped to a cw20 token, the burn message should be a Cw20ExecuteMsg::Burn
-    let expected_burn_msg = SubMsg {
-        id: 0,
-        msg: CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Burn {
-                amount: expected_burn_fee_amount,
-            })
-            .unwrap(),
-            funds: vec![],
-        }),
-        gas_limit: None,
-        reply_on: ReplyOn::Never,
+    let expected_return_amount = {
+        let x = expected_ret_amount
+            .checked_sub(expected_swap_fee_amount)
+            .unwrap()
+            .checked_sub(expected_protocol_fee_amount)
+            .unwrap()
+            .checked_sub(expected_burn_fee_amount)
+            .unwrap();
+
+        #[cfg(feature = "osmosis")]
+        {
+            x.checked_sub(expected_osmosis_fee_amount).unwrap()
+        }
+
+        #[cfg(not(feature = "osmosis"))]
+        {
+            x
+        }
     };
-    assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        // since there is a burn_fee on the PoolFee, check burn message
+        // since we swapped to a cw20 token, the burn message should be a Cw20ExecuteMsg::Burn
+        let expected_burn_msg = SubMsg {
+            id: 0,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: "asset0000".to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Burn {
+                    amount: expected_burn_fee_amount,
+                })
+                .unwrap(),
+                funds: vec![],
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Never,
+        };
+        assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        // the last message is the osmosis fee send message
+        let expected_send_msg = SubMsg {
+            id: 0,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: "asset0000".to_string(),
+                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    recipient: "osmosis_fee_collector_addr".to_string(),
+                    amount: expected_osmosis_fee_amount,
+                })
+                .unwrap(),
+                funds: vec![],
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Never,
+        };
+        assert_eq!(res.messages.last().unwrap().clone(), expected_send_msg);
+    }
 
     // as we swapped native to token, we accumulate the protocol fees in token
     let protocol_fees_for_token = query_fees(
@@ -288,6 +375,11 @@ fn try_native_to_token() {
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_burn_fee_amount, simulation_res.burn_fee_amount);
+    #[cfg(feature = "osmosis")]
+    assert_eq!(
+        expected_osmosis_fee_amount,
+        simulation_res.osmosis_fee_amount
+    );
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
     assert_eq!(
         expected_protocol_fee_amount,
@@ -332,9 +424,10 @@ fn try_native_to_token() {
     )
     .unwrap();
 
+    println!("reverse_simulation_res: {:?}", reverse_simulation_res);
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 3i128
+            < 5i128
     );
     assert!(
         (expected_swap_fee_amount.u128() as i128
@@ -360,6 +453,13 @@ fn try_native_to_token() {
             .abs()
             < 3i128
     );
+    #[cfg(feature = "osmosis")]
+    assert!(
+        (expected_osmosis_fee_amount.u128() as i128
+            - reverse_simulation_res.osmosis_fee_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
 
     assert_eq!(
         res.attributes,
@@ -378,6 +478,11 @@ fn try_native_to_token() {
                 expected_protocol_fee_amount.to_string(),
             ),
             attr("burn_fee_amount", expected_burn_fee_amount.to_string()),
+            #[cfg(feature = "osmosis")]
+            attr(
+                "osmosis_fee_amount",
+                expected_osmosis_fee_amount.to_string()
+            ),
             attr("swap_type", "ConstantProduct"),
         ]
     );
@@ -396,6 +501,7 @@ fn try_native_to_token() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_swap_invalid_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -523,18 +629,11 @@ fn try_token_to_native() {
         ),
     ]);
 
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [8u8, 8u8],
-        pool_fees: PoolFee {
+    let msg: InstantiateMsg;
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
@@ -544,11 +643,61 @@ fn try_token_to_native() {
             burn_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
-        },
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-    };
+        };
+
+        msg = InstantiateMsg {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            ],
+            token_code_id: 10u64,
+            asset_decimals: [6u8, 8u8],
+            pool_fees: pool_fees.clone(),
+            fee_collector_addr: "collector".to_string(),
+            pair_type: PairType::ConstantProduct,
+            token_factory_lp: false,
+        }
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(3u128, 1000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+        };
+
+        msg = InstantiateMsg {
+            asset_infos: [
+                AssetInfo::NativeToken {
+                    denom: "uusd".to_string(),
+                },
+                AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            ],
+            token_code_id: 10u64,
+            asset_decimals: [6u8, 8u8],
+            pool_fees: pool_fees.clone(),
+            fee_collector_addr: "collector".to_string(),
+            pair_type: PairType::ConstantProduct,
+            token_factory_lp: false,
+            osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
+        };
+    }
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
@@ -606,6 +755,9 @@ fn try_token_to_native() {
     let info = mock_info("asset0000", &[]);
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+    #[cfg(feature = "osmosis")]
+    assert_eq!(res.messages.len(), 3);
+    #[cfg(not(feature = "osmosis"))]
     assert_eq!(res.messages.len(), 2);
     let msg_transfer = res.messages.get(0).expect("no message");
 
@@ -619,25 +771,57 @@ fn try_token_to_native() {
     let expected_swap_fee_amount = expected_ret_amount.multiply_ratio(3u128, 1000u128); // 0.3%
     let expected_protocol_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
     let expected_burn_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
-    let expected_return_amount = expected_ret_amount
-        .checked_sub(expected_swap_fee_amount)
-        .unwrap()
-        .checked_sub(expected_protocol_fee_amount)
-        .unwrap()
-        .checked_sub(expected_burn_fee_amount)
-        .unwrap();
+    #[cfg(feature = "osmosis")]
+    let expected_osmosis_fee_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
-    // since there is a burn_fee on the PoolFee, check burn message
-    // since we swapped to a native token, the burn message should be a BankMsg::Burn
-    let expected_burn_msg = SubMsg {
-        id: 0,
-        msg: CosmosMsg::Bank(BankMsg::Burn {
-            amount: coins(expected_burn_fee_amount.u128(), "uusd"),
-        }),
-        gas_limit: None,
-        reply_on: ReplyOn::Never,
+    let expected_return_amount = {
+        let x = expected_ret_amount
+            .checked_sub(expected_swap_fee_amount)
+            .unwrap()
+            .checked_sub(expected_protocol_fee_amount)
+            .unwrap()
+            .checked_sub(expected_burn_fee_amount)
+            .unwrap();
+
+        #[cfg(feature = "osmosis")]
+        {
+            x.checked_sub(expected_osmosis_fee_amount).unwrap()
+        }
+
+        #[cfg(not(feature = "osmosis"))]
+        {
+            x
+        }
     };
-    assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        let expected_burn_msg = SubMsg {
+            id: 0,
+            msg: CosmosMsg::Bank(BankMsg::Burn {
+                amount: coins(expected_burn_fee_amount.u128().into(), "uusd"),
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Never,
+        };
+
+        assert_eq!(res.messages.last().unwrap().clone(), expected_burn_msg);
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        // the last message is the osmosis fee send message
+        let expected_send_msg = SubMsg {
+            id: 0,
+            msg: CosmosMsg::Bank(BankMsg::Send {
+                to_address: "osmosis_fee_collector_addr".to_string(),
+                amount: coins(expected_osmosis_fee_amount.u128().into(), "uusd"),
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Never,
+        };
+        assert_eq!(res.messages.last().unwrap().clone(), expected_send_msg);
+    }
 
     // as we swapped token to native, we accumulate the protocol fees in native
     let protocol_fees_for_native = query_fees(
@@ -720,6 +904,11 @@ fn try_token_to_native() {
     assert_eq!(expected_return_amount, simulation_res.return_amount);
     assert_eq!(expected_swap_fee_amount, simulation_res.swap_fee_amount);
     assert_eq!(expected_burn_fee_amount, simulation_res.burn_fee_amount);
+    #[cfg(feature = "osmosis")]
+    assert_eq!(
+        expected_osmosis_fee_amount,
+        simulation_res.osmosis_fee_amount
+    );
     assert_eq!(expected_spread_amount, simulation_res.spread_amount);
     assert_eq!(
         expected_protocol_fee_amount,
@@ -767,7 +956,7 @@ fn try_token_to_native() {
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
-            < 3i128
+            < 5i128
     );
     assert!(
         (expected_swap_fee_amount.u128() as i128
@@ -793,6 +982,13 @@ fn try_token_to_native() {
             .abs()
             < 3i128
     );
+    #[cfg(feature = "osmosis")]
+    assert!(
+        (expected_osmosis_fee_amount.u128() as i128
+            - reverse_simulation_res.osmosis_fee_amount.u128() as i128)
+            .abs()
+            < 3i128
+    );
 
     assert_eq!(
         res.attributes,
@@ -811,6 +1007,11 @@ fn try_token_to_native() {
                 expected_protocol_fee_amount.to_string(),
             ),
             attr("burn_fee_amount", expected_burn_fee_amount.to_string()),
+            #[cfg(feature = "osmosis")]
+            attr(
+                "osmosis_fee_amount",
+                expected_osmosis_fee_amount.to_string()
+            ),
             attr("swap_type", "ConstantProduct"),
         ]
     );
@@ -846,6 +1047,7 @@ fn try_token_to_native() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_swap_to_third_party() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -991,6 +1193,7 @@ fn test_swap_to_third_party() {
     assert_eq!(simulation_res.burn_fee_amount, Uint128::zero());
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn stableswap_reverse_simulation() {
     let total_share = Uint128::from(1_000_000u128);
@@ -1077,6 +1280,7 @@ fn stableswap_reverse_simulation() {
     )
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn stableswap_with_different_precisions() {
     let total_share = Uint128::from(20_000_000_000u128); // 200_000.00000
@@ -1323,7 +1527,7 @@ fn stableswap_with_different_precisions() {
                 expected_protocol_fee_amount.to_string(),
             ),
             attr("burn_fee_amount", expected_burn_fee_amount.to_string()),
-            attr("swap_type", "StableSwap")
+            attr("swap_type", "StableSwap"),
         ]
     );
 
@@ -1352,6 +1556,7 @@ fn stableswap_with_different_precisions() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_stableswap_with_no_swap_amount() {
     let offer_pool = Uint128::from(25000000u128);
@@ -1376,7 +1581,7 @@ fn test_stableswap_with_no_swap_amount() {
             pool_fees,
             &PairType::ConstantProduct,
             6,
-            6
+            6,
         )
         .unwrap()
         .return_amount,

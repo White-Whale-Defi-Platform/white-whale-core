@@ -12,6 +12,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_protocol_fees() {
     let total_share = Uint128::from(60_000_000_000u128);
@@ -207,6 +208,7 @@ fn test_protocol_fees() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -509,6 +511,7 @@ fn test_collect_protocol_fees_successful() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -697,6 +700,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn protocol_fees() {
     let protocol_fee = PoolFee {

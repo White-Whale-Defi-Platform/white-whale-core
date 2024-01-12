@@ -4,12 +4,6 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-#[cfg(feature = "osmosis")]
-use cosmwasm_std::Uint256;
-
-#[cfg(not(feature = "osmosis"))]
-use cosmwasm_std::Decimal256;
-
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",

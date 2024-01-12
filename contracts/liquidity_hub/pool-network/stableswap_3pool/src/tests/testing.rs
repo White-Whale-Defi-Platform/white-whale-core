@@ -24,6 +24,7 @@ use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_trio_info;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn proper_initialization_cw20_lp() {
     let mut deps = mock_dependencies(&[]);
@@ -331,6 +332,7 @@ fn intialize_with_burnable_token_factory_asset() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_fees() {
     let mut deps = mock_dependencies(&[]);
@@ -381,6 +383,7 @@ fn test_initialization_invalid_fees() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_amp() {
     let mut deps = mock_dependencies(&[]);
@@ -437,6 +440,7 @@ fn test_initialization_invalid_amp() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
@@ -612,6 +616,7 @@ fn test_max_spread() {
     .unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
@@ -704,6 +709,7 @@ fn test_update_config_unsuccessful() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_successful() {
     let mut deps = mock_dependencies(&[]);

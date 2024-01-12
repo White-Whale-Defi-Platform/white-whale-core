@@ -20,6 +20,7 @@ use white_whale::pool_network::trio::{
     SimulationResponse,
 };
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
@@ -52,6 +53,7 @@ fn test_compute_swap_with_huge_pool_variance() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -408,6 +410,7 @@ fn try_native_to_token() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_swap_invalid_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -519,6 +522,7 @@ fn try_swap_invalid_token() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_token_to_native() {
     let total_share = Uint128::from(20_000_000_000u128);
@@ -812,6 +816,9 @@ fn try_token_to_native() {
     )
     .unwrap();
 
+    println!("reverse_simulation_res: {:?}", reverse_simulation_res);
+    println!("expected_swap_fee_amount: {:?}", expected_swap_fee_amount);
+
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
             < 3i128
@@ -895,6 +902,7 @@ fn try_token_to_native() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_swap_to_third_party() {
     let total_share = Uint128::from(30_000_000_000u128);

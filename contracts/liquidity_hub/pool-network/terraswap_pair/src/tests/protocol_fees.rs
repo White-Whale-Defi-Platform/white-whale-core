@@ -12,6 +12,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_protocol_fees() {
     let total_share = Uint128::from(300_000_000_000u128);
@@ -196,6 +197,7 @@ fn test_protocol_fees() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful() {
     let total_share = Uint128::from(300_000_000_000u128);
@@ -424,6 +426,7 @@ fn test_collect_protocol_fees_successful() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(300_000_000_000u128);
@@ -603,6 +606,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn protocol_fees() {
     let protocol_fee = PoolFee {
@@ -678,6 +682,102 @@ fn protocol_fees() {
         },
         burn_fee: Fee {
             share: Decimal::zero(),
+        },
+    };
+    assert_eq!(protocol_fee.is_valid(), Ok(()));
+}
+
+#[cfg(feature = "osmosis")]
+#[test]
+fn protocol_fees_osmosis() {
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(50),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(50),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(200),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(200),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fee"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(40),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+    assert_eq!(
+        protocol_fee.is_valid(),
+        Err(StdError::generic_err("Invalid fees"))
+    );
+
+    let protocol_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(20),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(60),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::percent(10),
         },
     };
     assert_eq!(protocol_fee.is_valid(), Ok(()));
