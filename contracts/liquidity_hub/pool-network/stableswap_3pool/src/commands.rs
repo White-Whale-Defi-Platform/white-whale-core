@@ -542,7 +542,6 @@ pub fn swap(
     ]))
 }
 
-#[allow(unused_variables)]
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
 #[allow(clippy::too_many_arguments)]
 pub fn update_config(
@@ -551,7 +550,6 @@ pub fn update_config(
     info: MessageInfo,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
-    osmosis_fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
     ramp: Option<RampAmp>,
@@ -631,13 +629,6 @@ pub fn update_config(
 
     if let Some(fee_collector_addr) = fee_collector_addr {
         config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
-    }
-
-    #[cfg(feature = "osmosis")]
-    if let Some(osmosis_fee_collector_addr) = osmosis_fee_collector_addr {
-        config.osmosis_fee_collector_addr = deps
-            .api
-            .addr_validate(osmosis_fee_collector_addr.as_str())?;
     }
 
     CONFIG.save(deps.storage, &config)?;

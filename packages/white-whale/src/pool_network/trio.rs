@@ -19,8 +19,6 @@ pub struct InstantiateMsg {
     /// If true, the pair will use the token factory to create the LP token. If false, it will
     /// use a cw20 token instead.
     pub token_factory_lp: bool,
-    #[cfg(feature = "osmosis")]
-    pub osmosis_fee_collector_addr: String,
 }
 
 #[cw_serde]
@@ -44,20 +42,9 @@ pub enum ExecuteMsg {
         to: Option<String>,
     },
     /// Updates the trio pool config
-    #[cfg(not(feature = "osmosis"))]
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
-        pool_fees: Option<PoolFee>,
-        feature_toggle: Option<FeatureToggle>,
-        amp_factor: Option<RampAmp>,
-    },
-    /// Updates the trio pool config
-    #[cfg(feature = "osmosis")]
-    UpdateConfig {
-        owner: Option<String>,
-        fee_collector_addr: Option<String>,
-        osmosis_fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
         amp_factor: Option<RampAmp>,
@@ -205,8 +192,6 @@ impl PoolFee {
 pub struct Config {
     pub owner: Addr,
     pub fee_collector_addr: Addr,
-    #[cfg(feature = "osmosis")]
-    pub osmosis_fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
     pub initial_amp: u64,

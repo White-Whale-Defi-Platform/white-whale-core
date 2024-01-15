@@ -32,21 +32,11 @@ use crate::state::{
 fn proper_initialization() {
     let mut deps = mock_dependencies(&[]);
 
-    #[cfg(not(feature = "osmosis"))]
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = InstantiateMsg {
-        pair_code_id: 321u64,
-        trio_code_id: 456u64,
-        token_code_id: 123u64,
-        fee_collector_addr: "collector".to_string(),
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     let info = mock_info("addr0000", &[]);
@@ -59,32 +49,17 @@ fn proper_initialization() {
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
     assert_eq!("addr0000".to_string(), config_res.owner);
-    #[cfg(feature = "osmosis")]
-    assert_eq!(
-        "osmosis_fee_collector_addr".to_string(),
-        config_res.osmosis_fee_collector_addr
-    );
 }
 
 #[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
 
-    #[cfg(not(feature = "osmosis"))]
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = InstantiateMsg {
-        pair_code_id: 321u64,
-        trio_code_id: 456u64,
-        token_code_id: 123u64,
-        fee_collector_addr: "collector".to_string(),
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     let info = mock_info("addr0000", &[]);
@@ -104,21 +79,11 @@ fn can_migrate_contract() {
 fn update_config() {
     let mut deps = mock_dependencies(&[]);
 
-    #[cfg(not(feature = "osmosis"))]
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = InstantiateMsg {
-        pair_code_id: 321u64,
-        trio_code_id: 456u64,
-        token_code_id: 123u64,
-        fee_collector_addr: "collector".to_string(),
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     let info = mock_info("addr0000", &[]);
@@ -129,23 +94,12 @@ fn update_config() {
     // update owner
     let info = mock_info("addr0000", &[]);
 
-    #[cfg(not(feature = "osmosis"))]
     let msg = ExecuteMsg::UpdateConfig {
         owner: Some("addr0001".to_string()),
         pair_code_id: None,
         trio_code_id: None,
         token_code_id: None,
         fee_collector_addr: None,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = ExecuteMsg::UpdateConfig {
-        owner: Some("addr0001".to_string()),
-        pair_code_id: None,
-        trio_code_id: None,
-        token_code_id: None,
-        fee_collector_addr: None,
-        osmosis_fee_collector_addr: Some("new_osmosis_fee_collector_addr".to_string()),
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -158,32 +112,17 @@ fn update_config() {
     assert_eq!(321u64, config_res.pair_code_id);
     assert_eq!("addr0001".to_string(), config_res.owner);
     assert_eq!("collector".to_string(), config_res.fee_collector_addr);
-    #[cfg(feature = "osmosis")]
-    assert_eq!(
-        "new_osmosis_fee_collector_addr".to_string(),
-        config_res.osmosis_fee_collector_addr
-    );
 
     // update left items
     let env = mock_env();
     let info = mock_info("addr0001", &[]);
-    #[cfg(not(feature = "osmosis"))]
-    let msg = ExecuteMsg::UpdateConfig {
-        owner: None,
-        pair_code_id: Some(100u64),
-        trio_code_id: Some(300u64),
-        token_code_id: Some(200u64),
-        fee_collector_addr: Some("new_collector".to_string()),
-    };
 
-    #[cfg(feature = "osmosis")]
     let msg = ExecuteMsg::UpdateConfig {
         owner: None,
         pair_code_id: Some(100u64),
         trio_code_id: Some(300u64),
         token_code_id: Some(200u64),
         fee_collector_addr: Some("new_collector".to_string()),
-        osmosis_fee_collector_addr: None,
     };
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
@@ -201,23 +140,12 @@ fn update_config() {
     // Unauthorized err
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
-    #[cfg(not(feature = "osmosis"))]
     let msg = ExecuteMsg::UpdateConfig {
         owner: None,
         fee_collector_addr: None,
         pair_code_id: None,
         trio_code_id: None,
         token_code_id: None,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = ExecuteMsg::UpdateConfig {
-        owner: None,
-        fee_collector_addr: None,
-        pair_code_id: None,
-        trio_code_id: None,
-        token_code_id: None,
-        osmosis_fee_collector_addr: None,
     };
 
     let res = execute(deps.as_mut(), env, info, msg);
@@ -230,21 +158,11 @@ fn update_config() {
 fn init(
     mut deps: OwnedDeps<MockStorage, MockApi, WasmMockQuerier>,
 ) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
-    #[cfg(not(feature = "osmosis"))]
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = InstantiateMsg {
-        pair_code_id: 321u64,
-        trio_code_id: 456u64,
-        token_code_id: 123u64,
-        fee_collector_addr: "collector".to_string(),
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     let env = mock_env();
@@ -263,21 +181,11 @@ fn init(
 fn init_trio(
     mut deps: OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier>,
 ) -> OwnedDeps<MockStorage, MockApi, WasmMockTrioQuerier> {
-    #[cfg(not(feature = "osmosis"))]
     let msg = InstantiateMsg {
         pair_code_id: 321u64,
         trio_code_id: 456u64,
         token_code_id: 123u64,
         fee_collector_addr: "collector".to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let msg = InstantiateMsg {
-        pair_code_id: 321u64,
-        trio_code_id: 456u64,
-        token_code_id: 123u64,
-        fee_collector_addr: "collector".to_string(),
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     let env = mock_env();
@@ -363,7 +271,6 @@ fn create_pair() {
         ]
     );
 
-    #[cfg(not(feature = "osmosis"))]
     let expected_msg = PairInstantiateMsg {
         asset_infos: asset_infos.clone(),
         token_code_id: 123u64,
@@ -372,18 +279,6 @@ fn create_pair() {
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let expected_msg = PairInstantiateMsg {
-        asset_infos: asset_infos.clone(),
-        token_code_id: 123u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: pool_fees.clone(),
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     assert_eq!(
@@ -487,7 +382,6 @@ fn create_stableswap_pair() {
         ]
     );
 
-    #[cfg(not(feature = "osmosis"))]
     let expected_msg = PairInstantiateMsg {
         asset_infos: asset_infos.clone(),
         token_code_id: 123u64,
@@ -496,18 +390,6 @@ fn create_stableswap_pair() {
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::StableSwap { amp: 100 },
         token_factory_lp: false,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let expected_msg = PairInstantiateMsg {
-        asset_infos: asset_infos.clone(),
-        token_code_id: 123u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: pool_fees.clone(),
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::StableSwap { amp: 100 },
-        token_factory_lp: false,
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     assert_eq!(
@@ -623,7 +505,6 @@ fn create_pair_native_token_and_ibc_token() {
         ]
     );
 
-    #[cfg(not(feature = "osmosis"))]
     let expected_msg = PairInstantiateMsg {
         asset_infos: asset_infos.clone(),
         token_code_id: 123u64,
@@ -632,18 +513,6 @@ fn create_pair_native_token_and_ibc_token() {
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let expected_msg = PairInstantiateMsg {
-        asset_infos: asset_infos.clone(),
-        token_code_id: 123u64,
-        asset_decimals: [6u8, 6u8],
-        pool_fees: pool_fees.clone(),
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     assert_eq!(
@@ -766,7 +635,6 @@ fn create_ibc_tokens_pair() {
         ]
     );
 
-    #[cfg(not(feature = "osmosis"))]
     let expected_msg = PairInstantiateMsg {
         asset_infos: asset_infos.clone(),
         token_code_id: 123u64,
@@ -775,18 +643,6 @@ fn create_ibc_tokens_pair() {
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let expected_msg = PairInstantiateMsg {
-        asset_infos: asset_infos.clone(),
-        token_code_id: 123u64,
-        asset_decimals: [6u8, 6u8],
-        pool_fees: pool_fees.clone(),
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: false,
-        osmosis_fee_collector_addr: "osmosis_fee_collector_addr".to_string(),
     };
 
     assert_eq!(

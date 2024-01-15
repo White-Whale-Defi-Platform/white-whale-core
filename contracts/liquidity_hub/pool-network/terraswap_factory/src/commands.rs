@@ -21,13 +21,11 @@ use crate::state::{
     TMP_PAIR_INFO, TMP_TRIO_INFO, TRIOS,
 };
 
-#[allow(unused_variables)]
 /// Updates the contract's [Config]
 pub fn update_config(
     deps: DepsMut,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
-    osmosis_fee_collector_addr: Option<String>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
     trio_code_id: Option<u64>,
@@ -57,56 +55,31 @@ pub fn update_config(
         config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
     }
 
-    #[cfg(feature = "osmosis")]
-    if let Some(osmosis_fee_collector_addr) = osmosis_fee_collector_addr {
-        config.osmosis_fee_collector_addr = deps
-            .api
-            .addr_validate(osmosis_fee_collector_addr.as_str())?;
-    }
-
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
-#[allow(unused_variables)]
 /// Updates a pair config
 pub fn update_pair_config(
     deps: DepsMut,
     pair_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
-    osmosis_fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
 ) -> Result<Response, ContractError> {
-    let validated_pair_addr = deps.api.addr_validate(&pair_addr)?.to_string();
-
-    let update_msg = {
-        #[cfg(not(feature = "osmosis"))]
-        {
-            pool_network::pair::ExecuteMsg::UpdateConfig {
-                owner,
-                fee_collector_addr,
-                pool_fees,
-                feature_toggle,
-            }
-        }
-
-        #[cfg(feature = "osmosis")]
-        {
-            pool_network::pair::ExecuteMsg::UpdateConfig {
-                owner,
-                fee_collector_addr,
-                osmosis_fee_collector_addr,
-                pool_fees,
-                feature_toggle,
-            }
-        }
-    };
-
     Ok(Response::default()
-        .add_message(wasm_execute(validated_pair_addr, &update_msg, vec![])?)
+        .add_message(wasm_execute(
+            deps.api.addr_validate(&pair_addr)?.to_string(),
+            &pool_network::pair::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+            },
+            vec![],
+        )?)
         .add_attribute("action", "update_pair_config"))
 }
 
@@ -173,29 +146,6 @@ pub fn create_pair(
     let asset1_label = asset_infos[1].clone().get_label(&deps.as_ref())?;
     let pair_label = format!("{asset0_label}-{asset1_label} pair");
 
-    #[cfg(not(feature = "osmosis"))]
-    let instantiate_msg = PairInstantiateMsg {
-        asset_infos,
-        token_code_id: config.token_code_id,
-        asset_decimals,
-        pool_fees,
-        fee_collector_addr: config.fee_collector_addr.to_string(),
-        pair_type: pair_type.clone(),
-        token_factory_lp,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let instantiate_msg = PairInstantiateMsg {
-        asset_infos,
-        token_code_id: config.token_code_id,
-        asset_decimals,
-        pool_fees,
-        fee_collector_addr: config.fee_collector_addr.to_string(),
-        pair_type: pair_type.clone(),
-        token_factory_lp,
-        osmosis_fee_collector_addr: config.osmosis_fee_collector_addr.to_string(),
-    };
-
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_pair"),
@@ -211,13 +161,20 @@ pub fn create_pair(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
-                msg: to_binary(&instantiate_msg)?,
+                msg: to_binary(&PairInstantiateMsg {
+                    asset_infos,
+                    token_code_id: config.token_code_id,
+                    asset_decimals,
+                    pool_fees,
+                    fee_collector_addr: config.fee_collector_addr.to_string(),
+                    pair_type: pair_type.clone(),
+                    token_factory_lp,
+                })?,
             }),
             reply_on: ReplyOn::Success,
         }))
 }
 
-#[allow(unused_variables)]
 #[allow(clippy::too_many_arguments)]
 /// Updates a trio config
 pub fn update_trio_config(
@@ -225,40 +182,22 @@ pub fn update_trio_config(
     trio_addr: String,
     owner: Option<String>,
     fee_collector_addr: Option<String>,
-    osmosis_fee_collector_addr: Option<String>,
     pool_fees: Option<TrioPoolFee>,
     feature_toggle: Option<TrioFeatureToggle>,
     amp_factor: Option<RampAmp>,
 ) -> Result<Response, ContractError> {
-    let validated_trio_addr = deps.api.addr_validate(&trio_addr)?.to_string();
-
-    let update_msg = {
-        #[cfg(not(feature = "osmosis"))]
-        {
-            pool_network::trio::ExecuteMsg::UpdateConfig {
-                owner,
-                fee_collector_addr,
-                pool_fees,
-                feature_toggle,
-                amp_factor,
-            }
-        }
-
-        #[cfg(feature = "osmosis")]
-        {
-            pool_network::trio::ExecuteMsg::UpdateConfig {
-                owner,
-                fee_collector_addr,
-                osmosis_fee_collector_addr,
-                pool_fees,
-                feature_toggle,
-                amp_factor,
-            }
-        }
-    };
-
     Ok(Response::new()
-        .add_message(wasm_execute(validated_trio_addr, &update_msg, vec![])?)
+        .add_message(wasm_execute(
+            deps.api.addr_validate(&trio_addr)?.to_string(),
+            &pool_network::trio::ExecuteMsg::UpdateConfig {
+                owner,
+                fee_collector_addr,
+                pool_fees,
+                feature_toggle,
+                amp_factor,
+            },
+            vec![],
+        )?)
         .add_attribute("action", "update_trio_config"))
 }
 
@@ -338,29 +277,6 @@ pub fn create_trio(
     let asset2_label = asset_infos[2].clone().get_label(&deps.as_ref())?;
     let trio_label = format!("{asset0_label}-{asset1_label}-{asset2_label} trio");
 
-    #[cfg(not(feature = "osmosis"))]
-    let instantiate_msg = TrioInstantiateMsg {
-        asset_infos,
-        token_code_id: config.token_code_id,
-        asset_decimals,
-        pool_fees,
-        fee_collector_addr: config.fee_collector_addr.to_string(),
-        amp_factor,
-        token_factory_lp,
-    };
-
-    #[cfg(feature = "osmosis")]
-    let instantiate_msg = TrioInstantiateMsg {
-        asset_infos,
-        token_code_id: config.token_code_id,
-        asset_decimals,
-        pool_fees,
-        fee_collector_addr: config.fee_collector_addr.to_string(),
-        osmosis_fee_collector_addr: config.osmosis_fee_collector_addr.to_string(),
-        amp_factor,
-        token_factory_lp,
-    };
-
     Ok(Response::new()
         .add_attributes(vec![
             ("action", "create_trio"),
@@ -378,7 +294,15 @@ pub fn create_trio(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
-                msg: to_binary(&instantiate_msg)?,
+                msg: to_binary(&TrioInstantiateMsg {
+                    asset_infos,
+                    token_code_id: config.token_code_id,
+                    asset_decimals,
+                    pool_fees,
+                    fee_collector_addr: config.fee_collector_addr.to_string(),
+                    amp_factor,
+                    token_factory_lp,
+                })?,
             }),
             reply_on: ReplyOn::Success,
         }))

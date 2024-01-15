@@ -537,7 +537,6 @@ pub fn swap(
     ]))
 }
 
-#[allow(unused_variables)]
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
 pub fn update_config(
     deps: DepsMut,
