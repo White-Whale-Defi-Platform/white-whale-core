@@ -97,7 +97,8 @@ mod test {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        to_binary, Addr, BankMsg, CosmosMsg, Decimal, ReplyOn, Response, SubMsg, Uint128, WasmMsg,
+        to_json_binary, Addr, BankMsg, CosmosMsg, Decimal, ReplyOn, Response, SubMsg, Uint128,
+        WasmMsg,
     };
     use cw20::Cw20ExecuteMsg;
 
@@ -311,7 +312,7 @@ mod test {
                     id: 0,
                     msg: CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: "vault_token".to_string(),
-                        msg: to_binary(&Cw20ExecuteMsg::Burn {
+                        msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                             amount: Uint128::new(1),
                         })
                         .unwrap(),

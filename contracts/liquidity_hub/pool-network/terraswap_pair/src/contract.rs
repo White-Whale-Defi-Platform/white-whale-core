@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
     StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -203,23 +203,24 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Pair {} => Ok(to_binary(&queries::query_pair_info(deps)?)?),
-        QueryMsg::Pool {} => Ok(to_binary(&queries::query_pool(deps)?)?),
-        QueryMsg::Simulation { offer_asset } => {
-            Ok(to_binary(&queries::query_simulation(deps, offer_asset)?)?)
-        }
-        QueryMsg::ReverseSimulation { ask_asset } => Ok(to_binary(
+        QueryMsg::Pair {} => Ok(to_json_binary(&queries::query_pair_info(deps)?)?),
+        QueryMsg::Pool {} => Ok(to_json_binary(&queries::query_pool(deps)?)?),
+        QueryMsg::Simulation { offer_asset } => Ok(to_json_binary(&queries::query_simulation(
+            deps,
+            offer_asset,
+        )?)?),
+        QueryMsg::ReverseSimulation { ask_asset } => Ok(to_json_binary(
             &queries::query_reverse_simulation(deps, ask_asset)?,
         )?),
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             all_time,
             COLLECTED_PROTOCOL_FEES,
             Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
         )?)?),
-        QueryMsg::BurnedFees { asset_id } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::BurnedFees { asset_id } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             None,
@@ -234,6 +235,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use white_whale::migrate_guards::check_contract_name;
 
+    #[cfg(not(feature = "osmosis"))]
     use crate::migrations;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

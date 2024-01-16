@@ -1,6 +1,6 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
 };
 
 use white_whale::fee_distributor::EpochResponse;
@@ -71,7 +71,7 @@ pub fn query(
     match msg {
         white_whale::fee_distributor::QueryMsg::Config {} => {}
         white_whale::fee_distributor::QueryMsg::CurrentEpoch {} => {
-            return to_binary(&EpochResponse {
+            return to_json_binary(&EpochResponse {
                 epoch: CURRENT_EPOCH.load(deps.storage)?,
             });
         }
@@ -80,5 +80,5 @@ pub fn query(
         white_whale::fee_distributor::QueryMsg::Claimable { .. } => {}
     }
 
-    to_binary(&"")
+    to_json_binary(&"")
 }

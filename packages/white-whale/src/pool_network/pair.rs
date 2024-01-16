@@ -122,24 +122,7 @@ impl PoolFee {
         self.swap_fee.is_valid()?;
         self.burn_fee.is_valid()?;
 
-        let total_fee = {
-            let base_fee = self
-                .protocol_fee
-                .share
-                .checked_add(self.swap_fee.share)?
-                .checked_add(self.burn_fee.share)?;
-
-            #[cfg(feature = "osmosis")]
-            {
-                self.osmosis_fee.is_valid()?;
-                base_fee.checked_add(self.osmosis_fee.share)?
-            }
-
-            #[cfg(not(feature = "osmosis"))]
-            {
-                base_fee
-            }
-        };
+        let total_fee = self.aggregate()?;
 
         // Check if the total fee exceeds 100%
         if total_fee >= Decimal::percent(100) {

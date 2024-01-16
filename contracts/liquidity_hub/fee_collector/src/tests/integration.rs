@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    coin, coins, to_binary, Addr, BankMsg, BlockInfo, Coin, Decimal, Timestamp, Uint128, Uint256,
-    Uint64,
+    coin, coins, to_json_binary, Addr, BankMsg, BlockInfo, Coin, Decimal, Timestamp, Uint128,
+    Uint256, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
@@ -61,33 +61,11 @@ fn collect_all_factories_cw20_fees_successfully() {
         )
         .unwrap();
 
-    #[cfg(feature = "osmosis")]
-    let osmosis_fee_collector_address = app
-        .instantiate_contract(
-            fee_collector_id,
-            creator.clone().sender,
-            &InstantiateMsg {},
-            &[],
-            "osmosis_fee_collector",
-            None,
-        )
-        .unwrap();
-
-    #[cfg(not(feature = "osmosis"))]
     let instantiate_msg = pool_network::factory::InstantiateMsg {
         pair_code_id: pair_id,
         trio_code_id: trio_id,
         token_code_id: token_id,
         fee_collector_addr: fee_collector_address.to_string(),
-    };
-
-    #[cfg(feature = "osmosis")]
-    let instantiate_msg = pool_network::factory::InstantiateMsg {
-        pair_code_id: pair_id,
-        trio_code_id: trio_id,
-        token_code_id: token_id,
-        fee_collector_addr: fee_collector_address.to_string(),
-        osmosis_fee_collector_addr: osmosis_fee_collector_address.to_string(),
     };
 
     let pool_factory_address = app
@@ -299,7 +277,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize - 1].to_string(),
                 amount: Uint128::new(100_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -316,7 +294,7 @@ fn collect_all_factories_cw20_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i as usize].to_string(),
                 amount: Uint128::new(200_000_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(20u64)),
                     to: None,
@@ -817,7 +795,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i - 1].to_string(),
                 amount: Uint128::new(100_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(30u64)),
                     to: None,
@@ -834,7 +812,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(30u64)),
                     to: None,
@@ -1321,7 +1299,7 @@ fn collect_pools_native_fees_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: None,
                     to: None,
@@ -1884,7 +1862,7 @@ fn collect_fees_with_pagination_successfully() {
             &Cw20ExecuteMsg::Send {
                 contract: pair_tokens[i].to_string(),
                 amount: Uint128::new(200_000u128),
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread: Some(Decimal::percent(40u64)),
                     to: None,
@@ -2204,7 +2182,7 @@ fn collect_fees_for_vault() {
             vaults[i].clone(),
             &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
-                msg: to_binary(&BankMsg::Send {
+                msg: to_json_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
                     // return a higher amount than the flashloan + fees
                     amount: coins(return_flash_loan_value, coin.denom.clone()),
@@ -2632,7 +2610,7 @@ fn aggregate_fees_for_vault() {
             vaults[i].clone(),
             &white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
                 amount: Uint128::new(flash_loan_value),
-                msg: to_binary(&BankMsg::Send {
+                msg: to_json_binary(&BankMsg::Send {
                     to_address: vaults[i].to_string(),
                     // return a higher amount than the flashloan + fees
                     amount: coins(return_flash_loan_value, coin.denom.clone()),

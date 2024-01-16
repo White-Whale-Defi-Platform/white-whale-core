@@ -8,8 +8,8 @@ use cosmwasm_schema::cw_serde;
 ))]
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult, Storage,
-    SubMsg, Uint128, Uint256, WasmMsg,
+    to_json_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
+    Storage, SubMsg, Uint128, Uint256, WasmMsg,
 };
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
@@ -555,7 +555,7 @@ pub fn create_lp_token(
             msg: WasmMsg::Instantiate {
                 admin: None,
                 code_id: msg.token_code_id,
-                msg: to_binary(&TokenInstantiateMsg {
+                msg: to_json_binary(&TokenInstantiateMsg {
                     name: lp_token_name.to_owned(),
                     symbol: LP_SYMBOL.to_string(),
                     decimals: 6,

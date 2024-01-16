@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    from_binary, from_slice,
+    from_json,
     testing::{MockApi, MockQuerier, MockStorage},
-    to_binary, Coin, ContractResult, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest,
+    to_json_binary, Coin, ContractResult, Empty, OwnedDeps, Querier, QuerierResult, QueryRequest,
     SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cw20::{AllowanceResponse, BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
@@ -82,7 +82,7 @@ fn allowances_to_map(
 impl Querier for WasmMockQuerier {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         // MockQuerier doesn't support Custom, so we ignore it completely here
-        let request: QueryRequest<Empty> = match from_slice(bin_request) {
+        let request: QueryRequest<Empty> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -101,10 +101,10 @@ impl WasmMockQuerier {
         match &request {
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
                 if contract_addr == "lp_token" {
-                    match from_binary(msg).unwrap() {
+                    match from_json(msg).unwrap() {
                         Cw20QueryMsg::TokenInfo {} => {
                             return SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&TokenInfoResponse {
+                                to_json_binary(&TokenInfoResponse {
                                     decimals: 6,
                                     name: "lp_token".to_string(),
                                     symbol: "uLP".to_string(),
@@ -120,7 +120,7 @@ impl WasmMockQuerier {
                         }
                         Cw20QueryMsg::Balance { address } => {
                             return SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&BalanceResponse {
+                                to_json_binary(&BalanceResponse {
                                     balance: *self
                                         .token_querier
                                         .balances
@@ -135,10 +135,10 @@ impl WasmMockQuerier {
                         _ => panic!("DO NOT ENTER HERE"),
                     }
                 } else if contract_addr == "vault_token" {
-                    match from_binary(msg).unwrap() {
+                    match from_json(msg).unwrap() {
                         Cw20QueryMsg::Balance { address } => {
                             return SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&BalanceResponse {
+                                to_json_binary(&BalanceResponse {
                                     balance: *self
                                         .token_querier
                                         .balances
@@ -152,7 +152,7 @@ impl WasmMockQuerier {
                         }
                         Cw20QueryMsg::Allowance { owner, spender } => {
                             return SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&AllowanceResponse {
+                                to_json_binary(&AllowanceResponse {
                                     allowance: *self
                                         .token_querier
                                         .allowances

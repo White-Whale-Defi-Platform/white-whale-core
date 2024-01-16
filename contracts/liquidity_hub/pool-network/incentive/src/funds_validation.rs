@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Deps, Env, MessageInfo, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Deps, Env, MessageInfo, Uint128, WasmMsg};
 use cw_utils::PaymentError;
 use white_whale::pool_network::asset::AssetInfo;
 
@@ -43,7 +43,7 @@ pub fn validate_funds_sent(
             // send the lp deposit to us
             Some(WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                     owner: info.sender.into_string(),
                     recipient: env.contract.address.into_string(),
                     amount,

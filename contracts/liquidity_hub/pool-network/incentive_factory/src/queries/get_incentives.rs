@@ -57,7 +57,7 @@ fn calc_range_start(start_after: Option<AssetInfoRaw>) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,
+        testing::mock_dependencies, to_json_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,
         SubMsgResult,
     };
     use protobuf::{Message, SpecialFields};
@@ -80,7 +80,7 @@ mod tests {
                     data: Some(Binary::from(
                         Message::write_to_bytes(&MsgInstantiateContractResponse {
                             address: format!("incentive{id}"),
-                            data: to_binary(
+                            data: to_json_binary(
                                 &white_whale::pool_network::incentive::InstantiateReplyCallback {
                                     lp_asset: get_lp_asset(id),
                                 },

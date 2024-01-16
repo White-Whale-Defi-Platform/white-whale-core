@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Binary, Deps};
+use cosmwasm_std::{to_json_binary, Binary, Deps};
 
 use crate::{err::StdResult, state::CONFIG};
 
@@ -6,7 +6,7 @@ use crate::{err::StdResult, state::CONFIG};
 pub fn get_config(deps: Deps) -> StdResult<Binary> {
     let config = CONFIG.load(deps.storage)?;
 
-    Ok(to_binary(&config)?)
+    Ok(to_json_binary(&config)?)
 }
 
 #[cfg(test)]

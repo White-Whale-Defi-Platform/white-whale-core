@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    to_json_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
 };
 
@@ -161,7 +161,7 @@ pub fn create_pair(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
-                msg: to_binary(&PairInstantiateMsg {
+                msg: to_json_binary(&PairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
@@ -294,7 +294,7 @@ pub fn create_trio(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
-                msg: to_binary(&TrioInstantiateMsg {
+                msg: to_json_binary(&TrioInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
@@ -401,7 +401,7 @@ pub fn execute_migrate_pair(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
             new_code_id: pair_code_id,
-            msg: to_binary(&PairMigrateMsg {})?,
+            msg: to_json_binary(&PairMigrateMsg {})?,
         })),
     )
 }
@@ -427,7 +427,7 @@ pub fn execute_migrate_trio(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
             new_code_id: trio_code_id,
-            msg: to_binary(&TrioMigrateMsg {})?,
+            msg: to_json_binary(&TrioMigrateMsg {})?,
         })),
     )
 }

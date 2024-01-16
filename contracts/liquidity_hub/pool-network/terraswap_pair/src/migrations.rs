@@ -19,7 +19,7 @@ use crate::helpers::instantiate_fees;
 use crate::state::PAIR_INFO;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG};
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`]
 /// as identified by commit c8d8462c6933b93245acdc8abbe303287fdc1951 which changed the structs to use
