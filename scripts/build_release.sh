@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+
 # Displays tool usage
 function display_usage() {
   echo "Release builder"
@@ -33,6 +35,18 @@ case $chain in
 
 osmosis)
   flag="-osmosis"
+  echo " $projectRootPath/Cargo.toml"
+
+  # backup the Cargo.toml file
+  cp $projectRootPath/Cargo.toml $projectRootPath/Cargo.toml.bak
+
+  # add the osmosis feature flag to the Cargo.toml file so it optimizes correctly
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+  else
+    sed -i '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+  fi
+
   ;;
 juno | terra | chihuahua)
   flag="-osmosis_token_factory"
@@ -84,3 +98,8 @@ $projectRootPath/scripts/check_artifacts_size.sh
 
 # Check generated wasm file sizes
 $projectRootPath/scripts/get_artifacts_versions.sh
+
+if [[ "$chain" == "osmosis" ]]; then
+  #if the chain is osmosis, restore the Cargo.toml file
+  mv $projectRootPath/Cargo.toml.bak $projectRootPath/Cargo.toml
+fi
