@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
@@ -224,17 +224,17 @@ fn create_trio_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractErro
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
-        QueryMsg::Pair { asset_infos } => to_binary(&queries::query_pair(deps, asset_infos)?),
+        QueryMsg::Config {} => to_json_binary(&queries::query_config(deps)?),
+        QueryMsg::Pair { asset_infos } => to_json_binary(&queries::query_pair(deps, asset_infos)?),
         QueryMsg::Pairs { start_after, limit } => {
-            to_binary(&queries::query_pairs(deps, start_after, limit)?)
+            to_json_binary(&queries::query_pairs(deps, start_after, limit)?)
         }
-        QueryMsg::Trio { asset_infos } => to_binary(&queries::query_trio(deps, asset_infos)?),
+        QueryMsg::Trio { asset_infos } => to_json_binary(&queries::query_trio(deps, asset_infos)?),
         QueryMsg::Trios { start_after, limit } => {
-            to_binary(&queries::query_trios(deps, start_after, limit)?)
+            to_json_binary(&queries::query_trios(deps, start_after, limit)?)
         }
         QueryMsg::NativeTokenDecimals { denom } => {
-            to_binary(&queries::query_native_token_decimal(deps, denom)?)
+            to_json_binary(&queries::query_native_token_decimal(deps, denom)?)
         }
     }
 }
@@ -258,9 +258,11 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
+    #[cfg(not(feature = "osmosis"))]
     if storage_version <= Version::parse("1.0.8")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
+    #[cfg(not(feature = "osmosis"))]
     if storage_version <= Version::parse("1.2.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }

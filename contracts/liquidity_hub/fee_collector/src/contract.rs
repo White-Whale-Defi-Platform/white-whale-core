@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
+    to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut,
+    Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -96,7 +96,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             .add_attribute("action", "reply")
             .add_attribute("new_epoch", epoch.to_string())
             .add_messages(messages)
-            .set_data(to_binary(&ForwardFeesResponse { epoch })?))
+            .set_data(to_json_binary(&ForwardFeesResponse { epoch })?))
     } else {
         Err(ContractError::UnknownReplyId(msg.id))
     }
@@ -138,11 +138,11 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
+        QueryMsg::Config {} => to_json_binary(&queries::query_config(deps)?),
         QueryMsg::Fees {
             query_fees_for,
             all_time,
-        } => to_binary(&queries::query_fees(
+        } => to_json_binary(&queries::query_fees(
             deps,
             query_fees_for,
             all_time.unwrap_or(false),

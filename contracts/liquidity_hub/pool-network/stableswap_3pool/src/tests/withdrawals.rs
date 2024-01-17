@@ -7,7 +7,7 @@ use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 use cosmwasm_std::coin;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
+    attr, to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
@@ -18,6 +18,7 @@ use white_whale::pool_network::denom::MsgBurn;
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -110,7 +111,7 @@ fn withdraw_liquidity_cw20_lp() {
     // withdraw liquidity
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -167,7 +168,7 @@ fn withdraw_liquidity_cw20_lp() {
         msg_refund_1,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: expected_token_1_refund_amount,
             })
@@ -179,7 +180,7 @@ fn withdraw_liquidity_cw20_lp() {
         msg_refund_2,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0001".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: expected_token_2_refund_amount,
             })
@@ -191,7 +192,7 @@ fn withdraw_liquidity_cw20_lp() {
         msg_burn_liquidity,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Burn {
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                 amount: Uint128::from(100u128),
             })
             .unwrap(),
@@ -416,6 +417,7 @@ fn withdraw_liquidity_token_factory_lp_wrong_asset() {
     assert_eq!(err, ContractError::AssetMismatch {});
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_unauthorized() {
     let mut deps = mock_dependencies(&[Coin {
@@ -475,7 +477,7 @@ fn test_withdrawal_unauthorized() {
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
+        msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {}).unwrap(),
         amount: Uint128::from(100u128),
     });
 
@@ -489,6 +491,7 @@ fn test_withdrawal_unauthorized() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_wrong_message() {
     let mut deps = mock_dependencies(&[Coin {
@@ -548,7 +551,7 @@ fn test_withdrawal_wrong_message() {
     // withdraw liquidity should fail
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
-        msg: to_binary(&"invalid_message").unwrap(),
+        msg: to_json_binary(&"invalid_message").unwrap(),
         amount: Uint128::from(100u128),
     });
 

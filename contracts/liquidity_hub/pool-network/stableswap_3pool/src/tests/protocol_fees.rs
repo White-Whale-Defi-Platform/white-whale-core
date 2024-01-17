@@ -3,7 +3,7 @@ use crate::queries::query_fees;
 use crate::state::{ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES};
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
+    to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
@@ -12,6 +12,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_protocol_fees() {
     let total_share = Uint128::from(60_000_000_000u128);
@@ -207,6 +208,7 @@ fn test_protocol_fees() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -319,7 +321,7 @@ fn test_collect_protocol_fees_successful() {
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "asset0001".to_string(),
         amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
+        msg: to_json_binary(&Cw20HookMsg::Swap {
             ask_asset: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
@@ -369,7 +371,7 @@ fn test_collect_protocol_fees_successful() {
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "asset0000".to_string(),
         amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
+        msg: to_json_binary(&Cw20HookMsg::Swap {
             ask_asset: AssetInfo::Token {
                 contract_addr: "asset0001".to_string(),
             },
@@ -426,7 +428,7 @@ fn test_collect_protocol_fees_successful() {
         transfer_asset0000_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "collector".to_string(),
                 amount: protocol_fees_for_asset0000.clone().first().unwrap().amount,
             })
@@ -438,7 +440,7 @@ fn test_collect_protocol_fees_successful() {
         transfer_asset0001_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0001".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "collector".to_string(),
                 amount: protocol_fees_for_asset0001.clone().first().unwrap().amount,
             })
@@ -509,6 +511,7 @@ fn test_collect_protocol_fees_successful() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -642,7 +645,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
         transfer_cw20_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "collector".to_string(),
                 amount: protocol_fees[1].amount,
             })
@@ -697,6 +700,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn protocol_fees() {
     let protocol_fee = PoolFee {

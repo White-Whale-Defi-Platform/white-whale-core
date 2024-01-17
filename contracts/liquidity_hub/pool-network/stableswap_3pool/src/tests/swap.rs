@@ -8,8 +8,8 @@ use crate::state::{
 };
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    attr, coins, from_binary, to_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn, SubMsg,
-    SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
+    attr, coins, from_json, to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn,
+    SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale::fee::Fee;
@@ -20,6 +20,7 @@ use white_whale::pool_network::trio::{
     SimulationResponse,
 };
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
@@ -52,6 +53,7 @@ fn test_compute_swap_with_huge_pool_variance() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -173,7 +175,7 @@ fn try_native_to_token() {
         id: 0,
         msg: CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Burn {
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                 amount: expected_burn_fee_amount,
             })
             .unwrap(),
@@ -269,7 +271,7 @@ fn try_native_to_token() {
         )
         .unwrap();
 
-    let simulation_res: SimulationResponse = from_binary(
+    let simulation_res: SimulationResponse = from_json(
         &query(
             deps.as_ref(),
             mock_env(),
@@ -322,7 +324,7 @@ fn try_native_to_token() {
         )
         .unwrap();
 
-    let reverse_simulation_res: ReverseSimulationResponse = from_binary(
+    let reverse_simulation_res: ReverseSimulationResponse = from_json(
         &query(
             deps.as_ref(),
             mock_env(),
@@ -397,7 +399,7 @@ fn try_native_to_token() {
     assert_eq!(
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: "addr0000".to_string(),
                 amount: expected_return_amount,
             })
@@ -408,6 +410,7 @@ fn try_native_to_token() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_swap_invalid_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -519,6 +522,7 @@ fn try_swap_invalid_token() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_token_to_native() {
     let total_share = Uint128::from(20_000_000_000u128);
@@ -626,7 +630,7 @@ fn try_token_to_native() {
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
         amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
+        msg: to_json_binary(&Cw20HookMsg::Swap {
             ask_asset: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
             },
@@ -735,7 +739,7 @@ fn try_token_to_native() {
         )
         .unwrap();
 
-    let simulation_res: SimulationResponse = from_binary(
+    let simulation_res: SimulationResponse = from_json(
         &query(
             deps.as_ref(),
             mock_env(),
@@ -789,7 +793,7 @@ fn try_token_to_native() {
         .unwrap();
 
     // check reverse simulation res
-    let reverse_simulation_res: ReverseSimulationResponse = from_binary(
+    let reverse_simulation_res: ReverseSimulationResponse = from_json(
         &query(
             deps.as_ref(),
             mock_env(),
@@ -811,6 +815,9 @@ fn try_token_to_native() {
         .unwrap(),
     )
     .unwrap();
+
+    println!("reverse_simulation_res: {:?}", reverse_simulation_res);
+    println!("expected_swap_fee_amount: {:?}", expected_swap_fee_amount);
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
@@ -876,7 +883,7 @@ fn try_token_to_native() {
     let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
         sender: "addr0000".to_string(),
         amount: offer_amount,
-        msg: to_binary(&Cw20HookMsg::Swap {
+        msg: to_json_binary(&Cw20HookMsg::Swap {
             ask_asset: AssetInfo::Token {
                 contract_addr: "asset0000".to_string(),
             },
@@ -895,6 +902,7 @@ fn try_token_to_native() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_swap_to_third_party() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -1029,7 +1037,7 @@ fn test_swap_to_third_party() {
         )
         .unwrap();
 
-    let simulation_res: SimulationResponse = from_binary(
+    let simulation_res: SimulationResponse = from_json(
         &query(
             deps.as_ref(),
             mock_env(),

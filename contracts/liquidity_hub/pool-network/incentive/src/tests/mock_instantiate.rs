@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_binary, Addr, Env, OwnedDeps, Uint128, Uint64, WasmMsg,
+    to_json_binary, Addr, Env, OwnedDeps, Uint128, Uint64, WasmMsg,
 };
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
@@ -128,7 +128,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         mock_admin().sender,
         WasmMsg::Execute {
             contract_addr: incentive_factory.to_string(),
-            msg: to_binary(
+            msg: to_json_binary(
                 &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
                     lp_asset: AssetInfo::Token {
                         contract_addr: lp_addr.to_string(),

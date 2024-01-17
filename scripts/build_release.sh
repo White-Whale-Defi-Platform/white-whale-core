@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
+
 # Displays tool usage
 function display_usage() {
   echo "Release builder"
@@ -31,7 +33,22 @@ flag=""
 
 case $chain in
 
-juno | terra | osmosis)
+osmosis)
+  flag="-osmosis"
+  echo " $projectRootPath/Cargo.toml"
+
+  # backup the Cargo.toml file
+  cp $projectRootPath/Cargo.toml $projectRootPath/Cargo.toml.bak
+
+  # add the osmosis feature flag to the Cargo.toml file so it optimizes correctly
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+  else
+    sed -i '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+  fi
+
+  ;;
+juno | terra | chihuahua)
   flag="-osmosis_token_factory"
   ;;
 migaloo)
@@ -40,7 +57,7 @@ migaloo)
 injective)
   flag="-injective"
   ;;
-chihuahua | comdex | orai | sei) ;;
+comdex | orai | sei) ;;
 
 \*)
   echo "Network $chain not defined"
@@ -66,9 +83,9 @@ docker_options=(
 
 # Optimized builds
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer-arm64:0.14.0$flag")
+  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer-arm64:0.15.0$flag")
 else
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/workspace-optimizer:0.14.0$flag")
+  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer:0.15.0$flag")
 fi
 
 echo "${docker_command[@]}"
@@ -81,3 +98,8 @@ $projectRootPath/scripts/check_artifacts_size.sh
 
 # Check generated wasm file sizes
 $projectRootPath/scripts/get_artifacts_versions.sh
+
+if [[ "$chain" == "osmosis" ]]; then
+  #if the chain is osmosis, restore the Cargo.toml file
+  mv $projectRootPath/Cargo.toml.bak $projectRootPath/Cargo.toml
+fi

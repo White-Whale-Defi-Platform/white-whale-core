@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Binary, Deps};
+use cosmwasm_std::{to_json_binary, Binary, Deps};
 
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault_factory::{VaultInfo, VaultsResponse};
@@ -9,10 +9,10 @@ use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
 pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
     let vault_option = VAULTS.may_load(deps.storage, asset_info.get_reference())?;
     if let Some((vault_addr, _)) = vault_option {
-        return Ok(to_binary(&vault_addr)?);
+        return Ok(to_json_binary(&vault_addr)?);
     }
 
-    Ok(to_binary(&vault_option)?)
+    Ok(to_json_binary(&vault_option)?)
 }
 
 pub fn get_vaults(
@@ -21,7 +21,7 @@ pub fn get_vaults(
     limit: Option<u32>,
 ) -> StdResult<Binary> {
     let vaults: Vec<VaultInfo> = read_vaults(deps.storage, deps.api, start_after, limit)?;
-    Ok(to_binary(&VaultsResponse { vaults })?)
+    Ok(to_json_binary(&VaultsResponse { vaults })?)
 }
 
 #[cfg(test)]

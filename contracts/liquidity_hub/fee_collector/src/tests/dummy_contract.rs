@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, BankMsg, Coin, Response};
+use cosmwasm_std::{to_json_binary, Addr, BankMsg, Coin, Response};
 use cw_multi_test::ContractWrapper;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -28,6 +28,6 @@ pub fn create_dummy_flash_loan_contract(
             }
         },
         |_deps, _env, _info, _msg| Ok(Response::new()),
-        |_deps, _env, _query| Ok(to_binary::<Vec<Coin>>(&vec![]).unwrap()),
+        |_deps, _env, _query| Ok(to_json_binary::<Vec<Coin>>(&vec![]).unwrap()),
     )
 }

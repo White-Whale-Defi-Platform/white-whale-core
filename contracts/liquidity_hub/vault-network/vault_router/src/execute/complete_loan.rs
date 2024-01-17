@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    attr, coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    attr, coins, to_json_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    WasmMsg,
 };
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 use white_whale::vault_network::vault::PaybackAmountResponse;
@@ -76,7 +77,7 @@ pub fn complete_loan(
                 AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
                     contract_addr,
                     funds: vec![],
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                    msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                         recipient: vault,
                         amount: payback_amount.payback_amount,
                     })?,
@@ -97,7 +98,7 @@ pub fn complete_loan(
                     AssetInfo::Token { contract_addr } => Ok(WasmMsg::Execute {
                         contract_addr,
                         funds: vec![],
-                        msg: to_binary(&cw20::Cw20ExecuteMsg::Transfer {
+                        msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
                             recipient: initiator.clone().into_string(),
                             amount: profit_amount,
                         })?,
