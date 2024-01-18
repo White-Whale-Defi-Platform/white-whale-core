@@ -57,7 +57,7 @@ migaloo)
 injective)
   flag="-injective"
   ;;
-comdex | orai | sei) ;;
+comdex | orai | sei | vanilla) ;;
 
 \*)
   echo "Network $chain not defined"
