@@ -15,7 +15,7 @@ use crate::state::{get_vault_by_lp, CONFIG, ONGOING_FLASHLOAN, VAULT_COUNTER};
 use crate::{manager, queries, router, vault};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "ww-vault-manager";
+const CONTRACT_NAME: &str = "white-whale_vault-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -134,15 +134,8 @@ pub fn execute(
         } => router::commands::flash_loan(deps, env, info, asset, vault_identifier, payload),
         ExecuteMsg::Callback(msg) => router::commands::callback(deps, env, info, msg),
         ExecuteMsg::UpdateOwnership(action) => {
-            Ok(
-                cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
-                    |ownership| {
-                        Response::default()
-                            .add_attribute("action", "update_ownership")
-                            .add_attributes(ownership.into_attributes())
-                    },
-                )?,
-            )
+            cw_utils::nonpayable(&info)?;
+            white_whale::common::update_ownership(deps, env, info, action).map_err(Into::into)
         }
     }
 }

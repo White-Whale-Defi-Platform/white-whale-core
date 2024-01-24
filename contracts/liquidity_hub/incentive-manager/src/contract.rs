@@ -11,7 +11,7 @@ use crate::error::ContractError;
 use crate::state::CONFIG;
 use crate::{incentive, manager, position};
 
-const CONTRACT_NAME: &str = "crates.io:incentive-manager";
+const CONTRACT_NAME: &str = "white-whale_incentive-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -92,16 +92,7 @@ pub fn execute(
         },
         ExecuteMsg::UpdateOwnership(action) => {
             cw_utils::nonpayable(&info)?;
-
-            Ok(
-                cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(
-                    |ownership| {
-                        Response::default()
-                            .add_attribute("action", "update_ownership")
-                            .add_attributes(ownership.into_attributes())
-                    },
-                )?,
-            )
+            white_whale::common::update_ownership(deps, env, info, action).map_err(Into::into)
         }
         ExecuteMsg::EpochChangedHook(msg) => {
             manager::commands::on_epoch_changed(deps, env, info, msg)
