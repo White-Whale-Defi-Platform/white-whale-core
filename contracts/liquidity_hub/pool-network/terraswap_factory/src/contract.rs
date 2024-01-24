@@ -263,7 +263,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v110(deps.branch())?;
     }
     #[cfg(not(feature = "osmosis"))]
-    if storage_version <= Version::parse("1.2.0")? {
+    if storage_version < Version::parse("1.2.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
 
