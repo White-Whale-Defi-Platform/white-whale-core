@@ -28,7 +28,7 @@ cw20 = "1.0.1"
 cw20-base = { version = "1.1.0", features = ["library"] }
 cw-storage-plus = "1.1.0"
 cw-utils = "1.0.1"
-protobuf = { version = "3.2.0", features = ["with-bytes"] }
+protobuf = { version = "=3.2.0", features = ["with-bytes"] }
 schemars = "0.8.12"
 semver = "1.0.12"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
