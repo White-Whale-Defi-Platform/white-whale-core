@@ -104,7 +104,7 @@ function init_fee_distributor() {
   grace_period=21 #default value is 21 epochs
   distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
   epoch_duration=86400000000000     #default value is 1 day, in nanoseconds
-  genesis_epoch=1689260400000000000 #fill with desired unix time, in nanoseconds
+  genesis_epoch=1706540400000000000 #fill with desired unix time, in nanoseconds
   epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
 
   init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period": "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
@@ -125,23 +125,25 @@ function init_whale_lair() {
   echo -e "\nInitializing the Whale Lair..."
 
   # Prepare the instantiation message
-  unbonding_period=1209600000000000  # default value is 14 days, in nanoseconds
+  unbonding_period=86400000000000  # default value is 14 days, in nanoseconds
   growth_rate="0.000000064300411522" # this is the value when you interpolate the growth rate to 2X with 365 days of bonding
 
   bonding_assets=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
   grace_period="21" #default value is 21 epochs
   distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
   epoch_duration="86400000000000"      #default value is 1 day, in nanoseconds
-  genesis_epoch="1689865200000000000" #fill with desired unix time, in nanoseconds
+  genesis_epoch="1706540400000000000" #fill with desired unix time, in nanoseconds
   epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
 
   init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period":
   "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
 
+  echo "init_whale_lair fn is broken. Fix."
+  exit 0
   #todo fix this message here, it's broken
   # Instantiate the contract
   code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
-  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
+  $BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Lair" $TXFLAG --admin $deployer_address
 
   # Get contract address
   contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')

@@ -79,6 +79,14 @@ function init_chain_env() {
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/base_migaloo.env)
     ;;
 
+  osmosis)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/osmosis.env)
+    ;;
+
+  osmosis-testnet)
+    source <(cat "$project_root_path"/scripts/deployment/deploy_env/testnets/osmosis.env)
+    ;;
+
   orai)
     source <(cat "$project_root_path"/scripts/deployment/deploy_env/mainnets/orai.env)
     ;;
