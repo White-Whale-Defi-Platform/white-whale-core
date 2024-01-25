@@ -56,3 +56,12 @@ watch-test FEATURE='':
 
 optimize CHAIN:
   scripts/build_release.sh -c {{CHAIN}}
+
+get-artifacts-versions:
+  scripts/get_artifacts_versions.sh
+
+get-artifacts-size:
+  scripts/check_artifacts_size.sh
+
+get-pools CHAIN:
+    scripts/deployment/extract_pools.sh -c {{CHAIN}}
