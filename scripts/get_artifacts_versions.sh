@@ -12,4 +12,8 @@ for artifact in artifacts/*.wasm; do
 
   printf "%-25s %s\n" "$(basename $artifact)" ": $version"
 done
+
+version=$(grep 'white-whale = ' ''"$project_root_path"'/Cargo.toml' | sed -n 's/.*version = "\([^"]*\)".*/\1/p')
+printf "%-25s %s\n" "white-whale" ":  $version"
+
 echo -e "\n"
