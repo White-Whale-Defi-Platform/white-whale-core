@@ -12,9 +12,7 @@ description = "Common White Whale types and utils"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+documentation.workspace = true
 
 [features]
 # for quicker tests, cargo test --lib
