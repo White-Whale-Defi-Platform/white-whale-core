@@ -6,19 +6,21 @@ use cosmwasm_std::{
     Reply, ReplyOn, Response, SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 
-use white_whale::fee::Fee;
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
-use white_whale::pool_network::factory::{
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{
+    AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType,
+};
+use white_whale_std::pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
-use white_whale::pool_network::mock_querier::{
+use white_whale_std::pool_network::mock_querier::{
     mock_dependencies, mock_dependencies_trio, WasmMockQuerier, WasmMockTrioQuerier,
 };
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network::pair::{
     InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::trio::{
     InstantiateMsg as TrioInstantiateMsg, MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee,
 };
 

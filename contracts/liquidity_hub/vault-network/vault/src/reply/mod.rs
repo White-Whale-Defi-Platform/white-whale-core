@@ -1,5 +1,5 @@
 use cosmwasm_std::{entry_point, DepsMut, Env, Reply, Response, StdError, StdResult};
-use white_whale::vault_network::vault::INSTANTIATE_LP_TOKEN_REPLY_ID;
+use white_whale_std::vault_network::vault::INSTANTIATE_LP_TOKEN_REPLY_ID;
 
 mod lp_instantiate;
 

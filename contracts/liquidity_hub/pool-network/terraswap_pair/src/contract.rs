@@ -8,8 +8,8 @@ use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 use semver::Version;
 
-use white_whale::pool_network::asset::{has_factory_token, AssetInfoRaw, PairInfoRaw};
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network::asset::{has_factory_token, AssetInfoRaw, PairInfoRaw};
+use white_whale_std::pool_network::pair::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
@@ -233,7 +233,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     #[cfg(not(feature = "osmosis"))]
     use crate::migrations;

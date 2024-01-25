@@ -12,13 +12,13 @@ use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
 use crate::{commands, migrations, queries, state};
 use semver::Version;
-use white_whale::fee_collector::ForwardFeesResponse;
-use white_whale::fee_distributor::{
+use white_whale_std::fee_collector::ForwardFeesResponse;
+use white_whale_std::fee_distributor::{
     Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset;
-use white_whale::whale_lair::GlobalIndex;
-use white_whale::whale_lair::QueryMsg as LairQueryMsg;
+use white_whale_std::pool_network::asset;
+use white_whale_std::whale_lair::GlobalIndex;
+use white_whale_std::whale_lair::QueryMsg as LairQueryMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
@@ -167,7 +167,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
     let version: Version = CONTRACT_VERSION.parse()?;

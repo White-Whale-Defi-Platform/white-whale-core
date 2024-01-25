@@ -3,10 +3,10 @@ use crate::error::ContractError;
 use crate::queries::query_pool;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{Coin, Decimal, Reply, SubMsgResponse, SubMsgResult, Uint128};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
 
 #[cfg(not(feature = "osmosis"))]
 #[test]

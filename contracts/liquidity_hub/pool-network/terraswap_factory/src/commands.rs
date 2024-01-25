@@ -3,16 +3,16 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, PairType};
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
+use white_whale_std::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
     MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
-use white_whale::pool_network::{pair, trio};
+use white_whale_std::pool_network::{pair, trio};
 
 use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 use crate::error::ContractError;

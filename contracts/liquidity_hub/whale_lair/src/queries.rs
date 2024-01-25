@@ -6,8 +6,8 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Bound;
 
-use white_whale::fee_distributor::QueryMsg;
-use white_whale::{
+use white_whale_std::fee_distributor::QueryMsg;
+use white_whale_std::{
     pool_network::asset::AssetInfo,
     whale_lair::{
         Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
@@ -61,7 +61,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
     }
 
     let fee_distributor_addr = CONFIG.load(deps.storage)?.fee_distributor_addr;
-    let config: white_whale::fee_distributor::Config =
+    let config: white_whale_std::fee_distributor::Config =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: fee_distributor_addr.to_string(),
             msg: to_json_binary(&QueryMsg::Config {})?,

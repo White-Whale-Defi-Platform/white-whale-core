@@ -8,7 +8,7 @@ use crate::{contract::execute, error::ContractError};
 use super::{mock_creator, mock_instantiate::mock_instantiate};
 
 pub fn mock_execute(
-    msg: white_whale::pool_network::incentive::ExecuteMsg,
+    msg: white_whale_std::pool_network::incentive::ExecuteMsg,
 ) -> (
     Result<Response, ContractError>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,

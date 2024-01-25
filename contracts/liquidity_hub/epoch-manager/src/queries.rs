@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Deps, StdResult};
 
-use white_whale::epoch_manager::epoch_manager::{ConfigResponse, EpochResponse, EpochV2};
+use white_whale_std::epoch_manager::epoch_manager::{ConfigResponse, EpochResponse, EpochV2};
 
 use crate::state::{ADMIN, CONFIG, EPOCH};
 

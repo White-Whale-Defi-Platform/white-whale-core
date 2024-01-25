@@ -28,7 +28,7 @@ pub fn create_incentive_reply(deps: DepsMut, msg: Reply) -> Result<Response, Con
 
     let incentive_address = deps.api.addr_validate(&res.address)?;
 
-    let incentive_data: white_whale::pool_network::incentive::InstantiateReplyCallback =
+    let incentive_data: white_whale_std::pool_network::incentive::InstantiateReplyCallback =
         from_json(&res.data)?;
 
     INCENTIVE_MAPPINGS.save(

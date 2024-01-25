@@ -4,13 +4,13 @@ use cosmwasm_std::{
     to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
-use white_whale::pool_network::incentive::{
+use white_whale_std::pool_network::incentive::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 use semver::Version;
-use white_whale::migrate_guards::check_contract_name;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::migrate_guards::check_contract_name;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -58,7 +58,7 @@ pub fn instantiate(
             ("lp_asset", config.lp_asset.to_string()),
         ])
         .set_data(to_json_binary(
-            &white_whale::pool_network::incentive::InstantiateReplyCallback {
+            &white_whale_std::pool_network::incentive::InstantiateReplyCallback {
                 lp_asset: msg.lp_asset,
             },
         )?)

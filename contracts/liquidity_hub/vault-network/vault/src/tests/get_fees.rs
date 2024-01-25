@@ -1,5 +1,5 @@
 use cosmwasm_std::Decimal;
-use white_whale::fee::{Fee, VaultFee};
+use white_whale_std::fee::{Fee, VaultFee};
 
 pub fn get_fees() -> VaultFee {
     VaultFee {

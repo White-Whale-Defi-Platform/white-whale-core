@@ -7,14 +7,14 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use white_whale::fee::Fee;
+use white_whale_std::fee::Fee;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgMint;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom::MsgMint;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;

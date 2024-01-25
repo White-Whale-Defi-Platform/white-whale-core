@@ -1,8 +1,8 @@
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use white_whale::vault_network::vault::Config;
+use white_whale_std::vault_network::vault::Config;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 

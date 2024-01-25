@@ -1,12 +1,12 @@
 use cosmwasm_std::{to_json_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
 
-use white_whale::fee_collector::{Config, ContractType, FactoryType, FeesFor};
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::factory::PairsResponse;
-use white_whale::pool_network::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
-use white_whale::vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
-use white_whale::vault_network::vault_factory::VaultsResponse;
+use white_whale_std::fee_collector::{Config, ContractType, FactoryType, FeesFor};
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::factory::PairsResponse;
+use white_whale_std::pool_network::pair::ProtocolFeesResponse as ProtocolPairFeesResponse;
+use white_whale_std::vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
+use white_whale_std::vault_network::vault_factory::VaultsResponse;
 
 use crate::state::CONFIG;
 
@@ -75,9 +75,9 @@ fn query_fees_for_vault(deps: &Deps, vault: String, all_time: bool) -> StdResult
         .querier
         .query::<ProtocolVaultFeesResponse>(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: vault,
-            msg: to_json_binary(&white_whale::vault_network::vault::QueryMsg::ProtocolFees {
-                all_time,
-            })?,
+            msg: to_json_binary(
+                &white_whale_std::vault_network::vault::QueryMsg::ProtocolFees { all_time },
+            )?,
         }))?
         .fees;
 
@@ -115,7 +115,7 @@ fn query_fees_for_factory(
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                        &white_whale_std::vault_network::vault_factory::QueryMsg::Vaults {
                             start_after,
                             limit,
                         },
@@ -151,10 +151,10 @@ fn query_fees_for_factory(
 pub(crate) fn query_distribution_asset(deps: Deps) -> StdResult<AssetInfo> {
     let config: Config = CONFIG.load(deps.storage)?;
 
-    let fee_distributor_config: white_whale::fee_distributor::Config =
+    let fee_distributor_config: white_whale_std::fee_distributor::Config =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: config.fee_distributor.to_string(),
-            msg: to_json_binary(&white_whale::fee_distributor::QueryMsg::Config {})?,
+            msg: to_json_binary(&white_whale_std::fee_distributor::QueryMsg::Config {})?,
         }))?;
 
     Ok(fee_distributor_config.distribution_asset)

@@ -541,7 +541,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -587,7 +587,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -614,7 +614,7 @@ dependencies = [
  "vault",
  "vault_factory",
  "whale-lair",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -631,7 +631,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -685,7 +685,7 @@ dependencies = [
  "serde",
  "terraswap-pair",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -787,7 +787,7 @@ dependencies = [
  "serde",
  "terraswap-token",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -804,7 +804,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1532,7 +1532,7 @@ dependencies = [
  "serde",
  "stable-swap-sim",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1602,7 +1602,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1623,7 +1623,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1640,7 +1640,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1657,7 +1657,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1733,7 +1733,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1754,7 +1754,7 @@ dependencies = [
  "serde",
  "thiserror",
  "vault",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1776,7 +1776,7 @@ dependencies = [
  "thiserror",
  "vault",
  "vault_factory",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]
@@ -1820,12 +1820,12 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
- "white-whale",
+ "white-whale-std",
  "white-whale-testing",
 ]
 
 [[package]]
-name = "white-whale"
+name = "white-whale-std"
 version = "1.1.1"
 dependencies = [
  "cosmwasm-schema",
@@ -1853,7 +1853,7 @@ dependencies = [
  "schemars",
  "serde",
  "whale-lair",
- "white-whale",
+ "white-whale-std",
 ]
 
 [[package]]

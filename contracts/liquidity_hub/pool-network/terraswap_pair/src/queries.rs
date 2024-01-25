@@ -3,10 +3,10 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{
+use white_whale_std::pool_network::asset::{
     get_total_share, Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType,
 };
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };

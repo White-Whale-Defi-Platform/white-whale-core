@@ -1,7 +1,7 @@
 use cosmwasm_std::Uint128;
-use white_whale::pool_network::asset;
+use white_whale_std::pool_network::asset;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 #[test]
 fn aggregate_fees() {

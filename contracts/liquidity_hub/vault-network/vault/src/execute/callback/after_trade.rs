@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::state::{store_fee, ALL_TIME_BURNED_FEES};
 use crate::{
@@ -102,9 +102,9 @@ mod test {
     };
     use cw20::Cw20ExecuteMsg;
 
-    use white_whale::fee::{Fee, VaultFee};
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault::Config;
+    use white_whale_std::fee::{Fee, VaultFee};
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault::Config;
 
     use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{
@@ -130,7 +130,7 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_creator(),
-            white_whale::vault_network::vault::InstantiateMsg {
+            white_whale_std::vault_network::vault::InstantiateMsg {
                 owner: mock_creator().sender.into_string(),
                 token_id: 5,
                 asset_info: AssetInfo::NativeToken {
@@ -157,8 +157,8 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info(&env.contract.address.into_string(), &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(1_000),
                 },
@@ -296,8 +296,8 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info(&env.contract.address.into_string(), &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(1_000),
                 },
@@ -381,7 +381,7 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_creator(),
-            white_whale::vault_network::vault::InstantiateMsg {
+            white_whale_std::vault_network::vault::InstantiateMsg {
                 owner: mock_creator().sender.into_string(),
                 token_id: 5,
                 asset_info: AssetInfo::NativeToken {
@@ -398,8 +398,8 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info(&env.contract.address.into_string(), &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(1_000),
                 },
@@ -454,8 +454,8 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info(&env.contract.address.into_string(), &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(1_000),
                 },
@@ -537,8 +537,8 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info(&env.contract.address.into_string(), &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(1_000),
                 },

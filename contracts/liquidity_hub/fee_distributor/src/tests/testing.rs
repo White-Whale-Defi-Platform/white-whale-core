@@ -1,12 +1,12 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{Addr, Uint64};
 
-use white_whale::fee_distributor::Config;
+use white_whale_std::fee_distributor::Config;
 
 use crate::tests::robot::TestingRobot;
 use crate::ContractError;
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 #[test]
 fn instantiate_successfully() {

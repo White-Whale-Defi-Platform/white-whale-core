@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::whale_lair::Config;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::whale_lair::Config;
 
 use crate::tests::robot::TestingRobot;
 

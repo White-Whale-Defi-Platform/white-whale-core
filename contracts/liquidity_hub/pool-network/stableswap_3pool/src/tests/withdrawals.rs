@@ -11,12 +11,12 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::AssetInfo;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgBurn;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom::MsgBurn;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
 #[cfg(not(feature = "osmosis"))]
 #[test]
@@ -313,7 +313,7 @@ fn withdraw_liquidity_token_factory_lp() {
     });
     let msg_burn_liquidity_expected = <MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(white_whale::pool_network::denom::Coin {
+        amount: Some(white_whale_std::pool_network::denom::Coin {
             denom: lp_denom.clone(),
             amount: "6000".to_string(),
         }),

@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, CanonicalAddr, DepsMut, Order, StdError, Uint128};
 use cw_storage_plus::{Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 
 #[cfg(not(feature = "osmosis"))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:

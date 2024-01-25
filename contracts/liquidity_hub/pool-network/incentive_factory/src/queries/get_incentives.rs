@@ -1,6 +1,6 @@
 use cosmwasm_std::{Deps, Order, StdResult, Storage};
 use cw_storage_plus::Bound;
-use white_whale::pool_network::{
+use white_whale_std::pool_network::{
     asset::{AssetInfo, AssetInfoRaw},
     incentive_factory::{IncentivesContract, IncentivesResponse},
 };
@@ -61,7 +61,7 @@ mod tests {
         SubMsgResult,
     };
     use protobuf::{Message, SpecialFields};
-    use white_whale::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
+    use white_whale_std::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
 
     use crate::{
         reply::create_incentive_reply::{create_incentive_reply, CREATE_INCENTIVE_REPLY_ID},
@@ -81,7 +81,7 @@ mod tests {
                         Message::write_to_bytes(&MsgInstantiateContractResponse {
                             address: format!("incentive{id}"),
                             data: to_json_binary(
-                                &white_whale::pool_network::incentive::InstantiateReplyCallback {
+                                &white_whale_std::pool_network::incentive::InstantiateReplyCallback {
                                     lp_asset: get_lp_asset(id),
                                 },
                             )

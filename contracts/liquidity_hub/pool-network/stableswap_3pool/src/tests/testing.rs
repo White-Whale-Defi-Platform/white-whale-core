@@ -9,15 +9,15 @@ use cw20::MinterResponse;
 use crate::state::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, TrioInfo};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::swap::assert_max_spread;
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
+use white_whale_std::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::swap::assert_max_spread;
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale_std::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;

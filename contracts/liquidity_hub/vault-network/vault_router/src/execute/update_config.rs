@@ -38,7 +38,7 @@ pub fn update_config(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{testing::mock_info, Addr, Response};
-    use white_whale::vault_network::vault_router::{Config, ExecuteMsg};
+    use white_whale_std::vault_network::vault_router::{Config, ExecuteMsg};
 
     use crate::{
         contract::execute,

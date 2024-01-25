@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{Decimal, Decimal256, Uint128};
-    use white_whale::fee::Fee;
-    use white_whale::pool_network::{asset::PairType, pair::PoolFee};
+    use white_whale_std::fee::Fee;
+    use white_whale_std::pool_network::{asset::PairType, pair::PoolFee};
 
     use crate::{
         helpers::{calculate_stableswap_y, compute_swap, StableSwapDirection, SwapComputation},
