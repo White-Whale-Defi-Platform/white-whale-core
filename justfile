@@ -21,6 +21,7 @@ test FEATURE='':
 format:
   cargo fmt --all
   find . -type f -iname "*.toml" -print0 | xargs -0 taplo format
+  find . -type f -name '*.sh' -exec shfmt -w {} \;
 
 lint FEATURE='':
   #!/usr/bin/env sh

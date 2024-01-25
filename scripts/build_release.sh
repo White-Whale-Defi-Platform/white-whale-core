@@ -5,28 +5,28 @@ projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 
 # Displays tool usage
 function display_usage() {
-  echo "Release builder"
-  echo -e "\nUsage:./build_release.sh [flags].\n"
-  echo -e "Available flags:\n"
-  echo -e "  -c \tThe chain where you want to deploy (migaloo|juno|terra|...)"
+	echo "Release builder"
+	echo -e "\nUsage:./build_release.sh [flags].\n"
+	echo -e "Available flags:\n"
+	echo -e "  -c \tThe chain where you want to deploy (migaloo|juno|terra|...)"
 }
 
 if [ -z $1 ]; then
-  display_usage
-  exit 0
+	display_usage
+	exit 0
 fi
 
 while getopts ":c:" opt; do
-  case $opt in
-  c)
-    chain="$OPTARG"
-    ;;
-  \?)
-    echo "Invalid option: -$OPTARG" >&2
-    display_usage
-    exit 1
-    ;;
-  esac
+	case $opt in
+	c)
+		chain="$OPTARG"
+		;;
+	\?)
+		echo "Invalid option: -$OPTARG" >&2
+		display_usage
+		exit 1
+		;;
+	esac
 done
 
 flag=""
@@ -34,35 +34,35 @@ flag=""
 case $chain in
 
 osmosis)
-  flag="-osmosis"
-  echo " $projectRootPath/Cargo.toml"
+	flag="-osmosis"
+	echo " $projectRootPath/Cargo.toml"
 
-  # backup the Cargo.toml file
-  cp $projectRootPath/Cargo.toml $projectRootPath/Cargo.toml.bak
+	# backup the Cargo.toml file
+	cp $projectRootPath/Cargo.toml $projectRootPath/Cargo.toml.bak
 
-  # add the osmosis feature flag to the Cargo.toml file so it optimizes correctly
-  if [[ "$(uname)" == "Darwin" ]]; then
-    sed -i '' '/white-whale-std =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
-  else
-    sed -i '/white-whale-std =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
-  fi
+	# add the osmosis feature flag to the Cargo.toml file so it optimizes correctly
+	if [[ "$(uname)" == "Darwin" ]]; then
+		sed -i '' '/white-whale-std =/ s/}/, features = \["osmosis"\] }/' $projectRootPath/Cargo.toml
+	else
+		sed -i '/white-whale-std =/ s/}/, features = \["osmosis"\] }/' $projectRootPath/Cargo.toml
+	fi
 
-  ;;
+	;;
 juno | terra | chihuahua)
-  flag="-osmosis_token_factory"
-  ;;
+	flag="-osmosis_token_factory"
+	;;
 migaloo)
-  flag="-token_factory"
-  ;;
+	flag="-token_factory"
+	;;
 injective)
-  flag="-injective"
-  ;;
+	flag="-injective"
+	;;
 comdex | orai | sei | vanilla) ;;
 
 \*)
-  echo "Network $chain not defined"
-  exit 1
-  ;;
+	echo "Network $chain not defined"
+	exit 1
+	;;
 esac
 
 projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
@@ -71,10 +71,10 @@ projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 arch=$(uname -m)
 
 docker_options=(
-  --rm
-  -v "$projectRootPath":/code
-  --mount type=volume,source="$(basename "$projectRootPath")_cache",target=/target
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
+	--rm
+	-v "$projectRootPath":/code
+	--mount type=volume,source="$(basename "$projectRootPath")_cache",target=/target
+	--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
 )
 
 # Make sure you have an image with the flags installed on your docker. For that, fork the rust-optimizer,
@@ -83,9 +83,9 @@ docker_options=(
 
 # Optimized builds
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer-arm64:0.15.0$flag")
+	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer-arm64:0.15.0$flag")
 else
-  docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer:0.15.0$flag")
+	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer:0.15.0$flag")
 fi
 
 echo "${docker_command[@]}"
@@ -100,6 +100,6 @@ $projectRootPath/scripts/check_artifacts_size.sh
 $projectRootPath/scripts/get_artifacts_versions.sh
 
 if [[ "$chain" == "osmosis" ]]; then
-  #if the chain is osmosis, restore the Cargo.toml file
-  mv $projectRootPath/Cargo.toml.bak $projectRootPath/Cargo.toml
+	#if the chain is osmosis, restore the Cargo.toml file
+	mv $projectRootPath/Cargo.toml.bak $projectRootPath/Cargo.toml
 fi
