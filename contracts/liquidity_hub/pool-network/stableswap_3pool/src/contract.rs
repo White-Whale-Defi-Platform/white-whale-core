@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
+    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
     StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
@@ -103,6 +103,7 @@ pub fn instantiate(
         initial_amp_block: env.block.height,
         future_amp_block: env.block.height,
     };
+
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
@@ -210,6 +211,7 @@ pub fn execute(
             feature_toggle,
             amp_factor,
         ),
+
         ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps),
     }
 }
@@ -238,12 +240,12 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Trio {} => Ok(to_binary(&queries::query_trio_info(deps)?)?),
-        QueryMsg::Pool {} => Ok(to_binary(&queries::query_pool(deps)?)?),
+        QueryMsg::Trio {} => Ok(to_json_binary(&queries::query_trio_info(deps)?)?),
+        QueryMsg::Pool {} => Ok(to_json_binary(&queries::query_pool(deps)?)?),
         QueryMsg::Simulation {
             offer_asset,
             ask_asset,
-        } => Ok(to_binary(&queries::query_simulation(
+        } => Ok(to_json_binary(&queries::query_simulation(
             deps,
             offer_asset,
             ask_asset,
@@ -252,21 +254,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::ReverseSimulation {
             ask_asset,
             offer_asset,
-        } => Ok(to_binary(&queries::query_reverse_simulation(
+        } => Ok(to_json_binary(&queries::query_reverse_simulation(
             deps,
             ask_asset,
             offer_asset,
             env.block.height,
         )?)?),
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             all_time,
             COLLECTED_PROTOCOL_FEES,
             Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
         )?)?),
-        QueryMsg::BurnedFees { asset_id } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::BurnedFees { asset_id } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             None,

@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, DepsMut, MessageInfo, Response};
+use cosmwasm_std::{from_json, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version, ContractVersion};
 use std::env;
 
@@ -24,7 +24,7 @@ fn proper_initialization() {
     instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!("owner".to_string(), config_res.owner);
 }
 
@@ -35,7 +35,7 @@ fn test_update_config_successfully() {
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
     let msg = ExecuteMsg::UpdateConfig {
@@ -49,7 +49,7 @@ fn test_update_config_successfully() {
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
     assert_eq!(config_res.pool_router, Addr::unchecked("new_router"));
 }
@@ -61,7 +61,7 @@ fn test_update_config_unsuccessfully_unauthorized() {
     mock_instantiation(deps.as_mut(), info).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: Config = from_binary(&query_res).unwrap();
+    let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
 
     let info = mock_info("unauthorized", &[]);

@@ -8,6 +8,7 @@ use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale::pool_network::mock_querier::mock_dependencies;
 use white_whale::pool_network::pair::{InstantiateMsg, PoolFee, PoolResponse, QueryMsg};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_simulations_asset_missmatch() {
     let mut deps = mock_dependencies(&[]);
@@ -89,6 +90,7 @@ fn test_simulations_asset_missmatch() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_query_pool() {
     let total_share_amount = Uint128::from(111u128);

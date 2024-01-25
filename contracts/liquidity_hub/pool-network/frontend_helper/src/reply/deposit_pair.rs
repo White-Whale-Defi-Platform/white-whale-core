@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, Reply, Response, WasmMsg};
+use cosmwasm_std::{to_json_binary, DepsMut, Env, Reply, Response, WasmMsg};
 use white_whale::pool_network::{
     asset::AssetInfo, frontend_helper::TempState, incentive::QueryPosition,
 };
@@ -75,7 +75,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
             // to spend our new LP tokens
             messages.push(WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                msg: to_json_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
                     spender: incentive_address.to_string(),
                     amount: balance.balance,
                     expires: None,
@@ -114,7 +114,7 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         .add_messages(messages)
         .add_message(WasmMsg::Execute {
             contract_addr: incentive_address.into_string(),
-            msg: to_binary(&match has_existing_position {
+            msg: to_json_binary(&match has_existing_position {
                 true => white_whale::pool_network::incentive::ExecuteMsg::ExpandPosition {
                     amount: lp_amount,
                     unbonding_duration,

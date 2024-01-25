@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
-    Storage, SubMsg, Uint128, Uint256, WasmMsg,
+    to_json_binary, Decimal, Decimal256, Deps, DepsMut, Env, ReplyOn, Response, StdError,
+    StdResult, Storage, SubMsg, Uint128, Uint256, WasmMsg,
 };
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
@@ -50,17 +50,38 @@ pub fn compute_swap(
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
     let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-    // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
-    let return_amount: Uint256 =
-        return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
+    #[cfg(not(feature = "osmosis"))]
+    {
+        // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
+        let return_amount: Uint256 =
+            return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
 
-    Ok(SwapComputation {
-        return_amount: return_amount.try_into()?,
-        spread_amount: spread_amount.try_into()?,
-        swap_fee_amount: swap_fee_amount.try_into()?,
-        protocol_fee_amount: protocol_fee_amount.try_into()?,
-        burn_fee_amount: burn_fee_amount.try_into()?,
-    })
+        Ok(SwapComputation {
+            return_amount: return_amount.try_into()?,
+            spread_amount: spread_amount.try_into()?,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
+
+        // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
+        let return_amount: Uint256 =
+            return_amount - swap_fee_amount - protocol_fee_amount - osmosis_fee_amount;
+
+        Ok(SwapComputation {
+            return_amount: return_amount.try_into()?,
+            spread_amount: spread_amount.try_into()?,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+            osmosis_fee_amount: osmosis_fee_amount.try_into()?,
+        })
+    }
 }
 
 /// Represents the swap computation values
@@ -71,6 +92,8 @@ pub struct SwapComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 pub fn compute_offer_amount(
@@ -81,11 +104,25 @@ pub fn compute_offer_amount(
     pool_fees: PoolFee,
     invariant: StableSwap,
 ) -> StdResult<OfferAmountComputation> {
-    let fees = pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
+    let fees = {
+        let base_fees =
+            pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
+
+        #[cfg(feature = "osmosis")]
+        {
+            base_fees + pool_fees.osmosis_fee.share
+        }
+
+        #[cfg(not(feature = "osmosis"))]
+        {
+            base_fees
+        }
+    };
+
     let one_minus_commission = Decimal::one() - fees;
     let inv_one_minus_commission = Decimal::one() / one_minus_commission;
 
-    let before_commission_deduction: Uint128 = ask_amount * inv_one_minus_commission;
+    let before_commission_deduction = ask_amount * inv_one_minus_commission;
 
     let offer_amount = invariant
         .reverse_sim(
@@ -112,13 +149,32 @@ pub fn compute_offer_amount(
         .burn_fee
         .compute(before_commission_deduction.into());
 
-    Ok(OfferAmountComputation {
-        offer_amount,
-        spread_amount,
-        swap_fee_amount: swap_fee_amount.try_into()?,
-        protocol_fee_amount: protocol_fee_amount.try_into()?,
-        burn_fee_amount: burn_fee_amount.try_into()?,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(OfferAmountComputation {
+            offer_amount,
+            spread_amount,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount = pool_fees
+            .osmosis_fee
+            .compute(before_commission_deduction.into());
+
+        Ok(OfferAmountComputation {
+            offer_amount,
+            spread_amount,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+            osmosis_fee_amount: osmosis_fee_amount.try_into()?,
+        })
+    }
 }
 
 /// Represents the offer amount computation values
@@ -129,6 +185,8 @@ pub struct OfferAmountComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
@@ -288,7 +346,7 @@ pub fn create_lp_token(
             msg: WasmMsg::Instantiate {
                 admin: None,
                 code_id: msg.token_code_id,
-                msg: to_binary(&TokenInstantiateMsg {
+                msg: to_json_binary(&TokenInstantiateMsg {
                     name: lp_token_name.to_owned(),
                     symbol: "uLP".to_string(),
                     decimals: 6,

@@ -110,6 +110,8 @@ pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
     pub burn_fee: Fee,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee: Fee,
 }
 
 impl PoolFee {
@@ -120,16 +122,37 @@ impl PoolFee {
         self.swap_fee.is_valid()?;
         self.burn_fee.is_valid()?;
 
-        if self
-            .protocol_fee
-            .share
-            .checked_add(self.swap_fee.share)?
-            .checked_add(self.burn_fee.share)?
-            >= Decimal::percent(100)
-        {
+        let total_fee = self.aggregate()?;
+
+        // Check if the total fee exceeds 100%
+        if total_fee >= Decimal::percent(100) {
             return Err(StdError::generic_err("Invalid fees"));
         }
+
         Ok(())
+    }
+
+    /// aggregates all the fees into a single decimal
+    pub fn aggregate(&self) -> StdResult<Decimal> {
+        let total_fee = {
+            let base_fee = self
+                .protocol_fee
+                .share
+                .checked_add(self.swap_fee.share)?
+                .checked_add(self.burn_fee.share)?;
+
+            #[cfg(feature = "osmosis")]
+            {
+                base_fee.checked_add(self.osmosis_fee.share)?
+            }
+
+            #[cfg(not(feature = "osmosis"))]
+            {
+                base_fee
+            }
+        };
+
+        Ok(total_fee)
     }
 }
 
@@ -158,6 +181,8 @@ pub struct SimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 /// ReverseSimulationResponse returns reverse swap simulation response
@@ -174,6 +199,8 @@ pub struct ReverseSimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 /// We currently take no arguments for migrations

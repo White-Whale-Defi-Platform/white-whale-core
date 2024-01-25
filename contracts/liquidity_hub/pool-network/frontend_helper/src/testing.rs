@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::error::ContractError;
-    use cosmwasm_std::{coin, coins, to_binary, Addr, Uint128, WasmMsg};
+    use cosmwasm_std::{coin, coins, to_json_binary, Addr, Uint128, WasmMsg};
     use cw_multi_test::Executor;
     use white_whale::pool_network::asset::{Asset, AssetInfo};
     use white_whale::pool_network::frontend_helper::ConfigResponse;
@@ -129,7 +129,7 @@ mod tests {
             vec![
                 WasmMsg::Execute {
                     contract_addr: pool_assets[1].to_string(),
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                    msg: to_json_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
                         spender: frontend_helper.clone().into_string(),
                         amount: Uint128::new(5_000),
                         expires: None,
@@ -140,7 +140,7 @@ mod tests {
                 .into(),
                 WasmMsg::Execute {
                     contract_addr: frontend_helper.into_string(),
-                    msg: to_binary(
+                    msg: to_json_binary(
                         &white_whale::pool_network::frontend_helper::ExecuteMsg::Deposit {
                             pair_address: pair_address.into_string(),
                             assets: [

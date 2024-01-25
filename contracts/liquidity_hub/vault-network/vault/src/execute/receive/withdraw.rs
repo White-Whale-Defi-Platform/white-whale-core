@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
+    coins, to_json_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -75,7 +75,7 @@ pub fn withdraw(
             .into(),
             AssetInfo::Token { contract_addr } => WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: sender.into_string(),
                     amount: withdraw_amount,
                 })?,
@@ -116,7 +116,7 @@ fn burn_lp_asset_msg(
     } else {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_asset,
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
             funds: vec![],
         }))
     }
@@ -127,7 +127,7 @@ fn burn_lp_asset_msg(
     ))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+        msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
         funds: vec![],
     }))
 }
@@ -137,7 +137,7 @@ mod tests {
     use cosmwasm_std::{
         coins,
         testing::{mock_env, mock_info},
-        to_binary, Addr, BankMsg, Response, SubMsg, Uint128, WasmMsg,
+        to_json_binary, Addr, BankMsg, Response, SubMsg, Uint128, WasmMsg,
     };
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
@@ -171,8 +171,10 @@ mod tests {
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     sender: mock_creator().sender.into_string(),
                     amount: Uint128::new(5_000),
-                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                        .unwrap(),
+                    msg: to_json_binary(
+                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                    )
+                    .unwrap(),
                 },
             ),
         );
@@ -191,8 +193,10 @@ mod tests {
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     sender: mock_creator().sender.into_string(),
                     amount: Uint128::new(5_000),
-                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                        .unwrap(),
+                    msg: to_json_binary(
+                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                    )
+                    .unwrap(),
                 },
             ),
         );
@@ -248,8 +252,10 @@ mod tests {
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(2_000),
                     sender: mock_creator().sender.into_string(),
-                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                        .unwrap(),
+                    msg: to_json_binary(
+                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                    )
+                    .unwrap(),
                 },
             ),
         );
@@ -301,7 +307,7 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(4_500),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
             &[],
@@ -409,7 +415,7 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(4_500),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
+                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
                     .unwrap(),
             },
             &[],
@@ -507,8 +513,10 @@ mod tests {
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(5_000),
                     sender: mock_creator().sender.into_string(),
-                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                        .unwrap(),
+                    msg: to_json_binary(
+                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                    )
+                    .unwrap(),
                 },
             ),
         )
@@ -539,7 +547,7 @@ mod tests {
                         reply_on: cosmwasm_std::ReplyOn::Never,
                         msg: WasmMsg::Execute {
                             contract_addr: "lp_token".to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::Burn {
+                            msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                                 amount: Uint128::new(5000)
                             })
                             .unwrap(),
@@ -617,8 +625,10 @@ mod tests {
                 white_whale::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(5_000),
                     sender: mock_creator().sender.into_string(),
-                    msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                        .unwrap(),
+                    msg: to_json_binary(
+                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                    )
+                    .unwrap(),
                 },
             ),
         )
@@ -639,7 +649,7 @@ mod tests {
                         reply_on: cosmwasm_std::ReplyOn::Never,
                         msg: WasmMsg::Execute {
                             contract_addr: "vault_token".to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                                 amount: Uint128::new(4_999),
                                 recipient: mock_creator().sender.into_string(),
                             })
@@ -654,7 +664,7 @@ mod tests {
                         reply_on: cosmwasm_std::ReplyOn::Never,
                         msg: WasmMsg::Execute {
                             contract_addr: "lp_token".to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::Burn {
+                            msg: to_json_binary(&Cw20ExecuteMsg::Burn {
                                 amount: Uint128::new(5000)
                             })
                             .unwrap(),

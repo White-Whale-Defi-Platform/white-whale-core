@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, DepsMut, Env, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::pool_network::asset::AssetInfo;
 
 use crate::{
@@ -39,7 +39,7 @@ pub fn create_incentive(
             msg: WasmMsg::Instantiate {
                 admin: Some(env.contract.address.into_string()),
                 code_id: config.incentive_code_id,
-                msg: to_binary(&white_whale::pool_network::incentive::InstantiateMsg {
+                msg: to_json_binary(&white_whale::pool_network::incentive::InstantiateMsg {
                     lp_asset: lp_asset.clone(),
                     fee_distributor_address: config.fee_distributor_addr.into_string(),
                 })?,

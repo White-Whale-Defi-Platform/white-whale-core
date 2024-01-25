@@ -44,6 +44,7 @@ mod tests {
         assert_eq!(y, Uint128::new(980_053));
     }
 
+    #[cfg(not(feature = "osmosis"))]
     #[test]
     fn does_stableswap_correctly() {
         let asset_pool_amount = Uint128::from(990_050u128);
@@ -83,6 +84,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "osmosis"))]
     #[test]
     fn does_stableswap_correctly_with_smaller_asset_pool() {
         // test when asset_pool is smaller than collateral_pool
@@ -124,6 +126,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "osmosis"))]
     #[test]
     #[allow(clippy::inconsistent_digit_grouping)]
     fn does_stableswap_with_different_precisions() {
@@ -204,6 +207,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "osmosis"))]
     #[test]
     #[allow(clippy::inconsistent_digit_grouping)]
     fn does_stableswap_with_18_18_precision() {

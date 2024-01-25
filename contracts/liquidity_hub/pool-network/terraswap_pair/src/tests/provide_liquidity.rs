@@ -2,7 +2,7 @@ use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
 use cosmwasm_std::{
-    to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
+    to_json_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
@@ -30,6 +30,7 @@ use cosmwasm_std::coin;
 #[cfg(feature = "injective")]
 use cw_multi_test::Executor;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -166,7 +167,7 @@ fn provide_liquidity_cw20_lp() {
         transfer_from_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+            msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: "addr0000".to_string(),
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(2_000u128),
@@ -179,7 +180,7 @@ fn provide_liquidity_cw20_lp() {
         mint_initial_lp_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
+            msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "cosmos2contract".to_string(),
                 amount: MINIMUM_LIQUIDITY_AMOUNT,
             })
@@ -191,7 +192,7 @@ fn provide_liquidity_cw20_lp() {
         mint_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
+            msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "addr0000".to_string(),
                 amount: Uint128::from(1_000u128),
             })
@@ -261,7 +262,7 @@ fn provide_liquidity_cw20_lp() {
         transfer_from_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "asset0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+            msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
                 owner: "addr0000".to_string(),
                 recipient: MOCK_CONTRACT_ADDR.to_string(),
                 amount: Uint128::from(100u128),
@@ -274,7 +275,7 @@ fn provide_liquidity_cw20_lp() {
         mint_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: "liquidity0000".to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Mint {
+            msg: to_json_binary(&Cw20ExecuteMsg::Mint {
                 recipient: "staking0000".to_string(), // LP tokens sent to specified receiver
                 amount: Uint128::from(50u128),
             })
@@ -500,6 +501,7 @@ fn provide_liquidity_cw20_lp() {
     let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_zero_amount() {
     let mut deps = mock_dependencies(&[Coin {
@@ -600,6 +602,7 @@ fn provide_liquidity_zero_amount() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_invalid_minimum_lp_amount() {
     let mut deps = mock_dependencies(&[Coin {

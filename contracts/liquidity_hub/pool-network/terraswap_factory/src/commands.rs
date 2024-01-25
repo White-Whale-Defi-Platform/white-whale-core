@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    to_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
+    to_json_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
 };
 
@@ -69,9 +69,9 @@ pub fn update_pair_config(
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
 ) -> Result<Response, ContractError> {
-    Ok(Response::new()
+    Ok(Response::default()
         .add_message(wasm_execute(
-            deps.api.addr_validate(pair_addr.as_str())?.to_string(),
+            deps.api.addr_validate(&pair_addr)?.to_string(),
             &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
@@ -161,13 +161,13 @@ pub fn create_pair(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: pair_label,
-                msg: to_binary(&PairInstantiateMsg {
+                msg: to_json_binary(&PairInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
-                    pair_type,
+                    pair_type: pair_type.clone(),
                     token_factory_lp,
                 })?,
             }),
@@ -175,6 +175,7 @@ pub fn create_pair(
         }))
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Updates a trio config
 pub fn update_trio_config(
     deps: DepsMut,
@@ -187,7 +188,7 @@ pub fn update_trio_config(
 ) -> Result<Response, ContractError> {
     Ok(Response::new()
         .add_message(wasm_execute(
-            deps.api.addr_validate(trio_addr.as_str())?.to_string(),
+            deps.api.addr_validate(&trio_addr)?.to_string(),
             &pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
@@ -293,7 +294,7 @@ pub fn create_trio(
                 funds: info.funds,
                 admin: Some(env.contract.address.to_string()),
                 label: trio_label,
-                msg: to_binary(&TrioInstantiateMsg {
+                msg: to_json_binary(&TrioInstantiateMsg {
                     asset_infos,
                     token_code_id: config.token_code_id,
                     asset_decimals,
@@ -400,7 +401,7 @@ pub fn execute_migrate_pair(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
             new_code_id: pair_code_id,
-            msg: to_binary(&PairMigrateMsg {})?,
+            msg: to_json_binary(&PairMigrateMsg {})?,
         })),
     )
 }
@@ -426,7 +427,7 @@ pub fn execute_migrate_trio(
         Response::new().add_message(CosmosMsg::Wasm(WasmMsg::Migrate {
             contract_addr: contract,
             new_code_id: trio_code_id,
-            msg: to_binary(&TrioMigrateMsg {})?,
+            msg: to_json_binary(&TrioMigrateMsg {})?,
         })),
     )
 }

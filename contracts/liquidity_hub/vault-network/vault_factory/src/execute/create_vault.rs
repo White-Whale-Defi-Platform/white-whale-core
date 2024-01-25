@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale::fee::VaultFee;
 use white_whale::pool_network::asset::AssetInfo;
 use white_whale::vault_network::vault::InstantiateMsg;
@@ -37,7 +37,7 @@ pub fn create_vault(
         msg: WasmMsg::Instantiate {
             admin: Some(env.contract.address.clone().into_string()),
             code_id: config.vault_id,
-            msg: to_binary(&InstantiateMsg {
+            msg: to_json_binary(&InstantiateMsg {
                 owner: env.contract.address.into_string(),
                 asset_info: asset_info.clone(),
                 token_id: config.token_id,
@@ -70,7 +70,8 @@ pub fn create_vault(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        testing::mock_info, to_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg, WasmMsg,
+        testing::mock_info, to_json_binary, Addr, Decimal, ReplyOn, Response, StdError, SubMsg,
+        WasmMsg,
     };
     use cw_multi_test::Executor;
     use white_whale::fee::{Fee, VaultFee};
@@ -114,7 +115,7 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_binary(&white_whale::vault_network::vault::InstantiateMsg {
+                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
                             owner: env.contract.address.to_string(),
                             asset_info,
                             token_id: 6,
@@ -159,7 +160,7 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_binary(&white_whale::vault_network::vault::InstantiateMsg {
+                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
                             owner: env.contract.address.to_string(),
                             asset_info,
                             token_id: 6,
@@ -354,7 +355,7 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_binary(&white_whale::vault_network::vault::InstantiateMsg {
+                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
                             owner: env.contract.address.to_string(),
                             asset_info,
                             token_id: 6,
@@ -400,7 +401,7 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_binary(&white_whale::vault_network::vault::InstantiateMsg {
+                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
                             owner: env.contract.address.to_string(),
                             asset_info,
                             token_id: 6,

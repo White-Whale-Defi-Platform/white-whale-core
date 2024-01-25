@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
+    from_json, to_json_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
@@ -24,6 +24,7 @@ use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_trio_info;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn proper_initialization_cw20_lp() {
     let mut deps = mock_dependencies(&[]);
@@ -78,7 +79,7 @@ fn proper_initialization_cw20_lp() {
         vec![SubMsg {
             msg: WasmMsg::Instantiate {
                 code_id: 10u64,
-                msg: to_binary(&TokenInstantiateMsg {
+                msg: to_json_binary(&TokenInstantiateMsg {
                     name: "uusd-mAAPL-mAAPL-LP".to_string(),
                     symbol: "uLP".to_string(),
                     decimals: 6,
@@ -331,6 +332,7 @@ fn intialize_with_burnable_token_factory_asset() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_fees() {
     let mut deps = mock_dependencies(&[]);
@@ -381,6 +383,7 @@ fn test_initialization_invalid_fees() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_amp() {
     let mut deps = mock_dependencies(&[]);
@@ -437,6 +440,7 @@ fn test_initialization_invalid_amp() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
@@ -612,6 +616,7 @@ fn test_max_spread() {
     .unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
@@ -704,6 +709,7 @@ fn test_update_config_unsuccessful() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_successful() {
     let mut deps = mock_dependencies(&[]);
@@ -753,7 +759,7 @@ fn test_update_config_successful() {
     instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     let config: Config =
-        from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for original config
     assert_eq!(config.owner, Addr::unchecked("addr0000"));
@@ -781,7 +787,7 @@ fn test_update_config_successful() {
     execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     let config: Config =
-        from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for new config
     assert_eq!(config.owner, Addr::unchecked("new_admin"));
