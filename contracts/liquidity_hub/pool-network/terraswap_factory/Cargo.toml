@@ -2,9 +2,9 @@
 name = "terraswap-factory"
 version = "1.2.1"
 authors = [
-	"Terraform Labs, PTE.",
-	"DELIGHT LABS",
-	"Kerber0x <kerber0x@protonmail.com>",
+  "Terraform Labs, PTE.",
+  "DELIGHT LABS",
+  "Kerber0x <kerber0x@protonmail.com>",
 ]
 edition.workspace = true
 description = "A Terraswap factory contract - auto pair contract generator and also directory for all pairs"
@@ -13,9 +13,9 @@ publish.workspace = true
 documentation.workspace = true
 
 exclude = [
-	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-	"contract.wasm",
-	"hash.txt",
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

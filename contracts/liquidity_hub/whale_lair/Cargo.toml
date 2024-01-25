@@ -42,5 +42,5 @@ white-whale.workspace = true
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"
-anyhow = { version = "1.0.68"}
+anyhow = { version = "1.0.68" }
 white-whale-testing.workspace = true
