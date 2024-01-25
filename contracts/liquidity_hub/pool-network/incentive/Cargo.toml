@@ -19,10 +19,10 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["white-whale/injective"]
+injective = ["white-whale-std/injective"]
 osmosis = ["osmosis_token_factory"]
-token_factory = ["white-whale/token_factory"]
-osmosis_token_factory = ["white-whale/osmosis_token_factory"]
+token_factory = ["white-whale-std/token_factory"]
+osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
@@ -37,7 +37,7 @@ cw20.workspace = true
 cw2.workspace = true
 thiserror.workspace = true
 semver.workspace = true
-white-whale.workspace = true
+white-whale-std.workspace = true
 cosmwasm-schema.workspace = true
 cw-utils.workspace = true
 

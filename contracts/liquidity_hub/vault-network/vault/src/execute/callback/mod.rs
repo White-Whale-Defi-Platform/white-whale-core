@@ -3,7 +3,7 @@ mod after_trade;
 pub use after_trade::after_trade;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
-use white_whale::vault_network::vault::CallbackMsg;
+use white_whale_std::vault_network::vault::CallbackMsg;
 
 use crate::error::VaultError;
 
@@ -30,7 +30,7 @@ pub fn callback(
 mod test {
     use cosmwasm_std::{coins, Uint128};
     use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale_std::pool_network::asset::AssetInfo;
 
     use crate::{
         error::VaultError,
@@ -50,8 +50,8 @@ mod test {
                 denom: "uluna".to_string(),
             },
             false,
-            white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(5_000),
                     loan_amount: Uint128::new(2_500),
                 },
@@ -73,7 +73,7 @@ mod test {
             .instantiate_contract(
                 vault_id,
                 mock_creator().sender,
-                &white_whale::vault_network::vault::InstantiateMsg {
+                &white_whale_std::vault_network::vault::InstantiateMsg {
                     owner: mock_creator().sender.into_string(),
                     token_id,
                     asset_info: AssetInfo::NativeToken {
@@ -93,8 +93,8 @@ mod test {
         app.execute_contract(
             vault_addr.clone(),
             vault_addr,
-            &white_whale::vault_network::vault::ExecuteMsg::Callback(
-                white_whale::vault_network::vault::CallbackMsg::AfterTrade {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Callback(
+                white_whale_std::vault_network::vault::CallbackMsg::AfterTrade {
                     old_balance: Uint128::new(0),
                     loan_amount: Uint128::new(1_000),
                 },

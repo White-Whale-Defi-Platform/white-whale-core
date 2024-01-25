@@ -2,7 +2,7 @@ use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Respons
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::vault_network::vault_factory::{
+use white_whale_std::vault_network::vault_factory::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
@@ -71,7 +71,7 @@ pub fn execute(deps: DepsMut, env: Env, info: MessageInfo, msg: ExecuteMsg) -> S
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
@@ -95,7 +95,7 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Resp
 
 #[cfg(test)]
 mod test {
-    use white_whale::vault_network::vault_factory::MigrateMsg;
+    use white_whale_std::vault_network::vault_factory::MigrateMsg;
 
     use crate::err::VaultFactoryError;
     use crate::tests::mock_instantiate::mock_instantiate;

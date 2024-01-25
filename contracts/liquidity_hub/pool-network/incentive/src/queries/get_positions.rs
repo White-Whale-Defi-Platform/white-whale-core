@@ -1,5 +1,5 @@
 use cosmwasm_std::{Deps, Env};
-use white_whale::pool_network::incentive::{PositionsResponse, QueryPosition};
+use white_whale_std::pool_network::incentive::{PositionsResponse, QueryPosition};
 
 use crate::{
     error::ContractError,
@@ -51,7 +51,7 @@ mod tests {
         testing::{mock_dependencies, mock_env},
         Addr, Uint128,
     };
-    use white_whale::pool_network::incentive::{ClosedPosition, OpenPosition, QueryPosition};
+    use white_whale_std::pool_network::incentive::{ClosedPosition, OpenPosition, QueryPosition};
 
     use crate::{
         state::{CLOSED_POSITIONS, OPEN_POSITIONS},

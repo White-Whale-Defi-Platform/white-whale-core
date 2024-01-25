@@ -9,10 +9,10 @@ use schemars::JsonSchema;
 #[cfg(not(feature = "injective"))]
 use serde::{Deserialize, Serialize};
 
-use white_whale::fee::Fee;
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
-use white_whale::pool_network::pair::{Config, FeatureToggle};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
 #[cfg(not(feature = "injective"))]

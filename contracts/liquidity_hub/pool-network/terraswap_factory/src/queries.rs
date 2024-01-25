@@ -2,8 +2,10 @@ use crate::state::{
     pair_key, read_pairs, read_trios, trio_key, Config, ALLOW_NATIVE_TOKENS, CONFIG, PAIRS, TRIOS,
 };
 use cosmwasm_std::{Deps, StdResult};
-use white_whale::pool_network::asset::{AssetInfo, PairInfo, PairInfoRaw, TrioInfo, TrioInfoRaw};
-use white_whale::pool_network::factory::{
+use white_whale_std::pool_network::asset::{
+    AssetInfo, PairInfo, PairInfoRaw, TrioInfo, TrioInfoRaw,
+};
+use white_whale_std::pool_network::factory::{
     ConfigResponse, NativeTokenDecimalsResponse, PairsResponse, TriosResponse,
 };
 

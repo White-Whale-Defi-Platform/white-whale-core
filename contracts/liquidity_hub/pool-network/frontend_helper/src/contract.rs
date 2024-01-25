@@ -7,11 +7,11 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::frontend_helper::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::frontend_helper::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TempState,
 };
-use white_whale::traits::OptionDecimal;
+use white_whale_std::traits::OptionDecimal;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -133,7 +133,7 @@ pub fn execute(
                     msg: WasmMsg::Execute {
                         contract_addr: pair_address,
                         msg: to_json_binary(
-                            &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                            &white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity {
                                 assets,
                                 slippage_tolerance,
                                 receiver: None,

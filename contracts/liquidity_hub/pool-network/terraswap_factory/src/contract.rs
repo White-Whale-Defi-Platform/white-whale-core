@@ -7,9 +7,11 @@ use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 
 use semver::Version;
-use white_whale::pool_network::asset::{PairInfoRaw, TrioInfoRaw};
-use white_whale::pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale::pool_network::querier::{query_pair_info_from_pair, query_trio_info_from_trio};
+use white_whale_std::pool_network::asset::{PairInfoRaw, TrioInfoRaw};
+use white_whale_std::pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_network::querier::{
+    query_pair_info_from_pair, query_trio_info_from_trio,
+};
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -242,7 +244,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     use crate::migrations;
 

@@ -7,15 +7,15 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
-use white_whale::pool_network::swap::assert_max_spread;
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::ExecuteMsg::UpdateConfig;
+use white_whale_std::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
+use white_whale_std::pool_network::swap::assert_max_spread;
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;

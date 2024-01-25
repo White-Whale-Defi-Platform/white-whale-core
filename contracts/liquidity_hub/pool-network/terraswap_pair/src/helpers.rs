@@ -14,15 +14,15 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::MsgCreateDenom;
+use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::pair::{InstantiateMsg, PoolFee};
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale_std::pool_network::pair::{InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::contract::INSTANTIATE_REPLY_ID;
 use crate::error::ContractError;

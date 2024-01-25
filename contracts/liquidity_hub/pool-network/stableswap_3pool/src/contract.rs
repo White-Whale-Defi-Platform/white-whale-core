@@ -8,8 +8,8 @@ use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 use semver::Version;
 
-use white_whale::pool_network::asset::{AssetInfoRaw, TrioInfoRaw};
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::asset::{AssetInfoRaw, TrioInfoRaw};
+use white_whale_std::pool_network::trio::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
@@ -281,7 +281,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

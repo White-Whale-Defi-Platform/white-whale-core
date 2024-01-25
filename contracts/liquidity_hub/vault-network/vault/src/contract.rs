@@ -7,9 +7,9 @@ use cw20::MinterResponse;
 use semver::Version;
 
 #[cfg(feature = "injective")]
-use white_whale::pool_network::asset::PEGGY_PREFIX;
-use white_whale::pool_network::asset::{has_factory_token, AssetInfo, IBC_PREFIX};
-use white_whale::vault_network::vault::{
+use white_whale_std::pool_network::asset::PEGGY_PREFIX;
+use white_whale_std::pool_network::asset::{has_factory_token, AssetInfo, IBC_PREFIX};
+use white_whale_std::vault_network::vault::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, INSTANTIATE_LP_TOKEN_REPLY_ID,
 };
 
@@ -30,11 +30,11 @@ use crate::execute::receive::withdraw::withdraw;
 ))]
 use cosmwasm_std::CosmosMsg;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::MsgCreateDenom;
+use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 
 const CONTRACT_NAME: &str = "white_whale-vault";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -153,7 +153,7 @@ pub fn instantiate(
             msg: WasmMsg::Instantiate {
                 admin: None,
                 code_id: msg.token_id,
-                msg: to_json_binary(&white_whale::pool_network::token::InstantiateMsg {
+                msg: to_json_binary(&white_whale_std::pool_network::token::InstantiateMsg {
                     name: lp_label.clone(),
                     symbol: lp_symbol,
                     decimals: 6,
@@ -209,7 +209,7 @@ pub fn execute(
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, VaultError> {
     // initialize the loan counter
 
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
     LOAN_COUNTER.save(deps.storage, &0)?;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

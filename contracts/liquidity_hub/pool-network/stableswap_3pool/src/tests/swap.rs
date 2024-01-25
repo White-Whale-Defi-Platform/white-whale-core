@@ -12,10 +12,10 @@ use cosmwasm_std::{
     SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::{
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, QueryMsg, ReverseSimulationResponse,
     SimulationResponse,
 };

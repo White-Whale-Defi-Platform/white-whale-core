@@ -42,9 +42,9 @@ osmosis)
 
   # add the osmosis feature flag to the Cargo.toml file so it optimizes correctly
   if [[ "$(uname)" == "Darwin" ]]; then
-    sed -i '' '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+    sed -i '' '/white-whale-std =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
   else
-    sed -i '/white-whale =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
+    sed -i '/white-whale-std =/ s/features = \[\]/features = \["osmosis"\]/' $projectRootPath/Cargo.toml
   fi
 
   ;;

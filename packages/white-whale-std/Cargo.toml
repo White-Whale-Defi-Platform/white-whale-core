@@ -1,5 +1,5 @@
 [package]
-name = "white-whale"
+name = "white-whale-std"
 version = "1.1.1"
 edition.workspace = true
 authors = [

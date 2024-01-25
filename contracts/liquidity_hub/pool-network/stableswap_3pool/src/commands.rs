@@ -16,18 +16,18 @@ use cosmwasm_std::coins;
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{
     Asset, AssetInfo, AssetInfoRaw, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
-use white_whale::pool_network::swap;
-use white_whale::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::swap;
+use white_whale_std::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, PoolFee, RampAmp};
 
 use crate::error::ContractError;
 use crate::helpers;

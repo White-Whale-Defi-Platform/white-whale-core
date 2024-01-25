@@ -16,10 +16,10 @@ publish.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["white-whale/injective"]
+injective = ["white-whale-std/injective"]
 osmosis = ["osmosis_token_factory"]
-token_factory = ["white-whale/token_factory"]
-osmosis_token_factory = ["white-whale/osmosis_token_factory"]
+token_factory = ["white-whale-std/token_factory"]
+osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
@@ -32,7 +32,7 @@ schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-white-whale.workspace = true
+white-whale-std.workspace = true
 cosmwasm-schema.workspace = true
 
 [dev-dependencies]

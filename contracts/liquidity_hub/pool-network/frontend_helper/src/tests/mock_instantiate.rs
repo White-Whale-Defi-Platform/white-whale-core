@@ -2,7 +2,7 @@ use cosmwasm_std::{to_json_binary, Addr, Decimal, Uint128, WasmMsg};
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
 
-use white_whale::{
+use white_whale_std::{
     fee::Fee,
     pool_network::asset::{Asset, AssetInfo, PairType},
 };
@@ -72,7 +72,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         .unwrap();
 
     #[cfg(not(feature = "osmosis"))]
-    let pool_fee = white_whale::pool_network::pair::PoolFee {
+    let pool_fee = white_whale_std::pool_network::pair::PoolFee {
         burn_fee: Fee {
             share: Decimal::zero(),
         },
@@ -85,7 +85,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
     };
 
     #[cfg(feature = "osmosis")]
-    let pool_fee = white_whale::pool_network::pair::PoolFee {
+    let pool_fee = white_whale_std::pool_network::pair::PoolFee {
         burn_fee: Fee {
             share: Decimal::zero(),
         },
@@ -100,7 +100,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         },
     };
 
-    let instantiate_msg = white_whale::pool_network::pair::InstantiateMsg {
+    let instantiate_msg = white_whale_std::pool_network::pair::InstantiateMsg {
         token_factory_lp: false,
         token_code_id: token_id,
         pool_fees: pool_fee.clone(),
@@ -125,9 +125,9 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
     // get the LP token
     let lp_token = app
         .wrap()
-        .query_wasm_smart::<white_whale::pool_network::asset::PairInfo>(
+        .query_wasm_smart::<white_whale_std::pool_network::asset::PairInfo>(
             pair.clone(),
-            &white_whale::pool_network::pair::QueryMsg::Pair {},
+            &white_whale_std::pool_network::pair::QueryMsg::Pair {},
         )
         .unwrap()
         .liquidity_token;
@@ -148,7 +148,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         .instantiate_contract(
             factory_id,
             mock_admin().sender,
-            &white_whale::pool_network::incentive_factory::InstantiateMsg {
+            &white_whale_std::pool_network::incentive_factory::InstantiateMsg {
                 create_flow_fee: Asset {
                     amount: Uint128::zero(),
                     info: AssetInfo::NativeToken {
@@ -174,7 +174,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         WasmMsg::Execute {
             contract_addr: incentive_factory.to_string(),
             msg: to_json_binary(
-                &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
+                &white_whale_std::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
                     lp_asset: lp_token.clone(),
                 },
             )
@@ -189,7 +189,7 @@ pub fn app_mock_instantiate(app: &mut App, pool_assets: [AssetInfo; 2]) -> AppIn
         .instantiate_contract(
             frontend_helper_id,
             mock_admin().sender,
-            &white_whale::pool_network::frontend_helper::InstantiateMsg {
+            &white_whale_std::pool_network::frontend_helper::InstantiateMsg {
                 incentive_factory: incentive_factory.clone().into_string(),
             },
             &[],

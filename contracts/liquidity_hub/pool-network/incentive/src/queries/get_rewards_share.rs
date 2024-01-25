@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Decimal256, Deps, Uint128};
 
-use white_whale::pool_network::incentive::RewardsShareResponse;
+use white_whale_std::pool_network::incentive::RewardsShareResponse;
 
 use crate::error::ContractError;
 use crate::helpers;

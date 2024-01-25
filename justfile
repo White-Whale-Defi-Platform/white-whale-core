@@ -1,26 +1,34 @@
-build FEATURES='':
+build FEATURE='':
   #!/usr/bin/env sh
-  echo "-- Building {{FEATURES}} -- \n"
-  if [ -z "{{FEATURES}}" ]; then
+  echo "-- Building {{FEATURE}} -- \n"
+  if [ -z "{{FEATURE}}" ]; then
     cargo build
   else
-    cargo build --features {{FEATURES}}
+    cargo build --features {{FEATURE}}
   fi
 
-test FEATURES='':
+schemas:
+  scripts/build_schemas.sh
+
+test FEATURE='':
   #!/usr/bin/env sh
-  if [ -z "{{FEATURES}}" ]; then
+  if [ -z "{{FEATURE}}" ]; then
     cargo test
   else
-    cargo test --features {{FEATURES}}
+    cargo test --features {{FEATURE}}
   fi
 
 format:
   cargo fmt --all
   find . -type f -iname "*.toml" -print0 | xargs -0 taplo format
 
-lint:
-  cargo clippy --all --all-features -- -D warnings
+lint FEATURE='':
+  #!/usr/bin/env sh
+  if [ -z "{{FEATURE}}" ]; then
+    cargo clippy --all -- -D warnings
+  else
+    cargo clippy --features {{FEATURE}} --all -- -D warnings
+  fi
 
 lintfix:
   cargo clippy --fix --allow-staged --allow-dirty --all-features
@@ -38,8 +46,13 @@ refresh:
 watch:
   cargo watch -x lcheck
 
-watch-test:
-  cargo watch -x "nextest run"
+watch-test FEATURE='':
+  #!/usr/bin/env sh
+  if [ -z "{{FEATURE}}" ]; then
+    cargo watch -x "nextest run"
+  else
+    cargo watch -x "nextest run --features {{FEATURE}}"
+  fi
 
 optimize CHAIN:
-  ./build_release.sh --c {{CHAIN}}
+  scripts/build_release.sh -c {{CHAIN}}

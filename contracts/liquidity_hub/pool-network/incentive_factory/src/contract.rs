@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::pool_network::incentive_factory::{
+use white_whale_std::pool_network::incentive_factory::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 

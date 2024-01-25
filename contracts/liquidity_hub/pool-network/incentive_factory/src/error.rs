@@ -1,7 +1,7 @@
 use cosmwasm_std::StdError;
 use semver::Version;
 use thiserror::Error;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug)]
 pub enum ContractError {

@@ -3,11 +3,11 @@ use crate::error::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{to_json_binary, Coin, Decimal, Uint128};
 use cw20::Cw20ReceiveMsg;
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::trio::{
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale_std::pool_network::trio::{
     Cw20HookMsg, ExecuteMsg, FeatureToggle, InstantiateMsg, PoolFee,
 };
 

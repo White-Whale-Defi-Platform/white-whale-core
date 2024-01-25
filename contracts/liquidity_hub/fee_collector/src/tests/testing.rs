@@ -4,10 +4,10 @@ use cw2::{get_contract_version, set_contract_version, ContractVersion};
 use std::env;
 
 use crate::contract::{execute, instantiate, migrate, query};
-use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
 
 use crate::ContractError;
-use white_whale::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = InstantiateMsg {};

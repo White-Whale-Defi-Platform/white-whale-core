@@ -1,6 +1,6 @@
 use cosmwasm_std::{wasm_execute, DepsMut, Response};
 
-use white_whale::vault_network::vault::UpdateConfigParams;
+use white_whale_std::vault_network::vault::UpdateConfigParams;
 
 use crate::err::StdResult;
 
@@ -12,7 +12,7 @@ pub fn update_vault_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(vault_addr.as_str())?.to_string(),
-            &white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(params),
+            &white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(params),
             vec![],
         )?)
         .add_attribute("method", "update_vault_config"))
@@ -34,7 +34,7 @@ mod tests {
 
         let factory_addr = app_mock_instantiate(&mut app);
 
-        let asset_info = white_whale::pool_network::asset::AssetInfo::NativeToken {
+        let asset_info = white_whale_std::pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -44,7 +44,7 @@ mod tests {
         app.execute_contract(
             creator.sender.clone(),
             factory_addr.clone(),
-            &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -58,15 +58,15 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault { asset_info },
+                &white_whale_std::vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
 
-        let vault_config: white_whale::vault_network::vault::Config = app
+        let vault_config: white_whale_std::vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone().unwrap_or_else(|| Addr::unchecked("")),
-                &white_whale::vault_network::vault::QueryMsg::Config {},
+                &white_whale_std::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -78,12 +78,12 @@ mod tests {
         app.execute_contract(
             creator.sender,
             factory_addr,
-            &white_whale::vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
                 vault_addr: vault_addr
                     .clone()
                     .unwrap_or_else(|| Addr::unchecked(""))
                     .to_string(),
-                params: white_whale::vault_network::vault::UpdateConfigParams {
+                params: white_whale_std::vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: Some(false),
                     deposit_enabled: None,
                     withdraw_enabled: None,
@@ -96,11 +96,11 @@ mod tests {
         )
         .unwrap();
 
-        let vault_config: white_whale::vault_network::vault::Config = app
+        let vault_config: white_whale_std::vault_network::vault::Config = app
             .wrap()
             .query_wasm_smart(
                 vault_addr.unwrap_or_else(|| Addr::unchecked("")),
-                &white_whale::vault_network::vault::QueryMsg::Config {},
+                &white_whale_std::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -114,7 +114,7 @@ mod tests {
 
         let factory_addr = app_mock_instantiate(&mut app);
 
-        let asset_info = white_whale::pool_network::asset::AssetInfo::NativeToken {
+        let asset_info = white_whale_std::pool_network::asset::AssetInfo::NativeToken {
             denom: "uluna".to_string(),
         };
 
@@ -124,7 +124,7 @@ mod tests {
         app.execute_contract(
             creator.sender,
             factory_addr.clone(),
-            &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -138,7 +138,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault { asset_info },
+                &white_whale_std::vault_network::vault_factory::QueryMsg::Vault { asset_info },
             )
             .unwrap();
 
@@ -147,11 +147,11 @@ mod tests {
         let res = app.execute_contract(
             Addr::unchecked("unauthorized"),
             factory_addr,
-            &white_whale::vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::UpdateVaultConfig {
                 vault_addr: vault_addr
                     .unwrap_or_else(|| Addr::unchecked(""))
                     .to_string(),
-                params: white_whale::vault_network::vault::UpdateConfigParams {
+                params: white_whale_std::vault_network::vault::UpdateConfigParams {
                     flash_loan_enabled: None,
                     deposit_enabled: None,
                     withdraw_enabled: None,

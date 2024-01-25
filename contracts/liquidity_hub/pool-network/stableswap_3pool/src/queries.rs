@@ -1,8 +1,8 @@
 use cosmwasm_std::{Deps, StdResult};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, TrioInfo, TrioInfoRaw};
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfoRaw, TrioInfo, TrioInfoRaw};
+use white_whale_std::pool_network::trio::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
