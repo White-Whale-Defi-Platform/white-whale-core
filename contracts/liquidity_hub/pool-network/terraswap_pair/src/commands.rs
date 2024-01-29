@@ -19,8 +19,7 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 ))]
 use white_whale_std::pool_network::asset::is_factory_token;
 use white_whale_std::pool_network::asset::{
-    get_total_share, has_factory_token, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw,
-    MINIMUM_LIQUIDITY_AMOUNT,
+    get_total_share, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
@@ -565,20 +564,6 @@ pub fn update_config(
 
     if let Some(pool_fees) = pool_fees {
         pool_fees.is_valid()?;
-
-        let pair_info_raw = PAIR_INFO.load(deps.storage)?;
-
-        if has_factory_token(
-            &pair_info_raw
-                .asset_infos
-                .into_iter()
-                .map(|raw| raw.to_normal(deps.api).unwrap())
-                .collect::<Vec<AssetInfo>>(),
-        ) && pool_fees.burn_fee.share > Decimal::zero()
-        {
-            return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-        }
-
         config.pool_fees = pool_fees;
     }
 

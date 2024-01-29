@@ -31,7 +31,7 @@ use white_whale_std::pool_network::trio::{Config, Cw20HookMsg, FeatureToggle, Po
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::helpers::{get_protocol_fee_for_asset, get_total_share, has_factory_token};
+use crate::helpers::{get_protocol_fee_for_asset, get_total_share};
 use crate::stableswap_math::curve::StableSwap;
 use crate::state::{
     store_fee, ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
@@ -567,20 +567,6 @@ pub fn update_config(
 
     if let Some(pool_fees) = pool_fees {
         pool_fees.is_valid()?;
-
-        let trio_info_raw: TrioInfoRaw = TRIO_INFO.load(deps.storage)?;
-
-        if has_factory_token(
-            &trio_info_raw
-                .asset_infos
-                .into_iter()
-                .map(|raw| raw.to_normal(deps.api).unwrap())
-                .collect::<Vec<AssetInfo>>(),
-        ) && pool_fees.burn_fee.share > Decimal::zero()
-        {
-            return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-        }
-
         config.pool_fees = pool_fees;
     }
 
