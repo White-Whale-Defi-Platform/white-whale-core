@@ -1,14 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
-    StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 use semver::Version;
 
-use white_whale_std::pool_network::asset::{has_factory_token, AssetInfoRaw, PairInfoRaw};
+use white_whale_std::pool_network::asset::{AssetInfoRaw, PairInfoRaw};
 use white_whale_std::pool_network::pair::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
@@ -35,10 +34,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    if has_factory_token(&msg.asset_infos) && msg.pool_fees.burn_fee.share > Decimal::zero() {
-        return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-    }
 
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,

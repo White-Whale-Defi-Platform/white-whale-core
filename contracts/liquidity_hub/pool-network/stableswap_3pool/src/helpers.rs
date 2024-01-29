@@ -12,7 +12,13 @@ use cw_storage_plus::Item;
     feature = "injective"
 ))]
 use cosmwasm_std::CosmosMsg;
-use white_whale_std::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
@@ -298,15 +304,6 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
     .total_supply;
 
     Ok(total_share)
-}
-
-/// Verifies if there's a factory token in the vector of [AssetInfo]s.
-/// todo consolidate this once the pool PRs are merged
-pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
-    assets.iter().any(|asset| match asset {
-        AssetInfo::Token { .. } => false,
-        AssetInfo::NativeToken { denom } => is_factory_token(denom),
-    })
 }
 
 /// Creates a new LP token for this pool

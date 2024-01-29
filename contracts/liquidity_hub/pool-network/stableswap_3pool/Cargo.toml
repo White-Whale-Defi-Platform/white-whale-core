@@ -1,6 +1,6 @@
 [package]
 name = "stableswap-3pool"
-version = "1.2.2"
+version = "1.2.3"
 authors = ["Adam J. Weigold <adam@irulast.com>"]
 edition.workspace = true
 license.workspace = true

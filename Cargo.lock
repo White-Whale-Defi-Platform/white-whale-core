@@ -1515,7 +1515,7 @@ dependencies = [
 
 [[package]]
 name = "stableswap-3pool"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -1607,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "1.3.3"
+version = "1.3.4"
 dependencies = [
  "anybuf",
  "cosmwasm-schema",
