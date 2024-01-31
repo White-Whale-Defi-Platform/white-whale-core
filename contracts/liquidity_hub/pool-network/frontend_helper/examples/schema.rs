@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use white_whale::pool_network::frontend_helper::{ExecuteMsg, InstantiateMsg, MigrateMsg};
+use white_whale_std::pool_network::frontend_helper::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 
 fn main() {
     write_api! {

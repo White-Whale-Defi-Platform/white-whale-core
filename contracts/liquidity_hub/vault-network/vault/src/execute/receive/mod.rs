@@ -1,8 +1,8 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{from_binary, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{from_json, DepsMut, Env, MessageInfo, Response};
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_network::vault::{Cw20HookMsg, Cw20ReceiveMsg};
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::vault_network::vault::{Cw20HookMsg, Cw20ReceiveMsg};
 use withdraw::withdraw;
 
 use crate::{error::VaultError, state::CONFIG};
@@ -28,14 +28,14 @@ pub fn receive(
         return Err(VaultError::ExternalCallback {});
     }
 
-    match from_binary(&msg.msg)? {
+    match from_json(&msg.msg)? {
         Cw20HookMsg::Withdraw {} => withdraw(deps, env, msg.sender, msg.amount),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{to_binary, Addr, Uint128};
+    use cosmwasm_std::{to_json_binary, Addr, Uint128};
 
     #[cfg(any(
         feature = "token_factory",
@@ -44,8 +44,8 @@ mod test {
     ))]
     use cosmwasm_std::testing::mock_info;
 
-    use white_whale::pool_network::asset::AssetInfo;
-    use white_whale::vault_network::vault::Config;
+    use white_whale_std::pool_network::asset::AssetInfo;
+    use white_whale_std::vault_network::vault::Config;
 
     use crate::state::CONFIG;
     use crate::tests::get_fees;
@@ -87,11 +87,13 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                 sender: mock_creator().sender.into_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                    .unwrap(),
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
+                )
+                .unwrap(),
             },
         );
 
@@ -134,11 +136,13 @@ mod test {
             deps.as_mut(),
             env,
             mock_info("lp_token_2", &[]), //wrong cw20 LP token
-            white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                 sender: mock_creator().sender.into_string(),
                 amount: Uint128::new(5_000),
-                msg: to_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                    .unwrap(),
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
+                )
+                .unwrap(),
             },
         );
 

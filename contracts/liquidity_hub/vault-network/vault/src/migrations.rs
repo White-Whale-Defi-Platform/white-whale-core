@@ -5,9 +5,9 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, DepsMut, StdError};
 use cw_storage_plus::Item;
 
-use white_whale::fee::{Fee, VaultFee};
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_network::vault::Config;
+use white_whale_std::fee::{Fee, VaultFee};
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::vault_network::vault::Config;
 
 use crate::state::{initialize_fee, ALL_TIME_BURNED_FEES, CONFIG};
 

@@ -1,6 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Response};
-use white_whale::pool_network::asset::Asset;
+use white_whale_std::pool_network::asset::Asset;
 
 use crate::{error::ContractError, state::CONFIG};
 
@@ -112,10 +112,10 @@ mod tests {
     use crate::contract::{execute, instantiate, query};
     use crate::error::ContractError;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_binary, Addr, Uint128};
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::pool_network::incentive_factory::ExecuteMsg::UpdateConfig;
-    use white_whale::pool_network::incentive_factory::{Config, InstantiateMsg, QueryMsg};
+    use cosmwasm_std::{from_json, Addr, Uint128};
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::pool_network::incentive_factory::ExecuteMsg::UpdateConfig;
+    use white_whale_std::pool_network::incentive_factory::{Config, InstantiateMsg, QueryMsg};
 
     #[test]
     fn update_config_successfully() {
@@ -140,7 +140,7 @@ mod tests {
         instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
         assert_eq!(
             config,
@@ -183,7 +183,7 @@ mod tests {
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let config: Config =
-            from_binary(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
         assert_eq!(
             config,

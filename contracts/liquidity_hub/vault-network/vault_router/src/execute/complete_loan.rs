@@ -1,9 +1,7 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{
-    attr, coins, to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
-};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::vault_network::vault::PaybackAmountResponse;
+use cosmwasm_std::{attr, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::vault_network::vault::PaybackAmountResponse;
 
 use crate::err::{StdResult, VaultRouterError};
 
@@ -27,7 +25,7 @@ pub fn complete_loan(
         .map(|(vault, loaned_asset)| {
             let payback_amount: PaybackAmountResponse = deps.querier.query_wasm_smart(
                 vault.clone(),
-                &white_whale::vault_network::vault::QueryMsg::GetPaybackAmount {
+                &white_whale_std::vault_network::vault::QueryMsg::GetPaybackAmount {
                     amount: loaned_asset.amount,
                 },
             )?;
@@ -74,10 +72,7 @@ pub fn complete_loan(
                 }
             })?;
 
-            attributes.push(attr(
-                "payback_amount",
-                payback_amount.to_string(),
-            ));
+            attributes.push(attr("payback_amount", payback_amount.to_string()));
             attributes.push(attr("profit_amount", profit_amount.to_string()));
 
             let mut response_messages: Vec<CosmosMsg> = vec![];
@@ -94,8 +89,8 @@ pub fn complete_loan(
             // add profit message if non-zero profit
             if !profit_amount.is_zero() {
                 let profit_asset = Asset {
-                    info: loaned_asset.info.clone(),
-                    amount: profit_amount.clone(),
+                    info: loaned_asset.info,
+                    amount: profit_amount,
                 };
 
                 let profit_payback_msg = profit_asset.into_msg(&deps.querier, initiator.clone());

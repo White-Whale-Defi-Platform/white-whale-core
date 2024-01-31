@@ -1,8 +1,8 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Binary, Decimal, Deps, Env, Uint128};
+use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 
-use white_whale::pool_network::asset::{get_total_share, AssetInfo};
+use white_whale_std::pool_network::asset::{get_total_share, AssetInfo};
 
 use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
@@ -41,7 +41,7 @@ pub fn get_share(deps: Deps<TerraQuery>, env: Env, amount: Uint128) -> Result<Bi
     // lp_share = amount / lp_amount
     // asset_share = lp_share * balance
     let asset_share = Decimal::from_ratio(amount, lp_amount) * balance;
-    Ok(to_binary(&asset_share)?)
+    Ok(to_json_binary(&asset_share)?)
 }
 
 // #[cfg(test)]

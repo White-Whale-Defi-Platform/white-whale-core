@@ -1,23 +1,29 @@
 [package]
-name = "white-whale"
+name = "white-whale-std"
 version = "1.1.1"
 edition.workspace = true
-authors = ["Kerber0x <kerber0x@protonmail.com>"]
+authors = [
+  "Kerber0x <kerber0x@protonmail.com>",
+  "0xFable <0xfabledev@gmail.com>",
+  "kaimen-sano <kaimen_sano@protonmail.com>",
+  "White Whale <info@whitewhale.money>",
+]
 description = "Common White Whale types and utils"
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://whitewhale.money"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+documentation.workspace = true
 
 [features]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 injective = ["token_factory"]
+osmosis = ["osmosis_token_factory"]
 token_factory = ["cosmwasm-std/stargate", "cosmwasm-std/cosmwasm_1_1"]
-osmosis_token_factory = ["token_factory"] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
+osmosis_token_factory = [
+  "token_factory",
+] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
 
 [dependencies]
 cosmwasm-std.workspace = true
@@ -32,4 +38,3 @@ osmosis-std-derive.workspace = true
 prost.workspace = true
 prost-types.workspace = true
 classic-bindings.workspace = true
-#chain-queriers.workspace = true

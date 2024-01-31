@@ -1,14 +1,15 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Response,
+    WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
-use white_whale::pool_network::pair::ExecuteMsg as PairExecuteMsg;
-use white_whale::pool_network::querier::{query_balance, query_pair_info, query_token_balance};
-use white_whale::pool_network::router::SwapOperation;
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use white_whale_std::pool_network::pair::ExecuteMsg as PairExecuteMsg;
+use white_whale_std::pool_network::querier::{query_balance, query_pair_info, query_token_balance};
+use white_whale_std::pool_network::router::SwapOperation;
 
 use crate::error::ContractError;
 use crate::state::{Config, CONFIG};
@@ -86,7 +87,7 @@ pub fn asset_into_swap_msg(
                     denom,
                     amount: offer_asset.amount,
                 }],
-                msg: to_binary(&PairExecuteMsg::Swap {
+                msg: to_json_binary(&PairExecuteMsg::Swap {
                     offer_asset,
                     belief_price: None,
                     max_spread,
@@ -97,10 +98,10 @@ pub fn asset_into_swap_msg(
         AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,
             funds: vec![],
-            msg: to_binary(&Cw20ExecuteMsg::Send {
+            msg: to_json_binary(&Cw20ExecuteMsg::Send {
                 contract: pair_contract.to_string(),
                 amount: offer_asset.amount,
-                msg: to_binary(&pool_network::pair::Cw20HookMsg::Swap {
+                msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
                     max_spread,
                     to,

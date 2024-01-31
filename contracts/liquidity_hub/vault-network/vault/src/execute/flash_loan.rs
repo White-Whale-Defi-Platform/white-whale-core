@@ -1,12 +1,11 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, Binary, Coin, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
+    to_json_binary, Binary, Coin, CosmosMsg, DepsMut, Env, MessageInfo, OverflowError, Response,
     StdError, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
-
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::vault_network::vault::{CallbackMsg, ExecuteMsg};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::vault_network::vault::{CallbackMsg, ExecuteMsg};
 
 use crate::{
     error::VaultError,
@@ -56,7 +55,7 @@ pub fn flash_loan(
     if let AssetInfo::Token { contract_addr } = config.asset_info.clone() {
         let loan_msg = WasmMsg::Execute {
             contract_addr,
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                 recipient: info.sender.clone().into_string(),
                 amount,
             })?,
@@ -99,7 +98,7 @@ pub fn flash_loan(
     messages.push(
         WasmMsg::Execute {
             contract_addr: env.contract.address.into_string(),
-            msg: to_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
+            msg: to_json_binary(&ExecuteMsg::Callback(CallbackMsg::AfterTrade {
                 old_balance,
                 loan_amount: amount,
             }))?,

@@ -2,15 +2,14 @@ use classic_bindings::TerraQuery;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
-    StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 use semver::Version;
 
-use white_whale::pool_network::asset::{has_factory_token, AssetInfoRaw, PairInfoRaw};
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network::asset::{AssetInfoRaw, PairInfoRaw};
+use white_whale_std::pool_network::pair::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
@@ -37,10 +36,6 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    if has_factory_token(&msg.asset_infos) && msg.pool_fees.burn_fee.share > Decimal::zero() {
-        return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-    }
-
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
         liquidity_token: AssetInfoRaw::NativeToken {
@@ -66,7 +61,6 @@ pub fn instantiate(
     // check the fees are valid
     msg.pool_fees.is_valid()?;
 
-    // Set owner and initial pool fees
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
@@ -77,6 +71,7 @@ pub fn instantiate(
             swaps_enabled: true,
         },
     };
+
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
@@ -204,23 +199,24 @@ pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> StdResult<Resp
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Pair {} => Ok(to_binary(&queries::query_pair_info(deps)?)?),
-        QueryMsg::Pool {} => Ok(to_binary(&queries::query_pool(deps)?)?),
-        QueryMsg::Simulation { offer_asset } => {
-            Ok(to_binary(&queries::query_simulation(deps, offer_asset)?)?)
-        }
-        QueryMsg::ReverseSimulation { ask_asset } => Ok(to_binary(
+        QueryMsg::Pair {} => Ok(to_json_binary(&queries::query_pair_info(deps)?)?),
+        QueryMsg::Pool {} => Ok(to_json_binary(&queries::query_pool(deps)?)?),
+        QueryMsg::Simulation { offer_asset } => Ok(to_json_binary(&queries::query_simulation(
+            deps,
+            offer_asset,
+        )?)?),
+        QueryMsg::ReverseSimulation { ask_asset } => Ok(to_json_binary(
             &queries::query_reverse_simulation(deps, ask_asset)?,
         )?),
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::ProtocolFees { asset_id, all_time } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             all_time,
             COLLECTED_PROTOCOL_FEES,
             Some(ALL_TIME_COLLECTED_PROTOCOL_FEES),
         )?)?),
-        QueryMsg::BurnedFees { asset_id } => Ok(to_binary(&queries::query_fees(
+        QueryMsg::BurnedFees { asset_id } => Ok(to_json_binary(&queries::query_fees(
             deps,
             asset_id,
             None,
@@ -237,8 +233,9 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
+    #[cfg(not(feature = "osmosis"))]
     use crate::migrations;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
@@ -258,13 +255,13 @@ pub fn migrate(
         migrations::migrate_to_v13x(deps.branch())?;
     }
 
-    #[cfg(not(feature = "injective"))]
+    #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
     if storage_version <= Version::parse("1.0.4")? {
         migrations::migrate_to_v110(deps.branch())?;
     } else if storage_version == Version::parse("1.1.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
-    #[cfg(not(feature = "injective"))]
+    #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
     if storage_version == Version::parse("1.2.0")? {
         migrations::migrate_to_v130(deps.branch())?;
     }

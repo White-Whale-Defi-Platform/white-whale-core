@@ -2,7 +2,7 @@ use classic_bindings::TerraQuery;
 use cosmwasm_std::{Addr, DepsMut, Order, StdError};
 use cw_storage_plus::Map;
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::state::{TMP_VAULT_ASSET, VAULTS};
 

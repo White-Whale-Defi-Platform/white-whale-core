@@ -1,4 +1,4 @@
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 pub trait AssetReference {
     fn get_reference(&self) -> &[u8];

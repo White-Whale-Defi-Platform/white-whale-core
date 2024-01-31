@@ -1,15 +1,18 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, to_binary, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_json_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    SubMsg, WasmMsg,
+};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::frontend_helper::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::frontend_helper::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TempState,
 };
-use white_whale::traits::OptionDecimal;
+use white_whale_std::traits::OptionDecimal;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -95,7 +98,7 @@ pub fn execute(
                     Ok::<_, ContractError>(vec![
                         WasmMsg::Execute {
                             contract_addr: token_contract_addr.clone(),
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.clone().into_string(),
                                 recipient: env.contract.address.clone().into_string(),
                                 amount: token_amount,
@@ -104,7 +107,7 @@ pub fn execute(
                         },
                         WasmMsg::Execute {
                             contract_addr: token_contract_addr,
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::IncreaseAllowance {
                                 spender: pair_address.clone(),
                                 amount: token_amount,
                                 expires: None,
@@ -120,11 +123,9 @@ pub fn execute(
 
             let mut taxed_funds: Vec<Coin> = vec![];
 
-            for coin in info.funds.clone() {
+            for coin in info.funds {
                 let asset = Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: coin.denom,
-                    },
+                    info: AssetInfo::NativeToken { denom: coin.denom },
                     amount: coin.amount,
                 };
 
@@ -148,8 +149,8 @@ pub fn execute(
                     gas_limit: None,
                     msg: WasmMsg::Execute {
                         contract_addr: pair_address,
-                        msg: to_binary(
-                            &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                        msg: to_json_binary(
+                            &white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity {
                                 assets: [taxed_assets[0].clone(), taxed_assets[1].clone()],
                                 slippage_tolerance,
                                 receiver: None,
@@ -157,7 +158,7 @@ pub fn execute(
                         )?,
                         funds: taxed_funds,
                     }
-                        .into(),
+                    .into(),
                 }))
         }
         ExecuteMsg::UpdateConfig {
@@ -193,30 +194,44 @@ pub fn execute(
 
 #[cfg(test)]
 mod x {
-    use std::marker::PhantomData;
-    use cosmwasm_std::testing::{MOCK_CONTRACT_ADDR, mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coin, coins, OwnedDeps, Uint128};
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::pool_network::frontend_helper::ExecuteMsg;
     use crate::contract::{execute, instantiate};
     use crate::helpers::mock_dependencies;
+    use cosmwasm_std::testing::{
+        mock_env, mock_info, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
+    };
+    use cosmwasm_std::{coin, coins, OwnedDeps, Uint128};
+    use std::marker::PhantomData;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::pool_network::frontend_helper::ExecuteMsg;
 
     #[test]
     fn can_deposit() {
         let mut deps = mock_dependencies();
 
-        deps.querier.set_bank_balances(&[coin(1000000000000000, "uluna"), coin(1000000000000000, "uwhale")]);
+        deps.querier.set_bank_balances(&[
+            coin(1000000000000000, "uluna"),
+            coin(1000000000000000, "uwhale"),
+        ]);
 
         let msg = ExecuteMsg::Deposit {
             pair_address: "pair_address".to_string(),
             assets: [
-                Asset{ info: AssetInfo::NativeToken {denom: "uluna".to_string()}, amount: Uint128::new(100) },
-                Asset{ info: AssetInfo::NativeToken {denom: "uwhale".to_string()}, amount: Uint128::new(100) }
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uluna".to_string(),
+                    },
+                    amount: Uint128::new(100),
+                },
+                Asset {
+                    info: AssetInfo::NativeToken {
+                        denom: "uwhale".to_string(),
+                    },
+                    amount: Uint128::new(100),
+                },
             ],
             slippage_tolerance: None,
             unbonding_duration: 86400,
         };
-
 
         println!("{:?}", msg);
 
@@ -225,7 +240,6 @@ mod x {
         let res = execute(deps.as_mut(), env, info, msg);
 
         println!("{:?}", res);
-
     }
 }
 
@@ -241,7 +255,7 @@ pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> Result<Response
 #[entry_point]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&CONFIG.load(deps.storage)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&CONFIG.load(deps.storage)?)?),
     }
 }
 

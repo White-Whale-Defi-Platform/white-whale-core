@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::Deps;
 
-use white_whale::pool_network::incentive::GlobalWeightResponse;
+use white_whale_std::pool_network::incentive::GlobalWeightResponse;
 
 use crate::error::ContractError;
 use crate::state::GLOBAL_WEIGHT_SNAPSHOT;

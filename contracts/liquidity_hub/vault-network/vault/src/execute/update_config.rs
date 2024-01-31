@@ -1,8 +1,8 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{Decimal, DepsMut, MessageInfo, Response};
 
-use white_whale::pool_network::asset::has_factory_token;
-use white_whale::vault_network::vault::UpdateConfigParams;
+use white_whale_std::pool_network::asset::has_factory_token;
+use white_whale_std::vault_network::vault::UpdateConfigParams;
 
 use crate::{error::VaultError, state::CONFIG};
 

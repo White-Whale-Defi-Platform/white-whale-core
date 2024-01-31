@@ -1,9 +1,9 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Binary, Deps, StdError};
+use cosmwasm_std::{to_json_binary, Binary, Deps, StdError};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::vault_network::vault::ProtocolFeesResponse;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::vault_network::vault::ProtocolFeesResponse;
 
 use crate::error::VaultError;
 
@@ -16,13 +16,13 @@ pub fn get_fees(
 ) -> Result<Binary, VaultError> {
     if all_time {
         let fees = all_time_fees_storage_item.load(deps.storage)?;
-        return Ok(to_binary(&ProtocolFeesResponse { fees })?);
+        return Ok(to_json_binary(&ProtocolFeesResponse { fees })?);
     }
 
     let fees = fees_storage_item
         .ok_or_else(|| StdError::generic_err("fees_storage_item was None"))?
         .load(deps.storage)?;
-    Ok(to_binary(&ProtocolFeesResponse { fees })?)
+    Ok(to_json_binary(&ProtocolFeesResponse { fees })?)
 }
 
 // #[cfg(test)]

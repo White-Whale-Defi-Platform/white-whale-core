@@ -1,14 +1,14 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response, StdError,
-    SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
+    to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, QueryRequest, ReplyOn, Response,
+    StdError, SubMsg, Timestamp, Uint64, WasmMsg, WasmQuery,
 };
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::{BondingWeightResponse, QueryMsg};
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::whale_lair::{BondingWeightResponse, QueryMsg};
 
 use crate::contract::EPOCH_CREATION_REPLY_ID;
 use crate::helpers::{validate_epoch_config, validate_grace_period};
@@ -60,7 +60,7 @@ pub fn create_new_epoch(deps: DepsMut<TerraQuery>, env: Env) -> Result<Response,
             id: EPOCH_CREATION_REPLY_ID,
             msg: CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: config.fee_collector_addr.to_string(),
-                msg: to_binary(&white_whale::fee_collector::ExecuteMsg::ForwardFees {
+                msg: to_json_binary(&white_whale_std::fee_collector::ExecuteMsg::ForwardFees {
                     epoch: new_epoch.clone(),
                     forward_fees_as: config.distribution_asset,
                 })?,
@@ -90,7 +90,7 @@ pub fn claim(deps: DepsMut<TerraQuery>, info: MessageInfo) -> Result<Response, C
         let bonding_weight_response: BondingWeightResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: config.bonding_contract_addr.to_string(),
-                msg: to_binary(&QueryMsg::Weight {
+                msg: to_json_binary(&QueryMsg::Weight {
                     address: info.sender.to_string(),
                     timestamp: Some(epoch.start_time),
                     global_index: Some(epoch.global_index.clone()),

@@ -1,6 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    coins, to_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
+    coins, to_json_binary, BankMsg, CosmosMsg, Decimal, DepsMut, Env, Response, Uint128, WasmMsg,
 };
 use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -9,14 +9,14 @@ use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{get_total_share, AssetInfo};
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{get_total_share, AssetInfo};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn};
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn};
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
@@ -76,7 +76,7 @@ pub fn withdraw(
             .into(),
             AssetInfo::Token { contract_addr } => WasmMsg::Execute {
                 contract_addr,
-                msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                msg: to_json_binary(&Cw20ExecuteMsg::Transfer {
                     recipient: sender.into_string(),
                     amount: withdraw_amount,
                 })?,
@@ -117,7 +117,7 @@ fn burn_lp_asset_msg(
     } else {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: liquidity_asset,
-            msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+            msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
             funds: vec![],
         }))
     }
@@ -128,7 +128,7 @@ fn burn_lp_asset_msg(
     ))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
-        msg: to_binary(&Cw20ExecuteMsg::Burn { amount })?,
+        msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,
         funds: vec![],
     }))
 }

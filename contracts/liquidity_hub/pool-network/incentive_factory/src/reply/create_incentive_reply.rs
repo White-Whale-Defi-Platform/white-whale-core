@@ -1,5 +1,5 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{from_binary, DepsMut, Reply, Response};
+use cosmwasm_std::{from_json, DepsMut, Reply, Response};
 use protobuf::Message;
 
 use crate::{
@@ -32,8 +32,8 @@ pub fn create_incentive_reply(
 
     let incentive_address = deps.api.addr_validate(&res.address)?;
 
-    let incentive_data: white_whale::pool_network::incentive::InstantiateReplyCallback =
-        from_binary(&res.data.into())?;
+    let incentive_data: white_whale_std::pool_network::incentive::InstantiateReplyCallback =
+        from_json(&res.data)?;
 
     INCENTIVE_MAPPINGS.save(
         deps.storage,

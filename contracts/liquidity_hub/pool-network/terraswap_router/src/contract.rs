@@ -4,17 +4,17 @@ use std::collections::HashMap;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, Api, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    attr, from_json, to_json_binary, Addr, Api, Binary, CosmosMsg, Decimal, Deps, DepsMut, Env,
     MessageInfo, Order, Response, StdError, StdResult, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
 use semver::Version;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
-use white_whale::pool_network::pair::SimulationResponse;
-use white_whale::pool_network::querier::{query_pair_info, reverse_simulate, simulate};
-use white_whale::pool_network::router::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use white_whale_std::pool_network::pair::SimulationResponse;
+use white_whale_std::pool_network::querier::{query_pair_info, reverse_simulate, simulate};
+use white_whale_std::pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute, SwapRouteResponse,
 };
@@ -126,7 +126,7 @@ pub fn receive_cw20(
     cw20_msg: Cw20ReceiveMsg,
 ) -> Result<Response, ContractError> {
     let sender = deps.api.addr_validate(&cw20_msg.sender)?;
-    match from_binary(&cw20_msg.msg)? {
+    match from_json(&cw20_msg.msg)? {
         Cw20HookMsg::ExecuteSwapOperations {
             operations,
             minimum_receive,
@@ -178,7 +178,7 @@ pub fn execute_swap_operations(
             Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: env.contract.address.to_string(),
                 funds: vec![],
-                msg: to_binary(&ExecuteMsg::ExecuteSwapOperation {
+                msg: to_json_binary(&ExecuteMsg::ExecuteSwapOperation {
                     operation: op,
                     to: if operation_index == operations_len {
                         Some(to.to_string())
@@ -198,7 +198,7 @@ pub fn execute_swap_operations(
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
             funds: vec![],
-            msg: to_binary(&ExecuteMsg::AssertMinimumReceive {
+            msg: to_json_binary(&ExecuteMsg::AssertMinimumReceive {
                 asset_info: target_asset_info,
                 prev_balance: receiver_balance,
                 minimum_receive,
@@ -280,11 +280,11 @@ fn add_swap_routes(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&query_config(deps)?)?),
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
-        } => Ok(to_binary(&simulate_swap_operations(
+        } => Ok(to_json_binary(&simulate_swap_operations(
             deps,
             offer_amount,
             operations,
@@ -292,18 +292,18 @@ pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> Result<Binary,
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
             operations,
-        } => Ok(to_binary(&reverse_simulate_swap_operations(
+        } => Ok(to_json_binary(&reverse_simulate_swap_operations(
             deps, ask_amount, operations,
         )?)?),
         QueryMsg::SwapRoute {
             offer_asset_info,
             ask_asset_info,
-        } => Ok(to_binary(&get_swap_route(
+        } => Ok(to_json_binary(&get_swap_route(
             deps,
             offer_asset_info,
             ask_asset_info,
         )?)?),
-        QueryMsg::SwapRoutes {} => Ok(to_binary(&get_swap_routes(deps)?)?),
+        QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
     }
 }
 
@@ -550,7 +550,7 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

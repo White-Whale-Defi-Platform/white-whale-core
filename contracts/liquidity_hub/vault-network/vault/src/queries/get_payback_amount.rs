@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Binary, Deps, Uint128, Uint256};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::vault_network::vault::PaybackAmountResponse;
+use cosmwasm_std::{to_json_binary, Binary, Deps, Uint128, Uint256};
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::vault_network::vault::PaybackAmountResponse;
 
 use crate::error::VaultError;
 use crate::state::CONFIG;
@@ -16,7 +16,7 @@ pub fn get_payback_amount(deps: Deps<TerraQuery>, amount: Uint128) -> Result<Bin
     let burn_fee = Uint128::try_from(config.fees.burn_fee.compute(Uint256::from(amount)))?;
 
     let payback_asset = Asset {
-        info: config.asset_info.clone(),
+        info: config.asset_info,
         amount,
     };
 
@@ -28,7 +28,7 @@ pub fn get_payback_amount(deps: Deps<TerraQuery>, amount: Uint128) -> Result<Bin
         .checked_add(burn_fee)?
         .checked_add(tax)?;
 
-    Ok(to_binary(&PaybackAmountResponse {
+    Ok(to_json_binary(&PaybackAmountResponse {
         payback_amount: required_amount,
         protocol_fee,
         flash_loan_fee,

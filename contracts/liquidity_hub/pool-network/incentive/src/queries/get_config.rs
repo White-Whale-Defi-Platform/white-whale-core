@@ -1,6 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, StdError};
-use white_whale::pool_network::incentive::ConfigResponse;
+use white_whale_std::pool_network::incentive::ConfigResponse;
 
 use crate::state::CONFIG;
 

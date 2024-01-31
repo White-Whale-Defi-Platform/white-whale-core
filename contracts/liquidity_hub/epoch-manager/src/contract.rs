@@ -1,12 +1,12 @@
-use cosmwasm_std::{entry_point, to_binary, StdError};
+use cosmwasm_std::{entry_point, to_json_binary, StdError};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::epoch_manager::epoch_manager::{
+use white_whale_std::epoch_manager::epoch_manager::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::migrate_guards::check_contract_name;
+use white_whale_std::migrate_guards::check_contract_name;
 
 use crate::error::ContractError;
 use crate::state::{ADMIN, CONFIG, EPOCH};
@@ -79,9 +79,9 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::CurrentEpoch {} => Ok(to_binary(&queries::query_current_epoch(deps)?)?),
-        QueryMsg::Epoch { id } => Ok(to_binary(&queries::query_epoch(deps, id)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::CurrentEpoch {} => Ok(to_json_binary(&queries::query_current_epoch(deps)?)?),
+        QueryMsg::Epoch { id } => Ok(to_json_binary(&queries::query_epoch(deps, id)?)?),
     }
 }
 

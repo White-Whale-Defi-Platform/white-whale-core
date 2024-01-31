@@ -1,6 +1,6 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Uint128};
-use white_whale::pool_network::asset::Asset;
+use white_whale_std::pool_network::asset::Asset;
 
 use crate::{
     error::ContractError,

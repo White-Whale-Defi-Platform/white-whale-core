@@ -2,13 +2,13 @@ use classic_bindings::TerraQuery;
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128, Uint64,
-    WasmQuery,
+    to_json_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    Uint64, WasmQuery,
 };
 use cw_storage_plus::Bound;
 
-use white_whale::fee_distributor::QueryMsg;
-use white_whale::{
+use white_whale_std::fee_distributor::QueryMsg;
+use white_whale_std::{
     pool_network::asset::AssetInfo,
     whale_lair::{
         Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
@@ -62,10 +62,10 @@ pub(crate) fn query_bonded(deps: Deps<TerraQuery>, address: String) -> StdResult
     }
 
     let fee_distributor_addr = CONFIG.load(deps.storage)?.fee_distributor_addr;
-    let config: white_whale::fee_distributor::Config =
+    let config: white_whale_std::fee_distributor::Config =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
             contract_addr: fee_distributor_addr.to_string(),
-            msg: to_binary(&QueryMsg::Config {})?,
+            msg: to_json_binary(&QueryMsg::Config {})?,
         }))?;
     let epoch_config = config.epoch_config;
     let first_bonded_epoch_id = helpers::calculate_epoch(epoch_config, first_bond_timestamp)?;

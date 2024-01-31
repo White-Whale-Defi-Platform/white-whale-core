@@ -3,10 +3,10 @@ use std::collections::{BTreeMap, HashMap};
 
 use cosmwasm_std::{coin, coins, Addr, Decimal256, Timestamp, Uint128};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive;
-use white_whale::pool_network::incentive::{Curve, Flow, FlowIdentifier, RewardsShareResponse};
-use white_whale::pool_network::incentive_factory::IncentivesContract;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::incentive;
+use white_whale_std::pool_network::incentive::{Curve, Flow, FlowIdentifier, RewardsShareResponse};
+use white_whale_std::pool_network::incentive_factory::IncentivesContract;
 
 use crate::error::ContractError;
 use crate::tests::suite::TestingSuite;

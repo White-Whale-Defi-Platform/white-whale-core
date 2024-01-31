@@ -3,12 +3,12 @@ use std::collections::HashMap;
 
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult, Uint128,
-    WasmMsg,
+    to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError, StdResult,
+    Uint128, WasmMsg,
 };
 
-use white_whale::pool_network::incentive::Flow;
-use white_whale::pool_network::{
+use white_whale_std::pool_network::incentive::Flow;
+use white_whale_std::pool_network::{
     asset::{Asset, AssetInfo},
     incentive::Curve,
 };
@@ -43,10 +43,10 @@ pub fn open_flow(
 
     let config = CONFIG.load(deps.storage)?;
 
-    let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
+    let incentive_factory_config: white_whale_std::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             config.factory_address.into_string(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -54,7 +54,7 @@ pub fn open_flow(
     let flow_fee = incentive_factory_config.create_flow_fee;
 
     // compute lunc tax for flow_fee
-    let tax = flow_fee.clone().compute_tax(&deps.querier)?;
+    let tax = flow_fee.compute_tax(&deps.querier)?;
 
     // check the fee to create a flow is being paid
     match flow_fee.info.clone() {
@@ -182,7 +182,7 @@ pub fn open_flow(
             messages.push(
                 WasmMsg::Execute {
                     contract_addr: flow_fee_contract_addr,
-                    msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                    msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                         owner: info.sender.clone().into_string(),
                         recipient: incentive_factory_config.fee_collector_addr.into_string(),
                         amount: flow_fee.amount,
@@ -264,7 +264,7 @@ pub fn open_flow(
                         messages.push(
                             WasmMsg::Execute {
                                 contract_addr: flow_asset_contract_addr,
-                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
                                     amount: flow_asset.amount,
@@ -293,7 +293,7 @@ pub fn open_flow(
                         messages.push(
                             WasmMsg::Execute {
                                 contract_addr: flow_asset_contract_addr,
-                                msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                     owner: info.sender.clone().into_string(),
                                     recipient: env.contract.address.into_string(),
                                     amount: flow_asset.amount,
@@ -312,7 +312,7 @@ pub fn open_flow(
                     messages.push(
                         WasmMsg::Execute {
                             contract_addr: flow_asset_contract_addr,
-                            msg: to_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
+                            msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
                                 owner: info.sender.clone().into_string(),
                                 recipient: env.contract.address.into_string(),
                                 amount: flow_asset.amount,

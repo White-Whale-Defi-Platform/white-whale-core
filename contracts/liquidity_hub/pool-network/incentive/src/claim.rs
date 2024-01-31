@@ -1,10 +1,7 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{
-    to_binary, BankMsg, Coin, CosmosMsg, Decimal256, DepsMut, MessageInfo, StdError, Uint128,
-    Uint256, WasmMsg,
-};
+use cosmwasm_std::{CosmosMsg, Decimal256, DepsMut, MessageInfo, StdError, Uint128, Uint256};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::Asset;
 
 use crate::helpers::{get_flow_asset_amount_at_epoch, get_flow_current_end_epoch};
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};

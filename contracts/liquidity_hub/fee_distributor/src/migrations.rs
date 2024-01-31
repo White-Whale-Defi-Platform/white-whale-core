@@ -3,16 +3,16 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    to_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp, Uint64,
-    WasmQuery,
+    to_json_binary, CosmosMsg, DepsMut, Order, QueryRequest, StdError, StdResult, Timestamp,
+    Uint64, WasmQuery,
 };
 use cw_storage_plus::Map;
 
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset;
-use white_whale::pool_network::asset::Asset;
-use white_whale::whale_lair::GlobalIndex;
-use white_whale::whale_lair::QueryMsg as LairQueryMsg;
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::whale_lair::GlobalIndex;
+use white_whale_std::whale_lair::QueryMsg as LairQueryMsg;
 
 use crate::state::{get_claimable_epochs, CONFIG, EPOCHS};
 
@@ -48,7 +48,7 @@ pub fn migrate_to_v090(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     // Query the current global index
     let global_index: GlobalIndex = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: bonding_contract_addr.to_string(),
-        msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+        msg: to_json_binary(&LairQueryMsg::GlobalIndex {})?,
     }))?;
 
     for epoch in epochs_v08 {
@@ -68,6 +68,7 @@ pub fn migrate_to_v090(deps: DepsMut<TerraQuery>) -> Result<(), StdError> {
     Ok(())
 }
 
+#[allow(dead_code)]
 /// Fixes the broken state for Epochs created prior to the v0.9.0 migration.
 pub fn migrate_to_v091(deps: DepsMut<TerraQuery>) -> Result<Vec<CosmosMsg>, StdError> {
     let claimable_epochs = get_claimable_epochs(deps.as_ref())?;

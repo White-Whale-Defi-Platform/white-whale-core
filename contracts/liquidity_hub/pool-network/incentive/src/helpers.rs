@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 
-use white_whale::pool_network::incentive::Flow;
+use white_whale_std::pool_network::incentive::Flow;
 
 use crate::error::ContractError;
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, CONFIG, FLOWS};
@@ -9,10 +9,10 @@ use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, CONFIG, FLOWS};
 /// Gets the current epoch from the fee distributor contract.
 pub fn get_current_epoch(deps: Deps<TerraQuery>) -> Result<u64, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let epoch_response: white_whale::fee_distributor::EpochResponse =
+    let epoch_response: white_whale_std::fee_distributor::EpochResponse =
         deps.querier.query_wasm_smart(
             config.fee_distributor_address.into_string(),
-            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+            &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
         )?;
 
     Ok(epoch_response.epoch.id.u64())

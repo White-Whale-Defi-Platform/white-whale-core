@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Response, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Response, WasmMsg};
 
-use white_whale::vault_network::vault::MigrateMsg;
+use white_whale_std::vault_network::vault::MigrateMsg;
 
 use crate::err::StdResult;
 use crate::state::read_vaults;
@@ -43,7 +43,7 @@ fn migrate_vault_msg(vault_addr: Addr, code_id: u64) -> StdResult<CosmosMsg> {
     Ok(CosmosMsg::Wasm(WasmMsg::Migrate {
         contract_addr: vault_addr.to_string(),
         new_code_id: code_id,
-        msg: to_binary(&MigrateMsg {})?,
+        msg: to_json_binary(&MigrateMsg {})?,
     }))
 }
 

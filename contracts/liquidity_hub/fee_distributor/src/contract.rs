@@ -2,8 +2,8 @@ use classic_bindings::TerraQuery;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response,
-    StdResult, WasmQuery,
+    from_json, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply,
+    Response, StdResult, WasmQuery,
 };
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::parse_reply_execute_data;
@@ -13,13 +13,13 @@ use crate::helpers::{validate_epoch_config, validate_grace_period};
 use crate::state::{get_expiring_epoch, CONFIG, EPOCHS};
 use crate::{commands, migrations, queries, state};
 use semver::Version;
-use white_whale::fee_collector::ForwardFeesResponse;
-use white_whale::fee_distributor::{
+use white_whale_std::fee_collector::ForwardFeesResponse;
+use white_whale_std::fee_distributor::{
     Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset;
-use white_whale::whale_lair::GlobalIndex;
-use white_whale::whale_lair::QueryMsg as LairQueryMsg;
+use white_whale_std::pool_network::asset;
+use white_whale_std::whale_lair::GlobalIndex;
+use white_whale_std::whale_lair::QueryMsg as LairQueryMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-fee_distributor";
@@ -70,7 +70,7 @@ pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> Result<Respons
         let data = execute_contract_response
             .data
             .ok_or(ContractError::CannotReadEpoch {})?;
-        let forward_fees_response: ForwardFeesResponse = from_binary(&data)?;
+        let forward_fees_response: ForwardFeesResponse = from_json(data)?;
         let mut new_epoch = forward_fees_response.epoch;
 
         // Query bonding contract for GlobalIndex weight
@@ -79,7 +79,7 @@ pub fn reply(deps: DepsMut<TerraQuery>, _env: Env, msg: Reply) -> Result<Respons
         let global_index: GlobalIndex =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: config.bonding_contract_addr.to_string(),
-                msg: to_binary(&LairQueryMsg::GlobalIndex {})?,
+                msg: to_json_binary(&LairQueryMsg::GlobalIndex {})?,
             }))?;
         new_epoch.global_index = global_index;
 
@@ -154,11 +154,11 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::CurrentEpoch {} => Ok(to_binary(&state::get_current_epoch(deps)?)?),
-        QueryMsg::Epoch { id } => Ok(to_binary(&state::get_epoch(deps, id)?)?),
-        QueryMsg::ClaimableEpochs {} => Ok(to_binary(&state::get_claimable_epochs(deps)?)?),
-        QueryMsg::Config {} => Ok(to_binary(&queries::query_config(deps)?)?),
-        QueryMsg::Claimable { address } => Ok(to_binary(&state::query_claimable(
+        QueryMsg::CurrentEpoch {} => Ok(to_json_binary(&state::get_current_epoch(deps)?)?),
+        QueryMsg::Epoch { id } => Ok(to_json_binary(&state::get_epoch(deps, id)?)?),
+        QueryMsg::ClaimableEpochs {} => Ok(to_json_binary(&state::get_claimable_epochs(deps)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::Claimable { address } => Ok(to_json_binary(&state::query_claimable(
             deps,
             &deps.api.addr_validate(&address)?,
         )?)?),
@@ -172,7 +172,7 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
     let version: Version = CONTRACT_VERSION.parse()?;

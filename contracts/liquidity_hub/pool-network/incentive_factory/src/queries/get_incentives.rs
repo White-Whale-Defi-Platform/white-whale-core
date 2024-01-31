@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{Deps, Order, StdResult, Storage};
 use cw_storage_plus::Bound;
-use white_whale::pool_network::{
+use white_whale_std::pool_network::{
     asset::{AssetInfo, AssetInfoRaw},
     incentive_factory::{IncentivesContract, IncentivesResponse},
 };
@@ -59,11 +59,11 @@ fn calc_range_start(start_after: Option<AssetInfoRaw>) -> Option<Vec<u8>> {
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
     use cosmwasm_std::{
-        testing::mock_dependencies, to_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,
+        testing::mock_dependencies, to_json_binary, Addr, Binary, DepsMut, Reply, SubMsgResponse,
         SubMsgResult,
     };
     use protobuf::{Message, SpecialFields};
-    use white_whale::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
+    use white_whale_std::pool_network::{asset::AssetInfo, incentive_factory::IncentivesContract};
 
     use crate::{
         reply::create_incentive_reply::{create_incentive_reply, CREATE_INCENTIVE_REPLY_ID},
@@ -82,8 +82,8 @@ mod tests {
                     data: Some(Binary::from(
                         Message::write_to_bytes(&MsgInstantiateContractResponse {
                             address: format!("incentive{id}"),
-                            data: to_binary(
-                                &white_whale::pool_network::incentive::InstantiateReplyCallback {
+                            data: to_json_binary(
+                                &white_whale_std::pool_network::incentive::InstantiateReplyCallback {
                                     lp_asset: get_lp_asset(id),
                                 },
                             )

@@ -3,10 +3,10 @@ use cosmwasm_std::{
     Addr, Decimal, DepsMut, Env, MessageInfo, Order, Response, StdResult, Timestamp, Uint128,
     Uint64,
 };
-use white_whale::pool_network::asset;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use white_whale::whale_lair::Bond;
+use white_whale_std::whale_lair::Bond;
 
 use crate::helpers::validate_growth_rate;
 use crate::queries::MAX_PAGE_LIMIT;

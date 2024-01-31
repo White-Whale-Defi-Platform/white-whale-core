@@ -4,7 +4,7 @@ use classic_bindings::TerraQuery;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, StdError};
 use cw_storage_plus::Item;
-use white_whale::fee_collector::Config;
+use white_whale_std::fee_collector::Config;
 
 use crate::state::CONFIG;
 

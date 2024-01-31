@@ -2,16 +2,16 @@ use classic_bindings::TerraQuery;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
+    to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut,
+    Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::fee_collector::{
+use white_whale_std::fee_collector::{
     Config, ExecuteMsg, ForwardFeesResponse, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 use crate::error::ContractError;
 use crate::queries::query_distribution_asset;
@@ -103,7 +103,7 @@ pub fn reply(deps: DepsMut<TerraQuery>, env: Env, msg: Reply) -> Result<Response
             .add_attribute("action", "reply")
             .add_attribute("new_epoch", epoch.to_string())
             .add_messages(messages)
-            .set_data(to_binary(&ForwardFeesResponse { epoch })?))
+            .set_data(to_json_binary(&ForwardFeesResponse { epoch })?))
     } else {
         Err(ContractError::UnknownReplyId(msg.id))
     }
@@ -145,11 +145,11 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps<TerraQuery>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&queries::query_config(deps)?),
+        QueryMsg::Config {} => to_json_binary(&queries::query_config(deps)?),
         QueryMsg::Fees {
             query_fees_for,
             all_time,
-        } => to_binary(&queries::query_fees(
+        } => to_json_binary(&queries::query_fees(
             deps,
             query_fees_for,
             all_time.unwrap_or(false),
@@ -164,7 +164,7 @@ pub fn migrate(
     _env: Env,
     _msg: MigrateMsg,
 ) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;

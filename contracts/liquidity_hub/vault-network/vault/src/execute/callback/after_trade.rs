@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{DepsMut, Env, Response, StdError, Uint128, Uint256};
 use cw20::{BalanceResponse, Cw20QueryMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::state::{store_fee, ALL_TIME_BURNED_FEES};
 use crate::{

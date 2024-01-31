@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{Decimal256, Deps, Uint128, Uint256};
 
-use white_whale::pool_network::{asset::Asset, incentive::RewardsResponse};
+use white_whale_std::pool_network::{asset::Asset, incentive::RewardsResponse};
 
 use crate::error::ContractError;
 use crate::helpers;

@@ -1,9 +1,9 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
+use cosmwasm_std::{to_json_binary, Addr, Deps, Order, QueryRequest, StdResult, Uint64, WasmQuery};
 use cw_storage_plus::{Item, Map};
 
-use white_whale::fee_distributor::{ClaimableEpochsResponse, Config, Epoch, EpochResponse};
-use white_whale::whale_lair::{BondedResponse, QueryMsg};
+use white_whale_std::fee_distributor::{ClaimableEpochsResponse, Config, Epoch, EpochResponse};
+use white_whale_std::whale_lair::{BondedResponse, QueryMsg};
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch");
@@ -97,7 +97,7 @@ pub fn query_claimable(
         let bonded_response: BondedResponse =
             deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                 contract_addr: bonding_contract.to_string(),
-                msg: to_binary(&QueryMsg::Bonded {
+                msg: to_json_binary(&QueryMsg::Bonded {
                     address: address.to_string(),
                 })?,
             }))?;

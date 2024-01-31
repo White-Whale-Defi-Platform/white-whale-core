@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Uint128};
 
-use white_whale::pool_network::incentive::OpenPosition;
+use white_whale_std::pool_network::incentive::OpenPosition;
 
 use crate::state::ADDRESS_WEIGHT_HISTORY;
 use crate::{
@@ -24,10 +24,10 @@ pub fn open_position(
     let config = CONFIG.load(deps.storage)?;
 
     // validate unbonding duration
-    let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
+    let incentive_factory_config: white_whale_std::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             config.factory_address.into_string(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     if unbonding_duration < incentive_factory_config.min_unbonding_duration

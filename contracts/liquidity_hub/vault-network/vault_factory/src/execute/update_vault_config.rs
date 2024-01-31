@@ -1,7 +1,7 @@
 use classic_bindings::TerraQuery;
 use cosmwasm_std::{wasm_execute, DepsMut, Response};
 
-use white_whale::vault_network::vault::UpdateConfigParams;
+use white_whale_std::vault_network::vault::UpdateConfigParams;
 
 use crate::err::StdResult;
 
@@ -13,7 +13,7 @@ pub fn update_vault_config(
     Ok(Response::new()
         .add_message(wasm_execute(
             deps.api.addr_validate(vault_addr.as_str())?.to_string(),
-            &white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(params),
+            &white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(params),
             vec![],
         )?)
         .add_attribute("method", "update_vault_config"))

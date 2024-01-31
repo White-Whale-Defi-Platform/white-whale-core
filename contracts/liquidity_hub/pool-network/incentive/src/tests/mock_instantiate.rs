@@ -1,11 +1,11 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage},
-    to_binary, Addr, Env, OwnedDeps, Uint128, Uint64, WasmMsg,
+    to_json_binary, Addr, Env, OwnedDeps, Uint128, Uint64, WasmMsg,
 };
 use cw20::Cw20Coin;
 use cw_multi_test::{App, Executor};
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::contract::instantiate;
 
@@ -27,7 +27,7 @@ pub fn mock_instantiate() -> (OwnedDeps<MockStorage, MockApi, MockQuerier>, Env)
         deps.as_mut(),
         env.clone(),
         creator,
-        white_whale::pool_network::incentive::InstantiateMsg {
+        white_whale_std::pool_network::incentive::InstantiateMsg {
             lp_asset: AssetInfo::NativeToken {
                 denom: "lp_addr".to_string(),
             },
@@ -81,7 +81,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         .instantiate_contract(
             fee_distributor_id,
             mock_admin().sender,
-            &white_whale::fee_distributor::InstantiateMsg {
+            &white_whale_std::fee_distributor::InstantiateMsg {
                 bonding_contract_addr: "bonding_contract_addr".to_string(),
                 fee_collector_addr: "fee_collector_addr".to_string(),
                 grace_period: Uint64::one(),
@@ -103,7 +103,7 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         .instantiate_contract(
             factory_id,
             mock_admin().sender,
-            &white_whale::pool_network::incentive_factory::InstantiateMsg {
+            &white_whale_std::pool_network::incentive_factory::InstantiateMsg {
                 create_flow_fee: Asset {
                     amount: Uint128::zero(),
                     info: AssetInfo::NativeToken {
@@ -128,8 +128,8 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
         mock_admin().sender,
         WasmMsg::Execute {
             contract_addr: incentive_factory.to_string(),
-            msg: to_binary(
-                &white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
+            msg: to_json_binary(
+                &white_whale_std::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
                     lp_asset: AssetInfo::Token {
                         contract_addr: lp_addr.to_string(),
                     },
@@ -142,11 +142,11 @@ pub fn app_mock_instantiate(app: &mut App, lp_balance: Uint128) -> AppInstantiat
     )
     .unwrap();
 
-    let incentive_addr: white_whale::pool_network::incentive_factory::IncentiveResponse = app
+    let incentive_addr: white_whale_std::pool_network::incentive_factory::IncentiveResponse = app
         .wrap()
         .query_wasm_smart(
             incentive_factory,
-            &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentive {
                 lp_asset: lp_addr_token,
             },
         )

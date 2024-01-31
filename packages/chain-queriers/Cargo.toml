@@ -17,9 +17,9 @@ documentation = "https://whitewhale.money"
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-#cosmwasm-std.workspace = true
-#schemars.workspace = true
-#serde.workspace = true
-#cosmwasm-schema.workspace = true
-#cw-multi-test.workspace = true
-#classic-bindings.workspace = true
+cosmwasm-std.workspace = true
+schemars.workspace = true
+serde.workspace = true
+cosmwasm-schema.workspace = true
+cw-multi-test.workspace = true
+classic-bindings.workspace = true

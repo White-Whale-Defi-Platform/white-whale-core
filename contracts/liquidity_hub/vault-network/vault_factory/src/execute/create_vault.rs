@@ -1,9 +1,9 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
-use white_whale::fee::VaultFee;
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_network::vault::InstantiateMsg;
-use white_whale::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
+use white_whale_std::fee::VaultFee;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::vault_network::vault::InstantiateMsg;
+use white_whale_std::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
 
 use crate::{
     asset::AssetReference,
@@ -38,7 +38,7 @@ pub fn create_vault(
         msg: WasmMsg::Instantiate {
             admin: Some(env.contract.address.clone().into_string()),
             code_id: config.vault_id,
-            msg: to_binary(&InstantiateMsg {
+            msg: to_json_binary(&InstantiateMsg {
                 owner: env.contract.address.into_string(),
                 asset_info: asset_info.clone(),
                 token_id: config.token_id,

@@ -2,16 +2,16 @@ use classic_bindings::TerraQuery;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
+    to_json_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw2::{get_contract_version, set_contract_version};
-use white_whale::pool_network::incentive::{
+use white_whale_std::pool_network::incentive::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 use semver::Version;
-use white_whale::migrate_guards::check_contract_name;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::migrate_guards::check_contract_name;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -58,15 +58,15 @@ pub fn instantiate(
             ),
             ("lp_asset", config.lp_asset.to_string()),
         ])
-        .set_data(to_binary(
-            &white_whale::pool_network::incentive::InstantiateReplyCallback {
+        .set_data(to_json_binary(
+            &white_whale_std::pool_network::incentive::InstantiateReplyCallback {
                 lp_asset: msg.lp_asset,
             },
         )?)
         // takes a snapshot of the global weight at the current epoch from the start
         .add_message(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: env.contract.address.to_string(),
-            msg: to_binary(&ExecuteMsg::TakeGlobalWeightSnapshot {})?,
+            msg: to_json_binary(&ExecuteMsg::TakeGlobalWeightSnapshot {})?,
             funds: vec![],
         })))
 }
@@ -126,12 +126,12 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps<TerraQuery>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&queries::get_config(deps)?)?),
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::get_config(deps)?)?),
         QueryMsg::Flow {
             flow_identifier,
             start_epoch,
             end_epoch,
-        } => Ok(to_binary(&queries::get_flow(
+        } => Ok(to_json_binary(&queries::get_flow(
             deps,
             flow_identifier,
             start_epoch,
@@ -140,19 +140,19 @@ pub fn query(deps: Deps<TerraQuery>, env: Env, msg: QueryMsg) -> Result<Binary, 
         QueryMsg::Flows {
             start_epoch,
             end_epoch,
-        } => Ok(to_binary(&queries::get_flows(
+        } => Ok(to_json_binary(&queries::get_flows(
             deps,
             start_epoch,
             end_epoch,
         )?)?),
-        QueryMsg::Positions { address } => {
-            Ok(to_binary(&queries::get_positions(deps, env, address)?)?)
-        }
-        QueryMsg::Rewards { address } => Ok(to_binary(&queries::get_rewards(deps, address)?)?),
-        QueryMsg::GlobalWeight { epoch_id } => {
-            Ok(to_binary(&queries::get_global_weight(deps, epoch_id)?)?)
-        }
-        QueryMsg::CurrentEpochRewardsShare { address } => Ok(to_binary(
+        QueryMsg::Positions { address } => Ok(to_json_binary(&queries::get_positions(
+            deps, env, address,
+        )?)?),
+        QueryMsg::Rewards { address } => Ok(to_json_binary(&queries::get_rewards(deps, address)?)?),
+        QueryMsg::GlobalWeight { epoch_id } => Ok(to_json_binary(&queries::get_global_weight(
+            deps, epoch_id,
+        )?)?),
+        QueryMsg::CurrentEpochRewardsShare { address } => Ok(to_json_binary(
             &queries::get_rewards_share(deps, deps.api.addr_validate(&address)?)?,
         )?),
     }

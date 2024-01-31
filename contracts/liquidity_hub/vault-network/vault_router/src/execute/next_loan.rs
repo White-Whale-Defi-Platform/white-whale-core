@@ -1,8 +1,8 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use white_whale::vault_network::vault_router::ExecuteMsg;
+use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
 use crate::err::{StdResult, VaultRouterError};
 use crate::state::CONFIG;
@@ -24,7 +24,7 @@ pub fn next_loan(
 
     let Some(queried_vault) = deps.querier.query_wasm_smart::<Option<String>>(
         config.vault_factory,
-        &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+        &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
             asset_info: source_vault_asset,
         },
     )? else {
@@ -45,17 +45,19 @@ pub fn next_loan(
             vec![WasmMsg::Execute {
                 contract_addr: vault.clone(),
                 funds: vec![],
-                msg: to_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
-                    amount: asset.amount,
-                    msg: to_binary(&ExecuteMsg::NextLoan {
-                        initiator,
-                        source_vault: vault.to_string(),
-                        source_vault_asset_info: asset.info.clone(),
-                        to_loan: loans.to_vec(),
-                        payload,
-                        loaned_assets,
-                    })?,
-                })?,
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::ExecuteMsg::FlashLoan {
+                        amount: asset.amount,
+                        msg: to_json_binary(&ExecuteMsg::NextLoan {
+                            initiator,
+                            source_vault: vault.to_string(),
+                            source_vault_asset_info: asset.info.clone(),
+                            to_loan: loans.to_vec(),
+                            payload,
+                            loaned_assets,
+                        })?,
+                    },
+                )?,
             }
             .into()]
         }
@@ -65,7 +67,7 @@ pub fn next_loan(
                 WasmMsg::Execute {
                     contract_addr: env.contract.address.to_string(),
                     funds: vec![],
-                    msg: to_binary(&ExecuteMsg::CompleteLoan {
+                    msg: to_json_binary(&ExecuteMsg::CompleteLoan {
                         initiator,
                         loaned_assets,
                     })?,

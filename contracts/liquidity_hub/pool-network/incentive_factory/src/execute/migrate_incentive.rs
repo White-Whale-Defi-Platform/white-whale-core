@@ -1,9 +1,8 @@
 use classic_bindings::TerraQuery;
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Order, Response, StdResult, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Order, Response, StdResult, WasmMsg};
 
 use crate::error::ContractError;
 use crate::state::INCENTIVE_MAPPINGS;
-
 
 pub fn migrate_incentives(
     deps: DepsMut<TerraQuery>,
@@ -50,7 +49,7 @@ fn migrate_incentive_msg(incentive_address: Addr, new_code_id: u64) -> StdResult
     Ok(CosmosMsg::Wasm(WasmMsg::Migrate {
         contract_addr: incentive_address.to_string(),
         new_code_id,
-        msg: to_binary(&white_whale::pool_network::incentive::MigrateMsg {})?,
+        msg: to_json_binary(&white_whale_std::pool_network::incentive::MigrateMsg {})?,
     }))
 }
 
@@ -61,9 +60,9 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{attr, Addr, Uint128};
 
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::pool_network::incentive_factory::ExecuteMsg::MigrateIncentives;
-    use white_whale::pool_network::incentive_factory::InstantiateMsg;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::pool_network::incentive_factory::ExecuteMsg::MigrateIncentives;
+    use white_whale_std::pool_network::incentive_factory::InstantiateMsg;
 
     use crate::contract::{execute, instantiate};
     use crate::state::INCENTIVE_MAPPINGS;
@@ -109,7 +108,7 @@ mod tests {
                 code_id: 456,
             },
         )
-            .unwrap();
+        .unwrap();
 
         let expected_attributes = vec![
             attr("method", "migrate_incentives"),
@@ -160,7 +159,7 @@ mod tests {
                 code_id: 456,
             },
         )
-            .unwrap();
+        .unwrap();
 
         let expected_attributes = vec![
             attr("method", "migrate_incentives"),
