@@ -5,20 +5,20 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
 
-use white_whale::constants::LP_SYMBOL;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::constants::LP_SYMBOL;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
 use white_whale::tokenfactory;
-use white_whale::vault_manager::{LpTokenType, Vault, VaultFee};
+use white_whale_std::vault_manager::{LpTokenType, Vault, VaultFee};
 
 use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
 use crate::ContractError;
-use white_whale::whale_lair::fill_rewards_msg;
+use white_whale_std::whale_lair::fill_rewards_msg;
 
 /// Creates a new vault
 pub fn create_vault(
@@ -131,6 +131,7 @@ pub fn create_vault(
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
         let salt: Binary = hasher.finalize().to_vec().into();
+
 
         let vault_lp_address = deps.api.addr_humanize(
             &instantiate2_address(&checksum, &creator, &salt)
