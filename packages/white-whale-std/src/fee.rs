@@ -13,7 +13,7 @@ impl Fee {
         amount * Decimal256::from(self.share)
     }
 
-    /// Computes the fee for the given amount
+    /// Converts a Fee to a Decimal256
     pub fn to_decimal_256(&self) -> Decimal256 {
         Decimal256::from(self.share)
     }

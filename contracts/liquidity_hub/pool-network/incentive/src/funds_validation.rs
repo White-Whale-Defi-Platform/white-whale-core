@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_json_binary, Deps, Env, MessageInfo, Uint128, WasmMsg};
 use cw_utils::PaymentError;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 

@@ -9,17 +9,17 @@ use schemars::JsonSchema;
 #[cfg(not(feature = "injective"))]
 use serde::{Deserialize, Serialize};
 
-use white_whale::fee::Fee;
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
-use white_whale::pool_network::pair::{Config, FeatureToggle};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
 #[cfg(not(feature = "injective"))]
 use crate::state::PAIR_INFO;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG};
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`]
 /// as identified by commit c8d8462c6933b93245acdc8abbe303287fdc1951 which changed the structs to use
@@ -74,7 +74,7 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     #[cw_serde]
     struct ConfigV110 {
@@ -124,7 +124,7 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate to the StableSwap deployment
 ///
 /// Default to a ConstantProduct pool

@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 
 members = [
 	"packages/*",
@@ -29,13 +30,11 @@ cw20 = { version = "1.0.1"}
 cw20-base = { version = "1.1.0", features = ["library"] }
 cw-storage-plus = { version = "1.1.0"}
 cw-utils = { version = "1.0.1"}
-protobuf = { version = "3.2.0", features = ["with-bytes"] }
 schemars = { version = "0.8.12"}
 semver = { version = "1.0.12"}
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.43"}
 osmosis-std-derive = { version = "0.15.3"}
-prost = {version = "0.11.9", default-features = false, features = ["prost-derive"]}
 prost-types = {version = "0.11.9", default-features = false}
 white-whale = { path = "./packages/white-whale" }
 white-whale-testing = { path = "./packages/white-whale-testing" }
@@ -48,6 +47,11 @@ cw-ownable = { version = "0.5.1"}
 anybuf = { version = "0.3.0"}
 sha2 = { version = "0.10.8"}
 sha256 = { version = "1.4.0"}
+protobuf = { version = "=3.2.0", features = ["with-bytes"] }
+prost = { version = "0.11.9", default-features = false, features = [
+  "prost-derive",
+] }
+white-whale-std = { version = "1.1.1", path = "packages/white-whale-std" }
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }

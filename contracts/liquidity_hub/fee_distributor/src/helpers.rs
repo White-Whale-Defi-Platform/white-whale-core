@@ -1,7 +1,7 @@
 use cosmwasm_std::Uint64;
 
 use crate::ContractError;
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 
 const MAX_GRACE_PERIOD: u64 = 30u64;
 pub const DAY_IN_NANOSECONDS: u64 = 86_400_000_000_000u64;

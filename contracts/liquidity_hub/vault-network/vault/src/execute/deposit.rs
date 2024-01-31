@@ -14,15 +14,15 @@ use cw20::{AllowanceResponse, Cw20ExecuteMsg};
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::pool_network::asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgMint};
+use white_whale_std::pool_network::denom::{Coin, MsgMint};
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::{Coin, MsgMint};
+use white_whale_std::pool_network::denom_injective::{Coin, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgMint};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgMint};
 
 use crate::{
     error::VaultError,
@@ -219,8 +219,8 @@ mod test {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use white_whale::pool_network::asset::AssetInfo;
-    use white_whale::vault_network::vault::Config;
+    use white_whale_std::pool_network::asset::AssetInfo;
+    use white_whale_std::vault_network::vault::Config;
 
     use crate::tests::mock_app::mock_app_with_balance;
     use crate::tests::mock_instantiate::app_mock_instantiate;
@@ -272,7 +272,7 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_info("creator", &coins(5_000, "uluna")),
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -348,7 +348,7 @@ mod test {
             deps.as_mut(),
             env.clone(),
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -398,7 +398,7 @@ mod test {
                 denom: "uluna".to_string(),
             },
             false,
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -445,7 +445,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -489,7 +489,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -529,7 +529,7 @@ mod test {
             deps.as_mut(),
             mock_env(),
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
         );
@@ -563,7 +563,7 @@ mod test {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &coins(10_000, "uluna"),
@@ -575,7 +575,7 @@ mod test {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &white_whale::vault_network::vault::QueryMsg::Config {},
+                &white_whale_std::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -622,7 +622,7 @@ mod test {
         app.execute_contract(
             second_depositor.clone(),
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(5_000),
             },
             &coins(5_000, "uluna"),
@@ -646,7 +646,7 @@ mod test {
         app.execute_contract(
             third_depositor.clone(),
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(8_000),
             },
             &coins(8_000, "uluna"),
@@ -702,7 +702,7 @@ mod test {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(1_000_000_000_000000000000000000),
             },
             &coins(1_000_000_000_000000000000000000, "inj"),
@@ -713,7 +713,7 @@ mod test {
         app.execute_contract(
             second_depositor.clone(),
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(1_000_000_000_000000000000000000),
             },
             &coins(1_000_000_000_000000000000000000, "inj"),

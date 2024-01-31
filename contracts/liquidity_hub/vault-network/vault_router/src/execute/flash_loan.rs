@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_json_binary, CosmosMsg, DepsMut, MessageInfo, Response, WasmMsg};
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::vault_network::vault_router::ExecuteMsg;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
 use crate::{
     err::{StdResult, VaultRouterError},
@@ -30,7 +30,7 @@ pub fn flash_loan(
             // query factory for address
             let address: Option<String> = deps.querier.query_wasm_smart(
                 config.vault_factory.clone(),
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+                &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: asset.info.clone(),
                 },
             )?;
@@ -51,17 +51,19 @@ pub fn flash_loan(
         messages.push(
             WasmMsg::Execute {
                 contract_addr: vault.to_string(),
-                msg: to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
-                    amount: asset.amount,
-                    msg: to_json_binary(&ExecuteMsg::NextLoan {
-                        initiator: info.sender,
-                        source_vault: vault.to_string(),
-                        source_vault_asset_info: asset.info.clone(),
-                        to_loan: next_vaults.to_vec(),
-                        payload: msgs,
-                        loaned_assets: vaults,
-                    })?,
-                })?,
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::ExecuteMsg::FlashLoan {
+                        amount: asset.amount,
+                        msg: to_json_binary(&ExecuteMsg::NextLoan {
+                            initiator: info.sender,
+                            source_vault: vault.to_string(),
+                            source_vault_asset_info: asset.info.clone(),
+                            to_loan: next_vaults.to_vec(),
+                            payload: msgs,
+                            loaned_assets: vaults,
+                        })?,
+                    },
+                )?,
                 funds: vec![],
             }
             .into(),
@@ -81,8 +83,8 @@ mod tests {
     };
     use cw_multi_test::Executor;
 
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault_router::ExecuteMsg;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
     use crate::{
         err::VaultRouterError,

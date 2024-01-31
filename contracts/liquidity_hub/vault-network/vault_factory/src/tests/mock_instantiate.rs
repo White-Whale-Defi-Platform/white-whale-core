@@ -27,7 +27,7 @@ pub fn mock_instantiate(
         deps.as_mut(),
         env.clone(),
         creator.clone(),
-        white_whale::vault_network::vault_factory::InstantiateMsg {
+        white_whale_std::vault_network::vault_factory::InstantiateMsg {
             owner: creator.sender.to_string(),
             vault_id,
             token_id,
@@ -51,7 +51,7 @@ pub fn app_mock_instantiate(app: &mut App) -> Addr {
         .instantiate_contract(
             fee_collector_id,
             mock_creator().sender,
-            &white_whale::fee_collector::InstantiateMsg {},
+            &white_whale_std::fee_collector::InstantiateMsg {},
             &[],
             "mock fee collector",
             None,
@@ -61,7 +61,7 @@ pub fn app_mock_instantiate(app: &mut App) -> Addr {
     app.instantiate_contract(
         factory_id,
         creator.clone().sender,
-        &white_whale::vault_network::vault_factory::InstantiateMsg {
+        &white_whale_std::vault_network::vault_factory::InstantiateMsg {
             owner: creator.sender.into_string(),
             vault_id,
             token_id,

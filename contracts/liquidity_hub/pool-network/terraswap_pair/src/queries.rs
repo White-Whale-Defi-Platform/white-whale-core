@@ -3,10 +3,10 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Decimal256, Deps, Fraction, StdResult, Uint128};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{
+use white_whale_std::pool_network::asset::{
     get_total_share, Asset, AssetInfoRaw, PairInfo, PairInfoRaw, PairType,
 };
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network::pair::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
@@ -123,13 +123,28 @@ pub fn query_simulation(
         ask_decimal,
     )?;
 
-    Ok(SimulationResponse {
-        return_amount: swap_computation.return_amount,
-        spread_amount: swap_computation.spread_amount,
-        swap_fee_amount: swap_computation.swap_fee_amount,
-        protocol_fee_amount: swap_computation.protocol_fee_amount,
-        burn_fee_amount: swap_computation.burn_fee_amount,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(SimulationResponse {
+            return_amount: swap_computation.return_amount,
+            spread_amount: swap_computation.spread_amount,
+            swap_fee_amount: swap_computation.swap_fee_amount,
+            protocol_fee_amount: swap_computation.protocol_fee_amount,
+            burn_fee_amount: swap_computation.burn_fee_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        Ok(SimulationResponse {
+            return_amount: swap_computation.return_amount,
+            spread_amount: swap_computation.spread_amount,
+            swap_fee_amount: swap_computation.swap_fee_amount,
+            protocol_fee_amount: swap_computation.protocol_fee_amount,
+            burn_fee_amount: swap_computation.burn_fee_amount,
+            osmosis_fee_amount: swap_computation.osmosis_fee_amount,
+        })
+    }
 }
 
 /// Queries a swap reverse simulation. Used to derive the number of source tokens returned for
@@ -190,13 +205,28 @@ pub fn query_reverse_simulation(
                 pool_fees,
             )?;
 
-            Ok(ReverseSimulationResponse {
-                offer_amount: offer_amount_computation.offer_amount,
-                spread_amount: offer_amount_computation.spread_amount,
-                swap_fee_amount: offer_amount_computation.swap_fee_amount,
-                protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
-                burn_fee_amount: offer_amount_computation.burn_fee_amount,
-            })
+            #[cfg(not(feature = "osmosis"))]
+            {
+                Ok(ReverseSimulationResponse {
+                    offer_amount: offer_amount_computation.offer_amount,
+                    spread_amount: offer_amount_computation.spread_amount,
+                    swap_fee_amount: offer_amount_computation.swap_fee_amount,
+                    protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+                    burn_fee_amount: offer_amount_computation.burn_fee_amount,
+                })
+            }
+
+            #[cfg(feature = "osmosis")]
+            {
+                Ok(ReverseSimulationResponse {
+                    offer_amount: offer_amount_computation.offer_amount,
+                    spread_amount: offer_amount_computation.spread_amount,
+                    swap_fee_amount: offer_amount_computation.swap_fee_amount,
+                    protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+                    burn_fee_amount: offer_amount_computation.burn_fee_amount,
+                    osmosis_fee_amount: offer_amount_computation.osmosis_fee_amount,
+                })
+            }
         }
         PairType::StableSwap { amp } => {
             let offer_pool = Decimal256::decimal_with_precision(offer_pool.amount, offer_decimal)?;
@@ -248,13 +278,30 @@ pub fn query_reverse_simulation(
             let protocol_fee_amount = pool_fees.protocol_fee.compute(before_fees_ask);
             let burn_fee_amount = pool_fees.burn_fee.compute(before_fees_ask);
 
-            Ok(ReverseSimulationResponse {
-                offer_amount,
-                spread_amount,
-                swap_fee_amount: swap_fee_amount.try_into()?,
-                protocol_fee_amount: protocol_fee_amount.try_into()?,
-                burn_fee_amount: burn_fee_amount.try_into()?,
-            })
+            #[cfg(not(feature = "osmosis"))]
+            {
+                Ok(ReverseSimulationResponse {
+                    offer_amount,
+                    spread_amount,
+                    swap_fee_amount: swap_fee_amount.try_into()?,
+                    protocol_fee_amount: protocol_fee_amount.try_into()?,
+                    burn_fee_amount: burn_fee_amount.try_into()?,
+                })
+            }
+
+            #[cfg(feature = "osmosis")]
+            {
+                let osmosis_fee_amount = pool_fees.osmosis_fee.compute(before_fees_ask);
+
+                Ok(ReverseSimulationResponse {
+                    offer_amount,
+                    spread_amount,
+                    swap_fee_amount: swap_fee_amount.try_into()?,
+                    protocol_fee_amount: protocol_fee_amount.try_into()?,
+                    burn_fee_amount: burn_fee_amount.try_into()?,
+                    osmosis_fee_amount: osmosis_fee_amount.try_into()?,
+                })
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 use cosmwasm_std::{Deps, Order, StdError, StdResult};
 
-use white_whale::pool_network::incentive::Flow;
+use white_whale_std::pool_network::incentive::Flow;
 
 use crate::helpers::get_filtered_flow;
 use crate::state::FLOWS;

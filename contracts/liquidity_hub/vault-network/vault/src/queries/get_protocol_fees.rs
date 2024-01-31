@@ -1,8 +1,8 @@
 use cosmwasm_std::{to_json_binary, Binary, Deps, StdError};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::vault_network::vault::ProtocolFeesResponse;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::vault_network::vault::ProtocolFeesResponse;
 
 use crate::error::VaultError;
 
@@ -32,8 +32,8 @@ mod test {
         Uint128,
     };
 
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault::{ProtocolFeesResponse, QueryMsg};
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault::{ProtocolFeesResponse, QueryMsg};
 
     use crate::state::ALL_TIME_BURNED_FEES;
     use crate::{

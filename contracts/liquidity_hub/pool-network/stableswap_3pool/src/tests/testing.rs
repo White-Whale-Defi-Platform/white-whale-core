@@ -9,21 +9,22 @@ use cw20::MinterResponse;
 use crate::state::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, TrioInfo};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, TrioInfo};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::swap::assert_max_spread;
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::pool_network::trio::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
+use white_whale_std::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::swap::assert_max_spread;
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::trio::ExecuteMsg::UpdateConfig;
+use white_whale_std::pool_network::trio::{Config, InstantiateMsg, MigrateMsg, PoolFee, QueryMsg};
 
 use crate::contract::{execute, instantiate, migrate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_trio_info;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn proper_initialization_cw20_lp() {
     let mut deps = mock_dependencies(&[]);
@@ -203,134 +204,7 @@ fn proper_initialization_tokenfactory_lp() {
     );
 }
 
-#[cfg(feature = "token_factory")]
-#[test]
-fn intialize_with_burnable_token_factory_asset() {
-    let mut deps = mock_dependencies(&[]);
-
-    deps.querier.with_token_balances(&[
-        (
-            &"asset0000".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
-        ),
-        (
-            &"asset0001".to_string(),
-            &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(456u128))],
-        ),
-    ]);
-
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8, 10u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        },
-        fee_collector_addr: "collector".to_string(),
-        amp_factor: 1000,
-        token_factory_lp: true,
-    };
-
-    // we can just call .unwrap() to assert this was a success
-    let env = mock_env();
-    let info = mock_info("addr0000", &[]);
-    let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-
-    let expected = <MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
-        sender: MOCK_CONTRACT_ADDR.to_string(),
-        subdenom: LP_SYMBOL.to_string(),
-    });
-
-    assert_eq!(res.messages[0].msg, expected);
-
-    // let's try to increase the burn fee. It should fail
-    let update_config_message = UpdateConfig {
-        owner: None,
-        fee_collector_addr: None,
-        pool_fees: Some(PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-        }),
-        feature_toggle: None,
-        amp_factor: None,
-    };
-
-    let res = execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    );
-    match res {
-        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
-        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-    }
-
-    // now let's try instantiating the contract with burning fees, it should fail
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0001".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8, 10u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-        },
-        fee_collector_addr: "collector".to_string(),
-        amp_factor: 1000,
-        token_factory_lp: true,
-    };
-
-    let res = instantiate(deps.as_mut(), env, info, msg);
-    match res {
-        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
-        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-    }
-}
-
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_fees() {
     let mut deps = mock_dependencies(&[]);
@@ -381,6 +255,7 @@ fn test_initialization_invalid_fees() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_amp() {
     let mut deps = mock_dependencies(&[]);
@@ -437,6 +312,7 @@ fn test_initialization_invalid_amp() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn can_migrate_contract() {
     let mut deps = mock_dependencies(&[]);
@@ -612,6 +488,7 @@ fn test_max_spread() {
     .unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
@@ -704,6 +581,7 @@ fn test_update_config_unsuccessful() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_successful() {
     let mut deps = mock_dependencies(&[]);

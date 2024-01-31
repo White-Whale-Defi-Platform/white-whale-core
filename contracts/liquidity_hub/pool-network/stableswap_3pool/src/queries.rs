@@ -1,8 +1,8 @@
 use cosmwasm_std::{Deps, StdResult};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, AssetInfoRaw, TrioInfo, TrioInfoRaw};
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfoRaw, TrioInfo, TrioInfoRaw};
+use white_whale_std::pool_network::trio::{
     ConfigResponse, PoolResponse, ProtocolFeesResponse, ReverseSimulationResponse,
     SimulationResponse,
 };
@@ -148,13 +148,28 @@ pub fn query_simulation(
         invariant,
     )?;
 
-    Ok(SimulationResponse {
-        return_amount: swap_computation.return_amount,
-        spread_amount: swap_computation.spread_amount,
-        swap_fee_amount: swap_computation.swap_fee_amount,
-        protocol_fee_amount: swap_computation.protocol_fee_amount,
-        burn_fee_amount: swap_computation.burn_fee_amount,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(SimulationResponse {
+            return_amount: swap_computation.return_amount,
+            spread_amount: swap_computation.spread_amount,
+            swap_fee_amount: swap_computation.swap_fee_amount,
+            protocol_fee_amount: swap_computation.protocol_fee_amount,
+            burn_fee_amount: swap_computation.burn_fee_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        Ok(SimulationResponse {
+            return_amount: swap_computation.return_amount,
+            spread_amount: swap_computation.spread_amount,
+            swap_fee_amount: swap_computation.swap_fee_amount,
+            protocol_fee_amount: swap_computation.protocol_fee_amount,
+            burn_fee_amount: swap_computation.burn_fee_amount,
+            osmosis_fee_amount: swap_computation.osmosis_fee_amount,
+        })
+    }
 }
 
 /// Queries a swap reverse simulation. Used to derive the number of source tokens returned for
@@ -247,13 +262,28 @@ pub fn query_reverse_simulation(
         invariant,
     )?;
 
-    Ok(ReverseSimulationResponse {
-        offer_amount: offer_amount_computation.offer_amount,
-        spread_amount: offer_amount_computation.spread_amount,
-        swap_fee_amount: offer_amount_computation.swap_fee_amount,
-        protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
-        burn_fee_amount: offer_amount_computation.burn_fee_amount,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(ReverseSimulationResponse {
+            offer_amount: offer_amount_computation.offer_amount,
+            spread_amount: offer_amount_computation.spread_amount,
+            swap_fee_amount: offer_amount_computation.swap_fee_amount,
+            protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+            burn_fee_amount: offer_amount_computation.burn_fee_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        Ok(ReverseSimulationResponse {
+            offer_amount: offer_amount_computation.offer_amount,
+            spread_amount: offer_amount_computation.spread_amount,
+            swap_fee_amount: offer_amount_computation.swap_fee_amount,
+            protocol_fee_amount: offer_amount_computation.protocol_fee_amount,
+            burn_fee_amount: offer_amount_computation.burn_fee_amount,
+            osmosis_fee_amount: offer_amount_computation.osmosis_fee_amount,
+        })
+    }
 }
 
 /// Queries the [Config], which contains the owner, pool_fees and feature_toggle

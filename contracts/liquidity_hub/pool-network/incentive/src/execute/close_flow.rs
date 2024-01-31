@@ -3,8 +3,8 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::pool_network::incentive::{Flow, FlowIdentifier};
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::incentive::{Flow, FlowIdentifier};
 
 use crate::{
     error::ContractError,
@@ -19,10 +19,10 @@ pub fn close_flow(
 ) -> Result<Response, ContractError> {
     // validate that user is allowed to close the flow
     let config = CONFIG.load(deps.storage)?;
-    let factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
+    let factory_config: white_whale_std::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             config.factory_address.into_string(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     let flow = FLOWS

@@ -8,14 +8,14 @@ use cw20::{BalanceResponse, Cw20ExecuteMsg, Cw20QueryMsg};
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{get_total_share, AssetInfo};
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{get_total_share, AssetInfo};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn};
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn};
 
 use crate::state::COLLECTED_PROTOCOL_FEES;
 use crate::{error::VaultError, state::CONFIG};
@@ -142,8 +142,8 @@ mod tests {
     use cw20::Cw20ExecuteMsg;
     use cw_multi_test::Executor;
 
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault::{Config, UpdateConfigParams};
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::state::COLLECTED_PROTOCOL_FEES;
     use crate::{
@@ -167,12 +167,12 @@ mod tests {
                 denom: "uluna".to_string(),
             },
             false,
-            white_whale::vault_network::vault::ExecuteMsg::Receive(
-                white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::ExecuteMsg::Receive(
+                white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                     sender: mock_creator().sender.into_string(),
                     amount: Uint128::new(5_000),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                        &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
                     )
                     .unwrap(),
                 },
@@ -189,12 +189,12 @@ mod tests {
                 denom: "uluna".to_string(),
             },
             false,
-            white_whale::vault_network::vault::ExecuteMsg::Receive(
-                white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::ExecuteMsg::Receive(
+                white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                     sender: mock_creator().sender.into_string(),
                     amount: Uint128::new(5_000),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                        &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
                     )
                     .unwrap(),
                 },
@@ -211,7 +211,7 @@ mod tests {
                 denom: "uluna".to_string(),
             },
             false,
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: Some(false),
@@ -248,12 +248,12 @@ mod tests {
             deps.as_mut(),
             mock_env(),
             mock_info("lp_token", &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Receive(
-                white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::ExecuteMsg::Receive(
+                white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(2_000),
                     sender: mock_creator().sender.into_string(),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                        &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
                     )
                     .unwrap(),
                 },
@@ -280,7 +280,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &white_whale::vault_network::vault::QueryMsg::Config {},
+                &white_whale_std::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -292,7 +292,7 @@ mod tests {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &coins(10_000, "uluna"),
@@ -307,8 +307,10 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(4_500),
-                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                    .unwrap(),
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
+                )
+                .unwrap(),
             },
             &[],
         )
@@ -374,7 +376,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 vault_addr.clone(),
-                &white_whale::vault_network::vault::QueryMsg::Config {},
+                &white_whale_std::vault_network::vault::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -400,7 +402,7 @@ mod tests {
         app.execute_contract(
             mock_creator().sender,
             vault_addr.clone(),
-            &white_whale::vault_network::vault::ExecuteMsg::Deposit {
+            &white_whale_std::vault_network::vault::ExecuteMsg::Deposit {
                 amount: Uint128::new(10_000),
             },
             &[],
@@ -415,8 +417,10 @@ mod tests {
             &Cw20ExecuteMsg::Send {
                 contract: vault_addr.to_string(),
                 amount: Uint128::new(4_500),
-                msg: to_json_binary(&white_whale::vault_network::vault::Cw20HookMsg::Withdraw {})
-                    .unwrap(),
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
+                )
+                .unwrap(),
             },
             &[],
         )
@@ -509,12 +513,12 @@ mod tests {
             deps.as_mut(),
             env,
             mock_info("lp_token", &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Receive(
-                white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::ExecuteMsg::Receive(
+                white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(5_000),
                     sender: mock_creator().sender.into_string(),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                        &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
                     )
                     .unwrap(),
                 },
@@ -621,12 +625,12 @@ mod tests {
             deps.as_mut(),
             env,
             mock_info("lp_token", &[]),
-            white_whale::vault_network::vault::ExecuteMsg::Receive(
-                white_whale::vault_network::vault::Cw20ReceiveMsg {
+            white_whale_std::vault_network::vault::ExecuteMsg::Receive(
+                white_whale_std::vault_network::vault::Cw20ReceiveMsg {
                     amount: Uint128::new(5_000),
                     sender: mock_creator().sender.into_string(),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault::Cw20HookMsg::Withdraw {},
+                        &white_whale_std::vault_network::vault::Cw20HookMsg::Withdraw {},
                     )
                     .unwrap(),
                 },

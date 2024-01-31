@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_json_binary, Binary, Deps};
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_network::vault_factory::{VaultInfo, VaultsResponse};
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::vault_network::vault_factory::{VaultInfo, VaultsResponse};
 
 use crate::state::read_vaults;
 use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
@@ -27,9 +27,9 @@ pub fn get_vaults(
 #[cfg(test)]
 mod tests {
     use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale_std::pool_network::asset::AssetInfo;
 
-    use white_whale::vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultsResponse};
+    use white_whale_std::vault_network::vault_factory::{ExecuteMsg, QueryMsg, VaultsResponse};
 
     use crate::tests::{
         get_fees, mock_app, mock_creator, mock_instantiate::app_mock_instantiate, mock_query,

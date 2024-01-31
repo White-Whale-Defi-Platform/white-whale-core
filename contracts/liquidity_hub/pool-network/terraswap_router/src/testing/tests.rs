@@ -4,12 +4,12 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use white_whale::pool_network;
+use white_whale_std::pool_network;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::ExecuteMsg as PairExecuteMsg;
-use white_whale::pool_network::router::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::ExecuteMsg as PairExecuteMsg;
+use white_whale_std::pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute, SwapRouteResponse,
 };

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
-use white_whale::fee_distributor::{ClaimableEpochsResponse, EpochResponse};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::fee_distributor::{ClaimableEpochsResponse, EpochResponse};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
 use crate::state::CONFIG;
@@ -51,7 +51,7 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
     // Do a smart query for Claimable
     let claimable_rewards: ClaimableEpochsResponse = deps.querier.query_wasm_smart(
         fee_distributor,
-        &white_whale::fee_distributor::QueryMsg::Claimable {
+        &white_whale_std::fee_distributor::QueryMsg::Claimable {
             address: info.sender.to_string(),
         },
     )?;
@@ -73,7 +73,7 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(
 
     let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
         fee_distributor,
-        &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+        &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
     )?;
 
     let current_epoch = epoch_response.epoch;

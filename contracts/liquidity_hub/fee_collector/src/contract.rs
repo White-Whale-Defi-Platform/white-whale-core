@@ -7,10 +7,10 @@ use cosmwasm_std::{
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::fee_collector::{
+use white_whale_std::fee_collector::{
     Config, ExecuteMsg, ForwardFeesResponse, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 use crate::error::ContractError;
 use crate::queries::query_distribution_asset;
@@ -153,7 +153,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     let version: Version = CONTRACT_VERSION.parse()?;
     let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;

@@ -1,21 +1,21 @@
-use crate::fee::Fee;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Decimal, StdError, StdResult, Uint128};
 use cw20::Cw20ReceiveMsg;
 
-use crate::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use crate::fee::Fee;
+
+use crate::pool_network::asset::{Asset, AssetInfo, TrioInfo};
 
 #[cw_serde]
 pub struct InstantiateMsg {
     /// Asset infos
-    pub asset_infos: [AssetInfo; 2],
+    pub asset_infos: [AssetInfo; 3],
     /// Token contract code id for initialization
     pub token_code_id: u64,
-    pub asset_decimals: [u8; 2],
+    pub asset_decimals: [u8; 3],
     pub pool_fees: PoolFee,
     pub fee_collector_addr: String,
-    /// The type of pair to create
-    pub pair_type: PairType,
+    pub amp_factor: u64,
     /// If true, the pair will use the token factory to create the LP token. If false, it will
     /// use a cw20 token instead.
     pub token_factory_lp: bool,
@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     /// Provides liquidity to the pool
     ProvideLiquidity {
-        assets: [Asset; 2],
+        assets: [Asset; 3],
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
     },
@@ -36,25 +36,34 @@ pub enum ExecuteMsg {
     /// Swap an offer asset to the other
     Swap {
         offer_asset: Asset,
+        ask_asset: AssetInfo,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
     },
-    /// Updates the pair pool config
+    /// Updates the trio pool config
     UpdateConfig {
         owner: Option<String>,
         fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
+        amp_factor: Option<RampAmp>,
     },
     /// Collects the Protocol fees accrued by the pool
     CollectProtocolFees {},
 }
 
 #[cw_serde]
+pub struct RampAmp {
+    pub future_a: u64,
+    pub future_block: u64,
+}
+
+#[cw_serde]
 pub enum Cw20HookMsg {
     /// Sell a given amount of asset
     Swap {
+        ask_asset: AssetInfo,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
@@ -66,9 +75,9 @@ pub enum Cw20HookMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the info for the pair.
-    #[returns(PairInfo)]
-    Pair {},
+    /// Retrieves the info for the trio.
+    #[returns(TrioInfo)]
+    Trio {},
     /// Retrieves the configuration of the pool.
     #[returns(ConfigResponse)]
     Config {},
@@ -89,11 +98,17 @@ pub enum QueryMsg {
     Pool {},
     /// Simulates a swap.
     #[returns(SimulationResponse)]
-    Simulation { offer_asset: Asset },
+    Simulation {
+        offer_asset: Asset,
+        ask_asset: Asset,
+    },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
     /// perform the swap.
     #[returns(ReverseSimulationResponse)]
-    ReverseSimulation { ask_asset: Asset },
+    ReverseSimulation {
+        ask_asset: Asset,
+        offer_asset: Asset,
+    },
 }
 
 /// Pool feature toggle
@@ -110,6 +125,8 @@ pub struct PoolFee {
     pub protocol_fee: Fee,
     pub swap_fee: Fee,
     pub burn_fee: Fee,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee: Fee,
 }
 
 impl PoolFee {
@@ -120,16 +137,37 @@ impl PoolFee {
         self.swap_fee.is_valid()?;
         self.burn_fee.is_valid()?;
 
-        if self
-            .protocol_fee
-            .share
-            .checked_add(self.swap_fee.share)?
-            .checked_add(self.burn_fee.share)?
-            >= Decimal::percent(100)
-        {
+        let total_fee = self.aggregate()?;
+
+        // Check if the total fee exceeds 100%
+        if total_fee >= Decimal::percent(100) {
             return Err(StdError::generic_err("Invalid fees"));
         }
+
         Ok(())
+    }
+
+    /// aggregates all the fees into a single decimal
+    pub fn aggregate(&self) -> StdResult<Decimal> {
+        let total_fee = {
+            let base_fee = self
+                .protocol_fee
+                .share
+                .checked_add(self.swap_fee.share)?
+                .checked_add(self.burn_fee.share)?;
+
+            #[cfg(feature = "osmosis")]
+            {
+                base_fee.checked_add(self.osmosis_fee.share)?
+            }
+
+            #[cfg(not(feature = "osmosis"))]
+            {
+                base_fee
+            }
+        };
+
+        Ok(total_fee)
     }
 }
 
@@ -139,6 +177,10 @@ pub struct Config {
     pub fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
+    pub initial_amp: u64,
+    pub future_amp: u64,
+    pub initial_amp_block: u64,
+    pub future_amp_block: u64,
 }
 
 pub type ConfigResponse = Config;
@@ -158,9 +200,11 @@ pub struct SimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
-/// ReverseSimulationResponse returns reverse swap simulation response
+/// ProtocolFeesResponse returns protocol fees response
 #[cw_serde]
 pub struct ProtocolFeesResponse {
     pub fees: Vec<Asset>,
@@ -174,6 +218,8 @@ pub struct ReverseSimulationResponse {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 /// We currently take no arguments for migrations

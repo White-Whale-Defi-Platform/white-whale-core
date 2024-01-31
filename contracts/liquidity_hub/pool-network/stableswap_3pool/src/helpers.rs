@@ -12,16 +12,22 @@ use cw_storage_plus::Item;
     feature = "injective"
 ))]
 use cosmwasm_std::CosmosMsg;
-use white_whale::pool_network::asset::{is_factory_token, Asset, AssetInfo, AssetInfoRaw};
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::MsgCreateDenom;
+use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::querier::query_token_info;
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-use white_whale::pool_network::trio::{InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale_std::pool_network::querier::query_token_info;
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::trio::{InstantiateMsg, PoolFee};
 
 use crate::contract::INSTANTIATE_REPLY_ID;
 use crate::error::ContractError;
@@ -50,17 +56,38 @@ pub fn compute_swap(
     let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
     let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-    // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
-    let return_amount: Uint256 =
-        return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
+    #[cfg(not(feature = "osmosis"))]
+    {
+        // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
+        let return_amount: Uint256 =
+            return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
 
-    Ok(SwapComputation {
-        return_amount: return_amount.try_into()?,
-        spread_amount: spread_amount.try_into()?,
-        swap_fee_amount: swap_fee_amount.try_into()?,
-        protocol_fee_amount: protocol_fee_amount.try_into()?,
-        burn_fee_amount: burn_fee_amount.try_into()?,
-    })
+        Ok(SwapComputation {
+            return_amount: return_amount.try_into()?,
+            spread_amount: spread_amount.try_into()?,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
+
+        // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
+        let return_amount: Uint256 =
+            return_amount - swap_fee_amount - protocol_fee_amount - osmosis_fee_amount;
+
+        Ok(SwapComputation {
+            return_amount: return_amount.try_into()?,
+            spread_amount: spread_amount.try_into()?,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+            osmosis_fee_amount: osmosis_fee_amount.try_into()?,
+        })
+    }
 }
 
 /// Represents the swap computation values
@@ -71,6 +98,8 @@ pub struct SwapComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 
 pub fn compute_offer_amount(
@@ -81,11 +110,25 @@ pub fn compute_offer_amount(
     pool_fees: PoolFee,
     invariant: StableSwap,
 ) -> StdResult<OfferAmountComputation> {
-    let fees = pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
+    let fees = {
+        let base_fees =
+            pool_fees.swap_fee.share + pool_fees.protocol_fee.share + pool_fees.burn_fee.share;
+
+        #[cfg(feature = "osmosis")]
+        {
+            base_fees + pool_fees.osmosis_fee.share
+        }
+
+        #[cfg(not(feature = "osmosis"))]
+        {
+            base_fees
+        }
+    };
+
     let one_minus_commission = Decimal::one() - fees;
     let inv_one_minus_commission = Decimal::one() / one_minus_commission;
 
-    let before_commission_deduction: Uint128 = ask_amount * inv_one_minus_commission;
+    let before_commission_deduction = ask_amount * inv_one_minus_commission;
 
     let offer_amount = invariant
         .reverse_sim(
@@ -112,13 +155,32 @@ pub fn compute_offer_amount(
         .burn_fee
         .compute(before_commission_deduction.into());
 
-    Ok(OfferAmountComputation {
-        offer_amount,
-        spread_amount,
-        swap_fee_amount: swap_fee_amount.try_into()?,
-        protocol_fee_amount: protocol_fee_amount.try_into()?,
-        burn_fee_amount: burn_fee_amount.try_into()?,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(OfferAmountComputation {
+            offer_amount,
+            spread_amount,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount = pool_fees
+            .osmosis_fee
+            .compute(before_commission_deduction.into());
+
+        Ok(OfferAmountComputation {
+            offer_amount,
+            spread_amount,
+            swap_fee_amount: swap_fee_amount.try_into()?,
+            protocol_fee_amount: protocol_fee_amount.try_into()?,
+            burn_fee_amount: burn_fee_amount.try_into()?,
+            osmosis_fee_amount: osmosis_fee_amount.try_into()?,
+        })
+    }
 }
 
 /// Represents the offer amount computation values
@@ -129,6 +191,8 @@ pub struct OfferAmountComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
@@ -240,15 +304,6 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
     .total_supply;
 
     Ok(total_share)
-}
-
-/// Verifies if there's a factory token in the vector of [AssetInfo]s.
-/// todo consolidate this once the pool PRs are merged
-pub fn has_factory_token(assets: &[AssetInfo]) -> bool {
-    assets.iter().any(|asset| match asset {
-        AssetInfo::Token { .. } => false,
-        AssetInfo::NativeToken { denom } => is_factory_token(denom),
-    })
 }
 
 /// Creates a new LP token for this pool
