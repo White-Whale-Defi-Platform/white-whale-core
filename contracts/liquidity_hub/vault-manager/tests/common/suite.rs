@@ -5,10 +5,10 @@ use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, Wasm, WasmKeeper};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale::pool_network::pair::ExecuteMsg::{ProvideLiquidity, Swap};
-use white_whale::pool_network::pair::{PoolFee, SimulationResponse};
-use white_whale::vault_manager::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_network::pair::ExecuteMsg::{ProvideLiquidity, Swap};
+use white_whale_std::pool_network::pair::{PoolFee, SimulationResponse};
+use white_whale_std::vault_manager::{
     Config, Cw20HookMsg, FilterVaultBy, InstantiateMsg, LpTokenType, PaybackAssetResponse,
     ShareResponse, VaultsResponse,
 };
@@ -80,7 +80,7 @@ impl TestingSuite {
         let fee_collector = self.create_fee_collector();
 
         // create whale lair
-        let msg = white_whale::pool_network::pair::InstantiateMsg {
+        let msg = white_whale_std::pool_network::pair::InstantiateMsg {
             asset_infos,
             token_code_id,
             asset_decimals,
@@ -189,7 +189,7 @@ impl TestingSuite {
         let whale_lair_id = self.app.store_code(whale_lair_contract());
 
         // create whale lair
-        let msg = white_whale::whale_lair::InstantiateMsg {
+        let msg = white_whale_std::whale_lair::InstantiateMsg {
             unbonding_period: Uint64::new(86400u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
@@ -221,7 +221,7 @@ impl TestingSuite {
         let fee_collector_contract = self.app.store_code(fee_collector_contract());
 
         // create whale lair
-        let msg = white_whale::fee_collector::InstantiateMsg {};
+        let msg = white_whale_std::fee_collector::InstantiateMsg {};
 
         let creator = self.creator().clone();
 
@@ -239,7 +239,7 @@ impl TestingSuite {
 
     #[track_caller]
     pub fn create_cw20_token(&mut self) -> u64 {
-        let msg = white_whale::pool_network::token::InstantiateMsg {
+        let msg = white_whale_std::pool_network::token::InstantiateMsg {
             name: "mocktoken".to_string(),
             symbol: "MOCK".to_string(),
             decimals: 6,
@@ -357,7 +357,7 @@ impl TestingSuite {
         action: cw_ownable::Action,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::UpdateOwnership(action);
+        let msg = white_whale_std::vault_manager::ExecuteMsg::UpdateOwnership(action);
 
         result(
             self.app
@@ -373,11 +373,11 @@ impl TestingSuite {
         sender: Addr,
         asset_info: AssetInfo,
         vault_identifier: Option<String>,
-        fees: white_whale::vault_manager::VaultFee,
+        fees: white_whale_std::vault_manager::VaultFee,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::CreateVault {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::CreateVault {
             asset_info,
             fees,
             vault_identifier,
@@ -400,7 +400,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::Deposit {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Deposit {
             asset,
             vault_identifier,
         };
@@ -437,7 +437,7 @@ impl TestingSuite {
                 ));
             }
             AssetInfo::NativeToken { .. } => {
-                let msg = white_whale::vault_manager::ExecuteMsg::Withdraw {};
+                let msg = white_whale_std::vault_manager::ExecuteMsg::Withdraw {};
 
                 let vault_manager = self.vault_manager_addr.clone();
 
@@ -463,7 +463,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::UpdateConfig {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             vault_creation_fee,
             cw20_lp_code_id,
@@ -489,7 +489,7 @@ impl TestingSuite {
         payload: Vec<CosmosMsg>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::FlashLoan {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::FlashLoan {
             asset,
             vault_identifier,
             payload,
@@ -511,8 +511,8 @@ impl TestingSuite {
     ) -> &mut Self {
         // the values here don't matter as this is the test it would give an error, as only the
         // contract itself can make callbacks
-        let msg = white_whale::vault_manager::ExecuteMsg::Callback(
-            white_whale::vault_manager::CallbackMsg::AfterFlashloan {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Callback(
+            white_whale_std::vault_manager::CallbackMsg::AfterFlashloan {
                 old_asset_balance: Uint128::zero(),
                 loan_asset: Asset {
                     info: AssetInfo::NativeToken {
@@ -543,7 +543,7 @@ impl TestingSuite {
         let ownership_response: StdResult<cw_ownable::Ownership<String>> =
             self.app.wrap().query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::vault_manager::QueryMsg::Ownership {},
+                &white_whale_std::vault_manager::QueryMsg::Ownership {},
             );
 
         result(ownership_response);
@@ -559,7 +559,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Vault { filter_by },
+            &white_whale_std::vault_manager::QueryMsg::Vault { filter_by },
         );
 
         result(vaults_response);
@@ -576,7 +576,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Vaults { start_after, limit },
+            &white_whale_std::vault_manager::QueryMsg::Vaults { start_after, limit },
         );
 
         result(vaults_response);
@@ -622,7 +622,7 @@ impl TestingSuite {
     pub(crate) fn query_config(&mut self, result: impl Fn(StdResult<Config>)) -> &mut Self {
         let response: StdResult<Config> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Config {},
+            &white_whale_std::vault_manager::QueryMsg::Config {},
         );
 
         result(response);
@@ -637,7 +637,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let response: StdResult<ShareResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Share { lp_share },
+            &white_whale_std::vault_manager::QueryMsg::Share { lp_share },
         );
 
         result(response);
@@ -654,7 +654,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let response: StdResult<PaybackAssetResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::PaybackAmount {
+            &white_whale_std::vault_manager::QueryMsg::PaybackAmount {
                 asset,
                 vault_identifier,
             },
@@ -717,7 +717,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             pool,
-            &white_whale::pool_network::pair::QueryMsg::Simulation { offer_asset },
+            &white_whale_std::pool_network::pair::QueryMsg::Simulation { offer_asset },
         );
 
         result(response);

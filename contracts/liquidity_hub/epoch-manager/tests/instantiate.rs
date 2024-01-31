@@ -3,10 +3,10 @@ use cosmwasm_std::{from_json, Addr, Uint64};
 
 use epoch_manager::contract::{instantiate, query};
 use epoch_manager::ContractError;
-use white_whale::epoch_manager::epoch_manager::{
-    ConfigResponse, Epoch, EpochConfig, InstantiateMsg, QueryMsg,
+use white_whale_std::epoch_manager::epoch_manager::{
+    ConfigResponse, EpochV2, EpochConfig, InstantiateMsg, QueryMsg,
 };
-use white_whale::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
 
 mod common;
 
@@ -17,7 +17,7 @@ fn instantiation_successful() {
     let current_time = mock_env().block.time;
     let info = mock_info("owner", &[]);
     let msg = InstantiateMsg {
-        start_epoch: Epoch {
+        start_epoch: EpochV2 {
             id: 123,
             start_time: current_time,
         },
@@ -48,7 +48,7 @@ fn instantiation_unsuccessful() {
     let current_time = mock_env().block.time;
     let info = mock_info("owner", &[]);
     let msg = InstantiateMsg {
-        start_epoch: Epoch {
+        start_epoch: EpochV2 {
             id: 123,
             start_time: current_time.minus_days(1),
         },
@@ -65,7 +65,7 @@ fn instantiation_unsuccessful() {
     }
 
     let msg = InstantiateMsg {
-        start_epoch: Epoch {
+        start_epoch: EpochV2 {
             id: 123,
             start_time: current_time.plus_days(1),
         },

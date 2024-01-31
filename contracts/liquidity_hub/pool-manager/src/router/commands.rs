@@ -2,7 +2,7 @@
 
 // use cosmwasm_std::{DepsMut, Env, Addr, Uint128, Decimal, Response, StdError, Deps, CosmosMsg, WasmMsg, to_binary, StdResult, Coin, MessageInfo};
 // use cw20::Cw20ExecuteMsg;
-// use white_whale::{pool_network::{asset::{AssetInfo, Asset}}, pool_manager::{SwapOperation, ExecuteMsg, NPairInfo}};
+// use white_whale_std::{pool_network::{asset::{AssetInfo, Asset}}, pool_manager::{SwapOperation, ExecuteMsg, NPairInfo}};
 
 // use crate::{ContractError, state::{MANAGER_CONFIG, get_pair_by_identifier, Config}};
 
@@ -159,7 +159,7 @@
 //                 denom,
 //                 amount: offer_asset.amount,
 //             }],
-//             msg: to_binary(&white_whale::pool_manager::ExecuteMsg::Swap {
+//             msg: to_binary(&white_whale_std::pool_manager::ExecuteMsg::Swap {
 //                 offer_asset,
 //                 belief_price: None,
 //                 max_spread,
@@ -174,7 +174,7 @@
 //             msg: to_binary(&Cw20ExecuteMsg::Send {
 //                 contract: pair_contract.to_string(),
 //                 amount: offer_asset.amount,
-//                 msg: to_binary(&white_whale::pool_manager::Cw20HookMsg::Swap {
+//                 msg: to_binary(&white_whale_std::pool_manager::Cw20HookMsg::Swap {
 //                     belief_price: None,
 //                     max_spread,
 //                     to,

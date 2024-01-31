@@ -3,10 +3,10 @@ use cosmwasm_std::{
     Uint256, WasmMsg,
 };
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
-use white_whale::whale_lair::fill_rewards_msg;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::traits::AssetReference;
+use white_whale_std::vault_manager::{CallbackMsg, ExecuteMsg};
+use white_whale_std::whale_lair::fill_rewards_msg;
 
 use crate::helpers::{assert_asset, query_balances};
 

@@ -3,10 +3,10 @@ use cosmwasm_std::{
 };
 use cw_utils::must_pay;
 
-use white_whale::pool_network::asset::{
+use white_whale_std::pool_network::asset::{
     get_total_share, Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT,
 };
-use white_whale::vault_manager::Vault;
+use white_whale_std::vault_manager::Vault;
 
 use crate::helpers::assert_asset;
 use crate::state::{get_vault_by_identifier, CONFIG, ONGOING_FLASHLOAN, VAULTS};
@@ -88,7 +88,7 @@ pub fn deposit(
             .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
             .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
 
-        messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+        messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
             vault.lp_asset.to_string(),
             &env.contract.address,
             &env.contract.address,
@@ -115,7 +115,7 @@ pub fn deposit(
     };
 
     // mint LP token to sender
-    messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+    messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
         vault.lp_asset.to_string(),
         &info.sender.clone(),
         &env.contract.address,
@@ -164,7 +164,7 @@ pub fn withdraw(
     };
     let messages: Vec<CosmosMsg> = vec![
         return_asset.clone().into_msg(sender)?,
-        white_whale::lp_common::burn_lp_asset_msg(
+        white_whale_std::lp_common::burn_lp_asset_msg(
             liquidity_asset,
             env.contract.address,
             lp_amount,

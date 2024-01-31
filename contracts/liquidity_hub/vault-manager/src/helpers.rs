@@ -2,10 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ContractError;
 use cosmwasm_std::{Addr, Deps, Uint128};
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::pool_network::querier::query_all_balances;
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::Vault;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::querier::query_all_balances;
+use white_whale_std::traits::AssetReference;
+use white_whale_std::vault_manager::Vault;
 
 /// Queries the balances of all assets in the vaults.
 pub(crate) fn query_balances(

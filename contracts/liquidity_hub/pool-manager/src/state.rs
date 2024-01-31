@@ -1,9 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
-use white_whale::pool_manager::{NPairInfo, SwapOperation};
-use white_whale::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
-use white_whale::pool_network::pair::FeatureToggle;
+use white_whale_std::pool_manager::{NPairInfo, SwapOperation};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
+use white_whale_std::pool_network::pair::FeatureToggle;
 
 use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";

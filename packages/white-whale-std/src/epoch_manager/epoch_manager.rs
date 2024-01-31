@@ -1,5 +1,4 @@
 #![allow(clippy::module_inception)]
-
 use std::fmt;
 use std::fmt::Display;
 
@@ -9,19 +8,19 @@ use cw_controllers::HooksResponse;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub start_epoch: Epoch,
+    pub start_epoch: EpochV2,
     pub epoch_config: EpochConfig,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Creates a new epoch, triggering the hooks.
     CreateEpoch {},
-    /// Adds a new hook to the registry.
-    AddHook { contract_addr: String },
-    /// Removes a hook from the registry.
-    RemoveHook { contract_addr: String },
-    /// Updates the contract configuration.
+    AddHook {
+        contract_addr: String,
+    },
+    RemoveHook {
+        contract_addr: String,
+    },
     UpdateConfig {
         owner: Option<String>,
         epoch_config: Option<EpochConfig>,
@@ -31,7 +30,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Returns the config of the contract.
+    /// Returns the current epoch, which is the last on the EPOCHS map.
     #[returns(ConfigResponse)]
     Config {},
 
@@ -77,12 +76,12 @@ pub struct ConfigResponse {
 
 #[cw_serde]
 pub struct EpochResponse {
-    pub epoch: Epoch,
+    pub epoch: EpochV2,
 }
 
 #[cw_serde]
 pub struct ClaimableEpochsResponse {
-    pub epochs: Vec<Epoch>,
+    pub epochs: Vec<EpochV2>,
 }
 
 #[cw_serde]
@@ -105,20 +104,20 @@ impl Display for EpochConfig {
 
 #[cw_serde]
 #[derive(Default)]
-pub struct Epoch {
+pub struct EpochV2 {
     // Epoch identifier
     pub id: u64,
     // Epoch start time
     pub start_time: Timestamp,
 }
 
-impl Epoch {
+impl EpochV2 {
     pub fn to_epoch_response(self) -> EpochResponse {
         EpochResponse { epoch: self }
     }
 }
 
-impl Display for Epoch {
+impl Display for EpochV2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

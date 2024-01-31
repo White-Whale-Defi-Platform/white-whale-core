@@ -3,7 +3,7 @@ use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint64};
 
 use epoch_manager::contract::{execute, instantiate};
 use epoch_manager::ContractError;
-use white_whale::epoch_manager::epoch_manager::{Epoch, EpochConfig, ExecuteMsg, InstantiateMsg};
+use white_whale_std::epoch_manager::epoch_manager::{EpochV2, EpochConfig, ExecuteMsg, InstantiateMsg};
 
 /// Mocks contract instantiation.
 pub(crate) fn mock_instantiation(
@@ -12,7 +12,7 @@ pub(crate) fn mock_instantiation(
 ) -> Result<Response, ContractError> {
     let current_time = mock_env().block.time;
     let msg = InstantiateMsg {
-        start_epoch: Epoch {
+        start_epoch: EpochV2 {
             id: 123,
             start_time: current_time,
         },

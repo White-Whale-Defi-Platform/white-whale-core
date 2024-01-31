@@ -9,14 +9,14 @@ use cosmwasm_std::{
     OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use white_whale::pool_network::temp_mock_api::MockSimpleApi;
+use white_whale_std::pool_network::temp_mock_api::MockSimpleApi;
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType, TrioInfo};
-use white_whale::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
-use white_whale::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg, self};
-use white_whale::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale::pool_network::trio;
-use white_whale::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType, TrioInfo};
+use white_whale_std::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
+use white_whale_std::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg, self};
+use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
+use white_whale_std::pool_network::trio;
+use white_whale_std::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
@@ -123,7 +123,7 @@ impl WasmMockQuerier {
         match &request {
             QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
                 match from_binary(msg) {
-                    Ok(white_whale::pool_manager::QueryMsg::Pair { pair_identifier }) => {
+                    Ok(white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier }) => {
                         
                         match self
                             .pool_factory_querier
@@ -137,7 +137,7 @@ impl WasmMockQuerier {
                             }),
                         }
                     }
-                    Ok(white_whale::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
+                    Ok(white_whale_std::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
                         match self.pool_factory_querier.native_token_decimals.get(&denom) {
                             Some(decimals) => SystemResult::Ok(ContractResult::Ok(
                                 to_binary(&NativeTokenDecimalsResponse {
@@ -153,7 +153,7 @@ impl WasmMockQuerier {
                     }
                     _ => match from_binary(msg) {
                        
-                        Ok(white_whale::pool_manager::QueryMsg::Simulation { offer_asset, ask_asset, pair_identifier }) => {
+                        Ok(white_whale_std::pool_manager::QueryMsg::Simulation { offer_asset, ask_asset, pair_identifier }) => {
                             SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
@@ -162,7 +162,7 @@ impl WasmMockQuerier {
                                 burn_fee_amount: Uint128::zero(),
                             })))
                         }
-                        Ok(white_whale::pool_manager::QueryMsg::ReverseSimulation { ask_asset, offer_asset, pair_identifier }) => SystemResult::Ok(
+                        Ok(white_whale_std::pool_manager::QueryMsg::ReverseSimulation { ask_asset, offer_asset, pair_identifier }) => SystemResult::Ok(
                             ContractResult::from(to_binary(&ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
@@ -322,7 +322,7 @@ mod mock_exception {
     fn none_factory_pair_will_err() {
         let deps = mock_dependencies(&[]);
 
-        let msg = to_binary(&white_whale::pool_manager::QueryMsg::Pair {
+        let msg = to_binary(&white_whale_std::pool_manager::QueryMsg::Pair {
             pair_identifier: "pair0000".to_string(),
         })
         .unwrap();

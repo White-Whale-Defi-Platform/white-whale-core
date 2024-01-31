@@ -10,9 +10,9 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 use semver::Version;
-use white_whale::pool_manager::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::pair::FeatureToggle;
+use white_whale_std::pool_manager::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::pair::FeatureToggle;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
@@ -336,7 +336,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 #[entry_point]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use cw2::get_contract_version;
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

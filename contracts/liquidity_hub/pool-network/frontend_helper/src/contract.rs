@@ -132,8 +132,8 @@ pub fn execute(
                     gas_limit: None,
                     msg: WasmMsg::Execute {
                         contract_addr: pair_address,
-                        msg: to_binary(
-                            &white_whale::pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                        msg: to_json_binary(
+                            &white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity {
                                 assets,
                                 slippage_tolerance,
                                 receiver: None,

@@ -1,9 +1,9 @@
 use cosmwasm_std::{coin, Uint128};
 use std::collections::{HashMap, HashSet};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{Vault, VaultFee};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::traits::AssetReference;
+use white_whale_std::vault_manager::{Vault, VaultFee};
 
 #[test]
 pub fn query_balances() {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use white_whale::pool_manager::{Cw20HookMsg, SwapOperation};
-use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
+use white_whale_std::pool_manager::{Cw20HookMsg, SwapOperation};
+use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
 
 use anyhow::{Ok, Result as AnyResult};
 use cosmwasm_std::{
@@ -12,8 +12,8 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
     WasmKeeper,
 };
-use white_whale::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale::{
+use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
+use white_whale_std::{
     pool_network::{
         asset::{Asset, AssetInfo, PairType},
         pair::PoolFee,
@@ -220,7 +220,7 @@ impl TestingSuite {
         let whale_lair_id = self.app.store_code(whale_lair_contract());
 
         // create whale lair
-        let msg = white_whale::whale_lair::InstantiateMsg {
+        let msg = white_whale_std::whale_lair::InstantiateMsg {
             unbonding_period: Uint64::new(86400u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
@@ -250,7 +250,7 @@ impl TestingSuite {
 
     #[track_caller]
     pub fn create_cw20_token(&mut self) -> u64 {
-        let msg = white_whale::pool_network::token::InstantiateMsg {
+        let msg = white_whale_std::pool_network::token::InstantiateMsg {
             name: "mocktoken".to_string(),
             symbol: "MOCK".to_string(),
             decimals: 6,
@@ -299,7 +299,7 @@ impl TestingSuite {
         native_token_denom: String,
         decimals: u8,
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
             denom: native_token_denom.clone(),
             decimals: decimals,
         };
@@ -331,7 +331,7 @@ impl TestingSuite {
         action: cw_ownable::Action,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::UpdateOwnership(action);
+        let msg = white_whale_std::pool_manager::ExecuteMsg::UpdateOwnership(action);
 
         result(
             self.app
@@ -350,7 +350,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::ProvideLiquidity {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
             assets,
             pair_identifier,
             slippage_tolerance: None,
@@ -378,7 +378,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::Swap {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
             offer_asset,
             ask_asset,
             belief_price,
@@ -406,7 +406,7 @@ impl TestingSuite {
     //     funds: Vec<Coin>,
     //     result: impl Fn(Result<AppResponse, anyhow::Error>),
     // ) -> &mut Self {
-    //     let msg = white_whale::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
+    //     let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
 
     //     result(
     //         self.app
@@ -428,7 +428,7 @@ impl TestingSuite {
         pair_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::CreatePair {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
             asset_infos,
             pool_fees,
             pair_type,
@@ -454,7 +454,7 @@ impl TestingSuite {
         assets: Vec<Asset>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_manager::ExecuteMsg::WithdrawLiquidity {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
             assets,
             pair_identifier,
         };
@@ -507,7 +507,7 @@ impl TestingSuite {
         let ownership_response: StdResult<cw_ownable::Ownership<String>> =
             self.app.wrap().query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::pool_manager::QueryMsg::Ownership {},
+                &white_whale_std::pool_manager::QueryMsg::Ownership {},
             );
 
         result(ownership_response);
@@ -535,7 +535,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::pool_manager::QueryMsg::Pair {
+            &white_whale_std::pool_manager::QueryMsg::Pair {
                 pair_identifier: pair_identifier,
             },
         );
@@ -554,7 +554,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::pool_manager::QueryMsg::Simulation {
+            &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
                 ask_asset: Asset {
                     amount: Uint128::zero(),
@@ -579,7 +579,7 @@ impl TestingSuite {
         let pair_info_response: StdResult<ReverseSimulationResponse> =
             self.app.wrap().query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::pool_manager::QueryMsg::ReverseSimulation {
+                &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
                     offer_asset: Asset {
                         amount: Uint128::zero(),
                         info: offer_asset,
@@ -606,7 +606,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::pool_manager::QueryMsg::Pair {
+                &white_whale_std::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
             )
@@ -646,7 +646,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::pool_manager::QueryMsg::Pair {
+                &white_whale_std::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
             )

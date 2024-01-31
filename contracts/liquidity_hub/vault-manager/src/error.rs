@@ -4,7 +4,7 @@ use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
