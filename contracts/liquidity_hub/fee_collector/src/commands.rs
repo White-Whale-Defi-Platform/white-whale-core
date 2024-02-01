@@ -38,6 +38,13 @@ pub fn collect_fees(
     match collect_fees_for {
         FeesFor::Contracts { contracts } => {
             for contract in contracts {
+                // skip broken base-uluna pool
+                if contract.address
+                    == "terra1znxah0scl3xq747wtuzjg3k0tlml3fvvmxgt0m3jywcmqwn5867s7x29tx"
+                {
+                    continue;
+                }
+
                 collect_fees_messages.push(collect_fees_for_contract(
                     deps.api.addr_validate(contract.address.as_str())?,
                     contract.contract_type,
@@ -112,6 +119,13 @@ fn collect_fees_for_factory(
                 }))?;
 
             for pair in response.pairs {
+                // skip broken base-uluna pool
+                if pair.contract_addr
+                    == "terra1znxah0scl3xq747wtuzjg3k0tlml3fvvmxgt0m3jywcmqwn5867s7x29tx"
+                {
+                    continue;
+                }
+
                 result.push(collect_fees_for_contract(
                     deps.api
                         .addr_validate(pair.clone().contract_addr.as_str())?,
