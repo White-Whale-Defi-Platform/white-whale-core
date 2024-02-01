@@ -18,6 +18,9 @@ test FEATURE='':
     cargo test --features {{FEATURE}}
   fi
 
+fmt:
+  @just format
+
 format:
   cargo fmt --all
   find . -type f -iname "*.toml" -print0 | xargs -0 taplo format
