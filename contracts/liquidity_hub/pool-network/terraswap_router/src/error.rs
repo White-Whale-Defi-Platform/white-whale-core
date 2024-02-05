@@ -26,7 +26,6 @@ pub enum ContractError {
 
     #[error("Invalid swap route: {0}")]
     InvalidSwapRoute(SwapRoute),
-
     #[error("No swap route found for {offer_asset} -> {ask_asset}")]
     NoSwapRouteForAssets {
         offer_asset: String,
@@ -46,6 +45,9 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Cannot remove a route that does not exist")]
+    NoRouteFound {},
 }
 
 impl From<semver::Error> for ContractError {

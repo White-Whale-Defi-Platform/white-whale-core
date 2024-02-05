@@ -96,11 +96,15 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
             },
         )?;
     let has_existing_position = positions.positions.into_iter().any(|position| {
-        let QueryPosition::OpenPosition { unbonding_duration: position_unbonding_duration, .. } = position else {
-			return false;
-		};
+        let QueryPosition::OpenPosition {
+            unbonding_duration: position_unbonding_duration,
+            ..
+        } = position
+        else {
+            return false;
+        };
 
-		unbonding_duration == position_unbonding_duration
+        unbonding_duration == position_unbonding_duration
     });
 
     Ok(Response::default()
