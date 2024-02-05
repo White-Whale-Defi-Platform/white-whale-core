@@ -1,8 +1,9 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+#[cfg(feature = "osmosis")]
+use cosmwasm_std::Addr;
 use cosmwasm_std::{
-    to_json_binary, Addr, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdError, StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;

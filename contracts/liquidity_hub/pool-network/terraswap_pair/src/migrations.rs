@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network;
 use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
-use white_whale_std::pool_network::pair::{Config, FeatureToggle, PoolFee};
+
+use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
 use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
@@ -281,7 +282,7 @@ pub fn migrate_to_v135(deps: DepsMut) -> Result<(), StdError> {
     struct ConfigV133 {
         pub owner: Addr,
         pub fee_collector_addr: Addr,
-        pub pool_fees: PoolFee,
+        pub pool_fees: pool_network::pair::PoolFee,
         pub feature_toggle: FeatureToggle,
     }
 
