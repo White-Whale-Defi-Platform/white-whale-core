@@ -45,9 +45,6 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-
-    #[error("Cannot remove a route that does not exist")]
-    NoRouteFound {},
 }
 
 impl From<semver::Error> for ContractError {

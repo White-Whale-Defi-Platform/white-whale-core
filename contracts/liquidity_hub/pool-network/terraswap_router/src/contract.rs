@@ -281,7 +281,10 @@ pub fn remove_swap_routes(
             swap_route_key.remove(deps.storage);
             attributes.push(attr("swap_route", swap_route.clone().to_string()));
         } else {
-            return Err(ContractError::NoRouteFound {});
+            return Err(ContractError::NoSwapRouteForAssets {
+                offer_asset: swap_route.offer_asset_info.get_label(&deps.as_ref())?,
+                ask_asset: swap_route.ask_asset_info.get_label(&deps.as_ref())?,
+            });
         }
     }
 
