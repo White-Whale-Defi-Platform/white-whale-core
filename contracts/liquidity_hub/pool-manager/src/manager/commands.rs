@@ -209,7 +209,7 @@ pub fn create_pair(
             feature = "osmosis_token_factory",
             feature = "injective"
         ))]
-        Ok(tokenfactory::create_denom::create_denom(
+        Ok(white_whale_std::tokenfactory::create_denom::create_denom(
             env.contract.address,
             lp_symbol,
         ))

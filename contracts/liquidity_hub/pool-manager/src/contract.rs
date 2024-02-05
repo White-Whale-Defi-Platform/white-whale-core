@@ -10,7 +10,9 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 use semver::Version;
-use white_whale_std::pool_manager::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_manager::{
+    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 use white_whale_std::pool_network::pair::FeatureToggle;
 

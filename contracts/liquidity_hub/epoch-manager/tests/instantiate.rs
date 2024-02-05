@@ -4,7 +4,7 @@ use cosmwasm_std::{from_json, Addr, Uint64};
 use epoch_manager::contract::{instantiate, query};
 use epoch_manager::ContractError;
 use white_whale_std::epoch_manager::epoch_manager::{
-    ConfigResponse, EpochV2, EpochConfig, InstantiateMsg, QueryMsg,
+    ConfigResponse, EpochConfig, EpochV2, InstantiateMsg, QueryMsg,
 };
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 

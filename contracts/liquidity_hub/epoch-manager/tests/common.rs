@@ -3,7 +3,9 @@ use cosmwasm_std::{DepsMut, MessageInfo, Response, Uint64};
 
 use epoch_manager::contract::{execute, instantiate};
 use epoch_manager::ContractError;
-use white_whale_std::epoch_manager::epoch_manager::{EpochV2, EpochConfig, ExecuteMsg, InstantiateMsg};
+use white_whale_std::epoch_manager::epoch_manager::{
+    EpochConfig, EpochV2, ExecuteMsg, InstantiateMsg,
+};
 
 /// Mocks contract instantiation.
 pub(crate) fn mock_instantiation(

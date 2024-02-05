@@ -3,10 +3,11 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::panic;
 
-use cosmwasm_std::testing::{MockQuerier, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_json, to_json_binary, Coin, ContractInfoResponse, ContractResult, Empty, OwnedDeps,
-    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, Addr, HexBinary, to_binary,
+    from_json, to_binary, to_json_binary, Addr, CodeInfoResponse, Coin, ContractInfoResponse,
+    ContractResult, Empty, HexBinary, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError,
+    SystemResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -348,7 +349,7 @@ impl WasmMockQuerier {
                 SystemResult::Ok(ContractResult::Ok(
                     to_json_binary(&contract_info_response).unwrap(),
                 ))
-            },
+            }
             QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
                 let mut default = CodeInfoResponse::default();
 
@@ -356,7 +357,10 @@ impl WasmMockQuerier {
                     11 => {
                         default.code_id = 67;
                         default.creator = Addr::unchecked("creator").to_string();
-                        default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
+                        default.checksum = HexBinary::from_hex(&sha256::digest(format!(
+                            "code_checksum_{}",
+                            code_id
+                        )))
                         .unwrap();
                         SystemResult::Ok(to_binary(&default).into())
                     }

@@ -1,15 +1,14 @@
 use std::fmt;
 
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
-use cw20::Cw20ReceiveMsg;
-use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use crate::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
 };
-
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Decimal, Uint128};
+use cw20::Cw20ReceiveMsg;
+use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 #[cw_serde]
 pub enum Cw20HookMsg {
@@ -24,8 +23,6 @@ pub enum Cw20HookMsg {
     /// Withdraws liquidity
     WithdrawLiquidity { pair_identifier: String },
 }
-
-
 
 #[cw_serde]
 pub enum SwapOperation {
@@ -55,7 +52,7 @@ impl fmt::Display for SwapOperation {
                 f,
                 "WhaleSwap {{ token_in_info: {token_in_info}, token_out_info: {token_out_info}, pool_identifier: {pool_identifier} }}"
             ),
-            
+
         }
     }
 }
@@ -85,7 +82,6 @@ impl fmt::Display for SwapRoute {
     }
 }
 
-
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
 pub enum Fee {
@@ -100,7 +96,7 @@ pub struct StableSwapParams {
     pub initial_amp: String,
     pub future_amp: String,
     pub initial_amp_block: String,
-    pub future_amp_block: String
+    pub future_amp_block: String,
 }
 
 // Store PairInfo to N
@@ -118,7 +114,6 @@ pub struct NPairInfo {
     // pub stable_swap_params: Option<StableSwapParams>
 }
 impl NPairInfo {}
-
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -195,7 +190,7 @@ pub enum ExecuteMsg {
     /// Adds swap routes to the router.
     AddSwapRoutes {
         swap_routes: Vec<SwapRoute>,
-    }, 
+    },
     // CW20 Methods
     Receive(Cw20ReceiveMsg),
 }
@@ -247,7 +242,6 @@ pub enum QueryMsg {
     //     ask_amount: Uint128,
     //     operations: Vec<SwapOperation>,
     // },
-
     #[returns(NPairInfo)]
     Pair { pair_identifier: String },
 }

@@ -13,7 +13,7 @@ use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use white_whale::tokenfactory;
+use white_whale_std::tokenfactory;
 use white_whale_std::vault_manager::{LpTokenType, Vault, VaultFee};
 
 use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
@@ -131,7 +131,6 @@ pub fn create_vault(
         let mut hasher = Sha256::new();
         hasher.update(seed.as_bytes());
         let salt: Binary = hasher.finalize().to_vec().into();
-
 
         let vault_lp_address = deps.api.addr_humanize(
             &instantiate2_address(&checksum, &creator, &salt)
