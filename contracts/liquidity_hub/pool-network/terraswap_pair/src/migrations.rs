@@ -276,7 +276,7 @@ pub fn migrate_to_v13x(deps: DepsMut) -> Result<(), StdError> {
 /// This migration adds the `cosmwasm_pool_interface` to the config, so we can see if the swap is coming from
 /// the osmosis pool manager or not in order to pay the osmosis taker fee.
 #[cfg(feature = "osmosis")]
-pub fn migrate_to_v134(deps: DepsMut) -> Result<(), StdError> {
+pub fn migrate_to_v135(deps: DepsMut) -> Result<(), StdError> {
     #[cw_serde]
     struct ConfigV133 {
         pub owner: Addr,

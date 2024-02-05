@@ -292,8 +292,8 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v130(deps.branch())?;
     }
     #[cfg(feature = "osmosis")]
-    if storage_version == Version::parse("1.3.3")? {
-        migrations::migrate_to_v134(deps.branch())?;
+    if storage_version < Version::parse("1.3.4")? {
+        migrations::migrate_to_v135(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
