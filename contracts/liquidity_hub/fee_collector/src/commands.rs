@@ -183,6 +183,9 @@ pub fn update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
+/// The minimum balance that can be aggregated. This is to avoid swapping very small amounts.
+const MINIMUM_AGGREGATABLE_BALANCE: Uint128 = Uint128::new(1_000u128);
+
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
     mut deps: DepsMut<TerraQuery>,
@@ -283,7 +286,7 @@ pub fn aggregate_fees(
         };
 
         // if the balance is greater than zero, swap the asset to the ask_asset
-        if balance > Uint128::zero() {
+        if balance > MINIMUM_AGGREGATABLE_BALANCE {
             // query swap route from router
             let operations_res: StdResult<Vec<SwapOperation>> =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
