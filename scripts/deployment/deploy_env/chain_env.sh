@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 
@@ -93,7 +93,7 @@ function init_chain_env() {
 
 	*)
 		echo "Network $chain not defined"
-		exit 1
+		return 1
 		;;
 	esac
 
