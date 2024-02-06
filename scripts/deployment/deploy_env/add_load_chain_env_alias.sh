@@ -26,5 +26,6 @@ profile="$HOME/.profile"
 [[ -f "$zshrc" ]] && echo "$loadenv_function" >>"$zshrc" && echo "Added to $zshrc"
 [[ -f "$profile" ]] && echo "$loadenv_function" >>"$profile" && echo "Added to $profile"
 
-echo "Now you can load chains env variables by doing 'load <chain>' in your terminal."
+echo "Now you can load chains env variables by doing 'load <chain>' in your terminal. Make sure to source the
+configuration file or restart your terminal for the changes to take effect."
 echo "To see a list of compatible chains look into chain_env.sh"
