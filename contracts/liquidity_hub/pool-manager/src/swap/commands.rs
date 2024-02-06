@@ -24,7 +24,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
 use cosmwasm_std::Decimal;
-
+#[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
     _env: Env,

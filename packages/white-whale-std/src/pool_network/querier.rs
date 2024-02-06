@@ -4,7 +4,7 @@ use crate::pool_network::pair::{
     QueryMsg as PairQueryMsg, ReverseSimulationResponse, SimulationResponse,
 };
 use crate::pool_network::trio::QueryMsg as TrioQueryMsg;
-
+#[allow(unused_imports)]
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
     to_json_binary, Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, QuerierWrapper,

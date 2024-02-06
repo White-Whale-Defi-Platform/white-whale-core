@@ -1,6 +1,19 @@
-use crate::tokenfactory::common::{create_msg, EncodeMessage, MsgTypes};
+use crate::tokenfactory::common::EncodeMessage;
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use crate::tokenfactory::common::{create_msg, MsgTypes};
 use anybuf::Anybuf;
-use cosmwasm_std::{Addr, Coin, CosmosMsg};
+use cosmwasm_std::Coin;
+/// Returns the MsgMint Stargate message
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use cosmwasm_std::{Addr, CosmosMsg};
 
 /// Returns the MsgMint Stargate message
 #[cfg(any(

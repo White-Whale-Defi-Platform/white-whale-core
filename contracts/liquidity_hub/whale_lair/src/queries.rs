@@ -102,6 +102,7 @@ pub(crate) fn query_unbonding(
         .collect::<StdResult<Vec<Bond>>>()?;
 
     // aggregate all the amounts in unbonding vec and return uint128
+    #[allow(clippy::manual_try_fold)]
     let unbonding_amount = unbonding.iter().fold(Ok(Uint128::zero()), |acc, bond| {
         acc.and_then(|acc| acc.checked_add(bond.asset.amount))
     })?;

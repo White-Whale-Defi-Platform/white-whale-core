@@ -76,6 +76,7 @@ pub const LP_SYMBOL: &str = "uLP";
 /// # Ok(response)
 /// # }
 /// ```
+#[allow(clippy::too_many_arguments)]
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
@@ -183,7 +184,6 @@ pub fn create_pair(
             not(feature = "injective")
         ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
-
         let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };

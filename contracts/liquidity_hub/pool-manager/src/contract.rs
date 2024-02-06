@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
-use crate::{liquidity, manager, queries, router, swap};
+use crate::{liquidity, manager, queries, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -194,6 +194,7 @@ pub fn execute(
 }
 
 // Came from router can probably go
+#[allow(dead_code)]
 fn optional_addr_validate(
     api: &dyn Api,
     addr: Option<String>,
