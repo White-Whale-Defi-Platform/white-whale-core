@@ -21,19 +21,11 @@ pub fn close_position(
 ) -> Result<Response, ContractError> {
     //query and check if the user has pending rewards
     let rewards_query_result = get_rewards(deps.as_ref(), info.sender.clone().into_string());
-    match rewards_query_result {
-        Ok(rewards_response) => {
-            // can't close a position if there are pending rewards
-            if !rewards_response.rewards.is_empty() {
-                return Err(ContractError::PendingRewards {});
-            }
-        }
-        Err(error) => {
-            //if it has nothing to claim, then close the position
-            match error {
-                ContractError::NothingToClaim {} => {}
-                _ => return Err(ContractError::InvalidReward {}),
-            }
+
+    if let Ok(rewards_response) = rewards_query_result {
+        // can't close a position if there are pending rewards
+        if !rewards_response.rewards.is_empty() {
+            return Err(ContractError::PendingRewards {});
         }
     }
 
