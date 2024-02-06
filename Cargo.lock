@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "terraswap-pair"
-version = "1.3.4"
+version = "1.3.5"
 dependencies = [
  "anybuf",
  "classic-bindings",

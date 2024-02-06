@@ -586,6 +586,8 @@ pub fn update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
+const MINIMUM_COLLECTABLE_BALANCE: Uint128 = Uint128::new(1_000u128);
+
 /// Collects all protocol fees accrued by the pool
 pub fn collect_protocol_fees(deps: DepsMut<TerraQuery>) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
@@ -610,7 +612,7 @@ pub fn collect_protocol_fees(deps: DepsMut<TerraQuery>) -> Result<Response, Cont
     let mut messages: Vec<CosmosMsg> = Vec::new();
     for protocol_fee in protocol_fees {
         // prevents trying to send 0 coins, which errors
-        if protocol_fee.amount != Uint128::zero() {
+        if protocol_fee.amount > MINIMUM_COLLECTABLE_BALANCE {
             messages.push(protocol_fee.into_msg(&deps.querier, config.fee_collector_addr.clone())?);
         }
     }
