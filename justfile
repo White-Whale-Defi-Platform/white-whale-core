@@ -101,3 +101,7 @@ deploy CHAIN ARTIFACT='all':
 # Stores the contracts to the specified chain.
 store CHAIN ARTIFACT='all':
   scripts/deployment/deploy_liquidity_hub.sh -c {{CHAIN}} -s {{ARTIFACT}}
+
+# Migrates the contracts to the specified chain.
+migrate CHAIN ARTIFACT='all':
+  scripts/deployment/migrate_liquidity_hub.sh -c {{CHAIN}} -m {{ARTIFACT}}
