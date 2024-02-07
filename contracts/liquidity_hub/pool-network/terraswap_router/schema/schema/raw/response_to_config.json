@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConfigResponse",
+  "type": "object",
+  "required": [
+    "terraswap_factory"
+  ],
+  "properties": {
+    "terraswap_factory": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
