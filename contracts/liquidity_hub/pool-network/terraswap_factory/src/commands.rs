@@ -60,6 +60,7 @@ pub fn update_config(
     Ok(Response::new().add_attribute("action", "update_config"))
 }
 
+#[allow(unused_variables)]
 /// Updates a pair config
 pub fn update_pair_config(
     deps: DepsMut,
@@ -68,16 +69,29 @@ pub fn update_pair_config(
     fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
+    cosmwasm_pool_interface: Option<String>,
 ) -> Result<Response, ContractError> {
+    #[cfg(not(feature = "osmosis"))]
+    let msg = pool_network::pair::ExecuteMsg::UpdateConfig {
+        owner,
+        fee_collector_addr,
+        pool_fees,
+        feature_toggle,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let msg = pool_network::pair::ExecuteMsg::UpdateConfig {
+        owner,
+        fee_collector_addr,
+        pool_fees,
+        feature_toggle,
+        cosmwasm_pool_interface,
+    };
+
     Ok(Response::default()
         .add_message(wasm_execute(
             deps.api.addr_validate(&pair_addr)?.to_string(),
-            &pool_network::pair::ExecuteMsg::UpdateConfig {
-                owner,
-                fee_collector_addr,
-                pool_fees,
-                feature_toggle,
-            },
+            &msg,
             vec![],
         )?)
         .add_attribute("action", "update_pair_config"))

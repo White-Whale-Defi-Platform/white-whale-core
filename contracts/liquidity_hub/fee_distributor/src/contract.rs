@@ -193,5 +193,13 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
             .add_attribute("action", "migrate"));
     }
 
+    #[cfg(feature = "osmosis")]
+    if storage_version == Version::parse("0.9.1")? {
+        let fees_refund_messages = migrations::migrate_to_v091_hotfix(deps.branch())?;
+        return Ok(Response::default()
+            .add_messages(fees_refund_messages)
+            .add_attribute("action", "migrate"));
+    }
+
     Ok(Response::default())
 }

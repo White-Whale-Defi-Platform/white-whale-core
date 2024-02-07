@@ -58,7 +58,7 @@ The deployment scripts are found under `scripts/deployment/`. The following is t
 ```bash
 .
 ├── deploy_env
-│   ├── base.env
+│   ├── base_env.sh
 │   ├── chain_env.sh
 │   ├── mainnets
 │   │   ├── chihuahua.env
