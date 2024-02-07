@@ -65,7 +65,4 @@ get-artifacts-size:
   scripts/check_artifacts_size.sh
 
 get-pools CHAIN:
-  scripts/deployment/extract_pools.sh -c {{CHAIN}}
-
-load CHAIN:
-  scripts/deployment/deploy_env/load_chain_env.sh {{CHAIN}}
+    scripts/deployment/extract_pools.sh -c {{CHAIN}}
