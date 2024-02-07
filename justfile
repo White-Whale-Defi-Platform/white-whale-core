@@ -93,3 +93,11 @@ get-pools CHAIN:
 # Installs the env loader locally.
 install-env-loader:
     scripts/deployment/deploy_env/add_load_chain_env_alias.sh
+
+# Deploys the contracts to the specified chain.
+deploy CHAIN ARTIFACT='all':
+  scripts/deployment/deploy_liquidity_hub.sh -c {{CHAIN}} -d {{ARTIFACT}}
+
+# Stores the contracts to the specified chain.
+store CHAIN ARTIFACT='all':
+  scripts/deployment/deploy_liquidity_hub.sh -c {{CHAIN}} -s {{ARTIFACT}}
