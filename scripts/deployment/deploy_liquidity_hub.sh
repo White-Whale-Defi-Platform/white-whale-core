@@ -36,8 +36,9 @@ function store_artifact_on_chain() {
 	local version=$(cat ''"$contract_path"'/Cargo.toml' | awk -F= '/^version/ { print $2 }')
 	local version="${version//\"/}"
 
-	local res=$($BINARY tx wasm store $artifact $TXFLAG --from $deployer)
-	local code_id=$(echo $res | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value')
+	local res=$($BINARY tx wasm store $artifact $TXFLAG --from $deployer | jq -r '.txhash')
+	sleep $tx_delay
+	local code_id=$($BINARY q tx $res --node $RPC -o json | jq -r '.logs[0].events[] | select(.type == "store_code").attributes[] | select(.key == "code_id").value')
 
 	# Download the wasm binary from the chain and compare it to the original one
 	echo -e "Verifying integrity of wasm artifact on chain...\n"
@@ -48,7 +49,7 @@ function store_artifact_on_chain() {
 
 	# Write code_id in output file
 	tmpfile=$(mktemp)
-	jq --arg artifact $(basename "$artifact") --arg code_id $code_id --arg version $version '.contracts += [{wasm: $artifact, code_id: $code_id, version: $version}]' $output_file >$tmpfile
+	jq --arg artifact "$(basename "$artifact")" --arg code_id "$code_id" --arg version "$version" '.contracts += [{"wasm": $artifact, "code_id": $code_id, "version": $version}]' "$output_file" >"$tmpfile"
 	mv $tmpfile $output_file
 	echo -e "Stored artifact $(basename "$artifact") on $CHAIN_ID successfully\n"
 	sleep $tx_delay

@@ -93,3 +93,22 @@ get-pools CHAIN:
 # Installs the env loader locally.
 install-env-loader:
     scripts/deployment/deploy_env/add_load_chain_env_alias.sh
+
+# Deploys the contracts to the specified chain.
+deploy CHAIN ARTIFACT='all':
+  scripts/deployment/deploy_liquidity_hub.sh -c {{CHAIN}} -d {{ARTIFACT}}
+
+# Stores the contracts to the specified chain.
+store CHAIN ARTIFACT='all':
+  scripts/deployment/deploy_liquidity_hub.sh -c {{CHAIN}} -s {{ARTIFACT}}
+
+# Migrates the contracts to the specified chain.
+migrate CHAIN ARTIFACT='all':
+  scripts/deployment/migrate_liquidity_hub.sh -c {{CHAIN}} -m {{ARTIFACT}}
+
+# Renames the artifacts from *-aarch64.wasm to *.wasm.
+rename-a64-artifacts:
+    #!/usr/bin/env sh
+    for file in artifacts/*-aarch64*.wasm; do
+        mv "$file" "${file/-aarch64/}"
+    done
