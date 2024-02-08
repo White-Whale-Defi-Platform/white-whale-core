@@ -262,7 +262,7 @@ fn add_swap_routes(
         .add_attributes(attributes))
 }
 
-pub fn remove_swap_routes(
+fn remove_swap_routes(
     deps: DepsMut,
     env: Env,
     sender: Addr,
