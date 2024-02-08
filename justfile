@@ -105,3 +105,10 @@ store CHAIN ARTIFACT='all':
 # Migrates the contracts to the specified chain.
 migrate CHAIN ARTIFACT='all':
   scripts/deployment/migrate_liquidity_hub.sh -c {{CHAIN}} -m {{ARTIFACT}}
+
+# Renames the artifacts from *-aarch64.wasm to *.wasm.
+rename-a64-artifacts:
+    #!/usr/bin/env sh
+    for file in artifacts/*-aarch64*.wasm; do
+        mv "$file" "${file/-aarch64/}"
+    done
