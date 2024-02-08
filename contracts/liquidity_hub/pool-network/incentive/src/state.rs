@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
-use white_whale::pool_network::incentive::{ClosedPosition, Config, Flow, OpenPosition};
+use white_whale_std::pool_network::incentive::{ClosedPosition, Config, Flow, OpenPosition};
 
 /// The configuration for the incentive contract.
 pub const CONFIG: Item<Config> = Item::new("config");

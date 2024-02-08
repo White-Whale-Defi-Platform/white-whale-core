@@ -8,8 +8,8 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, DepsMut, Order, StdError, StdResult, Uint128};
 use cw_storage_plus::Map;
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::pool_network::incentive::{Curve, Flow};
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::pool_network::incentive::{Curve, Flow};
 
 use crate::state::{EpochId, FlowId, FLOWS};
 

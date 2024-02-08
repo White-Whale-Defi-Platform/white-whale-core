@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Response, WasmMsg};
 
-use white_whale::vault_network::vault::MigrateMsg;
+use white_whale_std::vault_network::vault::MigrateMsg;
 
 use crate::err::StdResult;
 use crate::state::read_vaults;
@@ -67,7 +67,7 @@ mod tests {
             deps.as_mut(),
             env,
             bad_actor,
-            white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
                 vault_addr: None,
                 vault_code_id: 7,
             },
@@ -87,7 +87,7 @@ mod tests {
             deps.as_mut(),
             env,
             info,
-            white_whale::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::MigrateVaults {
                 vault_addr: Some("outdated_vault".to_string()),
                 vault_code_id: 7,
             },

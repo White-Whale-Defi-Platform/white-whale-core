@@ -3,8 +3,8 @@ use std::string::ToString;
 use cosmwasm_std::{Deps, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_manager::{Config, Vault};
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::vault_manager::{Config, Vault};
 
 use crate::ContractError;
 

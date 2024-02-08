@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 
-use white_whale::pool_network::incentive::Flow;
+use white_whale_std::pool_network::incentive::Flow;
 
 use crate::error::ContractError;
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, CONFIG, FLOWS};
@@ -8,10 +8,10 @@ use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, CONFIG, FLOWS};
 /// Gets the current epoch from the fee distributor contract.
 pub fn get_current_epoch(deps: Deps) -> Result<u64, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let epoch_response: white_whale::fee_distributor::EpochResponse =
+    let epoch_response: white_whale_std::fee_distributor::EpochResponse =
         deps.querier.query_wasm_smart(
             config.fee_distributor_address.into_string(),
-            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+            &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
         )?;
 
     Ok(epoch_response.epoch.id.u64())
@@ -63,7 +63,7 @@ pub fn delete_weight_history_for_user(
 pub fn get_flow_asset_amount_at_epoch(flow: &Flow, epoch: u64) -> Uint128 {
     let mut asset_amount = flow.flow_asset.amount;
 
-    if let Some((_, &(change_amount, _))) = flow.asset_history.range(..=epoch).rev().next() {
+    if let Some((_, &(change_amount, _))) = flow.asset_history.range(..=epoch).next_back() {
         asset_amount = change_amount;
     }
 
@@ -85,7 +85,7 @@ pub fn get_flow_end_epoch(flow: &Flow) -> u64 {
 pub fn get_flow_current_end_epoch(flow: &Flow, epoch: u64) -> u64 {
     let mut end_epoch = flow.end_epoch;
 
-    if let Some((_, &(_, current_end_epoch))) = flow.asset_history.range(..=epoch).rev().next() {
+    if let Some((_, &(_, current_end_epoch))) = flow.asset_history.range(..=epoch).next_back() {
         end_epoch = current_end_epoch;
     }
 

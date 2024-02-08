@@ -1,9 +1,9 @@
 use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::{
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::whale_lair::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
@@ -93,7 +93,7 @@ impl TestingRobot {
             .instantiate_contract(
                 fee_collector_id,
                 self.sender.clone(),
-                &white_whale::fee_collector::InstantiateMsg {},
+                &white_whale_std::fee_collector::InstantiateMsg {},
                 &[],
                 "fee_collector",
                 None,
@@ -110,7 +110,7 @@ impl TestingRobot {
             .instantiate_contract(
                 fee_distributor_id,
                 self.sender.clone(),
-                &white_whale::fee_distributor::InstantiateMsg {
+                &white_whale_std::fee_distributor::InstantiateMsg {
                     bonding_contract_addr: whale_lair_addr.clone().to_string(),
                     fee_collector_addr: fee_collector_address.clone().to_string(),
                     grace_period: Uint64::new(1),

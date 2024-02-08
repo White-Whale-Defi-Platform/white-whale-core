@@ -27,9 +27,10 @@ incremental = false
 overflow-checks = true
 
 [features]
-injective = ["white-whale/injective"]
-token_factory = ["white-whale/token_factory"]
-osmosis_token_factory = ["white-whale/osmosis_token_factory"]
+injective = ["white-whale-std/injective"]
+osmosis = ["osmosis_token_factory"]
+token_factory = ["white-whale-std/token_factory"]
+osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
@@ -50,7 +51,7 @@ cw2 = "1.0.1"
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.31" }
-white-whale.workspace = true
+white-whale-std.workspace = true
 
 [dev-dependencies]
 cw-multi-test = "0.16.2"

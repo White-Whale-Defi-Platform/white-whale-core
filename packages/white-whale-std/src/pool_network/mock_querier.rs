@@ -3,10 +3,11 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::panic;
 
-use cosmwasm_std::testing::{MockQuerier, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_json, to_json_binary, Coin, ContractInfoResponse, ContractResult, Empty, OwnedDeps,
-    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, Addr, HexBinary, to_binary,
+    from_json, to_json_binary, Addr, CodeInfoResponse, Coin, ContractInfoResponse, ContractResult,
+    Empty, HexBinary, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult,
+    Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -227,24 +228,50 @@ impl WasmMockQuerier {
                                 pair_type: PairType::ConstantProduct,
                             })))
                         }
-                        Ok(PairQueryMsg::Simulation { offer_asset }) => SystemResult::Ok(
-                            ContractResult::from(to_json_binary(&SimulationResponse {
+                        Ok(PairQueryMsg::Simulation { offer_asset }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = SimulationResponse {
                                 return_amount: offer_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
-                        Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => SystemResult::Ok(
-                            ContractResult::from(to_json_binary(&ReverseSimulationResponse {
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = SimulationResponse {
+                                return_amount: offer_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&data)))
+                        }
+                        Ok(PairQueryMsg::ReverseSimulation { ask_asset }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = ReverseSimulationResponse {
                                 offer_amount: ask_asset.amount,
                                 swap_fee_amount: Uint128::zero(),
                                 spread_amount: Uint128::zero(),
                                 protocol_fee_amount: Uint128::zero(),
                                 burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = ReverseSimulationResponse {
+                                offer_amount: ask_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&data)))
+                        }
                         _ => match from_json(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
@@ -322,7 +349,7 @@ impl WasmMockQuerier {
                 SystemResult::Ok(ContractResult::Ok(
                     to_json_binary(&contract_info_response).unwrap(),
                 ))
-            },
+            }
             QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
                 let mut default = CodeInfoResponse::default();
 
@@ -330,13 +357,14 @@ impl WasmMockQuerier {
                     11 => {
                         default.code_id = 67;
                         default.creator = Addr::unchecked("creator").to_string();
-                        default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
+                        default.checksum = HexBinary::from_hex(&sha256::digest(format!(
+                            "code_checksum_{}",
+                            code_id
+                        )))
                         .unwrap();
-                        SystemResult::Ok(to_binary(&default).into())
+                        SystemResult::Ok(to_json_binary(&default).into())
                     }
-                    _ => {
-                        return SystemResult::Err(SystemError::Unknown {});
-                    }
+                    _ => SystemResult::Err(SystemError::Unknown {}),
                 }
             }
             _ => self.base.handle_query(request),
@@ -383,72 +411,98 @@ impl WasmMockTrioQuerier {
                         }),
                     }
                 }
-                _ => match from_json(msg) {
-                    Ok(TrioQueryMsg::Pool {}) => {
-                        SystemResult::Ok(ContractResult::from(to_json_binary(&TrioPoolResponse {
-                            assets: vec![
-                                Asset {
-                                    info: AssetInfo::NativeToken {
+                _ => {
+                    match from_json(msg) {
+                        Ok(TrioQueryMsg::Pool {}) => SystemResult::Ok(ContractResult::from(
+                            to_json_binary(&TrioPoolResponse {
+                                assets: vec![
+                                    Asset {
+                                        info: AssetInfo::NativeToken {
+                                            denom: "uluna".to_string(),
+                                        },
+                                        amount: Uint128::new(1_000_000_000u128),
+                                    },
+                                    Asset {
+                                        info: AssetInfo::NativeToken {
+                                            denom: "ujuno".to_string(),
+                                        },
+                                        amount: Uint128::new(1_000_000_000u128),
+                                    },
+                                    Asset {
+                                        info: AssetInfo::NativeToken {
+                                            denom: "uatom".to_string(),
+                                        },
+                                        amount: Uint128::new(1_000_000_000u128),
+                                    },
+                                ],
+                                total_share: Uint128::new(3_000_000_000u128),
+                            }),
+                        )),
+                        Ok(TrioQueryMsg::Trio {}) => {
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&TrioInfo {
+                                asset_infos: [
+                                    AssetInfo::NativeToken {
                                         denom: "uluna".to_string(),
                                     },
-                                    amount: Uint128::new(1_000_000_000u128),
-                                },
-                                Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ujuno".to_string(),
+                                    AssetInfo::NativeToken {
+                                        denom: "uluna".to_string(),
                                     },
-                                    amount: Uint128::new(1_000_000_000u128),
-                                },
-                                Asset {
-                                    info: AssetInfo::NativeToken {
+                                    AssetInfo::NativeToken {
                                         denom: "uatom".to_string(),
                                     },
-                                    amount: Uint128::new(1_000_000_000u128),
+                                ],
+                                asset_decimals: [6u8, 6u8, 10u8],
+                                contract_addr: "trio0000".to_string(),
+                                liquidity_token: AssetInfo::Token {
+                                    contract_addr: "liquidity0000".to_string(),
                                 },
-                            ],
-                            total_share: Uint128::new(3_000_000_000u128),
-                        })))
-                    }
-                    Ok(TrioQueryMsg::Trio {}) => {
-                        SystemResult::Ok(ContractResult::from(to_json_binary(&TrioInfo {
-                            asset_infos: [
-                                AssetInfo::NativeToken {
-                                    denom: "uluna".to_string(),
-                                },
-                                AssetInfo::NativeToken {
-                                    denom: "uluna".to_string(),
-                                },
-                                AssetInfo::NativeToken {
-                                    denom: "uatom".to_string(),
-                                },
-                            ],
-                            asset_decimals: [6u8, 6u8, 10u8],
-                            contract_addr: "trio0000".to_string(),
-                            liquidity_token: AssetInfo::Token {
-                                contract_addr: "liquidity0000".to_string(),
-                            },
-                        })))
-                    }
-                    Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => SystemResult::Ok(
-                        ContractResult::from(to_json_binary(&trio::SimulationResponse {
-                            return_amount: offer_asset.amount,
-                            swap_fee_amount: Uint128::zero(),
-                            spread_amount: Uint128::zero(),
-                            protocol_fee_amount: Uint128::zero(),
-                            burn_fee_amount: Uint128::zero(),
-                        })),
-                    ),
-                    Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => SystemResult::Ok(
-                        ContractResult::from(to_json_binary(&trio::ReverseSimulationResponse {
-                            offer_amount: ask_asset.amount,
-                            swap_fee_amount: Uint128::zero(),
-                            spread_amount: Uint128::zero(),
-                            protocol_fee_amount: Uint128::zero(),
-                            burn_fee_amount: Uint128::zero(),
-                        })),
-                    ),
-                    _ => {
-                        match from_json(msg).unwrap() {
+                            })))
+                        }
+                        Ok(TrioQueryMsg::Simulation { offer_asset, .. }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = trio::SimulationResponse {
+                                return_amount: offer_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = trio::SimulationResponse {
+                                return_amount: offer_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&data)))
+                        }
+                        Ok(TrioQueryMsg::ReverseSimulation { ask_asset, .. }) => {
+                            #[cfg(not(feature = "osmosis"))]
+                            let data = trio::ReverseSimulationResponse {
+                                offer_amount: ask_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                            };
+
+                            #[cfg(feature = "osmosis")]
+                            let data = trio::ReverseSimulationResponse {
+                                offer_amount: ask_asset.amount,
+                                swap_fee_amount: Uint128::zero(),
+                                spread_amount: Uint128::zero(),
+                                protocol_fee_amount: Uint128::zero(),
+                                burn_fee_amount: Uint128::zero(),
+                                osmosis_fee_amount: Uint128::zero(),
+                            };
+
+                            SystemResult::Ok(ContractResult::from(to_json_binary(&data)))
+                        }
+                        _ => match from_json(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
                                 match self.token_querier.balances.get(contract_addr) {
@@ -511,9 +565,9 @@ impl WasmMockTrioQuerier {
                             }
 
                             _ => panic!("DO NOT ENTER HERE"),
-                        }
+                        },
                     }
-                },
+                }
             },
             QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
                 let mut contract_info_response = ContractInfoResponse::default();

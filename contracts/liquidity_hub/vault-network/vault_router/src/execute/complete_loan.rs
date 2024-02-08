@@ -2,8 +2,8 @@ use cosmwasm_std::{
     attr, coins, to_json_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response,
     WasmMsg,
 };
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::vault_network::vault::PaybackAmountResponse;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::vault_network::vault::PaybackAmountResponse;
 
 use crate::err::{StdResult, VaultRouterError};
 
@@ -27,7 +27,7 @@ pub fn complete_loan(
         .map(|(vault, loaned_asset)| {
             let payback_amount: PaybackAmountResponse = deps.querier.query_wasm_smart(
                 vault.clone(),
-                &white_whale::vault_network::vault::QueryMsg::GetPaybackAmount {
+                &white_whale_std::vault_network::vault::QueryMsg::GetPaybackAmount {
                     amount: loaned_asset.amount,
                 },
             )?;
@@ -123,8 +123,8 @@ pub fn complete_loan(
 mod tests {
     use cosmwasm_std::{coin, coins, Uint128};
     use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault_router::ExecuteMsg;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
     use crate::{
         err::VaultRouterError,

@@ -7,11 +7,11 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Map;
 
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset;
-use white_whale::pool_network::asset::Asset;
-use white_whale::whale_lair::GlobalIndex;
-use white_whale::whale_lair::QueryMsg as LairQueryMsg;
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::whale_lair::GlobalIndex;
+use white_whale_std::whale_lair::QueryMsg as LairQueryMsg;
 
 use crate::state::{get_claimable_epochs, CONFIG, EPOCHS};
 

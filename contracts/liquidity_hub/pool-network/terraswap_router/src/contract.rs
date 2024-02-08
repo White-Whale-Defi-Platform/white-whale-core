@@ -10,10 +10,10 @@ use cw2::{get_contract_version, set_contract_version};
 use cw20::Cw20ReceiveMsg;
 use semver::Version;
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo};
-use white_whale::pool_network::pair::SimulationResponse;
-use white_whale::pool_network::querier::{query_pair_info, reverse_simulate, simulate};
-use white_whale::pool_network::router::{
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo};
+use white_whale_std::pool_network::pair::SimulationResponse;
+use white_whale_std::pool_network::querier::{query_pair_info, reverse_simulate, simulate};
+use white_whale_std::pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute, SwapRouteResponse,
 };
@@ -545,7 +545,7 @@ fn test_invalid_operations() {
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

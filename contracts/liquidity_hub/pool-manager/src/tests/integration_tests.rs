@@ -1,15 +1,15 @@
 use crate::ContractError;
-use white_whale::pool_manager::NPairInfo;
-use white_whale::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use white_whale_std::pool_manager::NPairInfo;
+use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
 // use crate::tests::suite::SuiteBuilder;
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use cw20::BalanceResponse;
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
-use white_whale::pool_network::pair::PoolFee;
-use white_whale::vault_manager::LpTokenType;
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network::pair::PoolFee;
+use white_whale_std::vault_manager::LpTokenType;
 
 use super::suite::TestingSuite;
 
@@ -127,7 +127,7 @@ fn deposit_and_withdraw_sanity_check() {
         },
     ];
 
-    // Default Pool fees white_whale::pool_network::pair::PoolFee
+    // Default Pool fees white_whale_std::pool_network::pair::PoolFee
     let fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::zero(),
@@ -149,7 +149,7 @@ fn deposit_and_withdraw_sanity_check() {
             creator.clone(),
             asset_infos,
             fees,
-            white_whale::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
             false,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
@@ -225,7 +225,7 @@ fn deposit_and_withdraw_cw20() {
         },
     ];
 
-    // Default Pool fees white_whale::pool_network::pair::PoolFee
+    // Default Pool fees white_whale_std::pool_network::pair::PoolFee
     let fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::zero(),
@@ -246,7 +246,7 @@ fn deposit_and_withdraw_cw20() {
             creator.clone(),
             asset_infos,
             fees,
-            white_whale::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
             false,
             None,
             vec![coin(1000, "uusd")],
@@ -360,7 +360,7 @@ mod pair_creation_failures {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         let fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::zero(),
@@ -381,7 +381,7 @@ mod pair_creation_failures {
                 creator.clone(),
                 asset_infos,
                 fees,
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 None,
                 vec![coin(90, "uusd")],
@@ -419,7 +419,7 @@ mod pair_creation_failures {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         let fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::zero(),
@@ -440,7 +440,7 @@ mod pair_creation_failures {
                 creator.clone(),
                 asset_infos.clone(),
                 fees.clone(),
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("mycoolpair".to_string()),
                 vec![coin(1000, "uusd")],
@@ -452,7 +452,7 @@ mod pair_creation_failures {
                 creator.clone(),
                 asset_infos,
                 fees,
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("mycoolpair".to_string()),
                 vec![coin(1000, "uusd")],
@@ -500,7 +500,7 @@ mod router {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
@@ -524,7 +524,7 @@ mod router {
                 creator.clone(),
                 first_pair,
                 fees.clone(),
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
@@ -536,7 +536,7 @@ mod router {
                 creator.clone(),
                 second_pair,
                 fees,
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
@@ -619,10 +619,10 @@ mod router {
 
         // Prepare teh swap operations, we want to go from WHALE -> UUSD
         // We will use the uluna-uusd pair as the intermediary
-        // use this type white_whale::pool_manager::SwapOperation
+        // use this type white_whale_std::pool_manager::SwapOperation
 
         let _swap_operations = vec![
-            white_whale::pool_manager::SwapOperation::WhaleSwap {
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
                 token_in_info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
                 },
@@ -631,7 +631,7 @@ mod router {
                 },
                 pool_identifier: "whale-uluna".to_string(),
             },
-            white_whale::pool_manager::SwapOperation::WhaleSwap {
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
                 token_in_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
@@ -694,7 +694,7 @@ mod swapping {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
@@ -717,7 +717,7 @@ mod swapping {
                 creator.clone(),
                 asset_infos,
                 fees,
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
@@ -918,7 +918,7 @@ mod swapping {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
@@ -941,7 +941,7 @@ mod swapping {
                 creator.clone(),
                 asset_infos,
                 fees,
-                white_whale::pool_network::asset::PairType::StableSwap { amp: 100 },
+                white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
                 false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
@@ -1142,7 +1142,7 @@ mod swapping {
             },
         ];
 
-        // Default Pool fees white_whale::pool_network::pair::PoolFee
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.001% and swap fee is 0.002% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
@@ -1165,7 +1165,7 @@ mod swapping {
                 creator.clone(),
                 asset_infos,
                 fees,
-                white_whale::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],

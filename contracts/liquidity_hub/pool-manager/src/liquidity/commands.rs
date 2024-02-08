@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::{
     helpers::{self},
@@ -12,21 +12,21 @@ use crate::{
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::coins;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::is_factory_token;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 use cw20::Cw20ExecuteMsg;
-use white_whale::pool_network::{
+use white_whale_std::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
     U256,
 };
@@ -141,7 +141,7 @@ pub fn provide_liquidity(
                     ));
                 }
 
-                messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token.to_string(),
                     &info.sender,
                     &env.contract.address,
@@ -186,7 +186,7 @@ pub fn provide_liquidity(
                     total_share,
                 )?;
 
-                messages.append(&mut white_whale::lp_common::mint_lp_token_msg(
+                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token.to_string(),
                     &info.sender,
                     &env.contract.address,
@@ -287,7 +287,7 @@ pub fn withdraw_liquidity(
             .unwrap();
     }
     // Burn the LP tokens
-    messages.push(white_whale::lp_common::burn_lp_asset_msg(
+    messages.push(white_whale_std::lp_common::burn_lp_asset_msg(
         liquidity_token,
         sender.clone(),
         amount,

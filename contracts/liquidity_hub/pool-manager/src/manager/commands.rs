@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
-use white_whale::{
+use white_whale_std::{
     pool_network::{
         asset::{Asset, AssetInfo, PairType},
         pair::PoolFee,
@@ -22,19 +22,19 @@ use crate::{
 };
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
 use cosmwasm_std::coins;
-use white_whale::pool_manager::NPairInfo as PairInfo;
+use white_whale_std::pool_manager::NPairInfo as PairInfo;
 #[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::is_factory_token;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::MsgCreateDenom;
-use white_whale::pool_network::querier::query_balance;
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
+use white_whale_std::pool_network::querier::query_balance;
 
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
@@ -46,8 +46,8 @@ pub const LP_SYMBOL: &str = "uLP";
 ///
 /// ```rust
 /// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_binary};
-/// # use white_whale::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
-/// # use white_whale::fee::Fee;
+/// # use white_whale_std::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
+/// # use white_whale_std::fee::Fee;
 /// # use pool_manager::error::ContractError;
 /// # use pool_manager::manager::commands::MAX_ASSETS_PER_POOL;
 /// # use pool_manager::manager::commands::create_pair;
@@ -76,6 +76,7 @@ pub const LP_SYMBOL: &str = "uLP";
 /// # Ok(response)
 /// # }
 /// ```
+#[allow(clippy::too_many_arguments)]
 pub fn create_pair(
     deps: DepsMut,
     env: Env,
@@ -183,7 +184,6 @@ pub fn create_pair(
             not(feature = "injective")
         ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
-
         let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
         let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
         let lp_asset = AssetInfo::NativeToken { denom };
@@ -209,7 +209,7 @@ pub fn create_pair(
             feature = "osmosis_token_factory",
             feature = "injective"
         ))]
-        Ok(tokenfactory::create_denom::create_denom(
+        Ok(white_whale_std::tokenfactory::create_denom::create_denom(
             env.contract.address,
             lp_symbol,
         ))

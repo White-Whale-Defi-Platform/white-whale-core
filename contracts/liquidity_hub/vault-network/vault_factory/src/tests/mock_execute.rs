@@ -10,7 +10,7 @@ use super::{mock_creator, mock_instantiate::mock_instantiate};
 pub fn mock_execute(
     vault_id: u64,
     token_id: u64,
-    msg: white_whale::vault_network::vault_factory::ExecuteMsg,
+    msg: white_whale_std::vault_network::vault_factory::ExecuteMsg,
 ) -> (
     StdResult<Response>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,

@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
-use white_whale::pool_network::incentive::FlowIdentifier;
+use white_whale_std::pool_network::incentive::FlowIdentifier;
 
 #[derive(Error, Debug)]
 pub enum ContractError {

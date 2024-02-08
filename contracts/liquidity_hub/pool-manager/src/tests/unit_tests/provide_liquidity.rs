@@ -8,20 +8,20 @@ use cosmwasm_std::{
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
 use cw20::Cw20ExecuteMsg;
-use white_whale::fee::Fee;
+use white_whale_std::fee::Fee;
 
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgMint;
+use white_whale_std::pool_network::denom::MsgMint;
 use crate::tests::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::PoolFee;
-// use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::pair::PoolFee;
+// use white_whale_std::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate};
 use crate::error::ContractError;
-use white_whale::pool_manager::ExecuteMsg;
-use white_whale::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
+use white_whale_std::pool_manager::ExecuteMsg;
+use white_whale_std::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {

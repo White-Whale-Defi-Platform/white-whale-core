@@ -9,19 +9,20 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use crate::state::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::coin;
-use white_whale::fee::Fee;
+use white_whale_std::fee::Fee;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, PairType};
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgBurn;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom::MsgBurn;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_xyk_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -184,6 +185,7 @@ fn withdraw_xyk_liquidity_cw20_lp() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn withdraw_stableswap_liquidity() {
     let mut deps = mock_dependencies(&[Coin {
@@ -333,6 +335,7 @@ fn withdraw_stableswap_liquidity() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_unauthorized() {
     let mut deps = mock_dependencies(&[Coin {
@@ -399,6 +402,7 @@ fn test_withdrawal_unauthorized() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_withdrawal_wrong_message() {
     let mut deps = mock_dependencies(&[Coin {

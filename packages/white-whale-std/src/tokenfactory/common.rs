@@ -8,7 +8,7 @@ enum Protocol {
 }
 
 impl Protocol {
-    #![allow(unreachable_code)]
+    #![allow(dead_code)]
     fn from_features() -> Self {
         #[cfg(feature = "injective")]
         {
@@ -24,7 +24,7 @@ impl Protocol {
         }
         unreachable!()
     }
-
+    #[allow(unused_assignments)]
     fn as_str(&self) -> &'static str {
         match self {
             Self::Injective => "injective",
@@ -34,6 +34,7 @@ impl Protocol {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) enum MsgTypes {
     CreateDenom,
     Mint,
@@ -41,6 +42,7 @@ pub(crate) enum MsgTypes {
 }
 
 impl MsgTypes {
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::CreateDenom => "MsgCreateDenom",
@@ -53,7 +55,7 @@ impl MsgTypes {
 pub(crate) trait EncodeMessage {
     fn encode(sender: String, data: Self) -> Vec<u8>;
 }
-
+#[allow(dead_code)]
 pub(crate) fn create_msg<M: EncodeMessage>(
     sender: Addr,
     message_data: M,

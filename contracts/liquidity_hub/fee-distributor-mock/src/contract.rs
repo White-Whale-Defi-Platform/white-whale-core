@@ -3,7 +3,7 @@ use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint64,
 };
 
-use white_whale::fee_distributor::EpochResponse;
+use white_whale_std::fee_distributor::EpochResponse;
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
@@ -19,7 +19,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     CURRENT_EPOCH.save(
         deps.storage,
-        &white_whale::fee_distributor::Epoch {
+        &white_whale_std::fee_distributor::Epoch {
             id: Uint64::one(),
             start_time: env.block.time,
             total: vec![],
@@ -38,11 +38,11 @@ pub fn execute(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: white_whale::fee_distributor::ExecuteMsg,
+    msg: white_whale_std::fee_distributor::ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    if let white_whale::fee_distributor::ExecuteMsg::NewEpoch {} = msg {
+    if let white_whale_std::fee_distributor::ExecuteMsg::NewEpoch {} = msg {
         CURRENT_EPOCH.update(deps.storage, |epoch| -> StdResult<_> {
-            Ok(white_whale::fee_distributor::Epoch {
+            Ok(white_whale_std::fee_distributor::Epoch {
                 id: epoch.id + Uint64::one(),
                 start_time: epoch.start_time.plus_seconds(86400u64),
                 total: vec![],
@@ -61,18 +61,18 @@ pub fn execute(
 pub fn query(
     deps: Deps,
     _env: Env,
-    msg: white_whale::fee_distributor::QueryMsg,
+    msg: white_whale_std::fee_distributor::QueryMsg,
 ) -> StdResult<Binary> {
     match msg {
-        white_whale::fee_distributor::QueryMsg::Config {} => {}
-        white_whale::fee_distributor::QueryMsg::CurrentEpoch {} => {
+        white_whale_std::fee_distributor::QueryMsg::Config {} => {}
+        white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {} => {
             return to_json_binary(&EpochResponse {
                 epoch: CURRENT_EPOCH.load(deps.storage)?,
             });
         }
-        white_whale::fee_distributor::QueryMsg::Epoch { .. } => {}
-        white_whale::fee_distributor::QueryMsg::ClaimableEpochs { .. } => {}
-        white_whale::fee_distributor::QueryMsg::Claimable { .. } => {}
+        white_whale_std::fee_distributor::QueryMsg::Epoch { .. } => {}
+        white_whale_std::fee_distributor::QueryMsg::ClaimableEpochs { .. } => {}
+        white_whale_std::fee_distributor::QueryMsg::Claimable { .. } => {}
     }
 
     to_json_binary(&"")

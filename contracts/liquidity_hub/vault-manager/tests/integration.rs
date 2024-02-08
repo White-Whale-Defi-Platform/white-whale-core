@@ -8,10 +8,10 @@ use cosmwasm_std::{
 use cw_ownable::OwnershipError;
 
 use vault_manager::ContractError;
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale::pool_network::pair::PoolFee;
-use white_whale::vault_manager::{
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_network::pair::PoolFee;
+use white_whale_std::vault_manager::{
     AssetQueryParams, FilterVaultBy, LpTokenType, PaybackAssetResponse, VaultFee,
 };
 
@@ -677,7 +677,7 @@ pub fn update_config() {
     let creator = suite.creator();
     let unauthorized = suite.senders[2].clone();
 
-    let initial_config = RefCell::new(white_whale::vault_manager::Config {
+    let initial_config = RefCell::new(white_whale_std::vault_manager::Config {
         lp_token_type: LpTokenType::TokenFactory,
         whale_lair_addr: Addr::unchecked(""),
         vault_creation_fee: Asset {
@@ -735,7 +735,7 @@ pub fn update_config() {
             assert_ne!(new_config, initial_config.borrow().clone());
             assert_eq!(
                 new_config,
-                white_whale::vault_manager::Config {
+                white_whale_std::vault_manager::Config {
                     lp_token_type: LpTokenType::Cw20(123),
                     whale_lair_addr: Addr::unchecked(
                         "migaloo1gqjwmexg70ajk439ckfjq0uw2k3u2qmqwy6axu"
@@ -1026,7 +1026,7 @@ pub fn successful_flashloan() {
             vec![
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: skewed_pool.to_string(),
-                    msg: to_json_binary(&white_whale::pool_network::pair::ExecuteMsg::Swap {
+                    msg: to_json_binary(&white_whale_std::pool_network::pair::ExecuteMsg::Swap {
                         offer_asset: Asset {
                             info: AssetInfo::NativeToken {
                                 denom: "uwhale".to_string(),
@@ -1042,7 +1042,7 @@ pub fn successful_flashloan() {
                 }),
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: balanced_pool.to_string(),
-                    msg: to_json_binary(&white_whale::pool_network::pair::ExecuteMsg::Swap {
+                    msg: to_json_binary(&white_whale_std::pool_network::pair::ExecuteMsg::Swap {
                         offer_asset: Asset {
                             info: AssetInfo::NativeToken {
                                 denom: "uluna".to_string(),
@@ -1535,7 +1535,7 @@ pub fn unsuccessful_flashloan() {
                 // try to drain the cw20 token vault
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: vault_manager.clone().to_string(),
-                    msg: to_json_binary(&white_whale::vault_manager::ExecuteMsg::Deposit {
+                    msg: to_json_binary(&white_whale_std::vault_manager::ExecuteMsg::Deposit {
                         asset: Asset {
                             info: AssetInfo::NativeToken {
                                 denom: "uwhale".to_string(),

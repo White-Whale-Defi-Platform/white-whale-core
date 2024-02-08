@@ -184,8 +184,6 @@ impl AssetInfo {
         }
     }
 
-    
-
     pub fn equal(&self, asset: &AssetInfo) -> bool {
         match self {
             AssetInfo::Token { contract_addr, .. } => {

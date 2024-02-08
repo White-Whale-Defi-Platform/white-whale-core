@@ -1,10 +1,10 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{Timestamp, Uint64};
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 
 use crate::ContractError;
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::tests::robot::TestingRobot;
 use crate::tests::test_helpers;

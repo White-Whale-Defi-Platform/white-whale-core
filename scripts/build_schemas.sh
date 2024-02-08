@@ -34,6 +34,13 @@ while getopts ":f:d:" opt; do
   esac
 done
 
+# First argument, whether or not to run git diff and exit with an error on any json file diff, not used by default
+if [[ -z $1 ]]; then
+	fail_diff_flag=false
+else
+	fail_diff_flag=$1
+fi
+
 projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 
 # Generates schemas for contracts in the liquidity_hub
@@ -46,16 +53,16 @@ for component in "$projectRootPath"/contracts/liquidity_hub/*/; do
   else
     echo "folder $component"
 
-    # it was a directory (such as pool_network), do it for all files inside the directory
-    for contract in "$component"*/; do
-      echo "generating for $contract"
+		# it was a directory (such as pool_network), do it for all files inside the directory
+		for contract in "$component"*/; do
+			echo "generating for $contract"
 
       cd $contract && cargo schema --locked --features "$feature_flag"
 
-      # Optionally fail on any unaccounted changes in json schema files
-      if [[ "$fail_diff_flag" == true ]]; then
-        git diff  --exit-code -- '*.json'
-      fi
-    done
-  fi
+			# Optionally fail on any unaccounted changes in json schema files
+			if [[ "$fail_diff_flag" == true ]]; then
+				git diff --exit-code -- '*.json'
+			fi
+		done
+	fi
 done

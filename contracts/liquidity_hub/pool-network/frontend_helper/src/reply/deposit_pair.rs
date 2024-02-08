@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_json_binary, DepsMut, Env, Reply, Response, WasmMsg};
-use white_whale::pool_network::{
+use white_whale_std::pool_network::{
     asset::AssetInfo, frontend_helper::TempState, incentive::QueryPosition,
 };
 
@@ -28,15 +28,15 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
     // now perform the incentive position creation
     let config = CONFIG.load(deps.storage)?;
 
-    let pair_info: white_whale::pool_network::asset::PairInfo = deps.querier.query_wasm_smart(
+    let pair_info: white_whale_std::pool_network::asset::PairInfo = deps.querier.query_wasm_smart(
         pair_addr.clone(),
-        &white_whale::pool_network::pair::QueryMsg::Pair {},
+        &white_whale_std::pool_network::pair::QueryMsg::Pair {},
     )?;
 
-    let incentive_address: white_whale::pool_network::incentive_factory::IncentiveResponse =
+    let incentive_address: white_whale_std::pool_network::incentive_factory::IncentiveResponse =
         deps.querier.query_wasm_smart(
             config.incentive_factory_addr,
-            &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentive {
                 lp_asset: pair_info.liquidity_token.clone(),
             },
         )?;
@@ -88,19 +88,23 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
     };
 
     // find out if the user has an open position with that unbonding_duration
-    let positions: white_whale::pool_network::incentive::PositionsResponse =
+    let positions: white_whale_std::pool_network::incentive::PositionsResponse =
         deps.querier.query_wasm_smart(
             incentive_address.clone(),
-            &white_whale::pool_network::incentive::QueryMsg::Positions {
+            &white_whale_std::pool_network::incentive::QueryMsg::Positions {
                 address: receiver.clone().into_string(),
             },
         )?;
     let has_existing_position = positions.positions.into_iter().any(|position| {
-        let QueryPosition::OpenPosition { unbonding_duration: position_unbonding_duration, .. } = position else {
-			return false;
-		};
+        let QueryPosition::OpenPosition {
+            unbonding_duration: position_unbonding_duration,
+            ..
+        } = position
+        else {
+            return false;
+        };
 
-		unbonding_duration == position_unbonding_duration
+        unbonding_duration == position_unbonding_duration
     });
 
     Ok(Response::default()
@@ -115,12 +119,12 @@ pub fn deposit_pair(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, Con
         .add_message(WasmMsg::Execute {
             contract_addr: incentive_address.into_string(),
             msg: to_json_binary(&match has_existing_position {
-                true => white_whale::pool_network::incentive::ExecuteMsg::ExpandPosition {
+                true => white_whale_std::pool_network::incentive::ExecuteMsg::ExpandPosition {
                     amount: lp_amount,
                     unbonding_duration,
                     receiver: Some(receiver.into_string()),
                 },
-                false => white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+                false => white_whale_std::pool_network::incentive::ExecuteMsg::OpenPosition {
                     amount: lp_amount,
                     unbonding_duration,
                     receiver: Some(receiver.into_string()),

@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdError};
 
-use white_whale::pool_network::incentive::{ClosedPosition, OpenPosition};
+use white_whale_std::pool_network::incentive::{ClosedPosition, OpenPosition};
 
 use crate::queries::get_rewards;
 use crate::state::ADDRESS_WEIGHT_HISTORY;

@@ -1,22 +1,20 @@
-use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
-
 use cosmwasm_std::{
     to_json_binary, wasm_execute, CosmosMsg, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg,
     WasmMsg,
 };
 
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{AssetInfo, PairType};
-use white_whale::pool_network::pair::{
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
+use white_whale_std::pool_network::pair::{
     FeatureToggle, InstantiateMsg as PairInstantiateMsg, MigrateMsg as PairMigrateMsg, PoolFee,
 };
-use white_whale::pool_network::querier::query_balance;
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::trio::{
     FeatureToggle as TrioFeatureToggle, InstantiateMsg as TrioInstantiateMsg,
     MigrateMsg as TrioMigrateMsg, PoolFee as TrioPoolFee, RampAmp,
 };
-use white_whale::pool_network::{pair, trio};
+use white_whale_std::pool_network::{pair, trio};
 
+use crate::contract::{CREATE_PAIR_RESPONSE, CREATE_TRIO_RESPONSE};
 use crate::error::ContractError;
 use crate::state::{
     add_allow_native_token, pair_key, trio_key, Config, TmpPairInfo, TmpTrioInfo, CONFIG, PAIRS,
@@ -71,9 +69,9 @@ pub fn update_pair_config(
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
 ) -> Result<Response, ContractError> {
-    Ok(Response::new()
+    Ok(Response::default()
         .add_message(wasm_execute(
-            deps.api.addr_validate(pair_addr.as_str())?.to_string(),
+            deps.api.addr_validate(&pair_addr)?.to_string(),
             &pool_network::pair::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
@@ -169,7 +167,7 @@ pub fn create_pair(
                     asset_decimals,
                     pool_fees,
                     fee_collector_addr: config.fee_collector_addr.to_string(),
-                    pair_type,
+                    pair_type: pair_type.clone(),
                     token_factory_lp,
                 })?,
             }),
@@ -177,6 +175,7 @@ pub fn create_pair(
         }))
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Updates a trio config
 pub fn update_trio_config(
     deps: DepsMut,
@@ -189,7 +188,7 @@ pub fn update_trio_config(
 ) -> Result<Response, ContractError> {
     Ok(Response::new()
         .add_message(wasm_execute(
-            deps.api.addr_validate(trio_addr.as_str())?.to_string(),
+            deps.api.addr_validate(&trio_addr)?.to_string(),
             &pool_network::trio::ExecuteMsg::UpdateConfig {
                 owner,
                 fee_collector_addr,
@@ -369,15 +368,9 @@ pub fn remove_trio(
 /// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
 pub fn add_native_token_decimals(
     deps: DepsMut,
-    env: Env,
     denom: String,
     decimals: u8,
 ) -> Result<Response, ContractError> {
-    let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
-    if balance.is_zero() {
-        return Err(ContractError::InvalidVerificationBalance {});
-    }
-
     add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
 
     Ok(Response::new().add_attributes(vec![

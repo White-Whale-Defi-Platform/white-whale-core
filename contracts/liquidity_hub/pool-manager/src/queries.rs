@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
-use white_whale::pool_manager::{SwapOperation, SwapRouteResponse};
-use white_whale::pool_network::{
+use white_whale_std::pool_manager::{SwapOperation, SwapRouteResponse};
+use white_whale_std::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
-    router::SimulateSwapOperationsResponse,
+    // router::SimulateSwapOperationsResponse,
 };
 
 use crate::{

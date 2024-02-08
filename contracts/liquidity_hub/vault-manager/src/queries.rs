@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, Deps, Uint128, Uint256};
 
-use white_whale::pool_network::asset::{get_total_share, Asset};
-use white_whale::vault_manager::{
+use white_whale_std::pool_network::asset::{get_total_share, Asset};
+use white_whale_std::vault_manager::{
     Config, FilterVaultBy, PaybackAssetResponse, ShareResponse, VaultsResponse,
 };
 
