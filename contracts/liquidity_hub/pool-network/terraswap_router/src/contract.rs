@@ -262,7 +262,6 @@ fn add_swap_routes(
         .add_attributes(attributes))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn remove_swap_routes(
     deps: DepsMut,
     env: Env,
@@ -275,8 +274,8 @@ pub fn remove_swap_routes(
 
     for swap_route in swap_routes {
         let swap_route_key = get_key_from_swap_route(deps.as_ref(), &swap_route)?;
-        // Remove the swap route if it exists
 
+        // Remove the swap route if it exists
         if swap_route_key.has(deps.storage) {
             swap_route_key.remove(deps.storage);
             attributes.push(attr("swap_route", swap_route.clone().to_string()));
