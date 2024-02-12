@@ -85,7 +85,7 @@ function init_fee_collector() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "fee_collector.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Collector" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -113,7 +113,7 @@ function init_fee_distributor() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -138,7 +138,7 @@ function init_whale_lair() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "whale_lair.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Lair" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -175,7 +175,7 @@ function init_incentive_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "incentive_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Incentive Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -195,7 +195,7 @@ function init_frontend_helper() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "frontend_helper.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Frontend Helper" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -218,7 +218,7 @@ function init_pool_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -237,7 +237,7 @@ function init_pool_router() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_router.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Router" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -259,7 +259,7 @@ function init_vault_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -279,7 +279,7 @@ function init_vault_router() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "vault_router.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Router" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -306,6 +306,7 @@ function init_liquidity_hub() {
 	init_fee_distributor
 	init_vault_network
 	init_incentive_factory
+	init_frontend_helper
 }
 
 function deploy() {
@@ -445,7 +446,7 @@ while getopts $optstring arg; do
 		if [[ "$chain" = "local" ]]; then
 			tx_delay=0.5
 		else
-			tx_delay=12
+			tx_delay=8
 		fi
 		;;
 	d)
