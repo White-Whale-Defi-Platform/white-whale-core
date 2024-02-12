@@ -27,5 +27,6 @@ function import_deployer_wallet() {
 		echo $mnemonic | $BINARY keys add $deployer --recover >/dev/null 2>&1
 	fi
 
-	deployer_address=$($BINARY keys show $deployer --output json | jq -r '.address')
+	deployer='deployer_wallet'
+	deployer_address=migaloo1dpx7ytug647wefe7ajxmg5ejt68gxcfvw35f4e
 }
