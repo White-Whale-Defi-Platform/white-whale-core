@@ -85,7 +85,7 @@ function init_fee_collector() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "fee_collector.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Collector" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -113,7 +113,7 @@ function init_fee_distributor() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Fee Distributor" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -128,29 +128,22 @@ function init_whale_lair() {
 	# Prepare the instantiation message
 	unbonding_period=86400000000000    # default value is 14 days, in nanoseconds
 	growth_rate="0.000000064300411522" # this is the value when you interpolate the growth rate to 2X with 365 days of bonding
+	bonding_assets='[
+                   {"native_token": {"denom": "uwhale"}},
+                   {"native_token": {"denom": "factory/migaloo1dpx7ytug647wefe7ajxmg5ejt68gxcfvw35f4e/test"}}
+                 ]'
 
-	bonding_assets=$(jq '.contracts[] | select (.wasm == "fee_collector.wasm") | .contract_address' $output_file)
-	grace_period="21" #default value is 21 epochs
-	distribution_asset='{"native_token":{"denom":"'$whale_denom'"}}'
-	epoch_duration="86400000000000"     #default value is 1 day, in nanoseconds
-	genesis_epoch="1706540400000000000" #fill with desired unix time, in nanoseconds
-	epoch_config='{"duration":"'$epoch_duration'", "genesis_epoch": "'$genesis_epoch'"}'
+	init="{\"unbonding_period\": \"$unbonding_period\", \"growth_rate\": \"$growth_rate\", \"bonding_assets\": $bonding_assets}"
 
-	init='{"bonding_contract_addr": '"$bonding_contract_addr"', "fee_collector_addr": '"$fee_collector_addr"', "grace_period":
-  "'$grace_period'", "epoch_config": '"$epoch_config"', "distribution_asset": '"$distribution_asset"'}'
-
-	echo "init_whale_lair fn is broken. Fix."
-	exit 0
-	#todo fix this message here, it's broken
 	# Instantiate the contract
-	code_id=$(jq -r '.contracts[] | select (.wasm == "fee_distributor.wasm") | .code_id' $output_file)
+	code_id=$(jq -r '.contracts[] | select (.wasm == "whale_lair.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Lair" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
 	# Append contract_address to output file
-	append_contract_address_to_output $contract_address 'fee_distributor.wasm'
+	append_contract_address_to_output $contract_address 'whale_lair.wasm'
 	sleep $tx_delay
 }
 
@@ -182,7 +175,7 @@ function init_incentive_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "incentive_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Incentive Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -202,7 +195,7 @@ function init_frontend_helper() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "frontend_helper.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Frontend Helper" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -225,7 +218,7 @@ function init_pool_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -244,7 +237,7 @@ function init_pool_router() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "terraswap_router.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Pool Router" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -266,7 +259,7 @@ function init_vault_factory() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "vault_factory.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Factory" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -286,7 +279,7 @@ function init_vault_router() {
 	# Instantiate the contract
 	code_id=$(jq -r '.contracts[] | select (.wasm == "vault_router.wasm") | .code_id' $output_file)
 	$BINARY tx wasm instantiate $code_id "$init" --from $deployer --label "White Whale Vault Router" $TXFLAG --admin $deployer_address
-
+	sleep $tx_delay
 	# Get contract address
 	contract_address=$($BINARY query wasm list-contract-by-code $code_id --node $RPC --output json | jq -r '.contracts[-1]')
 
@@ -313,6 +306,7 @@ function init_liquidity_hub() {
 	init_fee_distributor
 	init_vault_network
 	init_incentive_factory
+	init_frontend_helper
 }
 
 function deploy() {

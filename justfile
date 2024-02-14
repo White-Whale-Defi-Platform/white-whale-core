@@ -88,7 +88,7 @@ get-artifacts-size:
 
 # Extracts the pools from the given chain.
 get-pools CHAIN:
-    scripts/deployment/extract_pools.sh -c {{CHAIN}}
+  scripts/deployment/extract_pools.sh -c {{CHAIN}}
 
 # Installs the env loader locally.
 install-env-loader:
@@ -106,9 +106,13 @@ store CHAIN ARTIFACT='all':
 migrate CHAIN ARTIFACT='all':
   scripts/deployment/migrate_liquidity_hub.sh -c {{CHAIN}} -m {{ARTIFACT}}
 
+# Alias to the rename-a64-artifacts recipe.
+rename-artifacts:
+  @just rename-a64-artifacts
+
 # Renames the artifacts from *-aarch64.wasm to *.wasm.
 rename-a64-artifacts:
-    #!/usr/bin/env sh
-    for file in artifacts/*-aarch64*.wasm; do
-        mv "$file" "${file/-aarch64/}"
-    done
+  #!/usr/bin/env sh
+  for file in artifacts/*-aarch64*.wasm; do
+    mv "$file" "${file/-aarch64/}"
+  done

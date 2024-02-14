@@ -12,6 +12,7 @@ load_chain_env() {
     else
         source "${project_root_path}"/scripts/deployment/deploy_env/chain_env.sh
         init_chain_env \"\$1\"
+        echo \"Loaded ${CHAIN_ID}\"
     fi
 }
 "
