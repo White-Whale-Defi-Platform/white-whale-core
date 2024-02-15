@@ -140,6 +140,9 @@ pub enum ContractError {
         amount: cosmwasm_std::Uint128,
         expected: cosmwasm_std::Uint128,
     },
+
+    #[error("Funds for {denom} were missing when performing swap")]
+    MissingNativeSwapFunds { denom: String },
 }
 
 impl From<semver::Error> for ContractError {

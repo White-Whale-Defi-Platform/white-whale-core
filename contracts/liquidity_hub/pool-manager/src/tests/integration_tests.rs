@@ -258,7 +258,7 @@ fn deposit_and_withdraw_cw20() {
         creator.clone(),
         suite.cw20_tokens[0].clone(),
         Uint128::from(1000000u128),
-        suite.vault_manager_addr.clone(),
+        suite.pool_manager_addr.clone(),
     );
     // Lets try to add liquidity
     suite.provide_liquidity(
@@ -469,6 +469,8 @@ mod pair_creation_failures {
 }
 
 mod router {
+    use cosmwasm_std::Event;
+
     use super::*;
     #[test]
     fn basic_swap_operations_test() {
@@ -574,10 +576,9 @@ mod router {
                 },
             ],
             |result| {
-                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
-                for event in result.unwrap().events {
-                    println!("{:?}", event);
-                }
+                // ensure we got 999,000 in the response (1m - initial liquidity amount)
+                let result = result.unwrap();
+                assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
             },
         );
 
@@ -610,18 +611,16 @@ mod router {
                 },
             ],
             |result| {
-                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
-                for event in result.unwrap().events {
-                    println!("{:?}", event);
-                }
+                // ensure we got 999,000 in the response (1m - initial liquidity amount)
+                let result = result.unwrap();
+                assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
             },
         );
 
-        // Prepare teh swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary
-        // use this type white_whale_std::pool_manager::SwapOperation
+        // Prepare the swap operations, we want to go from WHALE -> UUSD
+        // We will use the uluna-uusd pair as the intermediary pool
 
-        let _swap_operations = vec![
+        let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
                 token_in_info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -642,27 +641,34 @@ mod router {
             },
         ];
 
-        // suite.execute_swap_operations(
-        //     creator.clone(), swap_operations, None, None, None,vec![coin(1000u128, "uwhale".to_string())], |result| {
-        //         // Find the key with 'offer_amount' and the key with 'return_amount'
-        //         // Ensure that the offer amount is 1000 and the return amount is greater than 0
-        //         let mut return_amount = String::new();
-        //         let mut offer_amount = String::new();
+        // before swap uusd balance = 1_000_000_001
+        // - 2*1_000 pair creation fee
+        // - 1_000_000 liquidity provision
+        // - 1 for native token creation (for decimal precisions)
+        // = 998_998_000
+        let pre_swap_amount = 998_998_000;
+        suite.query_balance(creator.to_string(), "uusd".to_string(), |amt| {
+            assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
+        });
 
-        //         for event in result.unwrap().events {
-        //             println!("{:?}", event);
-        //             if event.ty == "wasm" {
-        //                 for attribute in event.attributes {
-        //                     match attribute.key.as_str() {
-        //                         "return_amount" => return_amount = attribute.value,
-        //                         "offer_amount" => offer_amount = attribute.value,
-        //                         _ => {}
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //         // assert_ne!(true,true);
-        //     });
+        suite.execute_swap_operations(
+            creator.clone(),
+            swap_operations,
+            None,
+            None,
+            None,
+            vec![coin(1000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        // ensure that the whale got swapped to an appropriate amount of uusd
+        // we swap 1000 whale for 998 uusd
+        let post_swap_amount = pre_swap_amount + 998;
+        suite.query_balance(creator.to_string(), "uusd".to_string(), |amt| {
+            assert_eq!(amt.unwrap().amount.u128(), post_swap_amount);
+        });
     }
 }
 

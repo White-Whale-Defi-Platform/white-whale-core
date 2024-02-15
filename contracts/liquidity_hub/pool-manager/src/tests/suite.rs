@@ -58,7 +58,7 @@ pub struct TestingSuite {
     app: App<BankKeeper, MockApiBech32>,
     pub senders: [Addr; 3],
     pub whale_lair_addr: Addr,
-    pub vault_manager_addr: Addr,
+    pub pool_manager_addr: Addr,
     pub cw20_tokens: Vec<Addr>,
 }
 
@@ -130,7 +130,7 @@ impl TestingSuite {
             app,
             senders: [sender_1, sender_2, sender_3],
             whale_lair_addr: Addr::unchecked(""),
-            vault_manager_addr: Addr::unchecked(""),
+            pool_manager_addr: Addr::unchecked(""),
             cw20_tokens: vec![],
         }
     }
@@ -156,14 +156,14 @@ impl TestingSuite {
             },
         };
 
-        let vault_manager_id = self.app.store_code(contract_pool_manager());
+        let pool_manager_id = self.app.store_code(contract_pool_manager());
 
         let creator = self.creator().clone();
 
-        self.vault_manager_addr = self
+        self.pool_manager_addr = self
             .app
             .instantiate_contract(
-                vault_manager_id,
+                pool_manager_id,
                 creator.clone(),
                 &msg,
                 &[],
@@ -309,7 +309,7 @@ impl TestingSuite {
         self.app
             .execute_contract(
                 sender,
-                self.vault_manager_addr.clone(),
+                self.pool_manager_addr.clone(),
                 &msg,
                 &[Coin {
                     denom: native_token_denom.to_string(),
@@ -335,7 +335,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -359,7 +359,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
         );
 
         self
@@ -389,32 +389,37 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
         );
 
         self
     }
 
-    // #[track_caller]
-    // pub(crate) fn execute_swap_operations(
-    //     &mut self,
-    //     sender: Addr,
-    //     operations: Vec<SwapOperation>,
-    //     minimum_receive: Option<Uint128>,
-    //     to: Option<String>,
-    //     max_spread: Option<Decimal>,
-    //     funds: Vec<Coin>,
-    //     result: impl Fn(Result<AppResponse, anyhow::Error>),
-    // ) -> &mut Self {
-    //     let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations { operations, minimum_receive, to, max_spread };
+    #[track_caller]
+    pub(crate) fn execute_swap_operations(
+        &mut self,
+        sender: Addr,
+        operations: Vec<SwapOperation>,
+        minimum_receive: Option<Uint128>,
+        to: Option<String>,
+        max_spread: Option<Decimal>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive,
+            to,
+            max_spread,
+        };
 
-    //     result(
-    //         self.app
-    //             .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
-    //     );
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
 
-    //     self
-    // }
+        self
+    }
 
     #[track_caller]
     pub(crate) fn create_pair(
@@ -438,7 +443,7 @@ impl TestingSuite {
 
         result(self.app.execute_contract(
             sender,
-            self.vault_manager_addr.clone(),
+            self.pool_manager_addr.clone(),
             &msg,
             &pair_creation_fee_funds,
         ));
@@ -461,7 +466,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -481,7 +486,7 @@ impl TestingSuite {
 
         // Send the cw20 amount with a message
         let msg = cw20::Cw20ExecuteMsg::Send {
-            contract: self.vault_manager_addr.to_string(),
+            contract: self.pool_manager_addr.to_string(),
             amount: amount,
             msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {
                 pair_identifier: pair_identifier,
@@ -506,7 +511,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let ownership_response: StdResult<cw_ownable::Ownership<String>> =
             self.app.wrap().query_wasm_smart(
-                &self.vault_manager_addr,
+                &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::Ownership {},
             );
 
@@ -529,12 +534,12 @@ impl TestingSuite {
     }
 
     pub(crate) fn query_pair_info(
-        &mut self,
+        &self,
         pair_identifier: String,
         result: impl Fn(StdResult<NPairInfo>),
-    ) -> &mut Self {
+    ) -> &Self {
         let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
-            &self.vault_manager_addr,
+            &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Pair {
                 pair_identifier: pair_identifier,
             },
@@ -553,7 +558,7 @@ impl TestingSuite {
         result: impl Fn(StdResult<SimulationResponse>),
     ) -> &mut Self {
         let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
-            &self.vault_manager_addr,
+            &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
                 ask_asset: Asset {
@@ -578,7 +583,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<ReverseSimulationResponse> =
             self.app.wrap().query_wasm_smart(
-                &self.vault_manager_addr,
+                &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
                     offer_asset: Asset {
                         amount: Uint128::zero(),
@@ -605,7 +610,7 @@ impl TestingSuite {
             .app
             .wrap()
             .query_wasm_smart(
-                &self.vault_manager_addr,
+                &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
@@ -645,7 +650,7 @@ impl TestingSuite {
             .app
             .wrap()
             .query_wasm_smart(
-                &self.vault_manager_addr,
+                &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::Pair {
                     pair_identifier: identifier,
                 },
