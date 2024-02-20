@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt::Formatter;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 use crate::epoch_manager::hooks::EpochChangedHookMsg;
@@ -23,10 +23,12 @@ pub struct InstantiateMsg {
     pub max_concurrent_incentives: u32,
     /// New incentives are allowed to start up to `current_epoch + start_epoch_buffer` into the future.
     pub max_incentive_epoch_buffer: u32,
-    /// The minimum amount of time that a user can bond their tokens for. In seconds.
-    pub min_unbonding_duration: u64,
-    /// The maximum amount of time that a user can bond their tokens for. In seconds.
-    pub max_unbonding_duration: u64,
+    /// The minimum amount of time that a user can lock their tokens for. In seconds.
+    pub min_unlocking_duration: u64,
+    /// The maximum amount of time that a user can lock their tokens for. In seconds.
+    pub max_unlocking_duration: u64,
+    /// The penalty for unlocking a position before the unlocking duration finishes. In percentage.
+    pub emergency_unlock_penalty: Decimal,
 }
 
 /// The execution messages
@@ -74,10 +76,12 @@ pub struct Config {
     pub max_concurrent_incentives: u32,
     /// The maximum amount of epochs in the future a new incentive is allowed to start in.
     pub max_incentive_epoch_buffer: u32,
-    /// The minimum amount of time that a user can bond their tokens for. In seconds.
-    pub min_unbonding_duration: u64,
-    /// The maximum amount of time that a user can bond their tokens for. In seconds.
-    pub max_unbonding_duration: u64,
+    /// The minimum amount of time that a user can lock their tokens for. In seconds.
+    pub min_unlocking_duration: u64,
+    /// The maximum amount of time that a user can lock their tokens for. In seconds.
+    pub max_unlocking_duration: u64,
+    /// The penalty for unlocking a position before the unlocking duration finishes. In percentage.
+    pub emergency_unlock_penalty: Decimal,
 }
 
 /// Parameters for creating incentive
@@ -96,7 +100,7 @@ pub struct IncentiveParams {
     /// The asset to be distributed in this incentive.
     pub incentive_asset: Asset,
     /// If set, it  will be used to identify the incentive.
-    pub incentive_indentifier: Option<String>,
+    pub incentive_identifier: Option<String>,
 }
 
 #[cw_serde]
@@ -120,35 +124,53 @@ pub enum PositionAction {
     /// Fills a position. If the position doesn't exist, it opens it. If it exists already,
     /// it expands it given the sender opened the original position and the params are correct.
     Fill {
-        /// The parameters for the position to fill.
-        params: PositionParams,
+        /// The identifier of the position.
+        identifier: Option<String>,
+        /// The asset to add to the position.
+        lp_asset: Asset,
+        /// The time it takes in seconds to unlock this position. This is used to identify the position to fill.
+        unlocking_duration: u64,
+        /// The receiver for the position.
+        /// If left empty, defaults to the message sender.
+        receiver: Option<String>,
     },
     /// Closes an existing position. The position stops earning incentive rewards.
     Close {
-        /// The unbonding duration of the position to close.
-        unbonding_duration: u64,
+        /// The identifier of the position.
+        identifier: String,
+        /// The asset to add to the position. If not set, the position will be closed in full. If not, it could be partially closed.
+        lp_asset: Option<Asset>,
+    },
+    /// Withdraws the LP tokens from a position after the position has been closed and the unlocking duration has passed.
+    Withdraw {
+        /// The identifier of the position.
+        identifier: String,
     },
 }
 
 /// Parameters for creating incentive
 #[cw_serde]
 pub struct PositionParams {
+    /// The identifier of the position.
+    pub position_identifier: Option<String>,
     /// The asset to add to the position.
     pub lp_asset: Asset,
-    /// The unbond completion timestamp to identify the position to add to. In seconds.
-    pub unbonding_duration: u64,
+    /// The time it takes in seconds to unlock this position. This is used to identify the position to fill.
+    pub unlocking_duration: u64,
     /// The receiver for the position.
     /// If left empty, defaults to the message sender.
     pub receiver: Option<String>,
+    /// The action to perform on the position, either Fill or Close.
+    pub position_action: PositionAction,
 }
 
 impl std::fmt::Display for PositionParams {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "lp_asset: {}, unbonding_duration: {}, receiver: {}",
+            "lp_asset: {}, unlocking_duration: {}, receiver: {}",
             self.lp_asset,
-            self.unbonding_duration,
+            self.unlocking_duration,
             self.receiver.as_ref().unwrap_or(&"".to_string())
         )
     }
@@ -210,8 +232,31 @@ pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
 /// Represents an LP position.
 #[cw_serde]
 pub struct Position {
+    /// The identifier of the position.
+    pub identifier: String,
     /// The amount of LP tokens that are put up to earn incentives.
     pub lp_asset: Asset,
-    /// Represents the amount of time in seconds the user must wait after unbonding for the LP tokens to be released.
-    pub unbonding_duration: u64,
+    /// Represents the amount of time in seconds the user must wait after unlocking for the LP tokens to be released.
+    pub unlocking_duration: u64,
+    /// If true, the position is open. If false, the position is closed.
+    pub open: bool,
+    /// The block height at which the position, after being closed, can be withdrawn.
+    pub expiring_at: Option<u64>,
+    /// The owner of the position.
+    pub receiver: Addr,
+}
+
+/// Represents an LP position that is being partially closed.
+#[cw_serde]
+pub struct PartialClosingPosition {
+    /// The amount of LP tokens that are being closed.
+    pub lp_asset: Asset,
+    /// The block height at which the position is completely closed and can be withdrawn.
+    pub expiring_at: u64,
+}
+
+#[cw_serde]
+pub struct RewardsResponse {
+    /// The rewards that is available to a user if they executed the `claim` function at this point.
+    pub rewards: Vec<Coin>,
 }

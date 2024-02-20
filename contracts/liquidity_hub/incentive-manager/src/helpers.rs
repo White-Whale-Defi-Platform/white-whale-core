@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Deps, Env, MessageInfo};
+use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo};
 
 use white_whale::incentive_manager::{
     Config, IncentiveParams, PositionParams, DEFAULT_INCENTIVE_DURATION,
@@ -204,21 +204,32 @@ pub(crate) fn validate_incentive_epochs(
 }
 
 //todo maybe move this to position helpers??
-/// Validates the `unbonding_duration` specified in the position params is within the range specified
+/// Validates the `unlocking_duration` specified in the position params is within the range specified
 /// in the config.
-pub(crate) fn validate_unbonding_duration(
+pub(crate) fn validate_unlocking_duration(
     config: &Config,
-    params: &PositionParams,
+    unlocking_duration: u64,
 ) -> Result<(), ContractError> {
-    if params.unbonding_duration < config.min_unbonding_duration
-        || params.unbonding_duration > config.max_unbonding_duration
+    if unlocking_duration < config.min_unlocking_duration
+        || unlocking_duration > config.max_unlocking_duration
     {
-        return Err(ContractError::InvalidUnbondingDuration {
-            min: config.min_unbonding_duration,
-            max: config.max_unbonding_duration,
-            specified: params.unbonding_duration,
+        return Err(ContractError::InvalidUnlockingDuration {
+            min: config.min_unlocking_duration,
+            max: config.max_unlocking_duration,
+            specified: unlocking_duration,
         });
     }
 
     Ok(())
+}
+
+/// Validates the emergency unlock penalty is within the allowed range (0-100%). Returns value it's validating, i.e. the penalty.
+pub(crate) fn validate_emergency_unlock_penalty(
+    emergency_unlock_penalty: Decimal,
+) -> Result<Decimal, ContractError> {
+    if emergency_unlock_penalty > Decimal::percent(100) {
+        return Err(ContractError::InvalidEmergencyUnlockPenalty);
+    }
+
+    Ok(emergency_unlock_penalty)
 }

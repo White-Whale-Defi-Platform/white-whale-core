@@ -13,7 +13,7 @@ pub(crate) fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
         .unwrap_or(vec![]);
 
     if open_positions.is_empty() {
-        return Err(ContractError::NoOpenPositions {});
+        return Err(ContractError::NoOpenPositions);
     }
 
     let config = CONFIG.load(deps.storage)?;

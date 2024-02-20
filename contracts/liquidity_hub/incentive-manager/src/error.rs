@@ -108,13 +108,19 @@ pub enum ContractError {
         current_version: Version,
     },
 
-    #[error("The sender doesn't have open positions to qualify for incentive rewards")]
+    #[error("The sender doesn't have open positions")]
     NoOpenPositions,
 
+    #[error("No position found with the given identifier: {identifier}")]
+    NoPositionFound { identifier: String },
+
+    #[error("The position has not expired yet")]
+    PositionNotExpired,
+
     #[error(
-        "Invalid unbonding duration of {specified} specified, must be between {min} and {max}"
+        "Invalid unlocking duration of {specified} specified, must be between {min} and {max}"
     )]
-    InvalidUnbondingDuration {
+    InvalidUnlockingDuration {
         /// The minimum amount of seconds that a user must bond for.
         min: u64,
         /// The maximum amount of seconds that a user can bond for.
@@ -139,8 +145,14 @@ pub enum ContractError {
         paid_amount: Uint128,
     },
 
-    #[error("Attempt to compute the weight of a duration of {unbonding_duration} which is outside the allowed bounds")]
-    InvalidWeight { unbonding_duration: u64 },
+    #[error("Attempt to compute the weight of a duration of {unlocking_duration} which is outside the allowed bounds")]
+    InvalidWeight { unlocking_duration: u64 },
+
+    #[error("The emergency unlock penalty provided is invalid")]
+    InvalidEmergencyUnlockPenalty,
+
+    #[error("There're pending rewards to be claimed before this action can be executed")]
+    PendingRewards,
 }
 
 impl From<semver::Error> for ContractError {

@@ -8,8 +8,10 @@ use white_whale::incentive_manager::{
 use white_whale::vault_manager::MigrateMsg;
 
 use crate::error::ContractError;
+use crate::helpers::validate_emergency_unlock_penalty;
+use crate::position::commands::{close_position, fill_position, withdraw_position};
 use crate::state::CONFIG;
-use crate::{incentive, manager, position};
+use crate::{incentive, manager};
 
 const CONTRACT_NAME: &str = "white-whale_incentive-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -28,10 +30,10 @@ pub fn instantiate(
         return Err(ContractError::UnspecifiedConcurrentIncentives);
     }
 
-    if msg.max_unbonding_duration < msg.min_unbonding_duration {
+    if msg.max_unlocking_duration < msg.min_unlocking_duration {
         return Err(ContractError::InvalidUnbondingRange {
-            min: msg.min_unbonding_duration,
-            max: msg.max_unbonding_duration,
+            min: msg.min_unlocking_duration,
+            max: msg.max_unlocking_duration,
         });
     }
 
@@ -41,8 +43,9 @@ pub fn instantiate(
         create_incentive_fee: msg.create_incentive_fee,
         max_concurrent_incentives: msg.max_concurrent_incentives,
         max_incentive_epoch_buffer: msg.max_incentive_epoch_buffer,
-        min_unbonding_duration: msg.min_unbonding_duration,
-        max_unbonding_duration: msg.max_unbonding_duration,
+        min_unlocking_duration: msg.min_unlocking_duration,
+        max_unlocking_duration: msg.max_unlocking_duration,
+        emergency_unlock_penalty: validate_emergency_unlock_penalty(msg.emergency_unlock_penalty)?,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -65,11 +68,15 @@ pub fn instantiate(
         ),
         (
             "min_unbonding_duration",
-            config.min_unbonding_duration.to_string(),
+            config.min_unlocking_duration.to_string(),
         ),
         (
             "max_unbonding_duration",
-            config.max_unbonding_duration.to_string(),
+            config.max_unlocking_duration.to_string(),
+        ),
+        (
+            "emergency_unlock_penalty",
+            config.emergency_unlock_penalty.to_string(),
         ),
     ]))
 }
@@ -99,11 +106,26 @@ pub fn execute(
         }
         ExecuteMsg::Claim() => incentive::commands::claim(deps, env, info),
         ExecuteMsg::ManagePosition { action } => match action {
-            PositionAction::Fill { params } => {
-                position::commands::fill_position(deps, env, info, params)
-            }
-            PositionAction::Close { unbonding_duration } => {
-                position::commands::close_position(deps, env, info, unbonding_duration)
+            PositionAction::Fill {
+                identifier,
+                lp_asset,
+                unlocking_duration,
+                receiver,
+            } => fill_position(
+                deps,
+                env,
+                info,
+                identifier,
+                lp_asset,
+                unlocking_duration,
+                receiver,
+            ),
+            PositionAction::Close {
+                identifier,
+                lp_asset,
+            } => close_position(deps, env, info, identifier, lp_asset),
+            PositionAction::Withdraw { identifier } => {
+                withdraw_position(deps, env, info, identifier)
             }
         },
     }

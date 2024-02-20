@@ -1,4 +1,5 @@
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
+use white_whale::epoch_manager::common::validate_epoch;
 
 use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale::incentive_manager::{Curve, Incentive, IncentiveParams};
@@ -9,6 +10,7 @@ use crate::helpers::{
 use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
     get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
+    LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -20,7 +22,7 @@ pub(crate) fn fill_incentive(
 ) -> Result<Response, ContractError> {
     // if an incentive_identifier was passed in the params, check if an incentive with such identifier
     // exists and if the sender is allow to refill it, otherwise create a new incentive
-    if let Some(incentive_indentifier) = params.clone().incentive_indentifier {
+    if let Some(incentive_indentifier) = params.clone().incentive_identifier {
         let incentive_result = get_incentive_by_identifier(deps.storage, &incentive_indentifier);
         match incentive_result {
             // the incentive exists, try to expand it
@@ -54,10 +56,11 @@ fn create_incentive(
         deps.as_ref(),
         config.epoch_manager_addr.clone().into_string(),
     )?;
+    validate_epoch(&current_epoch, env.block.time)?;
 
     let (expired_incentives, incentives): (Vec<_>, Vec<_>) = incentives
         .into_iter()
-        .partition(|incentive| incentive.is_expired(current_epoch));
+        .partition(|incentive| incentive.is_expired(current_epoch.id));
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -104,7 +107,7 @@ fn create_incentive(
     // assert epoch params are correctly set
     let (start_epoch, end_epoch) = validate_incentive_epochs(
         &params,
-        current_epoch,
+        current_epoch.id,
         u64::from(config.max_incentive_epoch_buffer),
     )?;
 
@@ -112,7 +115,7 @@ fn create_incentive(
     let incentive_id = INCENTIVE_COUNTER
         .update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1u64))?;
     let incentive_identifier = params
-        .incentive_indentifier
+        .incentive_identifier
         .unwrap_or(incentive_id.to_string());
 
     // make sure another incentive with the same identifier doesn't exist
@@ -165,7 +168,7 @@ pub(crate) fn close_incentive(
 
     let mut incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
 
-    if !(!incentive.is_expired(current_epoch)
+    if !(!incentive.is_expired(current_epoch.id)
         && (incentive.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?))
     {
         return Err(ContractError::Unauthorized {});
@@ -195,7 +198,7 @@ fn close_incentives(
             .incentive_asset
             .amount
             .saturating_sub(incentive.claimed_amount);
-
+        //TODO remake this into_msg since we are getting rid of the Asset struct in V2
         messages.push(incentive.incentive_asset.into_msg(incentive.owner)?);
     }
 
@@ -223,7 +226,7 @@ fn expand_incentive(
     ]))
 }
 
-/// EpochChanged hook implementation
+/// EpochChanged hook implementation. Updates the LP_WEIGHTS.
 
 pub(crate) fn on_epoch_changed(
     deps: DepsMut,
@@ -239,6 +242,10 @@ pub(crate) fn on_epoch_changed(
     if info.sender != config.epoch_manager_addr {
         return Err(ContractError::Unauthorized {});
     }
+    //
+    // LP_WEIGHTS_HISTORY.
+    //
+    // msg.current_epoch
 
     Ok(Response::default())
 }

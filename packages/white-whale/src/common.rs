@@ -25,11 +25,9 @@ pub fn update_ownership(
     info: MessageInfo,
     action: Action,
 ) -> Result<Response, OwnershipError> {
-    Ok(
-        cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(|ownership| {
-            Response::default()
-                .add_attribute("action", "update_ownership")
-                .add_attributes(ownership.into_attributes())
-        })?,
-    )
+    cw_ownable::update_ownership(deps, &env.block, &info.sender, action).map(|ownership| {
+        Response::default()
+            .add_attribute("action", "update_ownership")
+            .add_attributes(ownership.into_attributes())
+    })
 }
