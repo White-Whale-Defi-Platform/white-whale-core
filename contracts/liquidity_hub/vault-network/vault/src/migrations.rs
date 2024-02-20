@@ -69,54 +69,6 @@ pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
-#[cfg(not(feature = "injective"))]
-pub fn migrate_to_v130(deps: DepsMut) -> Result<(), StdError> {
-    #[cw_serde]
-    pub struct ConfigV120 {
-        /// The owner of the vault
-        pub owner: Addr,
-        /// The asset info the vault manages
-        pub asset_info: AssetInfo,
-        /// If flash-loans are enabled
-        pub flash_loan_enabled: bool,
-        /// If deposits are enabled
-        pub deposit_enabled: bool,
-        /// If withdrawals are enabled
-        pub withdraw_enabled: bool,
-        /// The address of the liquidity token
-        pub liquidity_token: Addr,
-        /// The address of the fee collector
-        pub fee_collector_addr: Addr,
-        /// The fees associated with this vault
-        pub fees: VaultFee,
-    }
-
-    pub const CONFIG_V120: Item<ConfigV120> = Item::new("config");
-    let config_v120 = CONFIG_V120.load(deps.storage)?;
-
-    // Migrate the liquidity_token to lp_asset, as it can now be a token or native coin
-    let config = Config {
-        owner: config_v120.owner,
-        asset_info: config_v120.asset_info,
-        flash_loan_enabled: config_v120.flash_loan_enabled,
-        deposit_enabled: config_v120.deposit_enabled,
-        withdraw_enabled: config_v120.withdraw_enabled,
-        lp_asset: AssetInfo::Token {
-            contract_addr: config_v120.liquidity_token.to_string(),
-        },
-        fee_collector_addr: config_v120.fee_collector_addr,
-        fees: VaultFee {
-            protocol_fee: config_v120.fees.protocol_fee,
-            flash_loan_fee: config_v120.fees.flash_loan_fee,
-            burn_fee: config_v120.fees.burn_fee,
-        },
-    };
-
-    CONFIG.save(deps.storage, &config)?;
-
-    Ok(())
-}
-
 #[cfg(feature = "injective")]
 pub fn migrate_to_v126(deps: DepsMut) -> Result<(), StdError> {
     #[cw_serde]
