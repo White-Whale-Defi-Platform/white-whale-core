@@ -16,12 +16,9 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub const POSITION_ID_COUNTER: Item<u64> = Item::new("position_id_counter");
 
 /// The positions that a user has. Positions can be open or closed.
-pub const POSITIONS: Map<&String, Position> = Map::new("positions");
-
-//todo maybe this will be needed?
-/// The key is a tuple of (user_address, lp_asset_info as bytes, expiration block).
-pub const POSITIONX: IndexedMap<String, Position, PositionIndexes> = IndexedMap::new(
-    "positionx",
+/// The key is the position identifier
+pub const POSITIONS: IndexedMap<&String, Position, PositionIndexes> = IndexedMap::new(
+    "positions",
     PositionIndexes {
         lp_asset: MultiIndex::new(
             |_pk, p| p.lp_asset.to_string(),
@@ -50,33 +47,11 @@ impl<'a> IndexList<Position> for PositionIndexes<'a> {
     }
 }
 
-/// The positions that are being closed (partially) that were part of an open position.
-/// For example, if a user had an open position of 10 LP with an unlocking period of a month, and then closes 3 LP of that position,
-/// this map will store the 3 LP position that is being closed, so the unlocking clock of a month starts ticking for those 3 LP tokens.
-/// The remaining 7 LP tokens will still be part of the original open position, stored in the POSITIONS map.
-/// The key is a tuple of (user_address, lp_asset_info as bytes, expiration block).
-pub const PARTIAL_CLOSING_POSITIONS: Map<(&Addr, &[u8], u64), PartialClosingPosition> =
-    Map::new("partial_closing_positions");
-
-/// All open positions that a user have. Open positions accumulate rewards, and a user can have
-/// multiple open positions active at once.
-pub const OPEN_POSITIONS: Map<&Addr, Vec<Position>> = Map::new("open_positions");
-
-/// All closed positions that users have. Closed positions don't accumulate rewards, and the
-/// underlying tokens are claimable after `unbonding_duration`.
-pub const CLOSED_POSITIONS: Map<&Addr, Vec<Position>> = Map::new("closed_positions");
-
 /// The last epoch an address claimed rewards
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch");
 
-/// The total weight (sum of all individual weights) of an LP asset
-pub const LP_WEIGHTS: Map<&[u8], Uint128> = Map::new("lp_weights");
-
 /// The history of total weight (sum of all individual weights) of an LP asset at a given epoch
 pub const LP_WEIGHTS_HISTORY: Map<(&[u8], EpochId), Uint128> = Map::new("lp_weights_history");
-
-/// The weights for individual accounts
-pub const ADDRESS_LP_WEIGHT: Map<(&Addr, &[u8]), Uint128> = Map::new("address_lp_weight");
 
 /// The address lp weight history, i.e. how much lp weight an address had at a given epoch
 pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
@@ -86,7 +61,7 @@ pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");
 
 /// Incentives map
-pub const INCENTIVES: IndexedMap<String, Incentive, IncentiveIndexes> = IndexedMap::new(
+pub const INCENTIVES: IndexedMap<&String, Incentive, IncentiveIndexes> = IndexedMap::new(
     "incentives",
     IncentiveIndexes {
         lp_asset: MultiIndex::new(
@@ -192,19 +167,33 @@ pub fn get_incentive_by_identifier(
     incentive_identifier: &String,
 ) -> Result<Incentive, ContractError> {
     INCENTIVES
-        .may_load(storage, incentive_identifier.clone())?
+        .may_load(storage, incentive_identifier)?
         .ok_or(ContractError::NonExistentIncentive {})
 }
 
-/// Gets the positions of the given receiver.
-pub fn get_expired_positions_by_receiver(
+/// Gets a position given its identifier. If the position is not found with the given identifier, it returns None.
+pub fn get_position(
     storage: &dyn Storage,
-    time: Timestamp,
+    identifier: Option<String>,
+) -> StdResult<Option<Position>> {
+    if let Some(identifier) = identifier {
+        // there is a position
+        POSITIONS.may_load(storage, &identifier)
+    } else {
+        // there is no position
+        Ok(None)
+    }
+}
+
+//todo think of the limit when claiming rewards
+/// Gets the positions of the given receiver.
+pub fn get_open_positions_by_receiver(
+    storage: &dyn Storage,
     receiver: String,
 ) -> StdResult<Vec<Position>> {
     let limit = MAX_LIMIT as usize;
 
-    POSITIONX
+    POSITIONS
         .idx
         .receiver
         .prefix(receiver)
@@ -214,13 +203,6 @@ pub fn get_expired_positions_by_receiver(
             let (_, position) = item?;
             position
         })
-        .filter(|position| {
-            if position.expiring_at.is_none() || position.open {
-                return false;
-            }
-
-            let expiring_at = position.expiring_at.unwrap();
-            expiring_at > time.seconds()
-        })
+        .filter(|position| position.open)
         .collect()
 }

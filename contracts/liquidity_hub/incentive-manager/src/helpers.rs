@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 
 use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo};
 
-use white_whale::incentive_manager::{
-    Config, IncentiveParams, PositionParams, DEFAULT_INCENTIVE_DURATION,
-};
+use white_whale::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
 use crate::ContractError;

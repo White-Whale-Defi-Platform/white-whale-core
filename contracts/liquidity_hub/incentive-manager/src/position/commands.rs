@@ -8,7 +8,8 @@ use crate::position::helpers::{
     calculate_weight, get_latest_address_weight, get_latest_lp_weight, validate_funds_sent,
 };
 use crate::state::{
-    ADDRESS_LP_WEIGHT_HISTORY, CONFIG, LP_WEIGHTS_HISTORY, POSITIONS, POSITION_ID_COUNTER,
+    get_position, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, LP_WEIGHTS_HISTORY, POSITIONS,
+    POSITION_ID_COUNTER,
 };
 use crate::ContractError;
 
@@ -52,13 +53,7 @@ pub(crate) fn fill_position(
         .unwrap_or_else(|| info.clone());
 
     // check if there's an existing open position with the given `identifier`
-    let position = if let Some(identifier) = identifier {
-        // there is a position
-        POSITIONS.may_load(deps.storage, &identifier)?
-    } else {
-        // there is no position
-        None
-    };
+    let position = get_position(deps.storage, identifier)?;
 
     if let Some(mut position) = position {
         // there is a position, fill it
@@ -124,8 +119,7 @@ pub(crate) fn close_position(
     //     }
     // }
 
-    let mut position = POSITIONS
-        .may_load(deps.storage, &identifier)?
+    let mut position = get_position(deps.storage, Some(identifier.clone()))?
         .ok_or(ContractError::NoPositionFound { identifier })?;
 
     if position.receiver != info.sender {
@@ -135,7 +129,7 @@ pub(crate) fn close_position(
     let mut attributes = vec![
         ("action", "close_position".to_string()),
         ("receiver", info.sender.to_string()),
-        ("identifier", identifier.clone().to_string()),
+        ("identifier", identifier.to_string()),
     ];
 
     // check if it's gonna be closed in full or partially
@@ -192,14 +186,9 @@ pub(crate) fn withdraw_position(
     info: MessageInfo,
     identifier: String,
 ) -> Result<Response, ContractError> {
-    // let expired_positions = get_expired_positions_by_receiver(
-    //     deps.storage,
-    //     env.block.time,
-    //     info.sender.clone().into_string(),
-    // )?;
+    cw_utils::nonpayable(&info)?;
 
-    let position = POSITIONS
-        .may_load(deps.storage, &identifier)?
+    let position = get_position(deps.storage, Some(identifier.clone()))?
         .ok_or(ContractError::NoPositionFound { identifier })?;
 
     // check if this position is eligible for withdrawal
@@ -213,7 +202,7 @@ pub(crate) fn withdraw_position(
 
     let withdraw_message = position.lp_asset.into_msg(position.receiver.clone())?;
 
-    POSITIONS.remove(deps.storage, &identifier);
+    POSITIONS.remove(deps.storage, &identifier)?;
 
     Ok(Response::default()
         .add_attributes(vec![
@@ -224,7 +213,7 @@ pub(crate) fn withdraw_position(
         .add_message(withdraw_message))
 }
 
-/// Updates the weights when managing a position
+/// Updates the weights when managing a position. Computes what the weight is gonna be in the next epoch.
 fn update_weights(
     deps: DepsMut,
     receiver: &MessageInfo,

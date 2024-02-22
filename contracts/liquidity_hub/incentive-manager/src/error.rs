@@ -102,6 +102,9 @@ pub enum ContractError {
     #[error("Incentive start timestamp is too far into the future")]
     IncentiveStartTooFar,
 
+    #[error("The incentive has already ended, can't be expanded")]
+    IncentiveAlreadyEnded {},
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,

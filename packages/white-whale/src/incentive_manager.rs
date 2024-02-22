@@ -148,34 +148,6 @@ pub enum PositionAction {
     },
 }
 
-/// Parameters for creating incentive
-#[cw_serde]
-pub struct PositionParams {
-    /// The identifier of the position.
-    pub position_identifier: Option<String>,
-    /// The asset to add to the position.
-    pub lp_asset: Asset,
-    /// The time it takes in seconds to unlock this position. This is used to identify the position to fill.
-    pub unlocking_duration: u64,
-    /// The receiver for the position.
-    /// If left empty, defaults to the message sender.
-    pub receiver: Option<String>,
-    /// The action to perform on the position, either Fill or Close.
-    pub position_action: PositionAction,
-}
-
-impl std::fmt::Display for PositionParams {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "lp_asset: {}, unlocking_duration: {}, receiver: {}",
-            self.lp_asset,
-            self.unlocking_duration,
-            self.receiver.as_ref().unwrap_or(&"".to_string())
-        )
-    }
-}
-
 // type for the epoch id
 pub type EpochId = u64;
 
@@ -244,15 +216,6 @@ pub struct Position {
     pub expiring_at: Option<u64>,
     /// The owner of the position.
     pub receiver: Addr,
-}
-
-/// Represents an LP position that is being partially closed.
-#[cw_serde]
-pub struct PartialClosingPosition {
-    /// The amount of LP tokens that are being closed.
-    pub lp_asset: Asset,
-    /// The block height at which the position is completely closed and can be withdrawn.
-    pub expiring_at: u64,
 }
 
 #[cw_serde]

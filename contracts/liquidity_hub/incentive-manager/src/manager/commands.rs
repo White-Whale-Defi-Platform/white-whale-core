@@ -1,4 +1,6 @@
-use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128};
+use cosmwasm_std::{
+    ensure, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128,
+};
 use white_whale::epoch_manager::common::validate_epoch;
 
 use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
@@ -191,7 +193,7 @@ fn close_incentives(
 
     for mut incentive in incentives {
         // remove the incentive from the storage
-        INCENTIVES.remove(storage, incentive.identifier.clone())?;
+        INCENTIVES.remove(storage, &incentive.identifier)?;
 
         // return the available asset, i.e. the amount that hasn't been claimed
         incentive.incentive_asset.amount = incentive
@@ -210,7 +212,7 @@ fn expand_incentive(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    incentive: Incentive,
+    mut incentive: Incentive,
     params: IncentiveParams,
 ) -> Result<Response, ContractError> {
     // only the incentive owner can expand it
@@ -218,7 +220,17 @@ fn expand_incentive(
         return Err(ContractError::Unauthorized {});
     }
 
-    // validate the params are correct and the incentive can actually be expanded
+    let config = CONFIG.load(deps.storage)?;
+    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+        deps.as_ref(),
+        config.epoch_manager_addr.clone().into_string(),
+    )?;
+
+    // check if the incentive has already ended, can't be expanded
+    ensure!(
+        incentive.end_epoch >= current_epoch.id,
+        ContractError::IncentiveAlreadyEnded {}
+    );
 
     Ok(Response::default().add_attributes(vec![
         ("action", "close_incentive".to_string()),
@@ -226,6 +238,7 @@ fn expand_incentive(
     ]))
 }
 
+//todo maybe this is not necessary
 /// EpochChanged hook implementation. Updates the LP_WEIGHTS.
 
 pub(crate) fn on_epoch_changed(

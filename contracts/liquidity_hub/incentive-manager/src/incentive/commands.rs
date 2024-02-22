@@ -1,6 +1,6 @@
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
 
-use crate::state::{CONFIG, OPEN_POSITIONS};
+use crate::state::{get_open_positions_by_receiver, CONFIG, POSITIONS};
 use crate::ContractError;
 
 /// Claims pending rewards for incentives where the user has LP
@@ -8,9 +8,8 @@ pub(crate) fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     cw_utils::nonpayable(&info)?;
 
     // check if the user has any open LP positions
-    let mut open_positions = OPEN_POSITIONS
-        .may_load(deps.storage, &info.sender.clone())?
-        .unwrap_or(vec![]);
+    let mut open_positions =
+        get_open_positions_by_receiver(deps.storage, info.sender.clone().into_string())?;
 
     if open_positions.is_empty() {
         return Err(ContractError::NoOpenPositions);

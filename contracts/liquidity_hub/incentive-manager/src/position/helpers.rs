@@ -7,7 +7,7 @@ use cw_utils::PaymentError;
 use white_whale::incentive_manager::{EpochId, PositionParams};
 use white_whale::pool_network::asset::{Asset, AssetInfo};
 
-use crate::state::{ADDRESS_LP_WEIGHT, ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
+use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
 use crate::ContractError;
 
 /// Validates that the message sender has sent the tokens to the contract.
