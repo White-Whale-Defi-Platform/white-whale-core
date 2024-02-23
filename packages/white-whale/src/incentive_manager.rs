@@ -145,6 +145,8 @@ pub enum PositionAction {
     Withdraw {
         /// The identifier of the position.
         identifier: String,
+        /// Whether to unlock the position in an emergency. If set to true, the position will be unlocked immediately, but with a penalty.
+        emergency_unlock: Option<bool>,
     },
 }
 

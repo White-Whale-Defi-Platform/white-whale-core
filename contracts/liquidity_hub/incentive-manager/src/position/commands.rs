@@ -185,22 +185,56 @@ pub(crate) fn withdraw_position(
     env: Env,
     info: MessageInfo,
     identifier: String,
+    emergency_unlock: Option<bool>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let position = get_position(deps.storage, Some(identifier.clone()))?
+    let mut position = get_position(deps.storage, Some(identifier.clone()))?
         .ok_or(ContractError::NoPositionFound { identifier })?;
 
-    // check if this position is eligible for withdrawal
-    if position.receiver != info.sender || position.open || position.expiring_at.is_none() {
+    if position.receiver != info.sender {
         return Err(ContractError::Unauthorized);
     }
 
-    if position.expiring_at.unwrap() > env.block.time.seconds() {
-        return Err(ContractError::PositionNotExpired);
+    let mut messages: Vec<CosmosMsg> = vec![];
+
+    // check if the emergency unlock is requested, will pull the whole position out whether it's open, closed or expired, paying the penalty
+    if emergency_unlock.is_some() && emergency_unlock.unwrap() {
+        let emergency_unlock_penalty = CONFIG.load(deps.storage)?.emergency_unlock_penalty;
+
+        let penalty_fee = position.lp_asset.amount * emergency_unlock_penalty;
+
+        let penalty = Asset {
+            info: position.lp_asset.info.clone(),
+            amount: penalty_fee,
+        };
+
+        let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
+
+        // send penalty to whale lair for distribution
+        messages.push(white_whale::whale_lair::fill_rewards_msg(
+            whale_lair_addr.into_string(),
+            vec![penalty],
+        )?);
+
+        // subtract the penalty from the original position
+        position.lp_asset.amount = position.lp_asset.amount.saturating_sub(penalty_fee);
+    } else {
+        // check if this position is eligible for withdrawal
+        if position.open || position.expiring_at.is_none() {
+            return Err(ContractError::Unauthorized);
+        }
+
+        if position.expiring_at.unwrap() < env.block.time.seconds() {
+            return Err(ContractError::PositionNotExpired);
+        }
     }
 
-    let withdraw_message = position.lp_asset.into_msg(position.receiver.clone())?;
+    // sanity check
+    if !position.lp_asset.amount.is_zero() {
+        // withdraw the remaining LP tokens
+        messages.push(position.lp_asset.into_msg(position.receiver.clone())?);
+    }
 
     POSITIONS.remove(deps.storage, &identifier)?;
 
@@ -210,7 +244,7 @@ pub(crate) fn withdraw_position(
             ("receiver", info.sender.to_string()),
             ("identifier", identifier.clone().to_string()),
         ])
-        .add_message(withdraw_message))
+        .add_messages(messages))
 }
 
 /// Updates the weights when managing a position. Computes what the weight is gonna be in the next epoch.

@@ -124,9 +124,10 @@ pub fn execute(
                 identifier,
                 lp_asset,
             } => close_position(deps, env, info, identifier, lp_asset),
-            PositionAction::Withdraw { identifier } => {
-                withdraw_position(deps, env, info, identifier)
-            }
+            PositionAction::Withdraw {
+                identifier,
+                emergency_unlock,
+            } => withdraw_position(deps, env, info, identifier, emergency_unlock),
         },
     }
 }
