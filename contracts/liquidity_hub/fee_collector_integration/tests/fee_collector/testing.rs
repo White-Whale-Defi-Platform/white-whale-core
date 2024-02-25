@@ -1,13 +1,13 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_json, Addr, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version, ContractVersion};
+use fee_collector::{
+    contract::{execute, instantiate, migrate, query},
+    ContractError,
+};
 use std::env;
-
-use crate::contract::{execute, instantiate, migrate, query};
-use white_whale_std::pool_network::mock_querier::mock_dependencies;
-
-use crate::ContractError;
 use white_whale_std::fee_collector::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
 
 pub fn mock_instantiation(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = InstantiateMsg {};

@@ -27,13 +27,14 @@ use white_whale_std::vault_network::vault_factory::ExecuteMsg;
 use white_whale_std::whale_lair::BondingWeightResponse;
 use white_whale_std::{pool_network, vault_network};
 
-use crate::tests::common_integration::{
+use fee_collector::ContractError;
+
+use crate::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_fee_distributor_code,
     store_pair_code, store_pool_factory_code, store_pool_router_code, store_token_code,
     store_trio_code, store_vault_code, store_vault_factory_code, store_whale_lair_code,
 };
-use crate::ContractError;
 
 #[test]
 fn collect_all_factories_cw20_fees_successfully() {
@@ -2065,7 +2066,7 @@ fn collect_fees_for_vault() {
         .instantiate_contract(
             dummy_flash_loan_id,
             creator.clone().sender,
-            &crate::tests::dummy_contract::InstantiateMsg {},
+            &crate::dummy_contract::InstantiateMsg {},
             &[],
             "dummy flash-loan",
             None,
@@ -2403,7 +2404,7 @@ fn aggregate_fees_for_vault() {
         .instantiate_contract(
             dummy_flash_loan_id,
             creator.clone().sender,
-            &crate::tests::dummy_contract::InstantiateMsg {},
+            &crate::dummy_contract::InstantiateMsg {},
             &[],
             "dummy flash-loan",
             None,

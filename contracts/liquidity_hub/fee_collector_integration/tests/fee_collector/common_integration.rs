@@ -2,7 +2,7 @@ use cosmwasm_std::testing::mock_info;
 use cosmwasm_std::{Addr, Coin, MessageInfo, Uint128};
 use cw_multi_test::{App, AppBuilder, BankKeeper, ContractWrapper, Executor};
 
-use crate::contract::{execute, instantiate, migrate, query, reply};
+use fee_collector::contract::{execute, instantiate, migrate, query, reply};
 
 use super::dummy_contract::create_dummy_flash_loan_contract;
 
