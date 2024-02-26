@@ -47,7 +47,7 @@ fn proper_initialization() {
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
     assert_eq!("addr0000".to_string(), config_res.owner);
@@ -109,7 +109,7 @@ fn update_config() {
 
     // it worked, let's query the state
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(123u64, config_res.token_code_id);
     assert_eq!(321u64, config_res.pair_code_id);
     assert_eq!("addr0001".to_string(), config_res.owner);
@@ -132,7 +132,7 @@ fn update_config() {
 
     // it worked, let's query the state
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(200u64, config_res.token_code_id);
     assert_eq!(100u64, config_res.pair_code_id);
     assert_eq!(300u64, config_res.trio_code_id);
@@ -1226,7 +1226,7 @@ fn reply_test() {
     )
     .unwrap();
 
-    let pair_res: PairInfo = from_json(&query_res).unwrap();
+    let pair_res: PairInfo = from_json(query_res).unwrap();
     assert_eq!(
         pair_res,
         PairInfo {
@@ -1270,7 +1270,7 @@ fn normal_add_allow_native_token() {
         },
     )
     .unwrap();
-    let res: NativeTokenDecimalsResponse = from_json(&res).unwrap();
+    let res: NativeTokenDecimalsResponse = from_json(res).unwrap();
     assert_eq!(6u8, res.decimals)
 }
 
@@ -1317,7 +1317,7 @@ fn append_add_allow_native_token_with_already_exist_token() {
         },
     )
     .unwrap();
-    let res: NativeTokenDecimalsResponse = from_json(&res).unwrap();
+    let res: NativeTokenDecimalsResponse = from_json(res).unwrap();
     assert_eq!(6u8, res.decimals);
 
     let msg = ExecuteMsg::AddNativeTokenDecimals {
@@ -1335,7 +1335,7 @@ fn append_add_allow_native_token_with_already_exist_token() {
         },
     )
     .unwrap();
-    let res: NativeTokenDecimalsResponse = from_json(&res).unwrap();
+    let res: NativeTokenDecimalsResponse = from_json(res).unwrap();
     assert_eq!(7u8, res.decimals)
 }
 

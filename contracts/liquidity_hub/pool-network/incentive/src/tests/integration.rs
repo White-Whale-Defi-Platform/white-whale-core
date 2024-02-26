@@ -401,11 +401,11 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(past_epoch.clone()),
+            Some(past_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -425,12 +425,12 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            Some(future_future_epoch.clone()),
-            Some(future_epoch.clone()),
+            Some(future_future_epoch),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -457,7 +457,7 @@ fn try_open_flows_with_wrong_epochs() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -476,11 +476,11 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(future_epoch.clone()),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -536,7 +536,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(0u128),
             },
@@ -560,7 +560,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -583,7 +583,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -606,7 +606,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -629,7 +629,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -747,7 +747,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(500u128),
             },
@@ -771,7 +771,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -794,7 +794,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -820,7 +820,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -846,7 +846,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -943,7 +943,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .query_funds(
             carol.clone(),
             AssetInfo::NativeToken {
-                denom: "uwhale".clone().to_string(),
+                denom: "uwhale".to_string(),
             },
             |result| {
                 *carol_original_uwhale_funds.borrow_mut() = result;
@@ -958,7 +958,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".clone().to_string(),
+                    denom: "ampWHALE".to_string(),
                 },
                 amount: Uint128::new(1_000u128),
             },
@@ -975,7 +975,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
         .query_funds(
             carol.clone(),
             AssetInfo::NativeToken {
-                denom: "uwhale".clone().to_string(),
+                denom: "uwhale".to_string(),
             },
             |result| {
                 // the current balance should be the original minus the fee only, which is 1_000uwhale
@@ -1900,7 +1900,7 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },
@@ -1918,7 +1918,7 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(11_000u128),
             },
@@ -2122,7 +2122,7 @@ fn close_native_token_flows() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(5_000u128),
             },
@@ -3860,8 +3860,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone() + 4,
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration + 4,
             None,
             vec![],
             |result| {
@@ -3879,8 +3879,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone(),
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4152,8 +4152,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .open_incentive_position(
             bob.clone(),
             incentive_addr.clone().into_inner(),
-            bob_position_2.amount.clone(),
-            bob_position_2.unbonding_duration.clone(),
+            bob_position_2.amount,
+            bob_position_2.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4233,7 +4233,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     .flow_asset
                     .amount;
                 let claimed = flow_response.clone().unwrap().flow.unwrap().claimed_amount;
-                let expected_claimed = total_rewards.clone();
+                let expected_claimed = total_rewards;
 
                 assert!(total_rewards > claimed);
                 assert!(expected_claimed >= claimed);
@@ -4879,7 +4879,7 @@ fn open_expand_flow_with_native_token() {
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
-                    denom: "uwhale".clone().to_string(),
+                    denom: "uwhale".to_string(),
                 },
                 amount: Uint128::new(2_000u128),
             },

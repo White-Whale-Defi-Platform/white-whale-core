@@ -417,7 +417,7 @@ fn deposit_withdraw() {
         )
         .query_vault(FilterVaultBy::Identifier("0".to_string()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
 
             assert_eq!(
@@ -438,7 +438,7 @@ fn deposit_withdraw() {
             limit: None,
         }), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
 
             assert_eq!(
@@ -453,7 +453,7 @@ fn deposit_withdraw() {
         })
         .query_vault(FilterVaultBy::LpAsset(vault_lp_addr.clone().into_inner()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
 
             assert_eq!(
@@ -480,7 +480,7 @@ fn deposit_withdraw() {
         });
 
     let vault_manager = suite.vault_manager_addr.clone();
-    let random_cw20_token = suite.cw20_tokens.get(0).unwrap().clone();
+    let random_cw20_token = suite.cw20_tokens.first().unwrap().clone();
 
     suite
         .query_balance(
@@ -917,10 +917,8 @@ pub fn successful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &vec![
-                coin(1_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string()),
-            ],
+            &[coin(1_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -942,10 +940,8 @@ pub fn successful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &vec![
-                coin(2_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string()),
-            ],
+            &[coin(2_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -978,7 +974,7 @@ pub fn successful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,
@@ -1068,7 +1064,7 @@ pub fn successful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,
@@ -1107,7 +1103,7 @@ pub fn unsuccessful_flashloan() {
 
     suite.instantiate_with_cw20_lp_token().create_cw20_token();
 
-    let cw20_token = suite.cw20_tokens.get(0).unwrap().clone();
+    let cw20_token = suite.cw20_tokens.first().unwrap().clone();
     let vault_manager = suite.vault_manager_addr.clone();
     // create some vaults
 
@@ -1311,10 +1307,8 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &vec![
-                coin(1_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string()),
-            ],
+            &[coin(1_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -1336,10 +1330,8 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &vec![
-                coin(2_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string()),
-            ],
+            &[coin(2_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -1372,7 +1364,7 @@ pub fn unsuccessful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,

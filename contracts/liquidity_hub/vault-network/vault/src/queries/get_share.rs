@@ -113,7 +113,7 @@ mod test {
             .unwrap();
 
         let res: Uint128 = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 env,
                 white_whale_std::vault_network::vault::QueryMsg::Share {
@@ -184,7 +184,7 @@ mod test {
             .unwrap();
 
         let res: Uint128 = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 env,
                 white_whale_std::vault_network::vault::QueryMsg::Share {

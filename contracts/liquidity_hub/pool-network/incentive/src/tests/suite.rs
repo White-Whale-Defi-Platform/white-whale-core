@@ -57,7 +57,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -351,7 +351,7 @@ impl TestingSuite {
             sender,
             self.incentive_factory_addr.clone(),
             &msg,
-            &vec![],
+            &[],
         ));
 
         self
@@ -397,7 +397,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+                .execute_contract(sender, incentive_addr, &msg, &[]),
         );
 
         self
@@ -440,7 +440,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+                .execute_contract(sender, incentive_addr, &msg, &[]),
         );
 
         self
@@ -480,7 +480,7 @@ impl TestingSuite {
         println!("-------------- claiming {}", sender);
         result(
             self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+                .execute_contract(sender, incentive_addr, &msg, &[]),
         );
 
         self
@@ -495,7 +495,7 @@ impl TestingSuite {
         let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Withdraw {};
         result(
             self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
+                .execute_contract(sender, incentive_addr, &msg, &[]),
         );
 
         self
@@ -514,7 +514,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
 
@@ -542,7 +542,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
         }
@@ -561,7 +561,7 @@ impl TestingSuite {
             self.senders[0].clone(),
             incentive_addr.clone(),
             &msg,
-            &vec![],
+            &[],
         ));
 
         self
@@ -652,7 +652,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let global_weight_response: StdResult<GlobalWeightResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
+                incentive_addr,
                 &white_whale_std::pool_network::incentive::QueryMsg::GlobalWeight { epoch_id },
             );
 
@@ -669,7 +669,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let current_epoch_rewards_share: StdResult<RewardsShareResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
+                incentive_addr,
                 &white_whale_std::pool_network::incentive::QueryMsg::CurrentEpochRewardsShare {
                     address: address.to_string(),
                 },

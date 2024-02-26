@@ -83,7 +83,7 @@ mod tests {
 
         // check query
         let config: Config =
-            from_json(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config.owner, Addr::unchecked("other_acc"));
 
         // check storage
@@ -118,7 +118,7 @@ mod tests {
 
         // check query
         let config: Config =
-            from_json(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config.fee_collector_addr, Addr::unchecked("other_acc"));
 
         // check storage
@@ -160,7 +160,7 @@ mod tests {
         };
 
         let config: Config =
-            from_json(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config, desired_config);
 
         // check storage
@@ -202,7 +202,7 @@ mod tests {
         };
 
         let config: Config =
-            from_json(&query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), env, QueryMsg::Config {}).unwrap()).unwrap();
         assert_eq!(config, desired_config);
 
         // check storage

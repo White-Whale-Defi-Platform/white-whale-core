@@ -237,9 +237,9 @@ fn test_initialization_invalid_fees() {
 #[test]
 fn test_max_spread() {
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
@@ -248,38 +248,38 @@ fn test_max_spread() {
     // same example as above but using 6 and 18 decimal places
     assert_max_spread(
         Some(Decimal::from_ratio(
-            1200_000_000u128,
+            1_200_000_000_u128,
             1_000_000_000_000_000_000u128,
         )),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999_900_000_000_000u128),
         Uint128::zero(),
     )
     .unwrap_err();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         None, // defaults to 0.5%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(995_000u128), // all good
         Uint128::zero(),
     )
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         None, // defaults to 0.1%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_000u128), // fails
         Uint128::zero(),
     )
     .unwrap_err();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(990_000u128),
         Uint128::zero(),
     )
@@ -288,12 +288,12 @@ fn test_max_spread() {
     // same example as above but using 6 and 18 decimal place
     assert_max_spread(
         Some(Decimal::from_ratio(
-            1200_000_000u128,
+            1_200_000_000_u128,
             1_000_000_000_000_000_000u128,
         )),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
-        Uint128::from(990_000__000_000_000_000u128),
+        Uint128::from(1_200_000_000_u128),
+        Uint128::from(990_000_000_000_000_000_u128),
         Uint128::zero(),
     )
     .unwrap();
@@ -343,18 +343,18 @@ fn test_max_spread() {
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(60)), // this will default to 50%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(60)), // this will default to 50%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
@@ -521,7 +521,7 @@ fn test_update_config_successful() {
     instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     let config: Config =
-        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for original config
     assert_eq!(config.owner, Addr::unchecked("addr0000"));
@@ -572,7 +572,7 @@ fn test_update_config_successful() {
     execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     let config: Config =
-        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for new config
     assert_eq!(config.owner, Addr::unchecked("new_admin"));

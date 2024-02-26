@@ -1,11 +1,11 @@
 use crate::ContractError;
-use white_whale_std::pool_manager::NPairInfo;
-use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, QueryMsg};
+
+
 // use crate::tests::suite::SuiteBuilder;
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
+
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
-use cw20::BalanceResponse;
-use cw_multi_test::{App, Contract, ContractWrapper, Executor};
+
+use cw_multi_test::{Contract};
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 use white_whale_std::pool_network::pair::PoolFee;
@@ -114,8 +114,8 @@ fn deposit_and_withdraw_sanity_check() {
         coin(1_000_000_001u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
+    let _other = suite.senders[1].clone();
+    let _unauthorized = suite.senders[2].clone();
     // Asset infos with uwhale and uluna
 
     let asset_infos = vec![
@@ -210,11 +210,11 @@ fn deposit_and_withdraw_cw20() {
         coin(1_000_000_001u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
+    let _other = suite.senders[1].clone();
+    let _unauthorized = suite.senders[2].clone();
     // Asset infos with uwhale and cw20
 
-    let cw20_code_id = suite.create_cw20_token();
+    let _cw20_code_id = suite.create_cw20_token();
 
     let asset_infos = vec![
         AssetInfo::NativeToken {
@@ -345,11 +345,11 @@ mod pair_creation_failures {
             coin(1_000_000_001u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
-        let other = suite.senders[1].clone();
-        let unauthorized = suite.senders[2].clone();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and cw20
 
-        let cw20_code_id = suite.create_cw20_token();
+        let _cw20_code_id = suite.create_cw20_token();
 
         let asset_infos = vec![
             AssetInfo::NativeToken {
@@ -504,10 +504,10 @@ mod router {
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -698,10 +698,10 @@ mod swapping {
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -922,10 +922,10 @@ mod swapping {
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         let fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -1129,8 +1129,8 @@ mod swapping {
             coin(1_000_000_000_001u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
-        let other = suite.senders[1].clone();
-        let unauthorized = suite.senders[2].clone();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
         let asset_infos = vec![

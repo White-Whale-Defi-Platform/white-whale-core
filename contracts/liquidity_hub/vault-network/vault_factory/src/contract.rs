@@ -93,6 +93,15 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> StdResult<Resp
     Ok(Response::default())
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => get_config(deps),
+        QueryMsg::Vault { asset_info } => get_vault(deps, asset_info),
+        QueryMsg::Vaults { start_after, limit } => get_vaults(deps, start_after, limit),
+    }
+}
+
 #[cfg(test)]
 mod test {
     use white_whale_std::vault_network::vault_factory::MigrateMsg;
@@ -114,14 +123,5 @@ mod test {
             Err(VaultFactoryError::MigrateInvalidVersion { .. }) => (),
             _ => panic!("should return VaultFactoryError::MigrateInvalidVersion"),
         }
-    }
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => get_config(deps),
-        QueryMsg::Vault { asset_info } => get_vault(deps, asset_info),
-        QueryMsg::Vaults { start_after, limit } => get_vaults(deps, start_after, limit),
     }
 }
