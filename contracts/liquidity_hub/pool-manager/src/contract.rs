@@ -94,21 +94,12 @@ pub fn execute(
             to,
             pair_identifier,
         } => {
-            // check if the swap feature is enabled
-            let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
-            if !feature_toggle.swaps_enabled {
-                return Err(ContractError::OperationDisabled("swap".to_string()));
-            }
-
-            if !offer_asset.is_native_token() {
-                return Err(ContractError::Unauthorized {});
-            }
-
             let to_addr = if let Some(to_addr) = to {
                 Some(deps.api.addr_validate(&to_addr)?)
             } else {
                 None
             };
+
             swap::commands::swap(
                 deps,
                 env,
@@ -166,7 +157,6 @@ pub fn execute(
             let api = deps.api;
             router::commands::execute_swap_operations(
                 deps,
-                env,
                 info,
                 operations,
                 minimum_receive,

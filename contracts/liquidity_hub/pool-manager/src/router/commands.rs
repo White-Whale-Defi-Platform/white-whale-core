@@ -8,7 +8,7 @@ use white_whale_std::{
     pool_network::asset::{Asset, AssetInfo},
 };
 
-use crate::ContractError;
+use crate::{swap::perform_swap::perform_swap, ContractError};
 
 /// Checks that an arbitrary amount of [`SwapOperation`]s will not result in
 /// multiple output tokens.
@@ -40,7 +40,6 @@ fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> 
 
 pub fn execute_swap_operations(
     mut deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
@@ -98,42 +97,20 @@ pub fn execute_swap_operations(
         match operation {
             SwapOperation::WhaleSwap {
                 token_in_info,
-                token_out_info,
                 pool_identifier,
+                ..
             } => match &token_in_info {
-                AssetInfo::NativeToken { denom } => {
-                    let swap_response = crate::contract::execute(
+                AssetInfo::NativeToken { .. } => {
+                    let swap_result = perform_swap(
                         deps.branch(),
-                        env.clone(),
-                        MessageInfo {
-                            sender: env.contract.address.clone(),
-                            funds: vec![coin(previous_swap_output.amount.u128(), denom)],
-                        },
-                        ExecuteMsg::Swap {
-                            offer_asset: previous_swap_output.clone(),
-                            ask_asset: token_out_info.clone(),
-                            belief_price: None,
-                            max_spread,
-                            to: None,
-                            pair_identifier: pool_identifier,
-                        },
+                        previous_swap_output,
+                        pool_identifier,
+                        None,
+                        max_spread,
                     )?;
 
-                    // we have to find the swap amount
-                    let swap_amount = swap_response
-                        .attributes
-                        .iter()
-                        .find(|attr| attr.key == "return_amount")
-                        .map(|amt| Uint128::from_str(&amt.value))
-                        .ok_or(StdError::generic_err(
-                            "Failed to retrieve returned swap amount",
-                        ))??;
-
                     // update the previous swap output
-                    previous_swap_output = Asset {
-                        amount: swap_amount,
-                        info: token_out_info,
-                    }
+                    previous_swap_output = swap_result.return_asset;
                 }
                 AssetInfo::Token { .. } => {
                     return Err(StdError::generic_err("cw20 token swaps are disabled"))?
