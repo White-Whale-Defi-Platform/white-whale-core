@@ -42,7 +42,7 @@ pub fn get_pair_by_identifier(
     vault_identifier: String,
 ) -> Result<NPairInfo, ContractError> {
     PAIRS
-        .may_load(deps.storage, vault_identifier.clone())?
+        .may_load(deps.storage, vault_identifier)?
         .ok_or(ContractError::ExistingPair {})
 }
 

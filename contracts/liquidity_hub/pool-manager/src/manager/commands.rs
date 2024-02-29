@@ -58,6 +58,7 @@ pub const LP_SYMBOL: &str = "uLP";
 ///     AssetInfo::NativeToken { denom: "uatom".into() },
 ///     AssetInfo::NativeToken { denom: "uscrt".into() },
 /// ];
+/// #[cfg(not(feature = "osmosis"))]
 /// let pool_fees = PoolFee {
 ///     protocol_fee: Fee {
 ///         share: Decimal::percent(5u64),
@@ -66,6 +67,22 @@ pub const LP_SYMBOL: &str = "uLP";
 ///         share: Decimal::percent(7u64),
 ///     },
 ///     burn_fee: Fee {
+///         share: Decimal::zero(),
+///     },
+/// };
+///
+/// #[cfg(feature = "osmosis")]
+/// let pool_fees = PoolFee {
+///     protocol_fee: Fee {
+///         share: Decimal::percent(5u64),
+///     },
+///     swap_fee: Fee {
+///         share: Decimal::percent(7u64),
+///     },
+///     burn_fee: Fee {
+///         share: Decimal::zero(),
+///     },
+///     osmosis_fee: Fee {
 ///         share: Decimal::zero(),
 ///     },
 /// };
@@ -177,6 +194,7 @@ pub fn create_pair(
         })
         .collect::<Vec<_>>();
 
+    #[allow(unreachable_code)]
     let pair_creation_msg = if token_factory_lp {
         #[cfg(all(
             not(feature = "token_factory"),

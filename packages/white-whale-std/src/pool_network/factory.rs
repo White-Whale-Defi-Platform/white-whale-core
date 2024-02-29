@@ -26,6 +26,7 @@ pub enum ExecuteMsg {
         pair_code_id: Option<u64>,
         trio_code_id: Option<u64>,
     },
+    #[cfg(not(feature = "osmosis"))]
     /// Updates a pair config
     UpdatePairConfig {
         pair_addr: String,
@@ -33,6 +34,16 @@ pub enum ExecuteMsg {
         fee_collector_addr: Option<String>,
         pool_fees: Option<PoolFee>,
         feature_toggle: Option<FeatureToggle>,
+    },
+    #[cfg(feature = "osmosis")]
+    /// Updates a pair config
+    UpdatePairConfig {
+        pair_addr: String,
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        pool_fees: Option<PoolFee>,
+        feature_toggle: Option<FeatureToggle>,
+        cosmwasm_pool_interface: Option<String>,
     },
     /// Updates a trio config
     UpdateTrioConfig {

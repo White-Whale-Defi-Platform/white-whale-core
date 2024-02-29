@@ -115,6 +115,24 @@ pub fn execute(
         ExecuteMsg::MigrateTrio { contract, code_id } => {
             commands::execute_migrate_trio(deps, contract, code_id)
         }
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdatePairConfig {
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        } => commands::update_pair_config(
+            deps,
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        ),
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdatePairConfig {
             pair_addr,
             owner,
@@ -128,6 +146,7 @@ pub fn execute(
             fee_collector_addr,
             pool_fees,
             feature_toggle,
+            None,
         ),
         ExecuteMsg::UpdateTrioConfig {
             trio_addr,

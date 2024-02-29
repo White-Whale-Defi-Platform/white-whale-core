@@ -1,8 +1,8 @@
 use cosmwasm_std::{DepsMut, Response};
 
 use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::traits::AssetReference;
 
-use crate::asset::AssetReference;
 use crate::err::{StdResult, VaultFactoryError};
 use crate::state::VAULTS;
 
