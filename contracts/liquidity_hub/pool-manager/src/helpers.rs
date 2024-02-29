@@ -5,10 +5,6 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::pair::PoolFee;
 
 use crate::error::ContractError;
@@ -176,8 +172,10 @@ pub fn compute_swap(
             // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
             #[cfg(not(feature = "osmosis"))]
             {
-                let return_amount: Uint256 =
-                    return_amount - swap_fee_amount - protocol_fee_amount - burn_fee_amount;
+                let return_amount: Uint256 = return_amount
+                    .checked_sub(swap_fee_amount)?
+                    .checked_sub(protocol_fee_amount)?
+                    .checked_sub(burn_fee_amount)?;
 
                 Ok(SwapComputation {
                     return_amount: return_amount
@@ -203,10 +201,10 @@ pub fn compute_swap(
                 let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
 
                 let return_amount: Uint256 = return_amount
-                    - swap_fee_amount
-                    - protocol_fee_amount
-                    - burn_fee_amount
-                    - osmosis_fee_amount;
+                    .checked_sub(swap_fee_amount)?
+                    .checked_sub(protocol_fee_amount)?
+                    .checked_sub(burn_fee_amount)?
+                    .checked_sub(osmosis_fee_amount)?;
 
                 Ok(SwapComputation {
                     return_amount: return_amount
@@ -345,13 +343,15 @@ pub fn compute_offer_amount(
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - fees)) - offer_pool
     let fees = {
-        let base_fees = pool_fees.swap_fee.to_decimal_256()
-            + pool_fees.protocol_fee.to_decimal_256()
-            + pool_fees.burn_fee.to_decimal_256();
+        let base_fees = pool_fees
+            .swap_fee
+            .to_decimal_256()
+            .checked_add(pool_fees.protocol_fee.to_decimal_256())?
+            .checked_add(pool_fees.burn_fee.to_decimal_256())?;
 
         #[cfg(feature = "osmosis")]
         {
-            base_fees + pool_fees.osmosis_fee.to_decimal_256()
+            base_fees.checked_add(pool_fees.osmosis_fee.to_decimal_256())?
         }
 
         #[cfg(not(feature = "osmosis"))]
@@ -365,8 +365,11 @@ pub fn compute_offer_amount(
 
     let cp: Uint256 = offer_pool * ask_pool;
     let offer_amount: Uint256 = Uint256::one()
-        .multiply_ratio(cp, ask_pool - ask_amount * inv_one_minus_commission)
-        - offer_pool;
+        .multiply_ratio(
+            cp,
+            ask_pool.checked_sub(ask_amount * inv_one_minus_commission)?,
+        )
+        .checked_sub(offer_pool)?;
 
     let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
     let before_spread_deduction: Uint256 =
