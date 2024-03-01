@@ -1,7 +1,7 @@
 use crate::fee::Fee;
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, StdError, StdResult, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use std::fmt::{Display, Formatter};
 
@@ -15,7 +15,7 @@ pub struct InstantiateMsg {
     /// The whale lair address, where protocol fees are distributed
     pub whale_lair_addr: String,
     /// The fee to create a vault
-    pub vault_creation_fee: Asset,
+    pub vault_creation_fee: Coin,
 }
 
 /// Configuration for the contract (manager)
@@ -26,7 +26,7 @@ pub struct Config {
     /// The whale lair contract address
     pub whale_lair_addr: Addr,
     /// The fee to create a new vault
-    pub vault_creation_fee: Asset,
+    pub vault_creation_fee: Coin,
     /// If flash-loans are enabled
     pub flash_loan_enabled: bool,
     /// If deposits are enabled
@@ -63,9 +63,9 @@ impl Display for LpTokenType {
 #[cw_serde]
 pub struct Vault {
     /// The asset the vault manages
-    pub asset: Asset,
+    pub asset: Coin,
     /// The LP asset
-    pub lp_asset: AssetInfo,
+    pub lp_denom: String,
     /// The fees associated with the vault
     pub fees: VaultFee,
     /// Identifier associated with the vault
@@ -114,7 +114,7 @@ pub enum ExecuteMsg {
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
     /// for and the fees
     CreateVault {
-        asset_info: AssetInfo,
+        asset_denom: String,
         fees: VaultFee,
         vault_identifier: Option<String>,
     },
@@ -122,24 +122,20 @@ pub enum ExecuteMsg {
     /// If a field is not specified, it will not be modified.
     UpdateConfig {
         whale_lair_addr: Option<String>,
-        vault_creation_fee: Option<Asset>,
+        vault_creation_fee: Option<Coin>,
         cw20_lp_code_id: Option<u64>,
         flash_loan_enabled: Option<bool>,
         deposit_enabled: Option<bool>,
         withdraw_enabled: Option<bool>,
     },
     /// Deposits a given asset into the vault manager.
-    Deposit {
-        asset: Asset,
-        vault_identifier: String,
-    },
+    Deposit { vault_identifier: String },
     /// Withdraws from the vault manager. Used when the LP token is a token manager token.
     Withdraw,
-    Receive(Cw20ReceiveMsg),
     /// Retrieves the desired `asset` and runs the `payload`, paying the required amount back to the vault
     /// after running the messages in the payload, and returning the profit to the sender.
     FlashLoan {
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
         payload: Vec<CosmosMsg>,
     },
@@ -170,7 +166,7 @@ pub enum QueryMsg {
     },
     /// Retrieves the share of the assets stored in the vault that a given `lp_share` is entitled to.
     #[returns(ShareResponse)]
-    Share { lp_share: Asset },
+    Share { lp_share: Coin },
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
     #[returns(PaybackAssetResponse)]
     PaybackAmount {
@@ -190,12 +186,12 @@ pub struct VaultsResponse {
 pub enum FilterVaultBy {
     Asset(AssetQueryParams),
     Identifier(String),
-    LpAsset(AssetInfo),
+    LpAsset(String),
 }
 
 #[cw_serde]
 pub struct AssetQueryParams {
-    pub asset_info: AssetInfo,
+    pub asset_denom: String,
     pub start_after: Option<Vec<u8>>,
     pub limit: Option<u32>,
 }
@@ -205,24 +201,10 @@ pub struct AssetQueryParams {
 pub enum CallbackMsg {
     AfterFlashloan {
         old_asset_balance: Uint128,
-        loan_asset: Asset,
+        loan_asset: Coin,
         vault_identifier: String,
         sender: Addr,
     },
-}
-
-/// Cw20 hook messages
-#[cw_serde]
-pub enum Cw20HookMsg {
-    /// Withdraws a given amount from the vault.
-    Withdraw,
-}
-
-#[cw_serde]
-pub struct Cw20ReceiveMsg {
-    pub sender: String,
-    pub amount: Uint128,
-    pub msg: Binary,
 }
 
 /// Response for the PaybackAmount query. Contains the amount that must be paid back to the contract
@@ -243,5 +225,5 @@ pub struct PaybackAssetResponse {
 #[cw_serde]
 pub struct ShareResponse {
     /// The amount of assets that the given `lp_share` is entitled to.
-    pub share: Asset,
+    pub share: Coin,
 }

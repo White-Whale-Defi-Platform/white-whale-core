@@ -431,7 +431,7 @@ fn deposit_withdraw() {
             );
         })
         .query_vault(FilterVaultBy::Asset(AssetQueryParams {
-            asset_info: AssetInfo::NativeToken {
+            asset_denom: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
             },
             start_after: None,

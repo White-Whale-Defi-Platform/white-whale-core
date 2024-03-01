@@ -15,15 +15,14 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
+default = ["osmosis_token_factory"]
 injective = ["token_factory"]
 osmosis = ["osmosis_token_factory"]
 token_factory = []
 osmosis_token_factory = [
   "token_factory",
 ] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
+backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 cosmwasm-std.workspace = true

@@ -1,9 +1,8 @@
-use std::string::ToString;
+use std::clone::Clone;
 
 use cosmwasm_std::{Deps, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
 
-use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_std::vault_manager::{Config, Vault};
 
 use crate::ContractError;
@@ -13,7 +12,7 @@ pub const ONGOING_FLASHLOAN: Item<bool> = Item::new("ongoing_flashloan");
 
 // Stores the balances of all assets in the contract before a flashloan, to compare after the
 // messages are executed
-pub const TEMP_BALANCES: Map<&[u8], Uint128> = Map::new("temp_balances");
+pub const TEMP_BALANCES: Map<String, Uint128> = Map::new("temp_balances");
 
 // Contract's config
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -24,23 +23,23 @@ pub const VAULT_COUNTER: Item<u64> = Item::new("vault_count");
 pub const VAULTS: IndexedMap<String, Vault, VaultIndexes> = IndexedMap::new(
     "vaults",
     VaultIndexes {
-        lp_asset: UniqueIndex::new(|v| v.lp_asset.to_string(), "vaults__lp_asset"),
-        asset_info: MultiIndex::new(
-            |_pk, v| v.asset.info.to_string(),
+        lp_denom: UniqueIndex::new(|v| v.lp_denom.clone(), "vaults__lp_denom"),
+        asset_denom: MultiIndex::new(
+            |_pk, v| v.asset.denom.clone(),
             "vaults",
-            "vaults__asset_info",
+            "vaults__asset_denom",
         ),
     },
 );
 
 pub struct VaultIndexes<'a> {
-    pub lp_asset: UniqueIndex<'a, String, Vault, String>,
-    pub asset_info: MultiIndex<'a, String, Vault, String>,
+    pub lp_denom: UniqueIndex<'a, String, Vault, String>,
+    pub asset_denom: MultiIndex<'a, String, Vault, String>,
 }
 
 impl<'a> IndexList<Vault> for VaultIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Vault>> + '_> {
-        let v: Vec<&dyn Index<Vault>> = vec![&self.lp_asset, &self.asset_info];
+        let v: Vec<&dyn Index<Vault>> = vec![&self.lp_denom, &self.asset_denom];
         Box::new(v.into_iter())
     }
 }
@@ -78,10 +77,10 @@ fn calc_range_start(start_after: Option<Vec<u8>>) -> Option<Vec<u8>> {
     })
 }
 
-/// Gets vaults given an [AssetInfo]
-pub fn get_vaults_by_asset_info(
+/// Gets vaults given a asset denom
+pub fn get_vaults_by_asset_denom(
     storage: &dyn Storage,
-    asset_info: AssetInfo,
+    asset_info: String,
     start_after: Option<Vec<u8>>,
     limit: Option<u32>,
 ) -> StdResult<Vec<Vault>> {
@@ -90,8 +89,8 @@ pub fn get_vaults_by_asset_info(
 
     VAULTS
         .idx
-        .asset_info
-        .prefix(asset_info.to_string())
+        .asset_denom
+        .prefix(asset_info)
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
@@ -102,12 +101,12 @@ pub fn get_vaults_by_asset_info(
         .collect()
 }
 
-/// Gets the vault given an lp asset as [AssetInfo]
-pub fn get_vault_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<Vault, ContractError> {
+/// Gets the vault given an lp denom
+pub fn get_vault_by_lp(deps: &Deps, lp_denom: &String) -> Result<Vault, ContractError> {
     Ok(VAULTS
         .idx
-        .lp_asset
-        .item(deps.storage, lp_asset.to_string())?
+        .lp_denom
+        .item(deps.storage, lp_denom.to_owned())?
         .map_or_else(|| Err(ContractError::NonExistentVault {}), Ok)?
         .1)
 }

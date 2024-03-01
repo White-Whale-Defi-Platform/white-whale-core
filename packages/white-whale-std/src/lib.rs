@@ -9,6 +9,13 @@ pub mod migrate_guards;
 pub mod pool_manager;
 pub mod pool_network;
 pub mod token_factory;
+
+pub mod coin;
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
 pub mod tokenfactory;
 pub mod traits;
 pub mod vault_manager;

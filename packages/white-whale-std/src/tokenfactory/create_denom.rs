@@ -16,12 +16,6 @@ use cosmwasm_std::{Addr, CosmosMsg};
 
 use crate::tokenfactory::common::EncodeMessage;
 
-/// Returns the MsgCreateDenom Stargate message
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
 pub fn create_denom(sender: Addr, subdenom: String) -> CosmosMsg {
     let message_data = MsgCreateDenom { subdenom };
     create_msg(sender, message_data, MsgTypes::CreateDenom.as_str())
