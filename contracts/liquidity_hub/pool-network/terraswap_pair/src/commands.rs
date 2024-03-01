@@ -470,8 +470,11 @@ pub fn swap(
     }
 
     #[cfg(feature = "osmosis")]
-    if !swap_computation.osmosis_fee_amount.is_zero() {
-        // send osmosis fee to the Community Pool
+    if !swap_computation.osmosis_fee_amount.is_zero()
+        && info.sender != config.cosmwasm_pool_interface
+    {
+        // send osmosis fee to the Community Pool if the swap was not initiated by the osmosis pool manager via the
+        // cosmwasm pool interface
         let denom = match ask_pool.info.clone() {
             AssetInfo::Token { .. } => return Err(StdError::generic_err("Not supported").into()),
             AssetInfo::NativeToken { denom } => denom,
@@ -542,6 +545,7 @@ pub fn swap(
     ]))
 }
 
+#[allow(unused_variables)]
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
 pub fn update_config(
     deps: DepsMut,
@@ -550,6 +554,7 @@ pub fn update_config(
     fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
+    cosmwasm_pool_interface: Option<String>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
     if deps.api.addr_validate(info.sender.as_str())? != config.owner {
@@ -573,6 +578,12 @@ pub fn update_config(
 
     if let Some(fee_collector_addr) = fee_collector_addr {
         config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
+    }
+
+    #[cfg(feature = "osmosis")]
+    if let Some(cosmwasm_pool_interface) = cosmwasm_pool_interface {
+        config.cosmwasm_pool_interface =
+            deps.api.addr_validate(cosmwasm_pool_interface.as_str())?;
     }
 
     CONFIG.save(deps.storage, &config)?;

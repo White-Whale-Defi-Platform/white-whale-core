@@ -3,7 +3,7 @@ set -e
 
 deployment_script_dir=$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 project_root_path=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-tx_delay=8
+tx_delay=14
 
 # Displays tool usage
 function display_usage() {
@@ -18,6 +18,11 @@ function display_usage() {
 function migrate_fee_collector() {
 	migrate_msg='{}'
 	migrate_artifact $project_root_path/artifacts/fee_collector.wasm $migrate_msg
+}
+
+function migrate_fee_distributor() {
+	migrate_msg='{}'
+	migrate_artifact $project_root_path/artifacts/fee_distributor.wasm $migrate_msg
 }
 
 function migrate_pool_factory() {
@@ -62,6 +67,11 @@ function migrate_vault_router() {
 	migrate_artifact $project_root_path/artifacts/vault_router.wasm "$migrate_msg"
 }
 
+function migrate_whale_lair() {
+	migrate_msg='{}'
+	migrate_artifact $project_root_path/artifacts/whale_lair.wasm "$migrate_msg"
+}
+
 function migrate_vaults() {
 	echo -e "\nMigrating Vaults on $CHAIN_ID..."
 
@@ -86,6 +96,7 @@ function migrate_vaults() {
 
 function migrate_pool_network() {
 	migrate_fee_collector
+	migrate_fee_distributor
 	migrate_pool_factory
 	migrate_pool_router
 	migrate_pools
@@ -150,6 +161,9 @@ function migrate() {
 	fee-collector)
 		migrate_fee_collector
 		;;
+	fee-distributor)
+		migrate_fee_distributor
+		;;
 	pool-factory)
 		migrate_pool_factory
 		;;
@@ -167,6 +181,9 @@ function migrate() {
 		;;
 	vault-router)
 		migrate_vault_router
+		;;
+	whale-lair)
+		migrate_whale_lair
 		;;
 	*) # migrate all
 		migrate_liquidity_hub

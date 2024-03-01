@@ -528,10 +528,15 @@ fn test_update_config_successful() {
     assert!(config.feature_toggle.swaps_enabled);
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::zero());
     #[cfg(feature = "osmosis")]
-    assert_eq!(
-        config.pool_fees.osmosis_fee.share,
-        Decimal::from_ratio(1u128, 1000u128)
-    );
+    {
+        assert_eq!(
+            config.pool_fees.osmosis_fee.share,
+            Decimal::from_ratio(1u128, 1000u128)
+        );
+
+        // pool interface not set by default
+        assert_eq!(config.cosmwasm_pool_interface, Addr::unchecked(""));
+    }
 
     #[cfg(not(feature = "osmosis"))]
     let pool_fees = PoolFee {
@@ -562,11 +567,21 @@ fn test_update_config_successful() {
         },
     };
 
+    #[cfg(not(feature = "osmosis"))]
     let update_config_message = UpdateConfig {
         owner: Some("new_admin".to_string()),
         fee_collector_addr: Some("new_collector".to_string()),
         pool_fees: Some(pool_fees),
         feature_toggle: None,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let update_config_message = UpdateConfig {
+        owner: Some("new_admin".to_string()),
+        fee_collector_addr: Some("new_collector".to_string()),
+        pool_fees: Some(pool_fees),
+        feature_toggle: None,
+        cosmwasm_pool_interface: Some("new_interface".to_string()),
     };
 
     execute(deps.as_mut(), env, info, update_config_message).unwrap();
@@ -579,7 +594,13 @@ fn test_update_config_successful() {
     assert_eq!(config.fee_collector_addr, Addr::unchecked("new_collector"));
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::percent(3u64));
     #[cfg(feature = "osmosis")]
-    assert_eq!(config.pool_fees.osmosis_fee.share, Decimal::percent(5u64));
+    {
+        assert_eq!(config.pool_fees.osmosis_fee.share, Decimal::percent(5u64));
+        assert_eq!(
+            config.cosmwasm_pool_interface,
+            Addr::unchecked("new_interface")
+        );
+    }
 }
 
 #[test]

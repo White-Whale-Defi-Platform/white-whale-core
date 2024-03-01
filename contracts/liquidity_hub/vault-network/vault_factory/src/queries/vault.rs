@@ -1,10 +1,11 @@
 use cosmwasm_std::{to_json_binary, Binary, Deps};
 
 use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::traits::AssetReference;
 use white_whale_std::vault_network::vault_factory::{VaultInfo, VaultsResponse};
 
 use crate::state::read_vaults;
-use crate::{asset::AssetReference, err::StdResult, state::VAULTS};
+use crate::{err::StdResult, state::VAULTS};
 
 pub fn get_vault(deps: Deps, asset_info: AssetInfo) -> StdResult<Binary> {
     let vault_option = VAULTS.may_load(deps.storage, asset_info.get_reference())?;

@@ -9,6 +9,7 @@ enum Protocol {
 
 impl Protocol {
     #![allow(dead_code)]
+    #[allow(unreachable_code)]
     fn from_features() -> Self {
         #[cfg(feature = "injective")]
         {

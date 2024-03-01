@@ -1,5 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+#[cfg(feature = "osmosis")]
+use cosmwasm_std::Addr;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
@@ -60,6 +62,7 @@ pub fn instantiate(
     // check the fees are valid
     msg.pool_fees.is_valid()?;
 
+    #[cfg(not(feature = "osmosis"))]
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
@@ -69,6 +72,19 @@ pub fn instantiate(
             deposits_enabled: true,
             swaps_enabled: true,
         },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let config = Config {
+        owner: deps.api.addr_validate(info.sender.as_str())?,
+        fee_collector_addr: deps.api.addr_validate(msg.fee_collector_addr.as_str())?,
+        pool_fees: msg.pool_fees.clone(),
+        feature_toggle: FeatureToggle {
+            withdrawals_enabled: true,
+            deposits_enabled: true,
+            swaps_enabled: true,
+        },
+        cosmwasm_pool_interface: Addr::unchecked(""),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -157,6 +173,23 @@ pub fn execute(
                 to_addr,
             )
         }
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdateConfig {
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        ),
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdateConfig {
             owner,
             fee_collector_addr,
@@ -169,6 +202,7 @@ pub fn execute(
             fee_collector_addr,
             pool_fees,
             feature_toggle,
+            None,
         ),
         ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps),
     }
@@ -228,10 +262,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale_std::migrate_guards::check_contract_name;
-
-    #[cfg(not(feature = "osmosis"))]
     use crate::migrations;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
@@ -259,6 +291,10 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
     #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
     if storage_version == Version::parse("1.2.0")? {
         migrations::migrate_to_v130(deps.branch())?;
+    }
+    #[cfg(feature = "osmosis")]
+    if storage_version < Version::parse("1.3.4")? {
+        migrations::migrate_to_v135(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

@@ -94,6 +94,10 @@ pub enum ExecuteMsg {
     AddSwapRoutes {
         swap_routes: Vec<SwapRoute>,
     },
+    /// Removes swap routes from the router.
+    RemoveSwapRoutes {
+        swap_routes: Vec<SwapRoute>,
+    },
 }
 
 #[cw_serde]
