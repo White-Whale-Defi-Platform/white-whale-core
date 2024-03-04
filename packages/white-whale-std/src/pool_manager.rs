@@ -175,6 +175,11 @@ pub enum ExecuteMsg {
 
     /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
     ExecuteSwapOperations {
+        /// The operations that should be performed in sequence.
+        ///
+        /// The amount in each swap will be the output from the previous swap.
+        ///
+        /// The first swap will use whatever funds are sent in the [`MessageInfo`].
         operations: Vec<SwapOperation>,
         /// The minimum amount of the output (i.e., final swap operation token) required for the message to succeed.
         minimum_receive: Option<Uint128>,
@@ -182,6 +187,9 @@ pub enum ExecuteMsg {
         ///
         /// If left unspecified, tokens will be sent to the sender of the message.
         to: Option<String>,
+        /// The (optional) maximum spread to incur when performing any swap.
+        ///
+        /// If left unspecified, there is no limit to what spread the transaction can incur.
         max_spread: Option<Decimal>,
     },
     // /// Swap the offer to ask token. This message can only be called internally by the router contract.
