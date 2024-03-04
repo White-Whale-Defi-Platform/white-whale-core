@@ -8,7 +8,7 @@ use white_whale_std::{
     pool_network::asset::{Asset, AssetInfo},
 };
 
-use crate::{swap::perform_swap::perform_swap, ContractError};
+use crate::{state::MANAGER_CONFIG, swap::perform_swap::perform_swap, ContractError};
 
 /// Checks that an arbitrary amount of [`SwapOperation`]s will not result in
 /// multiple output tokens.
@@ -46,6 +46,12 @@ pub fn execute_swap_operations(
     to: Option<Addr>,
     max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
+    let config = MANAGER_CONFIG.load(deps.storage)?;
+    // check if the swap feature is enabled
+    if !config.feature_toggle.swaps_enabled {
+        return Err(ContractError::OperationDisabled("swap".to_string()));
+    }
+
     // ensure that there was at least one operation
     // and retrieve the output token info
     let target_asset_info = operations
