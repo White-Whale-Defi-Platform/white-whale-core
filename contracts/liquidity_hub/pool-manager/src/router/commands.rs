@@ -1,10 +1,10 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, Uint128,
+    coin, Addr, BankMsg, Decimal, DepsMut, MessageInfo, Response, StdError, Uint128,
 };
 use white_whale_std::{
-    pool_manager::{ExecuteMsg, SwapOperation},
+    pool_manager::SwapOperation,
     pool_network::asset::{Asset, AssetInfo},
 };
 
@@ -79,15 +79,7 @@ pub fn execute_swap_operations(
             })
         }
     };
-
-    assert_operations(&operations)?;
-
-    // we return the output to the sender if no alternative recipient was specified.
-    let to = to.unwrap_or(info.sender);
-
-    // perform each swap operation
-    // we start off with the initial funds
-    let mut previous_swap_output = Asset {
+    let offer_asset = Asset {
         amount: info
             .funds
             .iter()
@@ -98,6 +90,18 @@ pub fn execute_swap_operations(
             .amount,
         info: offer_asset_info.to_owned(),
     };
+
+    assert_operations(&operations)?;
+
+    // we return the output to the sender if no alternative recipient was specified.
+    let to = to.unwrap_or(info.sender.clone());
+
+    // perform each swap operation
+    // we start off with the initial funds
+    let mut previous_swap_output = offer_asset.clone();
+
+    // stores messages for sending fees after the swaps
+    let mut fee_messages = vec![];
 
     for operation in operations {
         match operation {
@@ -117,6 +121,25 @@ pub fn execute_swap_operations(
 
                     // update the previous swap output
                     previous_swap_output = swap_result.return_asset;
+
+                    // add the fee messages
+                    if !swap_result.burn_fee_asset.amount.is_zero() {
+                        fee_messages.push(swap_result.burn_fee_asset.into_burn_msg()?);
+                    }
+                    if !swap_result.protocol_fee_asset.amount.is_zero() {
+                        fee_messages.push(
+                            swap_result
+                                .protocol_fee_asset
+                                .into_msg(config.fee_collector_addr.clone())?,
+                        );
+                    }
+                    if !swap_result.swap_fee_asset.amount.is_zero() {
+                        fee_messages.push(
+                            swap_result
+                                .swap_fee_asset
+                                .into_msg(config.fee_collector_addr.clone())?,
+                        );
+                    }
                 }
                 AssetInfo::Token { .. } => {
                     return Err(StdError::generic_err("cw20 token swaps are disabled"))?
@@ -137,8 +160,19 @@ pub fn execute_swap_operations(
     }
 
     // send output to recipient
-    Ok(Response::new().add_message(BankMsg::Send {
-        to_address: to.to_string(),
-        amount: vec![coin(receiver_balance.u128(), target_denom)],
-    }))
+    Ok(Response::new()
+        .add_message(BankMsg::Send {
+            to_address: to.to_string(),
+            amount: vec![coin(receiver_balance.u128(), target_denom)],
+        })
+        .add_messages(fee_messages)
+        .add_attributes(vec![
+            ("action", "execute_swap_operations"),
+            ("sender", &info.sender.as_str()),
+            ("receiver", to.as_str()),
+            ("offer_info", &offer_asset.info.to_string()),
+            ("offer_amount", &offer_asset.amount.to_string()),
+            ("return_info", &target_asset_info.to_string()),
+            ("return_amount", &receiver_balance.to_string()),
+        ]))
 }
