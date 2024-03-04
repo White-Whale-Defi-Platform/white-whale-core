@@ -236,7 +236,7 @@ pub fn withdraw_liquidity(
     // check if the withdraw feature is enabled
     if !config.feature_toggle.withdrawals_enabled {
         return Err(ContractError::OperationDisabled(
-            "provide_liquidity".to_string(),
+            "withdraw_liquidity".to_string(),
         ));
     }
     // Get the pair by the pair_identifier
