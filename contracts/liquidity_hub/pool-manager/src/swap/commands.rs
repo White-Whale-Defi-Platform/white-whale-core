@@ -42,10 +42,6 @@ pub fn swap(
     }
 
     let config = MANAGER_CONFIG.load(deps.storage)?;
-    // check if the deposit feature is enabled
-    if !config.feature_toggle.deposits_enabled {
-        return Err(ContractError::OperationDisabled("swap".to_string()));
-    }
     // check if the swap feature is enabled
     if !config.feature_toggle.swaps_enabled {
         return Err(ContractError::OperationDisabled("swap".to_string()));
