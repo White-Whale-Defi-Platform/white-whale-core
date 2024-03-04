@@ -233,7 +233,7 @@ pub fn withdraw_liquidity(
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
-    // check if the deposit feature is enabled
+    // check if the withdraw feature is enabled
     if !config.feature_toggle.withdrawals_enabled {
         return Err(ContractError::OperationDisabled(
             "provide_liquidity".to_string(),
