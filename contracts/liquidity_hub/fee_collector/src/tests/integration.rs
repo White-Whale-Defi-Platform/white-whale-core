@@ -3770,7 +3770,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     }
     println!(" -> weights after each bonding 1000 whale: {:?}", weights);
 
-    // Create EPOCH 1 with 100 whale
+    // Create EPOCH 1 with over 1000 whale
     // whale -> native
     app.execute_contract(
         creator.sender.clone(),
@@ -3780,15 +3780,15 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(2_010u128),
+                amount: Uint128::new(21_100u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(2_010u128),
+            amount: Uint128::new(21_100u128),
         }],
     )
     .unwrap();
@@ -3834,14 +3834,14 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     assert_eq!(epoch_1.epoch.id, Uint64::one());
     assert_eq!(epoch_1.epoch.available, epoch_1.epoch.total);
     assert!(epoch_1.epoch.claimed.is_empty());
-    // Verify  expiring_epoch_res.epoch.available, has 100 whale as an Asset
+    // Verify  expiring_epoch_res.epoch.available, has 1_012 whale as an Asset
     assert_eq!(
         epoch_1.epoch.available,
         vec![Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
             },
-            amount: Uint128::new(100u128),
+            amount: Uint128::new(1_012u128),
         }]
     );
 
@@ -3872,15 +3872,15 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(2_050u128),
+                amount: Uint128::new(25_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(2_050u128),
+            amount: Uint128::new(25_000u128),
         }],
     )
     .unwrap();
@@ -3931,10 +3931,11 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
         .query_balance(creator.sender.clone(), "uwhale")
         .unwrap()
         .amount;
+
     // Verify amount
     assert_eq!(
         uwhale_balance_after_claiming,
-        uwhale_balance_before_claiming + Uint128::new(50u128)
+        uwhale_balance_before_claiming + Uint128::new(506u128)
     );
     user_1_claims.push(uwhale_balance_after_claiming - uwhale_balance_before_claiming);
 
@@ -4125,7 +4126,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // // Verify amount
     assert_eq!(
         uwhale_balance_after_claiming - uwhale_balance_before_claiming,
-        Uint128::new(60u128)
+        Uint128::new(660u128)
     );
     user_1_claims.push(uwhale_balance_after_claiming - uwhale_balance_before_claiming);
 
@@ -4288,12 +4289,17 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // It should be 50 + 60 + 80 = 190
     // and for user two it should be the remaining 50 + remaining 40 + remaining 20 = 110
     // TODO: Currently its 50 + 60 + 60 = 170 and 50 + 40 + 40 = 130
+    // TODO the values here were adjusted after adding the restriction of the minimum aggregable/collectable amount.
+    //the numbers in the comments might not reflect the ones used in the test
 
     // Print claims
     println!("User 1 claims: {:?}", user_1_claims);
     println!("User 2 claims: {:?}", user_2_claims);
-    assert_eq!(user_1_claims.iter().sum::<Uint128>(), Uint128::new(170u128));
-    assert_eq!(user_2_claims.iter().sum::<Uint128>(), Uint128::new(130u128));
+    assert_eq!(
+        user_1_claims.iter().sum::<Uint128>(),
+        Uint128::new(1_166u128)
+    );
+    assert_eq!(user_2_claims.iter().sum::<Uint128>(), Uint128::new(946u128));
 
     assert_ne!(user_2_whale_received, user_1_whale_received);
 
@@ -8825,7 +8831,7 @@ fn collect_distribute_with_unbonders() {
 
     // Create some epochs, for the first one all good but for the second we will have an unbonding
 
-    // Create EPOCH 1 with 100 whale
+    // Create EPOCH 1 with over 1000 whale
     // whale -> native
     app.execute_contract(
         creator.sender.clone(),
@@ -8835,15 +8841,15 @@ fn collect_distribute_with_unbonders() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(2_010u128),
+                amount: Uint128::new(21_100u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(2_010u128),
+            amount: Uint128::new(21_100u128),
         }],
     )
     .unwrap();
@@ -8879,14 +8885,14 @@ fn collect_distribute_with_unbonders() {
         expiring_epoch_res.epoch.total
     );
     assert!(expiring_epoch_res.epoch.claimed.is_empty());
-    // Verify  expiring_epoch_res.epoch.available, has 100 whale as an Asset
+    // Verify  expiring_epoch_res.epoch.available, has 1_012 whale as an Asset
     assert_eq!(
         expiring_epoch_res.epoch.available,
         vec![Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
             },
-            amount: Uint128::new(100u128),
+            amount: Uint128::new(1_012u128),
         }]
     );
 
@@ -8917,15 +8923,15 @@ fn collect_distribute_with_unbonders() {
                 info: AssetInfo::NativeToken {
                     denom: "usdc".to_string(),
                 },
-                amount: Uint128::new(2_050u128),
+                amount: Uint128::new(25_000u128),
             },
             belief_price: None,
-            max_spread: None,
+            max_spread: Some(Decimal::percent(30u64)),
             to: None,
         },
         &[Coin {
             denom: "usdc".to_string(),
-            amount: Uint128::new(2_050u128),
+            amount: Uint128::new(25_000u128),
         }],
     )
     .unwrap();
@@ -9222,8 +9228,8 @@ fn collect_distribute_with_unbonders() {
     // No claims happened
     // User 2 should have received more than user 1 as user 1 halfed their bond and thus their weight
     // User 1 should not get an even share anymore considering all else stays the same
-    assert_eq!(user_2_whale_received, Uint128::new(133u128));
-    assert_eq!(user_1_whale_received, Uint128::new(66u128));
+    assert_eq!(user_2_whale_received, Uint128::new(704u128));
+    assert_eq!(user_1_whale_received, Uint128::new(352u128));
 
     assert_ne!(user_2_whale_received, user_1_whale_received);
 }

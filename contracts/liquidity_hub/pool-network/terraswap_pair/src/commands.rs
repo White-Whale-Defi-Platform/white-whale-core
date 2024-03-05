@@ -38,6 +38,8 @@ use crate::state::{
     CONFIG, PAIR_INFO,
 };
 
+const MINIMUM_COLLECTABLE_BALANCE: Uint128 = Uint128::new(1_000u128);
+
 /// Receives cw20 tokens. Used to swap and withdraw from the pool.
 /// If the Cw20HookMsg is Swap, the user must call IncreaseAllowance on the cw20 token first to allow
 /// the contract to spend the tokens and perform the swap operation.
@@ -614,13 +616,13 @@ pub fn collect_protocol_fees(deps: DepsMut) -> Result<Response, ContractError> {
 
     let mut messages: Vec<CosmosMsg> = Vec::new();
     for protocol_fee in protocol_fees {
-        // prevents trying to send 0 coins, which errors
-        if protocol_fee.amount != Uint128::zero() {
+        // prevents sending protocol fees if the amount is less than the minimum collectable balance
+        if protocol_fee.amount > MINIMUM_COLLECTABLE_BALANCE {
             messages.push(protocol_fee.into_msg(config.fee_collector_addr.clone())?);
         }
     }
 
-    Ok(Response::new()
+    Ok(Response::default()
         .add_attribute("action", "collect_protocol_fees")
         .add_messages(messages))
 }

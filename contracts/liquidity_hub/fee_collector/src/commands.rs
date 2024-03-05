@@ -40,7 +40,7 @@ pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response
         }
     }
 
-    Ok(Response::new()
+    Ok(Response::default()
         .add_attribute("action", "collect_fees")
         .add_messages(collect_fees_messages))
 }
@@ -153,8 +153,10 @@ pub fn update_config(
     }
 
     CONFIG.save(deps.storage, &config)?;
-    Ok(Response::new().add_attribute("action", "update_config"))
+    Ok(Response::default().add_attribute("action", "update_config"))
 }
+
+const MINIMUM_AGGREGABLE_BALANCE: Uint128 = Uint128::new(1_000u128);
 
 /// Aggregates the fees collected into the given asset_info.
 pub fn aggregate_fees(
@@ -255,8 +257,8 @@ pub fn aggregate_fees(
             }
         };
 
-        // if the balance is greater than zero, swap the asset to the ask_asset
-        if balance > Uint128::zero() {
+        // if the balance is greater than the minimum aggregable balance, swap the asset to the ask_asset
+        if balance > MINIMUM_AGGREGABLE_BALANCE {
             // query swap route from router
             let operations_res: StdResult<Vec<SwapOperation>> =
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
@@ -309,7 +311,7 @@ pub fn aggregate_fees(
         }
     }
 
-    Ok(Response::new()
+    Ok(Response::default()
         .add_attribute("action", "aggregate_fees")
         .add_messages(aggregate_fees_messages))
 }
@@ -416,7 +418,7 @@ pub fn forward_fees(
     // saving the epoch and the asset info to forward the fees as in temp storage
     TMP_EPOCH.save(deps.storage, &epoch)?;
 
-    Ok(Response::new()
+    Ok(Response::default()
         .add_attribute("action", "forward_fees")
         .add_submessages(messages))
 }
