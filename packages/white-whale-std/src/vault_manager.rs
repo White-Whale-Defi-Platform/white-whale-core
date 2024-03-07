@@ -1,5 +1,4 @@
 use crate::fee::Fee;
-use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, StdError, StdResult, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -10,8 +9,6 @@ use std::fmt::{Display, Formatter};
 pub struct InstantiateMsg {
     /// The owner of the contract
     pub owner: String,
-    /// The type of LP token to use, whether a cw20 token or a token factory token
-    pub lp_token_type: LpTokenType,
     /// The whale lair address, where protocol fees are distributed
     pub whale_lair_addr: String,
     /// The fee to create a vault
@@ -21,8 +18,6 @@ pub struct InstantiateMsg {
 /// Configuration for the contract (manager)
 #[cw_serde]
 pub struct Config {
-    /// The type of LP token to use, whether a cw20 token or a token factory token
-    pub lp_token_type: LpTokenType,
     /// The whale lair contract address
     pub whale_lair_addr: Addr,
     /// The fee to create a new vault
@@ -33,30 +28,6 @@ pub struct Config {
     pub deposit_enabled: bool,
     /// If withdrawals are enabled
     pub withdraw_enabled: bool,
-}
-
-/// The type of LP token to use, whether a cw20 token or a token factory token
-#[cw_serde]
-pub enum LpTokenType {
-    Cw20(u64),
-    TokenFactory,
-}
-
-impl LpTokenType {
-    pub fn get_cw20_code_id(&self) -> StdResult<u64> {
-        match self {
-            LpTokenType::TokenFactory => Err(StdError::generic_err("Not a cw20 token")),
-            LpTokenType::Cw20(code_id) => Ok(*code_id),
-        }
-    }
-}
-impl Display for LpTokenType {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            LpTokenType::Cw20(value) => write!(f, "cw20({})", value),
-            LpTokenType::TokenFactory => write!(f, "token_factory"),
-        }
-    }
 }
 
 /// Vault representation
@@ -123,7 +94,6 @@ pub enum ExecuteMsg {
     UpdateConfig {
         whale_lair_addr: Option<String>,
         vault_creation_fee: Option<Coin>,
-        cw20_lp_code_id: Option<u64>,
         flash_loan_enabled: Option<bool>,
         deposit_enabled: Option<bool>,
         withdraw_enabled: Option<bool>,
@@ -170,7 +140,7 @@ pub enum QueryMsg {
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
     #[returns(PaybackAssetResponse)]
     PaybackAmount {
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
     },
 }
@@ -212,7 +182,7 @@ pub enum CallbackMsg {
 #[cw_serde]
 pub struct PaybackAssetResponse {
     /// The asset info of the asset that must be paid back
-    pub asset_info: AssetInfo,
+    pub asset_denom: String,
     /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
     pub payback_amount: Uint128,
     /// The amount of fee paid to the protocol

@@ -40,4 +40,6 @@ prost-types.workspace = true
 cw-ownable.workspace = true
 anybuf.workspace = true
 cw-controllers.workspace = true
-sha256.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+cw-multi-test.workspace = true

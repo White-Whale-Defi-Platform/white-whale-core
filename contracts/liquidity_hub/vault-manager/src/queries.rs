@@ -1,6 +1,5 @@
 use cosmwasm_std::{Coin, Decimal, Deps, Uint128, Uint256};
 
-use white_whale_std::pool_network::asset::Asset;
 use white_whale_std::vault_manager::{
     Config, FilterVaultBy, PaybackAssetResponse, ShareResponse, VaultsResponse,
 };
@@ -67,7 +66,7 @@ pub(crate) fn get_share(deps: Deps, lp_asset: Coin) -> Result<ShareResponse, Con
 /// Gets payback amount for a given asset.
 pub(crate) fn get_payback_amount(
     deps: Deps,
-    asset: Asset,
+    asset: Coin,
     vault_identifier: String,
 ) -> Result<PaybackAssetResponse, ContractError> {
     let vault = get_vault_by_identifier(&deps, vault_identifier)?;
@@ -96,7 +95,7 @@ pub(crate) fn get_payback_amount(
         .checked_add(flash_loan_fee)?;
 
     Ok(PaybackAssetResponse {
-        asset_info: asset.info,
+        asset_denom: asset.denom,
         payback_amount: required_amount,
         protocol_fee,
         flash_loan_fee,

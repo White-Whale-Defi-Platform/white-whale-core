@@ -25,7 +25,6 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        lp_token_type: msg.lp_token_type,
         whale_lair_addr: deps.api.addr_validate(&msg.whale_lair_addr)?,
         vault_creation_fee: msg.vault_creation_fee.clone(),
         flash_loan_enabled: true,
@@ -45,7 +44,6 @@ pub fn instantiate(
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", msg.owner),
-        ("lp_token_type", config.lp_token_type.to_string()),
         ("whale_lair_addr", config.whale_lair_addr.into_string()),
         ("vault_creation_fee", config.vault_creation_fee.to_string()),
     ]))
@@ -67,7 +65,6 @@ pub fn execute(
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             vault_creation_fee,
-            cw20_lp_code_id,
             flash_loan_enabled,
             deposit_enabled,
             withdraw_enabled,
@@ -76,7 +73,6 @@ pub fn execute(
             info,
             whale_lair_addr,
             vault_creation_fee,
-            cw20_lp_code_id,
             flash_loan_enabled,
             deposit_enabled,
             withdraw_enabled,

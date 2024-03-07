@@ -47,7 +47,7 @@ pub fn deposit(
             .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
             .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
 
-        messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+        messages.push(white_whale_std::lp_common::mint_lp_token_msg(
             vault.lp_denom.clone(),
             &env.contract.address,
             &env.contract.address,
@@ -70,7 +70,7 @@ pub fn deposit(
     };
 
     // mint LP token to sender
-    messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
         vault.clone().lp_denom,
         &info.sender.clone(),
         &env.contract.address,
@@ -129,7 +129,11 @@ pub fn withdraw(deps: DepsMut, env: &Env, info: &MessageInfo) -> Result<Response
             amount: vec![return_asset.clone()],
         }
         .into(),
-        tokenfactory::burn::burn(env.contract.address.clone(), info.funds[0].clone()),
+        tokenfactory::burn::burn(
+            env.contract.address.clone(),
+            info.funds[0].clone(),
+            env.contract.address.to_string(),
+        ),
     ];
 
     // decrease the amount on the asset in this vault

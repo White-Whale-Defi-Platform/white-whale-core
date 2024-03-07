@@ -4,7 +4,7 @@ use cosmwasm_std::{
 
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::tokenfactory;
-use white_whale_std::vault_manager::{LpTokenType, Vault, VaultFee};
+use white_whale_std::vault_manager::{Vault, VaultFee};
 use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
 use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
@@ -109,7 +109,6 @@ pub fn update_config(
     info: MessageInfo,
     whale_lair_addr: Option<String>,
     vault_creation_fee: Option<Coin>,
-    cw20_lp_code_id: Option<u64>,
     flash_loan_enabled: Option<bool>,
     deposit_enabled: Option<bool>,
     withdraw_enabled: Option<bool>,
@@ -123,17 +122,6 @@ pub fn update_config(
 
         if let Some(vault_creation_fee) = vault_creation_fee {
             config.vault_creation_fee = vault_creation_fee;
-        }
-
-        if let Some(new_token_id) = cw20_lp_code_id {
-            match config.lp_token_type {
-                LpTokenType::Cw20(_) => {
-                    config.lp_token_type = LpTokenType::Cw20(new_token_id);
-                }
-                LpTokenType::TokenFactory => {
-                    return Err(ContractError::InvalidLpTokenType {});
-                }
-            }
         }
 
         if let Some(flash_loan_enabled) = flash_loan_enabled {
@@ -154,7 +142,6 @@ pub fn update_config(
     Ok(Response::default().add_attributes(vec![
         ("method", "update_manager_config"),
         ("whale_lair_addr", &new_config.whale_lair_addr.into_string()),
-        ("lp_token_type", &new_config.lp_token_type.to_string()),
         (
             "vault_creation_fee",
             &new_config.vault_creation_fee.to_string(),

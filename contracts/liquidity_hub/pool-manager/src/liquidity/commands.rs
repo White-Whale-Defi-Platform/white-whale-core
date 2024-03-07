@@ -141,7 +141,7 @@ pub fn provide_liquidity(
                     ));
                 }
 
-                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token,
                     &info.sender,
                     &env.contract.address,
@@ -186,7 +186,7 @@ pub fn provide_liquidity(
                     total_share,
                 )?;
 
-                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token,
                     &info.sender,
                     &env.contract.address,

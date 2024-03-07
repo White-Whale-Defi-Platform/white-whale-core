@@ -9,7 +9,6 @@ use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 use white_whale_std::pool_network::pair::PoolFee;
-use white_whale_std::vault_manager::LpTokenType;
 
 use super::suite::TestingSuite;
 
@@ -22,7 +21,6 @@ fn instantiate_normal() {
 
     suite.instantiate(
         suite.senders[0].to_string(),
-        LpTokenType::TokenFactory,
         Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -34,7 +32,6 @@ fn instantiate_normal() {
     let cw20_code_id = suite.create_cw20_token();
     suite.instantiate(
         suite.senders[0].to_string(),
-        LpTokenType::Cw20(cw20_code_id),
         Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
