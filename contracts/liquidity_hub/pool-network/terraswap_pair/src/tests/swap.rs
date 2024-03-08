@@ -13,6 +13,9 @@ use white_whale_std::pool_network::pair::{
     SimulationResponse,
 };
 
+#[cfg(feature = "osmosis")]
+use anybuf::Anybuf;
+
 use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::compute_swap;

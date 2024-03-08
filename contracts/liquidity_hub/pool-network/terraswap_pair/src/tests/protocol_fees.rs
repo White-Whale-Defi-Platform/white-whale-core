@@ -432,7 +432,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(300_000_000_000u128);
     let asset_pool_amount = Uint128::from(200_000_000_000u128);
     let collateral_pool_amount = Uint128::from(300_000_000_000u128);
-    let offer_amount = Uint128::from(1_500_000u128);
+    let offer_amount = Uint128::from(15_000_000u128);
 
     let mut deps = mock_dependencies(&[Coin {
         denom: "uusd".to_string(),
@@ -522,8 +522,8 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     execute(deps.as_mut(), env.clone(), info, msg).unwrap();
 
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
-    // 9.995002 = 20000 * 15 / (30000 + 15) - swap_fee - protocol_fee
-    let expected_ret_amount = Uint128::from(999000u128);
+    // 99.5002 = 20000 * 150 / (30000 + 150) - swap_fee - protocol_fee
+    let expected_ret_amount = Uint128::from(9999000u128);
     let expected_protocol_fee_token_amount = expected_ret_amount.multiply_ratio(1u128, 1000u128); // 0.1%
 
     // as did only one swap from native -> token, we should have collected fees in token
