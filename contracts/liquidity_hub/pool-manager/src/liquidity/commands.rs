@@ -9,19 +9,6 @@ use crate::{
     state::{MANAGER_CONFIG, PAIRS},
     ContractError,
 };
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use cosmwasm_std::coins;
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale_std::pool_network::asset::is_factory_token;
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
-
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
