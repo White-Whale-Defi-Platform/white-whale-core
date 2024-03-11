@@ -9,7 +9,6 @@ use crate::{
     state::{MANAGER_CONFIG, PAIRS},
     ContractError,
 };
-
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
@@ -129,7 +128,7 @@ pub fn provide_liquidity(
                     ));
                 }
 
-                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token,
                     &info.sender,
                     &env.contract.address,
@@ -174,7 +173,7 @@ pub fn provide_liquidity(
                     total_share,
                 )?;
 
-                messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
+                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
                     liquidity_token,
                     &info.sender,
                     &env.contract.address,

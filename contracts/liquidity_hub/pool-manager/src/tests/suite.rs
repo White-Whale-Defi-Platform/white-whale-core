@@ -9,12 +9,9 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale_std::{
-    pool_network::{
-        asset::{Asset, AssetInfo, PairType},
-        pair::PoolFee,
-    },
-    vault_manager::LpTokenType,
+use white_whale_std::pool_network::{
+    asset::{Asset, AssetInfo, PairType},
+    pair::PoolFee,
 };
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -135,7 +132,6 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
-        _lp_token_type: LpTokenType,
         _vault_creation_fee: Asset,
     ) -> &mut Self {
         let cw20_token_id = self.app.store_code(cw20_token_contract());
@@ -181,7 +177,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::TokenFactory,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -202,7 +197,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::Cw20(cw20_code_id),
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),

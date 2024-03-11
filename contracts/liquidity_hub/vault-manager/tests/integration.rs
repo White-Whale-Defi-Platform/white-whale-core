@@ -3,7 +3,7 @@ extern crate core;
 use std::cell::RefCell;
 
 use cosmwasm_std::{
-    coin, coins, to_json_binary, Addr, BankMsg, CosmosMsg, Decimal, Uint128, WasmMsg,
+    coin, coins, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, Uint128, WasmMsg,
 };
 use cw_ownable::OwnershipError;
 
@@ -12,7 +12,7 @@ use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale_std::pool_network::pair::PoolFee;
 use white_whale_std::vault_manager::{
-    AssetQueryParams, FilterVaultBy, LpTokenType, PaybackAssetResponse, VaultFee,
+    AssetQueryParams, FilterVaultBy, PaybackAssetResponse, VaultFee,
 };
 
 use crate::common::suite::TestingSuite;
@@ -22,47 +22,21 @@ mod common;
 
 #[test]
 fn instantiate_vault_manager_successful() {
-    let mut suite = TestingSuite::default_with_balances(vec![]);
+    let mut suite =
+        TestingSuite::default_with_balances(vec![coin(1_000_000_000u128, "uwhale".to_string())]);
 
-    suite.create_cw20_token();
-
-    let cw20_token = suite.cw20_tokens[0].clone().into_string();
-
-    suite.instantiate_err(
-        LpTokenType::TokenFactory,
-        Asset {
-            info: AssetInfo::Token {
-                contract_addr: cw20_token.clone(),
-            },
+    suite.instantiate(
+        MOCK_CONTRACT_ADDR.to_string(),
+        Coin {
+            denom: "uwhale".to_string(),
             amount: Uint128::new(1_000u128),
-        },
-        |error| {
-            assert!(error
-                .root_cause()
-                .to_string()
-                .contains("Vault creation fee must be native token"));
         },
     );
 
     suite.instantiate(
         MOCK_CONTRACT_ADDR.to_string(),
-        LpTokenType::TokenFactory,
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::new(1_000u128),
-        },
-    );
-
-    let cw20_code_id = suite.create_cw20_token();
-    suite.instantiate(
-        MOCK_CONTRACT_ADDR.to_string(),
-        LpTokenType::Cw20(cw20_code_id),
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+        Coin {
+            denom: "uwhale".to_string(),
             amount: Uint128::new(1_000u128),
         },
     );
@@ -142,12 +116,10 @@ fn create_vaults() {
     let other = suite.senders[1].clone();
 
     suite
-        .instantiate_with_cw20_lp_token()
+        .instantiate_default()
         .create_vault(
             creator.clone(),
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             None,
             VaultFee {
                 protocol_fee: Fee {
@@ -171,9 +143,7 @@ fn create_vaults() {
         )
         .create_vault(
             creator,
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             None,
             VaultFee {
                 protocol_fee: Fee {
@@ -190,9 +160,7 @@ fn create_vaults() {
         )
         .create_vault(
             other.clone(),
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             Some("cheaper_vault".to_string()),
             VaultFee {
                 protocol_fee: Fee {
@@ -209,9 +177,7 @@ fn create_vaults() {
         )
         .create_vault(
             other,
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             Some("cheaper_vault".to_string()),
             VaultFee {
                 protocol_fee: Fee {
@@ -248,6 +214,7 @@ fn deposit_withdraw() {
     let mut suite = TestingSuite::default_with_balances(vec![
         coin(1_000_000_000u128, "uwhale".to_string()),
         coin(1_000_000_000u128, "uluna".to_string()),
+        coin(1_000_000_000u128, "uatom".to_string()),
         coin(1_000_000_000u128, "factory/creator/uLP".to_string()),
         coin(1_000_000_000u128, "factory/another_creator/uLP".to_string()),
     ]);
@@ -255,17 +222,13 @@ fn deposit_withdraw() {
     let creator = suite.creator();
     let other = suite.senders[1].clone();
 
-    let vault_lp_addr = RefCell::new(AssetInfo::Token {
-        contract_addr: "".to_string(),
-    });
+    let vault_lp_denom = RefCell::new("".to_string());
 
     suite
-        .instantiate_with_cw20_lp_token()
+        .instantiate_default()
         .create_vault(
             creator.clone(),
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             None,
             VaultFee {
                 protocol_fee: Fee {
@@ -279,10 +242,8 @@ fn deposit_withdraw() {
             |result| {
                 result.unwrap();
             },
-        )
-        .update_config(
+        ).update_config(
             creator.clone(),
-            None,
             None,
             None,
             None,
@@ -295,12 +256,6 @@ fn deposit_withdraw() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
             "0".to_string(),
             vec![coin(5_000u128, "uluna".to_string())],
             |result| {
@@ -317,7 +272,6 @@ fn deposit_withdraw() {
             None,
             None,
             None,
-            None,
             Some(true),
             None,
             vec![],
@@ -327,12 +281,6 @@ fn deposit_withdraw() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
             "unexisting_vault".to_string(),
             vec![coin(5_000u128, "uluna".to_string())],
             |result| {
@@ -346,12 +294,6 @@ fn deposit_withdraw() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
             "0".to_string(),
             vec![coin(5_000u128, "uluna".to_string())],
             |result| {
@@ -365,31 +307,6 @@ fn deposit_withdraw() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
-            "0".to_string(),
-            vec![coin(3_000u128, "uwhale".to_string())],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::FundsMismatch { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::FundsMismatch"),
-                }
-            },
-        )
-        .deposit(
-            creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(1_000u128),
-            },
             "0".to_string(),
             vec![coin(1_000u128, "uwhale".to_string())],
             |result| {
@@ -400,91 +317,73 @@ fn deposit_withdraw() {
                     _ => panic!("Wrong error type, should return ContractError::InvalidInitialLiquidityAmount"),
                 }
             },
-        )
-        .deposit(
+        ).deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
             "0".to_string(),
             vec![coin(5_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
-        )
-        .query_vault(FilterVaultBy::Identifier("0".to_string()), |result| {
+        ).query_vault(FilterVaultBy::Identifier("0".to_string()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.first().unwrap();
-            *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
+            let vault = vault_response.vaults.get(0).unwrap();
+            *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
                 vault.asset,
-                Asset {
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::new(5_000u128),
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string()
-                    },
                 }
             );
         })
         .query_vault(FilterVaultBy::Asset(AssetQueryParams {
-            asset_info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            asset_denom: "uwhale".to_string(),
             start_after: None,
             limit: None,
         }), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.first().unwrap();
-            *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
+            let vault = vault_response.vaults.get(0).unwrap();
+            *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
                 vault.asset,
-                Asset {
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::new(5_000u128),
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string()
-                    },
+
                 }
             );
         })
-        .query_vault(FilterVaultBy::LpAsset(vault_lp_addr.clone().into_inner()), |result| {
+        .query_vault(FilterVaultBy::LpAsset(vault_lp_denom.clone().into_inner()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.first().unwrap();
-            *vault_lp_addr.borrow_mut() = vault.lp_asset.clone();
+            let vault = vault_response.vaults.get(0).unwrap();
+            *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
                 vault.asset,
-                Asset {
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::new(5_000u128),
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string()
-                    },
                 }
             );
         })
-        .query_share(Asset { info: vault_lp_addr.clone().into_inner(), amount: Uint128::new(1_000u128) }, |result| {
+        .query_share(Coin { denom: vault_lp_denom.clone().into_inner(), amount: Uint128::new(1_000u128) }, |result| {
             let response = result.unwrap();
             assert_eq!(
                 response.share,
-                Asset {
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::new(1_000u128),
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string()
-                    },
                 }
             );
         });
 
     let vault_manager = suite.vault_manager_addr.clone();
-    let random_cw20_token = suite.cw20_tokens.first().unwrap().clone();
 
     suite
         .query_balance(
-            vault_lp_addr.clone().into_inner(),
+            vault_lp_denom.clone().into_inner(),
             creator.clone(),
             |result| {
                 // 4k to the user
@@ -492,7 +391,7 @@ fn deposit_withdraw() {
             },
         )
         .query_balance(
-            vault_lp_addr.clone().into_inner(),
+            vault_lp_denom.clone().into_inner(),
             vault_manager.clone(),
             |result| {
                 //  1k in vault
@@ -501,12 +400,6 @@ fn deposit_withdraw() {
         )
         .deposit(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
             "0".to_string(),
             vec![coin(5_000u128, "uwhale".to_string())],
             |result| {
@@ -514,36 +407,21 @@ fn deposit_withdraw() {
             },
         )
         .query_balance(
-            vault_lp_addr.clone().into_inner(),
+            vault_lp_denom.clone().into_inner(),
             other.clone(),
             |result| {
                 assert_eq!(result, Uint128::new(5_000u128));
             },
         )
+        .withdraw(other.clone(), vec![], |result| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::PaymentError { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+            }
+        })
         .withdraw(
             other.clone(),
-            Asset {
-                info: vault_lp_addr.clone().into_inner(),
-                amount: Uint128::new(2_000u128),
-            },
-            vec![],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::Unauthorized { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
-                }
-            },
-        )
-        .withdraw(
-            other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "factory/another_creator/uLP".to_string(),
-                },
-                amount: Uint128::new(2_000u128),
-            },
             vec![coin(2_000u128, "factory/another_creator/uLP".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -560,7 +438,6 @@ fn deposit_withdraw() {
             None,
             None,
             None,
-            None,
             Some(true),
             vec![],
             |result| {
@@ -569,13 +446,10 @@ fn deposit_withdraw() {
         )
         .withdraw(
             other.clone(),
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: random_cw20_token.to_string(),
-                },
+            vec![Coin {
+                denom: "uatom".to_string(),
                 amount: Uint128::new(2_000u128),
-            },
-            vec![],
+            }],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -587,17 +461,16 @@ fn deposit_withdraw() {
         )
         .withdraw(
             other.clone(),
-            Asset {
-                info: vault_lp_addr.clone().into_inner(),
+            vec![Coin {
+                denom: vault_lp_denom.clone().into_inner(),
                 amount: Uint128::new(2_000u128),
-            },
-            vec![],
+            }],
             |result| {
                 result.unwrap();
             },
         )
         .query_balance(
-            vault_lp_addr.clone().into_inner(),
+            vault_lp_denom.clone().into_inner(),
             other.clone(),
             |result| {
                 assert_eq!(result, Uint128::new(3_000u128));
@@ -605,62 +478,19 @@ fn deposit_withdraw() {
         )
         .withdraw(
             creator.clone(),
-            Asset {
-                info: vault_lp_addr.clone().into_inner(),
+            vec![Coin {
+                denom: vault_lp_denom.clone().into_inner(),
                 amount: Uint128::new(4_000u128),
-            },
-            vec![],
+            }],
             |result| {
                 result.unwrap();
             },
         )
         .query_balance(
-            vault_lp_addr.clone().into_inner(),
+            vault_lp_denom.clone().into_inner(),
             creator.clone(),
             |result| {
                 assert_eq!(result, Uint128::zero());
-            },
-        );
-
-    // create cw20 vault
-    suite
-        .create_vault(
-            creator.clone(),
-            AssetInfo::Token {
-                contract_addr: random_cw20_token.clone().to_string(),
-            },
-            Some("cw_20_vault".to_string()),
-            VaultFee {
-                protocol_fee: Fee {
-                    share: Decimal::from_ratio(1u128, 2000u128),
-                },
-                flash_loan_fee: Fee {
-                    share: Decimal::from_ratio(1u128, 1000u128),
-                },
-            },
-            vec![coin(1_000u128, "uwhale".to_string())],
-            |result| {
-                result.unwrap();
-            },
-        )
-        .increase_allowance(
-            creator.clone(),
-            Addr::unchecked(random_cw20_token.clone()),
-            Uint128::new(5_000u128),
-            vault_manager.clone(),
-        )
-        .deposit(
-            creator.clone(),
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: random_cw20_token.clone().to_string(),
-                },
-                amount: Uint128::new(5_000u128),
-            },
-            "cw_20_vault".to_string(),
-            vec![],
-            |result| {
-                result.unwrap();
             },
         );
 }
@@ -678,12 +508,9 @@ pub fn update_config() {
     let unauthorized = suite.senders[2].clone();
 
     let initial_config = RefCell::new(white_whale_std::vault_manager::Config {
-        lp_token_type: LpTokenType::TokenFactory,
         whale_lair_addr: Addr::unchecked(""),
-        vault_creation_fee: Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+        vault_creation_fee: Coin {
+            denom: "uluna".to_string(),
             amount: Default::default(),
         },
         flash_loan_enabled: true,
@@ -691,14 +518,13 @@ pub fn update_config() {
         withdraw_enabled: true,
     });
     suite
-        .instantiate_with_cw20_lp_token()
+        .instantiate_default()
         .query_config(|response| {
             let config = response.unwrap();
             *initial_config.borrow_mut() = config;
         })
         .update_config(
             unauthorized.clone(),
-            None,
             None,
             None,
             None,
@@ -715,13 +541,10 @@ pub fn update_config() {
         .update_config(
             creator.clone(),
             Some(Addr::unchecked("migaloo1gqjwmexg70ajk439ckfjq0uw2k3u2qmqwy6axu").to_string()),
-            Some(Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Some(Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(5_000u128),
             }),
-            Some(123),
             Some(false),
             Some(false),
             Some(false),
@@ -736,14 +559,11 @@ pub fn update_config() {
             assert_eq!(
                 new_config,
                 white_whale_std::vault_manager::Config {
-                    lp_token_type: LpTokenType::Cw20(123),
                     whale_lair_addr: Addr::unchecked(
                         "migaloo1gqjwmexg70ajk439ckfjq0uw2k3u2qmqwy6axu"
                     ),
-                    vault_creation_fee: Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string(),
-                        },
+                    vault_creation_fee: Coin {
+                        denom: "uwhale".to_string(),
                         amount: Uint128::new(5_000u128),
                     },
                     flash_loan_enabled: false,
@@ -752,30 +572,6 @@ pub fn update_config() {
                 }
             );
         });
-
-    suite.instantiate_default().update_config(
-        creator.clone(),
-        Some(Addr::unchecked("migaloo1gqjwmexg70ajk439ckfjq0uw2k3u2qmqwy6axu").to_string()),
-        Some(Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::new(5_000u128),
-        }),
-        Some(123),
-        Some(false),
-        Some(false),
-        Some(false),
-        vec![],
-        |result| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-            match err {
-                ContractError::InvalidLpTokenType { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::InvalidLpTokenType"),
-            }
-        },
-    );
 }
 
 #[test]
@@ -818,12 +614,10 @@ pub fn successful_flashloan() {
     };
 
     suite
-        .instantiate_with_cw20_lp_token()
+        .instantiate_default()
         .create_vault(
             creator.clone(),
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             Some("whale_vault".to_string()),
             VaultFee {
                 protocol_fee: Fee {
@@ -840,12 +634,6 @@ pub fn successful_flashloan() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(100_000_000u128),
-            },
             "whale_vault".to_string(),
             vec![coin(100_000_000u128, "uwhale".to_string())],
             |result| {
@@ -892,15 +680,9 @@ pub fn successful_flashloan() {
 
     let other_balance = RefCell::new(Uint128::zero());
 
-    suite.query_balance(
-        AssetInfo::NativeToken {
-            denom: "uwhale".to_string(),
-        },
-        other.clone(),
-        |result| {
-            *other_balance.borrow_mut() = result;
-        },
-    );
+    suite.query_balance("uwhale".to_string(), other.clone(), |result| {
+        *other_balance.borrow_mut() = result;
+    });
 
     // arb the pool with a flashloan
 
@@ -926,7 +708,7 @@ pub fn successful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &[
+            &vec![
                 coin(1_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -951,7 +733,7 @@ pub fn successful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &[
+            &vec![
                 coin(2_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -991,20 +773,16 @@ pub fn successful_flashloan() {
 
                 assert_eq!(
                     vault.asset,
-                    Asset {
+                    Coin {
+                        denom: "uwhale".to_string(),
                         amount: Uint128::new(100_000_000u128),
-                        info: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string()
-                        },
                     }
                 );
             },
         )
         .query_payback(
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(500_000),
             },
             "whale_vault".to_string(),
@@ -1013,9 +791,7 @@ pub fn successful_flashloan() {
                 assert_eq!(
                     payback,
                     PaybackAssetResponse {
-                        asset_info: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string()
-                        },
+                        asset_denom: "uwhale".to_string(),
                         payback_amount: Uint128::new(501_500u128),
                         protocol_fee: Uint128::new(500u128),
                         flash_loan_fee: Uint128::new(1_000u128),
@@ -1025,10 +801,8 @@ pub fn successful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(50_000u128),
             },
             "whale_vault".to_string(),
@@ -1081,27 +855,19 @@ pub fn successful_flashloan() {
 
                 assert_eq!(
                     vault.asset,
-                    Asset {
+                    Coin {
+                        denom: "uwhale".to_string(),
                         amount: Uint128::new(100_000_100u128), // the original amount + flashloan fees
-                        info: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string()
-                        },
                     }
                 );
             },
         )
-        .query_balance(
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            other.clone(),
-            |result| {
-                assert_eq!(
-                    result,
-                    other_balance.clone().into_inner() + Uint128::new(36_806)
-                ); // original amount before flashloan + profits
-            },
-        );
+        .query_balance("uwhale".to_string(), other.clone(), |result| {
+            assert_eq!(
+                result,
+                other_balance.clone().into_inner() + Uint128::new(36_806)
+            ); // original amount before flashloan + profits
+        });
 }
 
 #[test]
@@ -1114,7 +880,7 @@ pub fn unsuccessful_flashloan() {
     let creator = suite.creator();
     let other = suite.senders[1].clone();
 
-    suite.instantiate_with_cw20_lp_token().create_cw20_token();
+    suite.instantiate_default().create_cw20_token();
 
     let cw20_token = suite.cw20_tokens.first().unwrap().clone();
     let vault_manager = suite.vault_manager_addr.clone();
@@ -1123,9 +889,7 @@ pub fn unsuccessful_flashloan() {
     suite
         .create_vault(
             creator.clone(),
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             Some("whale_vault".to_string()),
             VaultFee {
                 protocol_fee: Fee {
@@ -1142,12 +906,6 @@ pub fn unsuccessful_flashloan() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(100_000_000u128),
-            },
             "whale_vault".to_string(),
             vec![coin(100_000_000u128, "uwhale".to_string())],
             |result| {
@@ -1156,9 +914,7 @@ pub fn unsuccessful_flashloan() {
         )
         .create_vault(
             creator.clone(),
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             Some("luna_vault".to_string()),
             VaultFee {
                 protocol_fee: Fee {
@@ -1175,53 +931,8 @@ pub fn unsuccessful_flashloan() {
         )
         .deposit(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                amount: Uint128::new(100_000_000u128),
-            },
             "luna_vault".to_string(),
             vec![coin(100_000_000u128, "uluna".to_string())],
-            |result| {
-                result.unwrap();
-            },
-        )
-        .create_vault(
-            creator.clone(),
-            AssetInfo::Token {
-                contract_addr: cw20_token.clone().to_string(),
-            },
-            Some("cw20_vault".to_string()),
-            VaultFee {
-                protocol_fee: Fee {
-                    share: Decimal::from_ratio(1u128, 1000u128),
-                },
-                flash_loan_fee: Fee {
-                    share: Decimal::from_ratio(2u128, 1000u128),
-                },
-            },
-            vec![coin(1_000u128, "uwhale".to_string())],
-            |result| {
-                result.unwrap();
-            },
-        )
-        .increase_allowance(
-            creator.clone(),
-            cw20_token.clone(),
-            Uint128::new(100_000_000u128),
-            vault_manager.clone(),
-        )
-        .deposit(
-            creator.clone(),
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: cw20_token.clone().to_string(),
-                },
-                amount: Uint128::new(100_000_000u128),
-            },
-            "cw20_vault".to_string(),
-            vec![],
             |result| {
                 result.unwrap();
             },
@@ -1296,15 +1007,9 @@ pub fn unsuccessful_flashloan() {
 
     let other_balance = RefCell::new(Uint128::zero());
 
-    suite.query_balance(
-        AssetInfo::NativeToken {
-            denom: "uwhale".to_string(),
-        },
-        other.clone(),
-        |result| {
-            *other_balance.borrow_mut() = result;
-        },
-    );
+    suite.query_balance("uwhale".to_string(), other.clone(), |result| {
+        *other_balance.borrow_mut() = result;
+    });
 
     // arb the pool with a flashloan
 
@@ -1330,7 +1035,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &[
+            &vec![
                 coin(1_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -1355,7 +1060,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &[
+            &vec![
                 coin(2_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -1395,21 +1100,17 @@ pub fn unsuccessful_flashloan() {
 
                 assert_eq!(
                     vault.asset,
-                    Asset {
+                    Coin {
                         amount: Uint128::new(100_000_000u128),
-                        info: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string()
-                        },
+                        denom: "uwhale".to_string()
                     }
                 );
             },
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(500_000),
             },
             "unexisting_vault".to_string(),
@@ -1425,10 +1126,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+            Coin {
+                denom: "uluna".to_string(),
                 amount: Uint128::new(500_000),
             },
             "whale_vault".to_string(),
@@ -1444,10 +1143,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(5_000_000_000_000),
             },
             "whale_vault".to_string(),
@@ -1465,10 +1162,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(50_000),
             },
             "whale_vault".to_string(),
@@ -1484,10 +1179,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(50_000),
             },
             "whale_vault".to_string(),
@@ -1513,40 +1206,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(50_000),
-            },
-            "whale_vault".to_string(),
-            vec![
-                // try to drain the cw20 token vault
-                CosmosMsg::Wasm(WasmMsg::Execute {
-                    contract_addr: cw20_token.clone().to_string(),
-                    msg: to_json_binary(&cw20::Cw20ExecuteMsg::Transfer {
-                        recipient: other.clone().to_string(),
-                        amount: Uint128::new(100_000_000u128),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }),
-            ],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::FlashLoanLoss { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::FlashLoanLoss"),
-                }
-            },
-        )
-        .flashloan(
-            other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(50_000),
             },
             "whale_vault".to_string(),
@@ -1555,12 +1216,6 @@ pub fn unsuccessful_flashloan() {
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: vault_manager.clone().to_string(),
                     msg: to_json_binary(&white_whale_std::vault_manager::ExecuteMsg::Deposit {
-                        asset: Asset {
-                            info: AssetInfo::NativeToken {
-                                denom: "uwhale".to_string(),
-                            },
-                            amount: Uint128::new(50_000),
-                        },
                         vault_identifier: "whale_vault".to_string(),
                     })
                     .unwrap(),
@@ -1580,7 +1235,6 @@ pub fn unsuccessful_flashloan() {
             creator.clone(),
             None,
             None,
-            None,
             Some(false),
             None,
             None,
@@ -1591,10 +1245,8 @@ pub fn unsuccessful_flashloan() {
         )
         .flashloan(
             other.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(50_000),
             },
             "whale_vault".to_string(),
@@ -1619,10 +1271,8 @@ pub fn unsuccessful_flashloan() {
 
     suite
         .query_payback(
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(5_000_000_000_000),
             },
             "whale_vault".to_string(),
@@ -1633,10 +1283,8 @@ pub fn unsuccessful_flashloan() {
             },
         )
         .query_payback(
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(5_000_000_000_000),
             },
             "non_existent_vault".to_string(),

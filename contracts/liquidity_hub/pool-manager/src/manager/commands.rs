@@ -20,6 +20,7 @@ use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
+
 use white_whale_std::pool_manager::NPairInfo as PairInfo;
 use white_whale_std::pool_network::querier::query_balance;
 

@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 #[cfg(not(feature = "injective"))]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "token_factory")]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 use crate::state::PAIR_INFO;
 
 use white_whale_std::fee::Fee;
