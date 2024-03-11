@@ -1,4 +1,3 @@
-
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, coins, from_json, to_json_binary, BankMsg, Coin, CosmosMsg, Decimal, Reply, ReplyOn,

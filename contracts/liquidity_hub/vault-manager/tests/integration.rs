@@ -926,8 +926,10 @@ pub fn successful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &[coin(1_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string())],
+            &[
+                coin(1_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string()),
+            ],
             |result| {
                 result.unwrap();
             },
@@ -949,8 +951,10 @@ pub fn successful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &[coin(2_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string())],
+            &[
+                coin(2_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string()),
+            ],
             |result| {
                 result.unwrap();
             },
@@ -1326,8 +1330,10 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &[coin(1_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string())],
+            &[
+                coin(1_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string()),
+            ],
             |result| {
                 result.unwrap();
             },
@@ -1349,8 +1355,10 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &[coin(2_000_000u128, "uluna".to_string()),
-                coin(1_000_000u128, "uwhale".to_string())],
+            &[
+                coin(2_000_000u128, "uluna".to_string()),
+                coin(1_000_000u128, "uwhale".to_string()),
+            ],
             |result| {
                 result.unwrap();
             },

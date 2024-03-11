@@ -77,7 +77,7 @@ fn instantiate_unsuccessfully() {
         "fee_collector_addr".to_string(),
         Uint64::one(),
         EpochConfig {
-            duration: invalid_epoch_duration,                    // a day
+            duration: invalid_epoch_duration,                          // a day
             genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
         },
         distribution_asset.clone(),

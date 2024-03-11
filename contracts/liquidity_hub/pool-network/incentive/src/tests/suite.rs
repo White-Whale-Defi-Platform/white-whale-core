@@ -347,12 +347,10 @@ impl TestingSuite {
             lp_asset: lp_address,
         };
 
-        result(self.app.execute_contract(
-            sender,
-            self.incentive_factory_addr.clone(),
-            &msg,
-            &[],
-        ));
+        result(
+            self.app
+                .execute_contract(sender, self.incentive_factory_addr.clone(), &msg, &[]),
+        );
 
         self
     }
@@ -395,10 +393,7 @@ impl TestingSuite {
         let msg =
             white_whale_std::pool_network::incentive::ExecuteMsg::CloseFlow { flow_identifier };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &[]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -438,10 +433,7 @@ impl TestingSuite {
             unbonding_duration,
         };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &[]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -478,10 +470,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Claim {};
         println!("-------------- claiming {}", sender);
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &[]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -493,10 +482,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Withdraw {};
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &[]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }

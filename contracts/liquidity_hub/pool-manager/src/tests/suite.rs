@@ -1,16 +1,12 @@
-
-
-use white_whale_std::pool_manager::{Cw20HookMsg};
+use white_whale_std::pool_manager::Cw20HookMsg;
 use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
-
 
 use cosmwasm_std::{
     to_json_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor,
-    WasmKeeper,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_std::{
@@ -483,10 +479,7 @@ impl TestingSuite {
         let msg = cw20::Cw20ExecuteMsg::Send {
             contract: self.vault_manager_addr.to_string(),
             amount,
-            msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {
-                pair_identifier,
-            })
-            .unwrap(),
+            msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity { pair_identifier }).unwrap(),
         };
 
         result(
@@ -535,9 +528,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::Pair {
-                pair_identifier,
-            },
+            &white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier },
         );
 
         result(pair_info_response);
