@@ -1,9 +1,16 @@
+#[cfg(not(feature = "osmosis"))]
 use crate::state::Config;
+#[cfg(not(feature = "osmosis"))]
 use cosmwasm_schema::cw_serde;
+#[cfg(not(feature = "osmosis"))]
 use cosmwasm_std::{Addr, CanonicalAddr, DepsMut, Order, StdError, Uint128};
+#[cfg(not(feature = "osmosis"))]
 use cw_storage_plus::{Item, Map};
+#[cfg(not(feature = "osmosis"))]
 use schemars::JsonSchema;
+#[cfg(not(feature = "osmosis"))]
 use serde::{Deserialize, Serialize};
+#[cfg(not(feature = "osmosis"))]
 use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 
 #[cfg(not(feature = "osmosis"))]
