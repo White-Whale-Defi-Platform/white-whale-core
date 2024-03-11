@@ -1630,33 +1630,79 @@ fn delete_pair_failed_if_not_found() {
     }
 }
 
-#[cfg(not(feature = "osmosis"))]
 #[test]
 fn update_pair_config() {
     let mut deps = mock_dependencies(&[coin(10u128, "uusd".to_string())]);
     deps = init(deps);
 
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fee = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
+    #[cfg(not(feature = "osmosis"))]
     let msg = ExecuteMsg::UpdatePairConfig {
         pair_addr: "pair_addr".to_string(),
         owner: Some("new_owner".to_string()),
         fee_collector_addr: None,
-        pool_fees: Some(PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(3u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(5u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        }),
+        pool_fees: Some(pool_fee.clone()),
         feature_toggle: None,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let msg = ExecuteMsg::UpdatePairConfig {
+        pair_addr: "pair_addr".to_string(),
+        owner: Some("new_owner".to_string()),
+        fee_collector_addr: None,
+        pool_fees: Some(pool_fee.clone()),
+        feature_toggle: None,
+        cosmwasm_pool_interface: Some("new_interface".to_string()),
     };
 
     let env = mock_env();
     let info = mock_info("addr0000", &[]);
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
+
+    #[cfg(not(feature = "osmosis"))]
+    let expected_msg = pool_network::pair::ExecuteMsg::UpdateConfig {
+        owner: Some("new_owner".to_string()),
+        fee_collector_addr: None,
+        pool_fees: Some(pool_fee),
+        feature_toggle: None,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let expected_msg = pool_network::pair::ExecuteMsg::UpdateConfig {
+        owner: Some("new_owner".to_string()),
+        fee_collector_addr: None,
+        pool_fees: Some(pool_fee),
+        feature_toggle: None,
+        cosmwasm_pool_interface: Some("new_interface".to_string()),
+    };
 
     assert_eq!(
         res,
@@ -1665,23 +1711,7 @@ fn update_pair_config() {
             .add_message(WasmMsg::Execute {
                 contract_addr: "pair_addr".to_string(),
                 funds: vec![],
-                msg: to_json_binary(&pool_network::pair::ExecuteMsg::UpdateConfig {
-                    owner: Some("new_owner".to_string()),
-                    fee_collector_addr: None,
-                    pool_fees: Some(PoolFee {
-                        protocol_fee: Fee {
-                            share: Decimal::percent(3u64),
-                        },
-                        swap_fee: Fee {
-                            share: Decimal::percent(5u64),
-                        },
-                        burn_fee: Fee {
-                            share: Decimal::zero(),
-                        },
-                    }),
-                    feature_toggle: None,
-                })
-                .unwrap(),
+                msg: to_json_binary(&expected_msg).unwrap(),
             })
     );
 }

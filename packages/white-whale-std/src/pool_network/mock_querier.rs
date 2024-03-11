@@ -5,9 +5,8 @@ use std::panic;
 
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_json, to_json_binary, Addr, CodeInfoResponse, Coin, ContractInfoResponse, ContractResult,
-    Empty, HexBinary, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult,
-    Uint128, WasmQuery,
+    from_json, to_json_binary, Coin, ContractInfoResponse, ContractResult, Empty, OwnedDeps,
+    Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
 
@@ -17,7 +16,7 @@ use crate::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as Pa
 use crate::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use crate::pool_network::trio;
 use crate::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
-// use crate::pool_network::temp_mock_api::MockSimpleApi as MockApi;
+
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
@@ -286,7 +285,6 @@ impl WasmMockQuerier {
                                         })
                                     }
                                 };
-                                println!("balances: {:?}", self.token_querier.balances);
 
                                 let mut total_supply = Uint128::zero();
 
@@ -349,23 +347,6 @@ impl WasmMockQuerier {
                 SystemResult::Ok(ContractResult::Ok(
                     to_json_binary(&contract_info_response).unwrap(),
                 ))
-            }
-            QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
-                let mut default = CodeInfoResponse::default();
-
-                match code_id {
-                    11 => {
-                        default.code_id = 67;
-                        default.creator = Addr::unchecked("creator").to_string();
-                        default.checksum = HexBinary::from_hex(&sha256::digest(format!(
-                            "code_checksum_{}",
-                            code_id
-                        )))
-                        .unwrap();
-                        SystemResult::Ok(to_json_binary(&default).into())
-                    }
-                    _ => SystemResult::Err(SystemError::Unknown {}),
-                }
             }
             _ => self.base.handle_query(request),
         }

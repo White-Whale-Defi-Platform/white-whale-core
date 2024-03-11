@@ -80,6 +80,7 @@ pub fn create_vault(
     let mut attributes = Vec::<Attribute>::new();
     attributes.push(attr("vault_identifier", identifier.clone()));
 
+    #[allow(unreachable_code)]
     let message = if config.lp_token_type == LpTokenType::TokenFactory {
         #[cfg(all(
             not(feature = "token_factory"),

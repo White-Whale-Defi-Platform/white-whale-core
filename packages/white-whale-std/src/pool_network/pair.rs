@@ -40,6 +40,16 @@ pub enum ExecuteMsg {
         max_spread: Option<Decimal>,
         to: Option<String>,
     },
+    #[cfg(feature = "osmosis")]
+    /// Updates the pair pool config
+    UpdateConfig {
+        owner: Option<String>,
+        fee_collector_addr: Option<String>,
+        pool_fees: Option<PoolFee>,
+        feature_toggle: Option<FeatureToggle>,
+        cosmwasm_pool_interface: Option<String>,
+    },
+    #[cfg(not(feature = "osmosis"))]
     /// Updates the pair pool config
     UpdateConfig {
         owner: Option<String>,
@@ -162,6 +172,8 @@ pub struct Config {
     pub fee_collector_addr: Addr,
     pub pool_fees: PoolFee,
     pub feature_toggle: FeatureToggle,
+    #[cfg(feature = "osmosis")]
+    pub cosmwasm_pool_interface: Addr,
 }
 
 pub type ConfigResponse = Config;

@@ -788,6 +788,35 @@ pub fn successful_flashloan() {
     let creator = suite.creator();
     let other = suite.senders[1].clone();
 
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Default::default(),
+        },
+        swap_fee: Fee {
+            share: Default::default(),
+        },
+        burn_fee: Fee {
+            share: Default::default(),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Default::default(),
+        },
+        swap_fee: Fee {
+            share: Default::default(),
+        },
+        burn_fee: Fee {
+            share: Default::default(),
+        },
+        osmosis_fee: Fee {
+            share: Default::default(),
+        },
+    };
+
     suite
         .instantiate_with_cw20_lp_token()
         .create_vault(
@@ -836,17 +865,7 @@ pub fn successful_flashloan() {
                 },
             ],
             [6u8, 6u8],
-            PoolFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                swap_fee: Fee {
-                    share: Default::default(),
-                },
-                burn_fee: Fee {
-                    share: Default::default(),
-                },
-            },
+            pool_fees.clone(),
             PairType::ConstantProduct,
             false,
         )
@@ -860,17 +879,7 @@ pub fn successful_flashloan() {
                 },
             ],
             [6u8, 6u8],
-            PoolFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                swap_fee: Fee {
-                    share: Default::default(),
-                },
-                burn_fee: Fee {
-                    share: Default::default(),
-                },
-            },
+            pool_fees.clone(),
             PairType::ConstantProduct,
             false,
         );
@@ -1215,6 +1224,36 @@ pub fn unsuccessful_flashloan() {
         );
 
     // create pools to arb
+
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Default::default(),
+        },
+        swap_fee: Fee {
+            share: Default::default(),
+        },
+        burn_fee: Fee {
+            share: Default::default(),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Default::default(),
+        },
+        swap_fee: Fee {
+            share: Default::default(),
+        },
+        burn_fee: Fee {
+            share: Default::default(),
+        },
+        osmosis_fee: Fee {
+            share: Default::default(),
+        },
+    };
+
     suite
         .create_pool(
             [
@@ -1226,17 +1265,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             [6u8, 6u8],
-            PoolFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                swap_fee: Fee {
-                    share: Default::default(),
-                },
-                burn_fee: Fee {
-                    share: Default::default(),
-                },
-            },
+            pool_fees.clone(),
             PairType::ConstantProduct,
             false,
         )
@@ -1250,17 +1279,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             [6u8, 6u8],
-            PoolFee {
-                protocol_fee: Fee {
-                    share: Default::default(),
-                },
-                swap_fee: Fee {
-                    share: Default::default(),
-                },
-                burn_fee: Fee {
-                    share: Default::default(),
-                },
-            },
+            pool_fees.clone(),
             PairType::ConstantProduct,
             false,
         );

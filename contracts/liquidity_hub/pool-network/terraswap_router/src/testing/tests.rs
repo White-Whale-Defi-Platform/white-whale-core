@@ -16,8 +16,8 @@ use white_whale_std::pool_network::router::{
 
 use crate::contract::{execute, instantiate, migrate, query};
 use crate::error::ContractError;
+use crate::helpers::get_key_from_swap_route;
 use crate::operations::asset_into_swap_msg;
-use crate::state::SWAP_ROUTES;
 
 #[test]
 fn proper_initialization() {
@@ -1128,35 +1128,8 @@ fn add_swap_routes() {
         ],
     };
 
-    let swap_route_1_key = SWAP_ROUTES.key((
-        swap_route_1
-            .clone()
-            .offer_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-        swap_route_1
-            .clone()
-            .ask_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-    ));
-
-    let swap_route_2_key = SWAP_ROUTES.key((
-        swap_route_2
-            .clone()
-            .offer_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-        swap_route_2
-            .clone()
-            .ask_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-    ));
+    let swap_route_1_key = get_key_from_swap_route(deps.as_ref(), &swap_route_1).unwrap();
+    let swap_route_2_key = get_key_from_swap_route(deps.as_ref(), &swap_route_2).unwrap();
 
     // verify the keys are not there
     assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
@@ -1517,35 +1490,8 @@ fn all_swap_routes() {
         ],
     };
 
-    let swap_route_1_key = SWAP_ROUTES.key((
-        swap_route_1
-            .clone()
-            .offer_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-        swap_route_1
-            .clone()
-            .ask_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-    ));
-
-    let swap_route_2_key = SWAP_ROUTES.key((
-        swap_route_2
-            .clone()
-            .offer_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-        swap_route_2
-            .clone()
-            .ask_asset_info
-            .get_label(&deps.as_ref())
-            .unwrap()
-            .as_str(),
-    ));
+    let swap_route_1_key = get_key_from_swap_route(deps.as_ref(), &swap_route_1).unwrap();
+    let swap_route_2_key = get_key_from_swap_route(deps.as_ref(), &swap_route_2).unwrap();
 
     // verify the keys are not there
     assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
@@ -1575,4 +1521,405 @@ fn all_swap_routes() {
     // Verify it has the correct swap routes
     assert_eq!(res[0].swap_route, swap_route_1.swap_operations);
     assert_eq!(res[1].swap_route, swap_route_2.swap_operations);
+}
+
+#[test]
+fn remove_swap_route() {
+    let mut deps = mock_dependencies(&[]);
+    let msg = InstantiateMsg {
+        terraswap_factory: "terraswapfactory".to_string(),
+    };
+    let info = mock_info("creator", &[]);
+
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+    deps.querier.with_pool_factory(
+        &[
+            (
+                &"ukrwasset0000".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+            (
+                &"asset0000uluna".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+            (
+                &"ulunauwhale".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0002".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0002".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+        ],
+        &[
+            ("ukrw".to_string(), 6u8),
+            ("uluna".to_string(), 6u8),
+            ("uwhale".to_string(), 6u8),
+        ],
+    );
+    let swap_route_1 = SwapRoute {
+        offer_asset_info: AssetInfo::NativeToken {
+            denom: "ukrw".to_string(),
+        },
+        ask_asset_info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        swap_operations: vec![
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+        ],
+    };
+    let swap_route_2 = SwapRoute {
+        offer_asset_info: AssetInfo::NativeToken {
+            denom: "ukrw".to_string(),
+        },
+        ask_asset_info: AssetInfo::NativeToken {
+            denom: "uwhale".to_string(),
+        },
+        swap_operations: vec![
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+            },
+        ],
+    };
+    let swap_route_1_key = get_key_from_swap_route(deps.as_ref(), &swap_route_1).unwrap();
+    let swap_route_2_key = get_key_from_swap_route(deps.as_ref(), &swap_route_2).unwrap();
+
+    // verify the keys are not there
+    assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
+    assert_eq!(None, swap_route_2_key.may_load(&deps.storage).unwrap());
+
+    // add swap route
+    let msg = ExecuteMsg::AddSwapRoutes {
+        swap_routes: vec![swap_route_1.clone(), swap_route_2.clone()],
+    };
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+    let expected_attributes = vec![
+        attr("action", "add_swap_routes"),
+        attr("swap_route", swap_route_1.to_string()),
+        attr("swap_route", swap_route_2.to_string()),
+    ];
+    assert_eq!(res.messages.len(), 0usize);
+    assert_eq!(res.attributes, expected_attributes);
+
+    // query swap route
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_1.offer_asset_info.clone(),
+        ask_asset_info: swap_route_1.ask_asset_info.clone(),
+    };
+    let res: Vec<SwapOperation> =
+        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+    assert_eq!(res, swap_route_1.swap_operations);
+
+    // remove swap route
+    let msg = ExecuteMsg::RemoveSwapRoutes {
+        swap_routes: vec![swap_route_1.clone()],
+    };
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+    let expected_attributes = vec![
+        attr("action", "remove_swap_routes"),
+        attr("swap_route", swap_route_1.to_string()),
+    ];
+    assert_eq!(res.messages.len(), 0usize);
+    assert_eq!(res.attributes, expected_attributes);
+
+    // verify the key is not there
+    assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
+
+    // query swap route 1 should fail
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_1.offer_asset_info.clone(),
+        ask_asset_info: swap_route_1.ask_asset_info.clone(),
+    };
+    assert!(query(deps.as_ref(), mock_env(), msg).is_err());
+
+    // query swap route 2 should still work
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_2.offer_asset_info.clone(),
+        ask_asset_info: swap_route_2.ask_asset_info.clone(),
+    };
+    let res: Vec<SwapOperation> =
+        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+    assert_eq!(res, swap_route_2.swap_operations);
+
+    // remove swap route 1 again should fail
+    let msg = ExecuteMsg::RemoveSwapRoutes {
+        swap_routes: vec![swap_route_1.clone()],
+    };
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg);
+    assert!(res.is_err());
+}
+
+#[test]
+fn remove_swap_routes() {
+    let mut deps = mock_dependencies(&[]);
+    let msg = InstantiateMsg {
+        terraswap_factory: "terraswapfactory".to_string(),
+    };
+    let info = mock_info("creator", &[]);
+
+    // we can just call .unwrap() to assert this was a success
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+    deps.querier.with_pool_factory(
+        &[
+            (
+                &"ukrwasset0000".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "ukrw".to_string(),
+                        },
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0000".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0000".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+            (
+                &"asset0000uluna".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::Token {
+                            contract_addr: "asset0000".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0001".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0001".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+            (
+                &"ulunauwhale".to_string(),
+                &PairInfo {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "uluna".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                    ],
+                    contract_addr: "pair0002".to_string(),
+                    liquidity_token: AssetInfo::Token {
+                        contract_addr: "liquidity0002".to_string(),
+                    },
+                    asset_decimals: [6u8, 6u8],
+                    pair_type: PairType::ConstantProduct,
+                },
+            ),
+        ],
+        &[
+            ("ukrw".to_string(), 6u8),
+            ("uluna".to_string(), 6u8),
+            ("uwhale".to_string(), 6u8),
+        ],
+    );
+    let swap_route_1 = SwapRoute {
+        offer_asset_info: AssetInfo::NativeToken {
+            denom: "ukrw".to_string(),
+        },
+        ask_asset_info: AssetInfo::NativeToken {
+            denom: "uluna".to_string(),
+        },
+        swap_operations: vec![
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+        ],
+    };
+    let swap_route_2 = SwapRoute {
+        offer_asset_info: AssetInfo::NativeToken {
+            denom: "ukrw".to_string(),
+        },
+        ask_asset_info: AssetInfo::NativeToken {
+            denom: "uwhale".to_string(),
+        },
+        swap_operations: vec![
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "ukrw".to_string(),
+                },
+                ask_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::Token {
+                    contract_addr: "asset0000".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+            },
+            SwapOperation::TerraSwap {
+                offer_asset_info: AssetInfo::NativeToken {
+                    denom: "uluna".to_string(),
+                },
+                ask_asset_info: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+            },
+        ],
+    };
+    let swap_route_1_key = get_key_from_swap_route(deps.as_ref(), &swap_route_1).unwrap();
+    let swap_route_2_key = get_key_from_swap_route(deps.as_ref(), &swap_route_2).unwrap();
+
+    // verify the keys are not there
+    assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
+    assert_eq!(None, swap_route_2_key.may_load(&deps.storage).unwrap());
+
+    // add swap route
+    let msg = ExecuteMsg::AddSwapRoutes {
+        swap_routes: vec![swap_route_1.clone(), swap_route_2.clone()],
+    };
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+    let expected_attributes = vec![
+        attr("action", "add_swap_routes"),
+        attr("swap_route", swap_route_1.to_string()),
+        attr("swap_route", swap_route_2.to_string()),
+    ];
+    assert_eq!(res.messages.len(), 0usize);
+    assert_eq!(res.attributes, expected_attributes);
+
+    // query swap route
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_1.offer_asset_info.clone(),
+        ask_asset_info: swap_route_1.ask_asset_info.clone(),
+    };
+    let res: Vec<SwapOperation> =
+        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+    assert_eq!(res, swap_route_1.swap_operations);
+
+    // remove swap routes
+    let msg = ExecuteMsg::RemoveSwapRoutes {
+        swap_routes: vec![swap_route_1.clone(), swap_route_2.clone()],
+    };
+    let res = execute(deps.as_mut(), mock_env(), mock_info("creator", &[]), msg).unwrap();
+    let expected_attributes = vec![
+        attr("action", "remove_swap_routes"),
+        attr("swap_route", swap_route_1.to_string()),
+        attr("swap_route", swap_route_2.to_string()),
+    ];
+    assert_eq!(res.messages.len(), 0usize);
+    assert_eq!(res.attributes, expected_attributes);
+
+    // verify the keys are not there
+    assert_eq!(None, swap_route_1_key.may_load(&deps.storage).unwrap());
+    assert_eq!(None, swap_route_2_key.may_load(&deps.storage).unwrap());
+
+    // query swap route 1 should fail
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_1.offer_asset_info.clone(),
+        ask_asset_info: swap_route_1.ask_asset_info.clone(),
+    };
+    assert!(query(deps.as_ref(), mock_env(), msg).is_err());
+
+    // query swap route 2 should also fail
+    let msg = QueryMsg::SwapRoute {
+        offer_asset_info: swap_route_2.offer_asset_info.clone(),
+        ask_asset_info: swap_route_2.ask_asset_info.clone(),
+    };
+    assert!(query(deps.as_ref(), mock_env(), msg).is_err());
 }

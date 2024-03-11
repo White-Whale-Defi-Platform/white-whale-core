@@ -1,11 +1,10 @@
 use crate::ContractError;
 
-
 // use crate::tests::suite::SuiteBuilder;
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
-use cw_multi_test::{Contract};
+use cw_multi_test::Contract;
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 use white_whale_std::pool_network::pair::PoolFee;
@@ -128,7 +127,8 @@ fn deposit_and_withdraw_sanity_check() {
     ];
 
     // Default Pool fees white_whale_std::pool_network::pair::PoolFee
-    let fees = PoolFee {
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::zero(),
         },
@@ -136,6 +136,22 @@ fn deposit_and_withdraw_sanity_check() {
             share: Decimal::zero(),
         },
         burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::zero(),
+        },
+        swap_fee: Fee {
+            share: Decimal::zero(),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
             share: Decimal::zero(),
         },
     };
@@ -148,7 +164,7 @@ fn deposit_and_withdraw_sanity_check() {
         .create_pair(
             creator.clone(),
             asset_infos,
-            fees,
+            pool_fees,
             white_whale_std::pool_network::asset::PairType::ConstantProduct,
             false,
             Some("whale-uluna".to_string()),
@@ -226,7 +242,8 @@ fn deposit_and_withdraw_cw20() {
     ];
 
     // Default Pool fees white_whale_std::pool_network::pair::PoolFee
-    let fees = PoolFee {
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::zero(),
         },
@@ -238,6 +255,22 @@ fn deposit_and_withdraw_cw20() {
         },
     };
 
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::zero(),
+        },
+        swap_fee: Fee {
+            share: Decimal::zero(),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
     // Create a pair
     suite
         .instantiate_with_cw20_lp_token()
@@ -245,7 +278,7 @@ fn deposit_and_withdraw_cw20() {
         .create_pair(
             creator.clone(),
             asset_infos,
-            fees,
+            pool_fees,
             white_whale_std::pool_network::asset::PairType::ConstantProduct,
             false,
             None,
@@ -361,7 +394,8 @@ mod pair_creation_failures {
         ];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::zero(),
             },
@@ -373,6 +407,21 @@ mod pair_creation_failures {
             },
         };
 
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
         // Create a pair
         suite
             .instantiate_with_cw20_lp_token()
@@ -380,7 +429,7 @@ mod pair_creation_failures {
             .create_pair(
                 creator.clone(),
                 asset_infos,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 None,
@@ -420,7 +469,8 @@ mod pair_creation_failures {
         ];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::zero(),
             },
@@ -432,6 +482,22 @@ mod pair_creation_failures {
             },
         };
 
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
         // Create a pair
         suite
             .instantiate_with_cw20_lp_token()
@@ -439,7 +505,7 @@ mod pair_creation_failures {
             .create_pair(
                 creator.clone(),
                 asset_infos.clone(),
-                fees.clone(),
+                pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("mycoolpair".to_string()),
@@ -451,7 +517,7 @@ mod pair_creation_failures {
             .create_pair(
                 creator.clone(),
                 asset_infos,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("mycoolpair".to_string()),
@@ -502,15 +568,32 @@ mod router {
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 10_000_u128),
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 10_000_u128),
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
+            },
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
         };
 
@@ -523,7 +606,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 first_pair,
-                fees.clone(),
+                pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
@@ -535,7 +618,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("uluna-uusd".to_string()),
@@ -696,15 +779,32 @@ mod swapping {
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 10_000_u128),
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 10_000_u128),
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
+            },
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
             },
         };
 
@@ -716,7 +816,7 @@ mod swapping {
             .create_pair(
                 creator.clone(),
                 asset_infos,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
@@ -920,15 +1020,32 @@ mod swapping {
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::from_ratio(1u128, 10_000_u128),
+                share: Decimal::from_ratio(1u128, 1000u128),
             },
             swap_fee: Fee {
                 share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
+            },
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
             },
         };
 
@@ -940,7 +1057,7 @@ mod swapping {
             .create_pair(
                 creator.clone(),
                 asset_infos,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
                 false,
                 Some("whale-uluna".to_string()),
@@ -1144,7 +1261,8 @@ mod swapping {
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.001% and swap fee is 0.002% and burn fee is 0%
-        let fees = PoolFee {
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
             protocol_fee: Fee {
                 share: Decimal::from_ratio(1u128, 100_000u128),
             },
@@ -1152,6 +1270,22 @@ mod swapping {
                 share: Decimal::from_ratio(2u128, 100_000u128),
             },
             burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(2u128, 100_000u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
                 share: Decimal::zero(),
             },
         };
@@ -1164,7 +1298,7 @@ mod swapping {
             .create_pair(
                 creator.clone(),
                 asset_infos,
-                fees,
+                pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 false,
                 Some("whale-uluna".to_string()),
