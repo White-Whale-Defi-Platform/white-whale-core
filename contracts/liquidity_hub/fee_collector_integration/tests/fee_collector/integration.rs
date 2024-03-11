@@ -27,13 +27,14 @@ use white_whale_std::vault_network::vault_factory::ExecuteMsg;
 use white_whale_std::whale_lair::BondingWeightResponse;
 use white_whale_std::{pool_network, vault_network};
 
-use crate::tests::common_integration::{
+use fee_collector::ContractError;
+
+use crate::common_integration::{
     increase_allowance, mock_app, mock_app_with_balance, mock_creator,
     store_dummy_flash_loan_contract, store_fee_collector_code, store_fee_distributor_code,
     store_pair_code, store_pool_factory_code, store_pool_router_code, store_token_code,
     store_trio_code, store_vault_code, store_vault_factory_code, store_whale_lair_code,
 };
-use crate::ContractError;
 
 #[test]
 fn collect_all_factories_cw20_fees_successfully() {
@@ -326,7 +327,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr.to_string() != cw20_tokens[i as usize]
+                *asset_addr != cw20_tokens[i as usize]
             })
             .unwrap();
 
@@ -354,7 +355,7 @@ fn collect_all_factories_cw20_fees_successfully() {
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr.to_string() != cw20_tokens[i as usize]
+                *asset_addr != cw20_tokens[i as usize]
             })
             .unwrap();
 
@@ -410,12 +411,12 @@ fn collect_all_factories_cw20_fees_successfully() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale_std::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: "whale_lair".clone().to_string(),
+                bonding_contract_addr: "whale_lair".to_string(),
                 fee_collector_addr: fee_collector_address.clone().to_string(),
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: ask_asset.clone(),
             },
@@ -844,7 +845,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr.to_string() != cw20_tokens[i]
+                *asset_addr != cw20_tokens[i]
             })
             .unwrap();
 
@@ -872,7 +873,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                     AssetInfo::NativeToken { .. } => panic!("no native tokens in this test"),
                 };
                 // fees are collected in the token opposite of the one you swap
-                asset_addr.to_string() != cw20_tokens[i]
+                *asset_addr != cw20_tokens[i]
             })
             .unwrap();
 
@@ -1399,12 +1400,12 @@ fn collect_pools_native_fees_successfully() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale_std::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: "whale_lair".clone().to_string(),
+                bonding_contract_addr: "whale_lair".to_string(),
                 fee_collector_addr: fee_collector_address.clone().to_string(),
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: ask_asset.clone(),
             },
@@ -2065,7 +2066,7 @@ fn collect_fees_for_vault() {
         .instantiate_contract(
             dummy_flash_loan_id,
             creator.clone().sender,
-            &crate::tests::dummy_contract::InstantiateMsg {},
+            &crate::dummy_contract::InstantiateMsg {},
             &[],
             "dummy flash-loan",
             None,
@@ -2352,12 +2353,12 @@ fn aggregate_fees_for_vault() {
             fee_distributor_id,
             creator.clone().sender,
             &white_whale_std::fee_distributor::InstantiateMsg {
-                bonding_contract_addr: "whale_lair".clone().to_string(),
+                bonding_contract_addr: "whale_lair".to_string(),
                 fee_collector_addr: fee_collector_address.clone().to_string(),
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uatom".to_string(),
@@ -2403,7 +2404,7 @@ fn aggregate_fees_for_vault() {
         .instantiate_contract(
             dummy_flash_loan_id,
             creator.clone().sender,
-            &crate::tests::dummy_contract::InstantiateMsg {},
+            &crate::dummy_contract::InstantiateMsg {},
             &[],
             "dummy flash-loan",
             None,
@@ -3113,7 +3114,7 @@ fn collect_and_distribute_fees_successfully() {
                 grace_period: Uint64::new(2),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -3356,7 +3357,7 @@ fn collect_and_distribute_fees_successfully() {
     assert_eq!(fee_distributor_current_epoch_query.epoch, Epoch::default());
 
     app.set_block(BlockInfo {
-        time: Timestamp::from_nanos(1678802400_000000000u64),
+        time: Timestamp::from_nanos(1_678_802_400_000_000_000_u64),
         ..app.block_info()
     });
 
@@ -3530,7 +3531,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -3753,7 +3754,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
 
     // Get weight of both users and store as a vec for now
     let mut weights: Vec<Uint128> = Vec::new();
-    for user in vec![creator.sender.clone(), Addr::unchecked("other")] {
+    for user in [creator.sender.clone(), Addr::unchecked("other")] {
         let weight: BondingWeightResponse = app
             .wrap()
             .query_wasm_smart(
@@ -3796,7 +3797,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -3845,7 +3846,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
         }]
     );
 
-    for user in vec![creator.sender.clone(), Addr::unchecked("other")] {
+    for user in [creator.sender.clone(), Addr::unchecked("other")] {
         let weight: BondingWeightResponse = app
             .wrap()
             .query_wasm_smart(
@@ -3903,7 +3904,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -4097,7 +4098,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // advance the time to one day after the second epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64 + 86400_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64 + 86400_000000000u64),
         chain_id: "".to_string(),
     });
 
@@ -4209,7 +4210,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
     // Advance time one more time
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64 + (86400_000000000u64 * 2u64)),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64 + (86400_000000000u64 * 2u64)),
         chain_id: "".to_string(),
     });
 
@@ -4497,7 +4498,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -4744,7 +4745,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -4798,7 +4799,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -5071,7 +5072,7 @@ fn create_epoch_unsuccessfully() {
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -5267,7 +5268,7 @@ fn create_epoch_unsuccessfully() {
 
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678802400_000000000u64),
+        time: Timestamp::from_nanos(1_678_802_400_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -5283,7 +5284,7 @@ fn create_epoch_unsuccessfully() {
     // advance some time, but not enough to create a new epoch
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678802500_000000000u64), //less than a day
+        time: Timestamp::from_nanos(1_678_802_500_000_000_000_u64), //less than a day
         chain_id: "".to_string(),
     });
 
@@ -5576,7 +5577,7 @@ fn decrease_grace_period_fee_distributor() {
                 grace_period: Uint64::new(2),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -5773,7 +5774,7 @@ fn decrease_grace_period_fee_distributor() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -5812,7 +5813,7 @@ fn decrease_grace_period_fee_distributor() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -5998,7 +5999,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -6227,7 +6228,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -6280,7 +6281,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -6362,7 +6363,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678978800_000000000u64),
+        time: Timestamp::from_nanos(1_678_978_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -6565,7 +6566,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -6812,7 +6813,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -6865,7 +6866,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -7012,7 +7013,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
 
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678978800_000000000u64),
+        time: Timestamp::from_nanos(1_678_978_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -7224,7 +7225,7 @@ fn user_weight_accounts_for_unbondings() {
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -7491,7 +7492,7 @@ fn user_weight_accounts_for_unbondings() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -7544,7 +7545,7 @@ fn user_weight_accounts_for_unbondings() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -7692,7 +7693,7 @@ fn user_weight_accounts_for_unbondings() {
     // advance the time
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678978800_000000000u64),
+        time: Timestamp::from_nanos(1_678_978_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -7866,7 +7867,7 @@ fn user_weight_accounts_for_unbondings() {
     // advance the time
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1679065200_000000000u64),
+        time: Timestamp::from_nanos(1_679_065_200_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -8080,7 +8081,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                 grace_period: Uint64::new(3u64),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -8266,7 +8267,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     //     // "enable" bonding on 10 March 2023 15:00:00
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678460400_000000000u64),
+        time: Timestamp::from_nanos(1_678_460_400_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -8316,7 +8317,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     // advance the time until the point when the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -8375,7 +8376,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
     // advance just a bit more after the new epoch can be created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888900_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_900_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -8602,7 +8603,7 @@ fn collect_distribute_with_unbonders() {
                 grace_period: Uint64::new(1),
                 epoch_config: EpochConfig {
                     duration: Uint64::new(86_400_000_000_000u64), // a day
-                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                 },
                 distribution_asset: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -8851,7 +8852,7 @@ fn collect_distribute_with_unbonders() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -8948,7 +8949,7 @@ fn collect_distribute_with_unbonders() {
     // advance the time to one day after the first epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(1678888800_000000000u64),
+        time: Timestamp::from_nanos(1_678_888_800_000_000_000_u64),
         chain_id: "".to_string(),
     });
 
@@ -9104,7 +9105,7 @@ fn collect_distribute_with_unbonders() {
     // advance the time to one day after the second epoch was created
     app.set_block(BlockInfo {
         height: 123456789u64,
-        time: Timestamp::from_nanos(3357777600_000000000u64),
+        time: Timestamp::from_nanos(3_357_777_600_000_000_000_u64),
         chain_id: "".to_string(),
     });
 

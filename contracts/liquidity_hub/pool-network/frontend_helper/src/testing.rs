@@ -236,7 +236,7 @@ mod tests {
                 incentive_factory_addr: Some("new_factory".to_string()),
                 owner: Some("new_owner".to_string()),
             },
-            &vec![],
+            &[],
         );
 
         let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -253,7 +253,7 @@ mod tests {
                 incentive_factory_addr: Some("new_factory".to_string()),
                 owner: Some("new_owner".to_string()),
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 

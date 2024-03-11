@@ -20,21 +20,9 @@ use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
 };
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use cosmwasm_std::coins;
 use white_whale_std::pool_manager::NPairInfo as PairInfo;
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale_std::pool_network::asset::is_factory_token;
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::querier::query_balance;
 
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 

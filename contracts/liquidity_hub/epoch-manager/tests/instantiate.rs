@@ -30,7 +30,7 @@ fn instantiation_successful() {
     instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(
         EpochConfig {
             duration: Uint64::new(86400),

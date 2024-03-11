@@ -27,8 +27,8 @@ fn add_hook_successfully() {
         },
     )
     .unwrap();
-    let hook_registered: bool = from_json(&query_res).unwrap();
-    assert_eq!(hook_registered, false);
+    let hook_registered: bool = from_json(query_res).unwrap();
+    assert!(!hook_registered);
 
     execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -40,7 +40,7 @@ fn add_hook_successfully() {
         },
     )
     .unwrap();
-    let hook_registered: bool = from_json(&query_res).unwrap();
+    let hook_registered: bool = from_json(query_res).unwrap();
     assert!(hook_registered);
 
     for i in 2..10 {
@@ -51,7 +51,7 @@ fn add_hook_successfully() {
     }
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Hooks {}).unwrap();
-    let hooks_response: HooksResponse = from_json(&query_res).unwrap();
+    let hooks_response: HooksResponse = from_json(query_res).unwrap();
     assert_eq!(
         hooks_response,
         HooksResponse {
@@ -109,7 +109,7 @@ fn remove_hook_successfully() {
         },
     )
     .unwrap();
-    let hook_registered: bool = from_json(&query_res).unwrap();
+    let hook_registered: bool = from_json(query_res).unwrap();
     assert!(hook_registered);
 
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -122,8 +122,8 @@ fn remove_hook_successfully() {
         },
     )
     .unwrap();
-    let hook_registered: bool = from_json(&query_res).unwrap();
-    assert_eq!(hook_registered, false);
+    let hook_registered: bool = from_json(query_res).unwrap();
+    assert!(!hook_registered);
 }
 
 #[test]
@@ -145,7 +145,7 @@ fn remove_hook_unsuccessfully() {
         },
     )
     .unwrap();
-    let hook_registered: bool = from_json(&query_res).unwrap();
+    let hook_registered: bool = from_json(query_res).unwrap();
     assert!(hook_registered);
 
     let info = mock_info("unauthorized", &[]);

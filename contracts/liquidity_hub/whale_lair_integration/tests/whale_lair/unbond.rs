@@ -4,7 +4,7 @@ use white_whale_std::whale_lair::{Bond, BondedResponse, BondingWeightResponse, U
 
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use crate::tests::robot::TestingRobot;
+use crate::robot::TestingRobot;
 
 #[test]
 fn test_unbond_successfully() {

@@ -60,7 +60,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -595,7 +595,7 @@ impl TestingSuite {
             AssetInfo::Token { contract_addr } => {
                 let balance_response: StdResult<BalanceResponse> =
                     self.app.wrap().query_wasm_smart(
-                        &contract_addr,
+                        contract_addr,
                         &cw20_base::msg::QueryMsg::Balance {
                             address: address.to_string(),
                         },

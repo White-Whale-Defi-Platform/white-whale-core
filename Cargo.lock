@@ -692,24 +692,14 @@ version = "1.1.4"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.20.0",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
  "cw20",
- "fee_distributor",
  "schemars",
  "semver",
  "serde",
- "stableswap-3pool",
- "terraswap-factory",
- "terraswap-pair",
- "terraswap-router",
- "terraswap-token",
  "thiserror",
- "vault",
- "vault_factory",
- "whale-lair",
  "white-whale-std",
 ]
 
@@ -2066,10 +2056,8 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 name = "whale-lair"
 version = "0.9.2"
 dependencies = [
- "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.20.0",
  "cw-storage-plus",
  "cw2",
  "schemars",
@@ -2077,7 +2065,6 @@ dependencies = [
  "serde",
  "thiserror",
  "white-whale-std",
- "white-whale-testing",
 ]
 
 [[package]]
