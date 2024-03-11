@@ -9,6 +9,9 @@ use schemars::JsonSchema;
 #[cfg(not(feature = "injective"))]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "token_factory")]
+use crate::state::PAIR_INFO;
+
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network;
 use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
