@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 #[cfg(not(feature = "injective"))]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "token_factory")]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 use crate::state::PAIR_INFO;
 
 use white_whale_std::fee::Fee;
@@ -18,7 +18,7 @@ use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
-use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
+use crate::state::{ALL_TIME_BURNED_FEES, CONFIG};
 
 #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
