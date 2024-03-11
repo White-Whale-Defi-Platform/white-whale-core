@@ -352,7 +352,7 @@ fn test_collect_protocol_fees_successful() {
     // make sure two messages were sent, one for the native token and one for the cw20
     assert_eq!(res.messages.len(), 2);
 
-    let transfer_native_token_msg = res.messages.get(0).expect("no message");
+    let transfer_native_token_msg = res.messages.first().expect("no message");
     let transfer_cw20_token_msg = res.messages.get(1).expect("no message");
     assert_eq!(
         transfer_native_token_msg,
@@ -546,7 +546,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     // make sure one message was sent, as there is only one fee to collect, the other one is zero
     assert_eq!(res.messages.len(), 1);
 
-    let transfer_cw20_token_msg = res.messages.get(0).expect("no message");
+    let transfer_cw20_token_msg = res.messages.first().expect("no message");
     assert_eq!(
         transfer_cw20_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {

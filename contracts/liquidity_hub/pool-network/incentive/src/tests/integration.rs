@@ -401,7 +401,7 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(past_epoch.clone()),
+            Some(past_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -425,8 +425,8 @@ fn try_open_flows_with_wrong_epochs() {
         .open_incentive_flow(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            Some(future_future_epoch.clone()),
-            Some(future_epoch.clone()),
+            Some(future_future_epoch),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -476,7 +476,7 @@ fn try_open_flows_with_wrong_epochs() {
             alice.clone(),
             incentive_addr.clone().into_inner(),
             None,
-            Some(future_epoch.clone()),
+            Some(future_epoch),
             Some(Curve::Linear),
             Asset {
                 info: AssetInfo::NativeToken {
@@ -3860,8 +3860,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone() + 4,
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration + 4,
             None,
             vec![],
             |result| {
@@ -3879,8 +3879,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .expand_incentive_position(
             alice.clone(),
             incentive_addr.clone().into_inner(),
-            alice_position_1.amount.clone(),
-            alice_position_1.unbonding_duration.clone(),
+            alice_position_1.amount,
+            alice_position_1.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4152,8 +4152,8 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
         .open_incentive_position(
             bob.clone(),
             incentive_addr.clone().into_inner(),
-            bob_position_2.amount.clone(),
-            bob_position_2.unbonding_duration.clone(),
+            bob_position_2.amount,
+            bob_position_2.unbonding_duration,
             None,
             vec![],
             |result| {
@@ -4233,7 +4233,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                     .flow_asset
                     .amount;
                 let claimed = flow_response.clone().unwrap().flow.unwrap().claimed_amount;
-                let expected_claimed = total_rewards.clone();
+                let expected_claimed = total_rewards;
 
                 assert!(total_rewards > claimed);
                 assert!(expected_claimed >= claimed);

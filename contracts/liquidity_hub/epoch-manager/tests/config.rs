@@ -21,7 +21,7 @@ fn update_config_successfully() {
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(
         EpochConfig {
             duration: Uint64::new(86400),
@@ -42,7 +42,7 @@ fn update_config_successfully() {
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(
         EpochConfig {
             duration: Uint64::new(172800),
@@ -61,7 +61,7 @@ fn update_config_unsuccessfully() {
     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
     assert_eq!(
         EpochConfig {
             duration: Uint64::new(86400),
@@ -90,7 +90,7 @@ fn update_config_unsuccessfully() {
     }
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_res: ConfigResponse = from_json(&query_res).unwrap();
+    let config_res: ConfigResponse = from_json(query_res).unwrap();
 
     // has not changed
     assert_eq!(

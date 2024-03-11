@@ -450,7 +450,7 @@ fn get_native_asset_label() {
     let asset_info = AssetInfo::NativeToken {
         denom: "factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB".to_string(),
     };
-    assert!(is_factory_token(&"factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB"));
+    assert!(is_factory_token("factory/migaloo1wcg789e6vcd8vpq5smrjffjnn8hkep4nk7aa7frk0d7u022m63uqfrupkl/Qwertyuiopasdfghjkl/zxcvbnm/qwer.tyuiop.asdfghjklZXCVB"));
     let asset_label = asset_info.get_label(&deps.as_ref()).unwrap();
     assert_eq!(asset_label, "factory/mig...pkl/Qwe...CVB");
 }

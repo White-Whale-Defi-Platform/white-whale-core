@@ -769,7 +769,7 @@ pub fn successful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,
@@ -851,7 +851,7 @@ pub fn successful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,
@@ -882,6 +882,7 @@ pub fn unsuccessful_flashloan() {
 
     suite.instantiate_default().create_cw20_token();
 
+    let cw20_token = suite.cw20_tokens.first().unwrap().clone();
     let vault_manager = suite.vault_manager_addr.clone();
     // create some vaults
 
@@ -1095,7 +1096,7 @@ pub fn unsuccessful_flashloan() {
             FilterVaultBy::Identifier("whale_vault".to_string()),
             |result| {
                 let vault_response = result.unwrap();
-                let vault = vault_response.vaults.get(0).unwrap();
+                let vault = vault_response.vaults.first().unwrap();
 
                 assert_eq!(
                     vault.asset,
