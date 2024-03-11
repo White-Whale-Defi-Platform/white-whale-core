@@ -12,6 +12,7 @@ pub mod token_factory;
 
 pub mod coin;
 
+#[cfg(test)]
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",

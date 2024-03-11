@@ -13,6 +13,9 @@ pub mod pair;
 pub mod querier;
 pub mod router;
 pub mod swap;
+
+//todo this might go away
+#[cfg(test)]
 pub mod temp_mock_api;
 pub mod token;
 pub mod trio;
