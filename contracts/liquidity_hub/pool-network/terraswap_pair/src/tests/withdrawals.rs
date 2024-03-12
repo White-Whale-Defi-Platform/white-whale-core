@@ -5,16 +5,16 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use crate::state::LP_SYMBOL;
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use cosmwasm_std::coin;
 use white_whale_std::fee::Fee;
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use white_whale_std::pool_network;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgBurn;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale_std::pool_network::denom_osmosis::MsgBurn;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 use white_whale_std::pool_network::pair::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
@@ -469,7 +469,7 @@ fn test_withdrawal_wrong_message() {
     }
 }
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 #[test]
 fn withdraw_xyk_liquidity_token_factory_lp() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
@@ -561,7 +561,7 @@ fn withdraw_xyk_liquidity_token_factory_lp() {
     });
     let msg_burn_liquidity_expected = <MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(pool_network::denom::Coin {
+        amount: Some(pool_network::denom_osmosis::Coin {
             denom: lp_denom.clone(),
             amount: "1000".to_string(),
         }),
@@ -581,7 +581,7 @@ fn withdraw_xyk_liquidity_token_factory_lp() {
     );
 }
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 #[test]
 fn withdraw_xyk_liquidity_token_factory_lp_wrong_asset() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");

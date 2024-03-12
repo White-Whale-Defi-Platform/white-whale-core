@@ -1,24 +1,14 @@
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use cosmwasm_std::coins;
 use cosmwasm_std::{
     to_json_binary, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, Uint256, WasmMsg,
 };
 use cw20::{AllowanceResponse, Cw20ExecuteMsg};
 
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use white_whale_std::pool_network::asset::is_factory_token;
 use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_std::pool_network::asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::{Coin, MsgMint};
 #[cfg(feature = "injective")]
 use white_whale_std::pool_network::denom_injective::{Coin, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
@@ -166,11 +156,7 @@ fn mint_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, VaultError> {
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     if is_factory_token(liquidity_asset.as_str()) {
         let mut messages = vec![];
         messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
@@ -197,11 +183,7 @@ fn mint_lp_token_msg(
         })])
     }
 
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
+    #[cfg(all(not(feature = "osmosis_token_factory"), not(feature = "injective")))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
         msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,

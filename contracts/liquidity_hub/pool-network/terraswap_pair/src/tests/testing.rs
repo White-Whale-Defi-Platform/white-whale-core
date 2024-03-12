@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, Decimal, Reply, ReplyOn, StdError, SubMsg, SubMsgResponse,
@@ -9,8 +9,8 @@ use cw20::MinterResponse;
 
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 use white_whale_std::pool_network::pair::ExecuteMsg::UpdateConfig;
 use white_whale_std::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
@@ -21,7 +21,7 @@ use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_pair_info;
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use crate::state::LP_SYMBOL;
 
 #[cfg(not(feature = "osmosis"))]
@@ -127,7 +127,7 @@ fn proper_initialization_cw20_lp() {
     );
 }
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 #[test]
 fn proper_initialization_token_factory_lp() {
     let mut deps = mock_dependencies(&[]);

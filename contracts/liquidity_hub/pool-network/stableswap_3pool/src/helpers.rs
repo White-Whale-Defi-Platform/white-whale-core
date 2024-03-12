@@ -6,21 +6,11 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use cosmwasm_std::CosmosMsg;
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use white_whale_std::pool_network::asset::is_factory_token;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
 use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
@@ -277,11 +267,7 @@ pub fn instantiate_fees(
 
 /// Gets the total supply of the given liquidity token
 pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint128> {
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     let total_share = if is_factory_token(liquidity_token.as_str()) {
         //bank query total
         deps.querier.query_supply(&liquidity_token)?.amount
@@ -292,11 +278,7 @@ pub fn get_total_share(deps: &Deps, liquidity_token: String) -> StdResult<Uint12
         )?
         .total_supply
     };
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
+    #[cfg(all(not(feature = "osmosis_token_factory"), not(feature = "injective")))]
     let total_share = query_token_info(
         &deps.querier,
         deps.api.addr_validate(liquidity_token.as_str())?,
@@ -322,11 +304,7 @@ pub fn create_lp_token(
             Ok(trio_info)
         })?;
 
-        #[cfg(any(
-            feature = "token_factory",
-            feature = "osmosis_token_factory",
-            feature = "injective"
-        ))]
+        #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
         return Ok(
             Response::new().add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(
                 MsgCreateDenom {

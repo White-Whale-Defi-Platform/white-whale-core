@@ -16,7 +16,9 @@ use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
 use crate::helpers::instantiate_fees;
-use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
+use crate::state::PAIR_INFO;
+use crate::state::{ALL_TIME_BURNED_FEES, CONFIG};
 
 #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:

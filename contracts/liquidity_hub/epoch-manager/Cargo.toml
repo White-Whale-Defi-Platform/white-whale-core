@@ -16,7 +16,6 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-token_factory = ["white-whale-std/token_factory"]
 osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 injective = ["white-whale-std/injective"]
 osmosis = ["osmosis_token_factory"]

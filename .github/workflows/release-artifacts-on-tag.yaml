@@ -13,10 +13,18 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Build Artifacts
+      - name: Build Artifacts vanilla
         run: |
           $GITHUB_WORKSPACE/scripts/build_release.sh -c vanilla
           tar -zcvf cosmwasm-artifacts_no-token-factory.tar.gz artifacts
+      - name: Build Artifacts osmosis_token_factory
+        run: |
+          $GITHUB_WORKSPACE/scripts/build_release.sh -c migaloo
+          tar -zcvf cosmwasm-artifacts_osmosis_token_factory.tar.gz artifacts
+      - name: Build Artifacts injective
+        run: |
+          $GITHUB_WORKSPACE/scripts/build_release.sh -c injective
+          tar -zcvf cosmwasm-artifacts_injective.tar.gz artifacts
       - name: Get Artifacts Versions
         run: $GITHUB_WORKSPACE/scripts/get_artifacts_versions.sh > artifact_versions.txt
       - name: Create Release
@@ -27,4 +35,6 @@ jobs:
           generate_release_notes: true
           files: |
             cosmwasm-artifacts_no-token-factory.tar.gz
+            cosmwasm-artifacts_osmosis_token_factory.tar.gz
+            cosmwasm-artifacts_injective.tar.gz
             artifact_versions.txt
