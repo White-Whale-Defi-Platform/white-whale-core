@@ -11,87 +11,111 @@ project_toplevel=$(git rev-parse --show-toplevel)
 git_directory=$(git rev-parse --git-dir)
 
 install_hook() {
-  mkdir -p "$git_directory/hooks"
-  ln -sfv "$project_toplevel/scripts/hooks/pre-commit.sh" "$git_directory/hooks/pre-commit"
+	mkdir -p "$git_directory/hooks"
+	ln -sfv "$project_toplevel/scripts/hooks/pre-commit.sh" "$git_directory/hooks/pre-commit"
+	cargo install taplo-cli --locked
 }
 
 if [ "$1" = "--install" ]; then
-  if [ -f "$git_directory/hooks/pre-commit" ]; then
-    read -r -p "There's an existing pre-commit hook. Do you want to overwrite it? [y/N] " response
-    case "$response" in
-    [yY][eE][sS] | [yY])
-      install_hook
-      ;;
-    *)
-      printf "Skipping hook installation :("
-      exit $?
-      ;;
-    esac
-  else
-    install_hook
-  fi
-  exit $?
+	if [ -f "$git_directory/hooks/pre-commit" ]; then
+		read -r -p "There's an existing pre-commit hook. Do you want to overwrite it? [y/N] " response
+		case "$response" in
+		[yY][eE][sS] | [yY])
+			install_hook
+			;;
+		*)
+			printf "Skipping hook installation :("
+			exit $?
+			;;
+		esac
+	else
+		install_hook
+	fi
+	exit $?
 fi
 
 # cargo fmt checks
 format_check() {
-  printf "Starting file formatting check...\n"
+	printf "Starting file formatting check...\n"
 
-  has_formatting_issues=0
-  first_file=1
-  rust_staged_files=$(git diff --name-only --staged -- '*.rs')
+	has_formatting_issues=0
+	first_file=1
 
-  # check for issues
-  for file in $rust_staged_files; do
-    format_check_result=$(rustfmt --check $file)
-    if [ "$format_check_result" != "" ]; then
-      if [ $first_file -eq 0 ]; then
-        printf "\n"
-      fi
-      printf "$file"
-      has_formatting_issues=1
-      first_file=0
-    fi
-  done
+	# Check and format Rust files
+	rust_staged_files=$(git diff --name-only --staged -- '*.rs')
+	format_files "$rust_staged_files"
 
-  if [ $has_formatting_issues -ne 0 ]; then # there are formatting issues
-    printf "\nFormatting issues were found in files listed above. Trying to format them for you...\n"
-    exit_code=0
+	# Check and format TOML files
+	toml_staged_files=$(git diff --name-only --staged -- '*.toml')
+	format_files "$toml_staged_files"
 
-    for file in $rust_staged_files; do
-      rustfmt $file
-      format_exit_code=$?
+	# Check and format Shell script files
+	sh_staged_files=$(git diff --name-only --staged -- '*.sh')
+	format_files "$sh_staged_files"
 
-      if [ $format_exit_code -ne 0 ]; then
-        # rustfmt couldn't format the current file
-        exit_code=1
-      else
-        not_staged_file=$(git diff --name-only -- $file)
+	if [ $has_formatting_issues -ne 0 ]; then
+		printf "\nSome files were formatted and added to the commit.\n"
+	fi
+}
 
-        if [ "$not_staged_file" != "" ]; then # it means the file changed and it's not staged, i.e. rustfmt did the job.
-          git add $not_staged_file
-        fi
-      fi
-    done
+format_files() {
+	local staged_files=$1
 
-    if [ $exit_code -ne 0 ]; then
-      printf "rustfmt failed to format some files. Please review, fix them and stage them manually."
-      exit 1
-    fi
+	for file in $staged_files; do
+		case "$file" in
+		*.rs)
+			format_check_result=$(rustfmt --check $file 2>&1)
+			;;
+		*.toml)
+			taplo fmt $file >/dev/null 2>&1
+			git add $file
+			printf "$file\n"
+			;;
+		*.sh)
+			format_check_result=$(shfmt -d $file 2>&1)
+			;;
+		esac
 
-  fi
+		format_file
+	done
+}
+
+format_file() {
+	if [ "$format_check_result" != "" ]; then
+		if [ $first_file -eq 0 ]; then
+			printf "\n"
+		fi
+		printf "$file"
+		has_formatting_issues=1
+		first_file=0
+
+		case "$file" in
+		*.rs)
+			rustfmt $file
+			;;
+		*.sh)
+			shfmt -w $file
+			;;
+		esac
+
+		# Add formatted file to commit if changes were made
+		not_staged_file=$(git diff --name-only -- $file)
+		if [ "$not_staged_file" != "" ]; then
+			git add $not_staged_file
+		fi
+	fi
 }
 
 # clippy checks
 lint_check() {
-  printf "Starting clippy check...\n"
-  RUSTFLAGS="-Dwarnings"
-  cargo clippy --quiet -- -D warnings
-  clippy_exit_code=$?
-  if [ $clippy_exit_code -ne 0 ]; then
-    printf "\nclippy found some issues. Fix them manually and try again :)"
-    exit 1
-  fi
+	printf "Starting clippy check...\n"
+	RUSTFLAGS="-Dwarnings"
+	cargo clippy --quiet -- -D warnings
+	clippy_exit_code=$?
+	if [ $clippy_exit_code -ne 0 ]; then
+		printf "\nclippy found some issues. Fix them manually and try again :)"
+		exit 1
+	fi
 }
 
 format_check

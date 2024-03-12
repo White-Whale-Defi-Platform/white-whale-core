@@ -1,12 +1,11 @@
-use cosmwasm_std::{Decimal, Deps, Uint128, Uint256};
+use cosmwasm_std::{Coin, Decimal, Deps, Uint128, Uint256};
 
-use white_whale::pool_network::asset::{get_total_share, Asset};
-use white_whale::vault_manager::{
+use white_whale_std::vault_manager::{
     Config, FilterVaultBy, PaybackAssetResponse, ShareResponse, VaultsResponse,
 };
 
 use crate::state::{
-    get_vault_by_identifier, get_vault_by_lp, get_vaults, get_vaults_by_asset_info, CONFIG,
+    get_vault_by_identifier, get_vault_by_lp, get_vaults, get_vaults_by_asset_denom, CONFIG,
 };
 use crate::ContractError;
 
@@ -21,16 +20,16 @@ pub(crate) fn query_vault(
     filter_by: FilterVaultBy,
 ) -> Result<VaultsResponse, ContractError> {
     let vaults = match filter_by {
-        FilterVaultBy::Asset(params) => get_vaults_by_asset_info(
+        FilterVaultBy::Asset(params) => get_vaults_by_asset_denom(
             deps.storage,
-            params.asset_info,
+            params.asset_denom,
             params.start_after,
             params.limit,
         )?,
         FilterVaultBy::Identifier(identifier) => {
             vec![get_vault_by_identifier(&deps, identifier)?]
         }
-        FilterVaultBy::LpAsset(lp_asset) => vec![get_vault_by_lp(&deps, &lp_asset)?],
+        FilterVaultBy::LpAsset(lp_denom) => vec![get_vault_by_lp(&deps, &lp_denom)?],
     };
 
     Ok(VaultsResponse { vaults })
@@ -48,17 +47,17 @@ pub(crate) fn query_vaults(
 }
 
 /// Gets the share of the assets stored in the vault that a given `lp_share` is entitled to.
-pub(crate) fn get_share(deps: Deps, lp_asset: Asset) -> Result<ShareResponse, ContractError> {
-    let vault = get_vault_by_lp(&deps, &lp_asset.info)?;
+pub(crate) fn get_share(deps: Deps, lp_asset: Coin) -> Result<ShareResponse, ContractError> {
+    let vault = get_vault_by_lp(&deps, &lp_asset.denom)?;
 
-    let lp_amount = get_total_share(&deps, lp_asset.info.to_string())?;
+    let lp_amount = deps.querier.query_supply(lp_asset.denom)?.amount;
 
     // lp_share = amount / lp_amount
     // asset_share = lp_share * vault.asset.amount
     let asset_share = Decimal::from_ratio(lp_asset.amount, lp_amount) * vault.asset.amount;
     Ok(ShareResponse {
-        share: Asset {
-            info: vault.asset.info,
+        share: Coin {
+            denom: vault.asset.denom,
             amount: asset_share,
         },
     })
@@ -67,7 +66,7 @@ pub(crate) fn get_share(deps: Deps, lp_asset: Asset) -> Result<ShareResponse, Co
 /// Gets payback amount for a given asset.
 pub(crate) fn get_payback_amount(
     deps: Deps,
-    asset: Asset,
+    asset: Coin,
     vault_identifier: String,
 ) -> Result<PaybackAssetResponse, ContractError> {
     let vault = get_vault_by_identifier(&deps, vault_identifier)?;
@@ -96,7 +95,7 @@ pub(crate) fn get_payback_amount(
         .checked_add(flash_loan_fee)?;
 
     Ok(PaybackAssetResponse {
-        asset_info: asset.info,
+        asset_denom: asset.denom,
         payback_amount: required_amount,
         protocol_fee,
         flash_loan_fee,

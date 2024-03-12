@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Env, OwnedDeps,
 };
 use serde::de::DeserializeOwned;
-use white_whale::vault_network::vault_factory::QueryMsg;
+use white_whale_std::vault_network::vault_factory::QueryMsg;
 
 use crate::contract::query;
 
@@ -20,7 +20,7 @@ where
 {
     let (deps, env) = mock_instantiate(vault_id, token_id);
 
-    let res = from_json(&query(deps.as_ref(), env.clone(), query_msg).unwrap()).unwrap();
+    let res = from_json(query(deps.as_ref(), env.clone(), query_msg).unwrap()).unwrap();
 
     (res, deps, env)
 }

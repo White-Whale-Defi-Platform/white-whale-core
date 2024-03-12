@@ -2,7 +2,7 @@ use cosmwasm_std::{OverflowError, StdError, Uint128};
 use semver::Version;
 use thiserror::Error;
 
-use white_whale::pool_network::router::SwapRoute;
+use white_whale_std::pool_network::router::SwapRoute;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -26,7 +26,6 @@ pub enum ContractError {
 
     #[error("Invalid swap route: {0}")]
     InvalidSwapRoute(SwapRoute),
-
     #[error("No swap route found for {offer_asset} -> {ask_asset}")]
     NoSwapRouteForAssets {
         offer_asset: String,

@@ -1,8 +1,8 @@
 use cosmwasm_std::{Timestamp, Uint128, Uint64};
 
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::whale_lair::GlobalIndex;
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::whale_lair::GlobalIndex;
 
 pub(crate) fn get_epochs() -> Vec<Epoch> {
     vec![

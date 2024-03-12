@@ -7,11 +7,12 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::{Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_protocol_fees() {
     let total_share = Uint128::from(60_000_000_000u128);
@@ -207,6 +208,7 @@ fn test_protocol_fees() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -409,7 +411,7 @@ fn test_collect_protocol_fees_successful() {
     // make sure two messages were sent, one for the native token and one for the cw20
     assert_eq!(res.messages.len(), 3);
 
-    let transfer_native_token_msg = res.messages.get(0).expect("no message");
+    let transfer_native_token_msg = res.messages.first().expect("no message");
     let transfer_asset0000_token_msg = res.messages.get(1).expect("no message");
     let transfer_asset0001_token_msg = res.messages.get(2).expect("no message");
     assert_eq!(
@@ -509,6 +511,7 @@ fn test_collect_protocol_fees_successful() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_collect_protocol_fees_successful_1_fee_only() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -637,7 +640,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     // make sure one message was sent, as there is only one fee to collect, the other one is zero
     assert_eq!(res.messages.len(), 1);
 
-    let transfer_cw20_token_msg = res.messages.get(0).expect("no message");
+    let transfer_cw20_token_msg = res.messages.first().expect("no message");
     assert_eq!(
         transfer_cw20_token_msg,
         &SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -697,6 +700,7 @@ fn test_collect_protocol_fees_successful_1_fee_only() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn protocol_fees() {
     let protocol_fee = PoolFee {

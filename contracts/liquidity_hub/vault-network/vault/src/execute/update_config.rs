@@ -1,7 +1,7 @@
 use cosmwasm_std::{Decimal, DepsMut, MessageInfo, Response};
 
-use white_whale::pool_network::asset::has_factory_token;
-use white_whale::vault_network::vault::UpdateConfigParams;
+use white_whale_std::pool_network::asset::has_factory_token;
+use white_whale_std::vault_network::vault::UpdateConfigParams;
 
 use crate::{error::VaultError, state::CONFIG};
 
@@ -75,9 +75,9 @@ mod test {
         Addr, Decimal, Response, StdError, Uint128,
     };
 
-    use white_whale::fee::{Fee, VaultFee};
-    use white_whale::pool_network::asset::AssetInfo;
-    use white_whale::vault_network::vault::{Config, UpdateConfigParams};
+    use white_whale_std::fee::{Fee, VaultFee};
+    use white_whale_std::pool_network::asset::AssetInfo;
+    use white_whale_std::vault_network::vault::{Config, UpdateConfigParams};
 
     use crate::{
         contract::execute,
@@ -100,7 +100,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_info("unauthorized", &[]),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: None,
@@ -139,7 +139,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: None,
@@ -193,7 +193,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: None,
                 deposit_enabled: None,
                 withdraw_enabled: None,
@@ -258,7 +258,7 @@ mod test {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
+            white_whale_std::vault_network::vault::ExecuteMsg::UpdateConfig(UpdateConfigParams {
                 flash_loan_enabled: Some(true),
                 deposit_enabled: Some(true),
                 withdraw_enabled: Some(true),

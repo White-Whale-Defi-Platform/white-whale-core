@@ -3,10 +3,10 @@ mod tests {
     use crate::error::ContractError;
     use cosmwasm_std::{coin, coins, to_json_binary, Addr, Uint128, WasmMsg};
     use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::pool_network::frontend_helper::ConfigResponse;
-    use white_whale::pool_network::incentive::{PositionsResponse, QueryPosition};
-    use white_whale::pool_network::incentive_factory::IncentiveResponse;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::pool_network::frontend_helper::ConfigResponse;
+    use white_whale_std::pool_network::incentive::{PositionsResponse, QueryPosition};
+    use white_whale_std::pool_network::incentive_factory::IncentiveResponse;
 
     use crate::tests::mock_app::mock_app;
     use crate::tests::mock_info::{mock_admin, mock_alice, mock_creator};
@@ -44,7 +44,7 @@ mod tests {
         app.execute_contract(
             mock_creator().sender,
             frontend_helper,
-            &white_whale::pool_network::frontend_helper::ExecuteMsg::Deposit {
+            &white_whale_std::pool_network::frontend_helper::ExecuteMsg::Deposit {
                 pair_address: pair_address.into_string(),
                 assets: [
                     Asset {
@@ -67,7 +67,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 incentive_factory,
-                &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+                &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentive {
                     lp_asset: lp_token,
                 },
             )
@@ -77,7 +77,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 incentive_addr.unwrap(),
-                &white_whale::pool_network::incentive::QueryMsg::Positions {
+                &white_whale_std::pool_network::incentive::QueryMsg::Positions {
                     address: mock_creator().sender.to_string(),
                 },
             )
@@ -141,7 +141,7 @@ mod tests {
                 WasmMsg::Execute {
                     contract_addr: frontend_helper.into_string(),
                     msg: to_json_binary(
-                        &white_whale::pool_network::frontend_helper::ExecuteMsg::Deposit {
+                        &white_whale_std::pool_network::frontend_helper::ExecuteMsg::Deposit {
                             pair_address: pair_address.into_string(),
                             assets: [
                                 Asset {
@@ -169,7 +169,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 incentive_factory,
-                &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+                &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentive {
                     lp_asset: lp_token,
                 },
             )
@@ -179,7 +179,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 incentive_addr.unwrap(),
-                &white_whale::pool_network::incentive::QueryMsg::Positions {
+                &white_whale_std::pool_network::incentive::QueryMsg::Positions {
                     address: mock_creator().sender.to_string(),
                 },
             )
@@ -222,7 +222,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 frontend_helper.clone(),
-                &white_whale::pool_network::frontend_helper::QueryMsg::Config {},
+                &white_whale_std::pool_network::frontend_helper::QueryMsg::Config {},
             )
             .unwrap();
 
@@ -232,11 +232,11 @@ mod tests {
         let result = app.execute_contract(
             mock_alice().sender,
             frontend_helper.clone(),
-            &white_whale::pool_network::frontend_helper::ExecuteMsg::UpdateConfig {
+            &white_whale_std::pool_network::frontend_helper::ExecuteMsg::UpdateConfig {
                 incentive_factory_addr: Some("new_factory".to_string()),
                 owner: Some("new_owner".to_string()),
             },
-            &vec![],
+            &[],
         );
 
         let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -249,11 +249,11 @@ mod tests {
         app.execute_contract(
             mock_admin().sender,
             frontend_helper.clone(),
-            &white_whale::pool_network::frontend_helper::ExecuteMsg::UpdateConfig {
+            &white_whale_std::pool_network::frontend_helper::ExecuteMsg::UpdateConfig {
                 incentive_factory_addr: Some("new_factory".to_string()),
                 owner: Some("new_owner".to_string()),
             },
-            &vec![],
+            &[],
         )
         .unwrap();
 
@@ -261,7 +261,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 frontend_helper,
-                &white_whale::pool_network::frontend_helper::QueryMsg::Config {},
+                &white_whale_std::pool_network::frontend_helper::QueryMsg::Config {},
             )
             .unwrap();
 

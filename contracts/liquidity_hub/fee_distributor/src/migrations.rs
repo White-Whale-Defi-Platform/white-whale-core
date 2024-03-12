@@ -7,11 +7,11 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Map;
 
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset;
-use white_whale::pool_network::asset::Asset;
-use white_whale::whale_lair::GlobalIndex;
-use white_whale::whale_lair::QueryMsg as LairQueryMsg;
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::Asset;
+use white_whale_std::whale_lair::GlobalIndex;
+use white_whale_std::whale_lair::QueryMsg as LairQueryMsg;
 
 use crate::state::{get_claimable_epochs, CONFIG, EPOCHS};
 
@@ -94,6 +94,40 @@ pub fn migrate_to_v091(deps: DepsMut) -> Result<Vec<CosmosMsg>, StdError> {
         // save the faulty epoch in the state
         EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), epoch)?;
     }
+
+    // create messages to send total_fees back to the fee collector
+    let mut messages = vec![];
+
+    for fee in total_fees {
+        messages.push(fee.into_msg(fee_collector_addr.clone())?);
+    }
+
+    Ok(messages)
+}
+
+#[cfg(feature = "osmosis")]
+/// Fixes the broken state for the first epoch on osmosis.
+pub fn migrate_to_v091_hotfix(deps: DepsMut) -> Result<Vec<CosmosMsg>, StdError> {
+    let claimable_epochs = get_claimable_epochs(deps.as_ref())?;
+
+    let mut faulty_epoch = claimable_epochs
+        .epochs
+        .into_iter()
+        .find(|epoch| epoch.id == Uint64::from(1u64))
+        .ok_or(StdError::generic_err("Epoch not found"))?;
+
+    let fee_collector_addr = CONFIG.load(deps.storage)?.fee_collector_addr;
+
+    // collect all available funds on faulty epochs and send them back to the fee collector, to be
+    // redistributed on the next (new) epoch
+
+    let total_fees = asset::aggregate_assets(vec![], faulty_epoch.available.clone())?;
+
+    // set the available fees of this faulty epoch to zero
+    faulty_epoch.available = vec![];
+
+    // save the faulty epoch in the state
+    EPOCHS.save(deps.storage, &faulty_epoch.id.to_be_bytes(), &faulty_epoch)?;
 
     // create messages to send total_fees back to the fee collector
     let mut messages = vec![];

@@ -10,13 +10,14 @@ use cosmwasm_std::{
     SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgMint;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom::MsgMint;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -162,7 +163,7 @@ fn provide_liquidity_cw20_lp() {
 
     assert_eq!(res.messages.len(), 4usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_initial_lp_msg = res.messages.get(2).expect("no message");
     let mint_msg = res.messages.get(3).expect("no message");
     assert_eq!(
@@ -268,7 +269,7 @@ fn provide_liquidity_cw20_lp() {
     let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 3usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_msg = res.messages.get(2).expect("no message");
     assert_eq!(
         transfer_from_msg,
@@ -660,7 +661,7 @@ fn provide_liquidity_token_factory_lp() {
 
     let mint_initial_lp_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(white_whale::pool_network::denom::Coin {
+        amount: Some(white_whale_std::pool_network::denom::Coin {
             denom: lp_denom.clone(),
             amount: (MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8)).to_string(),
         }),
@@ -668,7 +669,7 @@ fn provide_liquidity_token_factory_lp() {
 
     let mint_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(white_whale::pool_network::denom::Coin {
+        amount: Some(white_whale_std::pool_network::denom::Coin {
             denom: lp_denom.clone(),
             amount: "6000".to_string(),
         }),
@@ -686,6 +687,7 @@ fn provide_liquidity_token_factory_lp() {
     assert_eq!(bank_send_msg, bank_send_msg_expected);
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_zero_amount() {
     let mut deps = mock_dependencies(&[Coin {
@@ -796,6 +798,7 @@ fn provide_liquidity_zero_amount() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_invalid_minimum_lp_amount() {
     let mut deps = mock_dependencies(&[Coin {
@@ -870,7 +873,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0000".to_string(),
                 },
-                amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
+                amount: (MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
             },
             Asset {
                 info: AssetInfo::NativeToken {
@@ -882,7 +885,7 @@ fn provide_liquidity_invalid_minimum_lp_amount() {
                 info: AssetInfo::Token {
                     contract_addr: "asset0001".to_string(),
                 },
-                amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
+                amount: (MINIMUM_LIQUIDITY_AMOUNT - Uint128::one()),
             },
         ],
         slippage_tolerance: None,

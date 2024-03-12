@@ -1,11 +1,10 @@
-use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp, Uint128};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex, UniqueIndex};
+use std::string::ToString;
 
-use white_whale::incentive_manager::{
-    Config, EpochId, Incentive, PartialClosingPosition, Position,
-};
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_manager::Vault;
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
+use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
+
+use white_whale_std::incentive_manager::{Config, EpochId, Incentive, Position};
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::ContractError;
 
@@ -30,14 +29,14 @@ pub const POSITIONS: IndexedMap<&String, Position, PositionIndexes> = IndexedMap
             "positions",
             "positions__receiver",
         ),
-        open: MultiIndex::new(|_pk, p| p.open, "positions", "positions__open"),
+        open: MultiIndex::new(|_pk, p| p.open.to_string(), "positions", "positions__open"),
     },
 );
 
 pub struct PositionIndexes<'a> {
     pub lp_asset: MultiIndex<'a, String, Position, String>,
     pub receiver: MultiIndex<'a, String, Position, String>,
-    pub open: MultiIndex<'a, bool, Position, String>,
+    pub open: MultiIndex<'a, String, Position, String>,
 }
 
 impl<'a> IndexList<Position> for PositionIndexes<'a> {
@@ -193,7 +192,7 @@ pub fn get_open_positions_by_receiver(
 ) -> StdResult<Vec<Position>> {
     let limit = MAX_LIMIT as usize;
 
-    POSITIONS
+    let open_positions = POSITIONS
         .idx
         .receiver
         .prefix(receiver)
@@ -201,8 +200,12 @@ pub fn get_open_positions_by_receiver(
         .take(limit)
         .map(|item| {
             let (_, position) = item?;
-            position
+            Ok(position)
         })
+        .collect::<StdResult<Vec<Position>>>()?
+        .into_iter()
         .filter(|position| position.open)
-        .collect()
+        .collect::<Vec<Position>>();
+
+    Ok(open_positions)
 }

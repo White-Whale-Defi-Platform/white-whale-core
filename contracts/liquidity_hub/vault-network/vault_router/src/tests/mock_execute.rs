@@ -9,7 +9,7 @@ use super::{mock_creator, mock_instantiate::mock_instantiate};
 
 pub fn mock_execute<F: Into<String>>(
     factory_addr: F,
-    msg: white_whale::vault_network::vault_router::ExecuteMsg,
+    msg: white_whale_std::vault_network::vault_router::ExecuteMsg,
 ) -> (
     StdResult<Response>,
     OwnedDeps<MockStorage, MockApi, MockQuerier>,

@@ -1,9 +1,11 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{wasm_execute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo};
+use cosmwasm_std::{
+    wasm_execute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo, Uint128,
+};
 
-use white_whale::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::ContractError;
 
@@ -11,81 +13,74 @@ use crate::ContractError;
 pub(crate) fn process_incentive_creation_fee(
     config: &Config,
     info: &MessageInfo,
-    incentive_creation_fee: &Asset,
+    incentive_creation_fee: &Coin,
     params: &mut IncentiveParams,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut messages: Vec<CosmosMsg> = vec![];
 
     // verify the fee to create an incentive is being paid
-    match incentive_creation_fee.info.clone() {
-        AssetInfo::Token { .. } => {
-            // only fees in native tokens are supported
-            return Err(ContractError::FeeAssetNotSupported);
-        }
-        AssetInfo::NativeToken {
-            denom: incentive_creation_fee_denom,
-        } => {
-            // check paid fee amount
-            let paid_fee_amount = info
-                .funds
-                .iter()
-                .find(|coin| coin.denom == incentive_creation_fee_denom)
-                .ok_or(ContractError::IncentiveFeeMissing)?
-                .amount;
+    let paid_fee_amount = info
+        .funds
+        .iter()
+        .find(|coin| coin.denom == incentive_creation_fee.denom)
+        .ok_or(ContractError::IncentiveFeeMissing)?
+        .amount;
 
-            match paid_fee_amount.cmp(&incentive_creation_fee.amount) {
-                Ordering::Equal => (), // do nothing if user paid correct amount,
-                Ordering::Less => {
-                    // user underpaid
-                    return Err(ContractError::IncentiveFeeNotPaid {
-                        paid_amount: paid_fee_amount,
-                        required_amount: incentive_creation_fee.amount,
-                    });
-                }
-                Ordering::Greater => {
-                    // if the user is paying more than the incentive_creation_fee, check if it's trying to create
-                    // and incentive with the same asset as the incentive_creation_fee.
-                    // otherwise, refund the difference
-                    match params.incentive_asset.info.clone() {
-                        AssetInfo::Token { .. } => {}
-                        AssetInfo::NativeToken {
-                            denom: incentive_asset_denom,
-                        } => {
-                            if incentive_creation_fee_denom == incentive_asset_denom {
-                                // check if the amounts add up, i.e. the fee + incentive asset = paid amount. That is because the incentive asset
-                                // and the creation fee asset are the same, all go in the info.funds of the transaction
-                                if params
-                                    .incentive_asset
-                                    .amount
-                                    .checked_add(incentive_creation_fee.amount)?
-                                    != paid_fee_amount
-                                {
-                                    return Err(ContractError::AssetMismatch);
+    match paid_fee_amount.cmp(&incentive_creation_fee.amount) {
+        Ordering::Equal => (), // do nothing if user paid correct amount,
+        Ordering::Less => {
+            // user underpaid
+            return Err(ContractError::IncentiveFeeNotPaid {
+                paid_amount: paid_fee_amount,
+                required_amount: incentive_creation_fee.amount,
+            });
+        }
+        Ordering::Greater => {
+            // if the user is paying more than the incentive_creation_fee, check if it's trying to create
+            // an incentive with the same asset as the incentive_creation_fee.
+            // otherwise, refund the difference
+            match params.incentive_asset.info.clone() {
+                AssetInfo::Token { .. } => {}
+                AssetInfo::NativeToken {
+                    denom: incentive_asset_denom,
+                } => {
+                    if incentive_creation_fee.denom == incentive_asset_denom {
+                        // check if the amounts add up, i.e. the fee + incentive asset = paid amount. That is because the incentive asset
+                        // and the creation fee asset are the same, all go in the info.funds of the transaction
+                        if params
+                            .incentive_asset
+                            .amount
+                            .checked_add(incentive_creation_fee.amount)?
+                            != paid_fee_amount
+                        {
+                            return Err(ContractError::AssetMismatch);
+                        }
+                    } else {
+                        let refund_amount =
+                            paid_fee_amount.saturating_sub(incentive_creation_fee.amount);
+                        if refund_amount > Uint128::zero() {
+                            messages.push(
+                                BankMsg::Send {
+                                    to_address: info.sender.clone().into_string(),
+                                    amount: vec![Coin {
+                                        amount: refund_amount,
+                                        denom: incentive_creation_fee.denom.clone(),
+                                    }],
                                 }
-                            } else {
-                                messages.push(
-                                    BankMsg::Send {
-                                        to_address: info.sender.clone().into_string(),
-                                        amount: vec![Coin {
-                                            amount: paid_fee_amount - incentive_creation_fee.amount,
-                                            denom: incentive_creation_fee_denom.clone(),
-                                        }],
-                                    }
-                                    .into(),
-                                );
-                            }
+                                .into(),
+                            );
                         }
                     }
                 }
             }
-
-            // send incentive creation fee to whale lair for distribution
-            messages.push(white_whale::whale_lair::fill_rewards_msg(
-                config.whale_lair_addr.clone().into_string(),
-                vec![incentive_creation_fee.to_owned()],
-            )?);
         }
     }
+
+    // send incentive creation fee to whale lair for distribution
+    messages.push(white_whale_std::whale_lair::fill_rewards_msg_coin(
+        config.whale_lair_addr.clone().into_string(),
+        vec![incentive_creation_fee.to_owned()],
+    )?);
 
     Ok(messages)
 }
@@ -96,7 +91,7 @@ pub(crate) fn assert_incentive_asset(
     deps: Deps,
     env: &Env,
     info: &MessageInfo,
-    incentive_creation_fee: &Asset,
+    incentive_creation_fee: &Coin,
     params: &mut IncentiveParams,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -111,28 +106,22 @@ pub(crate) fn assert_incentive_asset(
                 .find(|sent| sent.denom == incentive_asset_denom)
                 .ok_or(ContractError::AssetMismatch)?;
 
-            match incentive_creation_fee.info.clone() {
-                AssetInfo::Token { .. } => {} // only fees in native tokens are supported
-                AssetInfo::NativeToken {
-                    denom: incentive_fee_denom,
-                } => {
-                    if incentive_fee_denom != incentive_asset_denom {
-                        if coin_sent.amount != params.incentive_asset.amount {
-                            return Err(ContractError::AssetMismatch);
-                        }
-                    } else {
-                        if params
-                            .incentive_asset
-                            .amount
-                            .checked_add(incentive_creation_fee.amount)?
-                            != coin_sent.amount
-                        {
-                            return Err(ContractError::AssetMismatch);
-                        }
-                    }
+            if incentive_creation_fee.denom != incentive_asset_denom {
+                if coin_sent.amount != params.incentive_asset.amount {
+                    return Err(ContractError::AssetMismatch);
+                }
+            } else {
+                if params
+                    .incentive_asset
+                    .amount
+                    .checked_add(incentive_creation_fee.amount)?
+                    != coin_sent.amount
+                {
+                    return Err(ContractError::AssetMismatch);
                 }
             }
         }
+        //todo remove
         AssetInfo::Token {
             contract_addr: incentive_asset_contract_addr,
         } => {

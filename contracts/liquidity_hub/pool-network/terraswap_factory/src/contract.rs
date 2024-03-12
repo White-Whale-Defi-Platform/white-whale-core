@@ -7,9 +7,11 @@ use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 
 use semver::Version;
-use white_whale::pool_network::asset::{PairInfoRaw, TrioInfoRaw};
-use white_whale::pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale::pool_network::querier::{query_pair_info_from_pair, query_trio_info_from_trio};
+use white_whale_std::pool_network::asset::{PairInfoRaw, TrioInfoRaw};
+use white_whale_std::pool_network::factory::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_network::querier::{
+    query_pair_info_from_pair, query_trio_info_from_trio,
+};
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -105,7 +107,7 @@ pub fn execute(
         ExecuteMsg::RemovePair { asset_infos } => commands::remove_pair(deps, env, asset_infos),
         ExecuteMsg::RemoveTrio { asset_infos } => commands::remove_trio(deps, env, asset_infos),
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            commands::add_native_token_decimals(deps, env, denom, decimals)
+            commands::add_native_token_decimals(deps, denom, decimals)
         }
         ExecuteMsg::MigratePair { contract, code_id } => {
             commands::execute_migrate_pair(deps, contract, code_id)
@@ -113,6 +115,24 @@ pub fn execute(
         ExecuteMsg::MigrateTrio { contract, code_id } => {
             commands::execute_migrate_trio(deps, contract, code_id)
         }
+        #[cfg(feature = "osmosis")]
+        ExecuteMsg::UpdatePairConfig {
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        } => commands::update_pair_config(
+            deps,
+            pair_addr,
+            owner,
+            fee_collector_addr,
+            pool_fees,
+            feature_toggle,
+            cosmwasm_pool_interface,
+        ),
+        #[cfg(not(feature = "osmosis"))]
         ExecuteMsg::UpdatePairConfig {
             pair_addr,
             owner,
@@ -126,6 +146,7 @@ pub fn execute(
             fee_collector_addr,
             pool_fees,
             feature_toggle,
+            None,
         ),
         ExecuteMsg::UpdateTrioConfig {
             trio_addr,
@@ -239,11 +260,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
+#[allow(unused_mut)]
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
+    #[cfg(not(feature = "osmosis"))]
     use crate::migrations;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
@@ -258,10 +281,12 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         });
     }
 
+    #[cfg(not(feature = "osmosis"))]
     if storage_version <= Version::parse("1.0.8")? {
         migrations::migrate_to_v110(deps.branch())?;
     }
-    if storage_version <= Version::parse("1.2.0")? {
+    #[cfg(not(feature = "osmosis"))]
+    if storage_version < Version::parse("1.2.0")? {
         migrations::migrate_to_v120(deps.branch())?;
     }
 

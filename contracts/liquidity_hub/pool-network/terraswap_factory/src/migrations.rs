@@ -1,11 +1,19 @@
+#[cfg(not(feature = "osmosis"))]
 use crate::state::Config;
+#[cfg(not(feature = "osmosis"))]
 use cosmwasm_schema::cw_serde;
+#[cfg(not(feature = "osmosis"))]
 use cosmwasm_std::{Addr, CanonicalAddr, DepsMut, Order, StdError, Uint128};
+#[cfg(not(feature = "osmosis"))]
 use cw_storage_plus::{Item, Map};
+#[cfg(not(feature = "osmosis"))]
 use schemars::JsonSchema;
+#[cfg(not(feature = "osmosis"))]
 use serde::{Deserialize, Serialize};
-use white_whale::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
+#[cfg(not(feature = "osmosis"))]
+use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 
+#[cfg(not(feature = "osmosis"))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:
 /// [`PairInfoRaw`], [`PairInfo`], [`AssetInfoRaw`], [`AssetRaw`], [`TmpPairInfo`]
 /// as identified by commit c8d8462c6933b93245acdc8abbe303287fdc1951 which changed the structs to use
@@ -83,6 +91,7 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
     Ok(())
 }
 
+#[cfg(not(feature = "osmosis"))]
 /// Migrate state of the factory for the StableSwap deployment
 pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     // migrate the TmpPairInfo struct changed in c9395c4f9d2a7b163056db0de33ab9066090969d

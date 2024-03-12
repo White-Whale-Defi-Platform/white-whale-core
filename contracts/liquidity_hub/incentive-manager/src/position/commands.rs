@@ -1,7 +1,7 @@
 use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError};
 
-use white_whale::incentive_manager::Position;
-use white_whale::pool_network::asset::Asset;
+use white_whale_std::incentive_manager::Position;
+use white_whale_std::pool_network::asset::Asset;
 
 use crate::helpers::validate_unlocking_duration;
 use crate::position::helpers::{
@@ -53,28 +53,28 @@ pub(crate) fn fill_position(
         .unwrap_or_else(|| info.clone());
 
     // check if there's an existing open position with the given `identifier`
-    let position = get_position(deps.storage, identifier)?;
+    let mut position = get_position(deps.storage, identifier)?;
 
-    if let Some(mut position) = position {
+    if let Some(ref mut position) = position {
         // there is a position, fill it
         position.lp_asset.amount = position.lp_asset.amount.checked_add(lp_asset.amount)?;
 
         POSITIONS.save(deps.storage, &position.identifier, &position)?;
     } else {
         // No position found, create a new one
-        let identifier = (POSITION_ID_COUNTER
+        let identifier = POSITION_ID_COUNTER
             .may_load(deps.storage)?
             .unwrap_or_default()
-            + 1u64)
-            .to_string();
-        POSITION_ID_COUNTER.update(deps.storage, |id| Ok(id.unwrap_or_default() + 1u64))?;
+            + 1u64;
+
+        POSITION_ID_COUNTER.save(deps.storage, &identifier)?;
 
         POSITIONS.save(
             deps.storage,
-            &identifier,
+            &identifier.to_string(),
             &Position {
-                identifier,
-                lp_asset,
+                identifier: identifier.to_string(),
+                lp_asset: lp_asset.clone(),
                 unlocking_duration,
                 open: true,
                 expiring_at: None,
@@ -84,7 +84,7 @@ pub(crate) fn fill_position(
     }
 
     // Update weights for the LP and the user
-    update_weights(deps, &receiver, &lp_asset, unlocking_duration, true)?;
+    update_weights(deps, &receiver, &lp_asset.clone(), unlocking_duration, true)?;
 
     let action = match position {
         Some(_) => "expand_position",
@@ -94,7 +94,7 @@ pub(crate) fn fill_position(
     Ok(Response::default().add_attributes(vec![
         ("action", action.to_string()),
         ("receiver", receiver.sender.to_string()),
-        ("lp_asset", lp_asset.clone().to_string()),
+        ("lp_asset", lp_asset.to_string()),
         ("unlocking_duration", unlocking_duration.to_string()),
     ]))
 }
@@ -119,8 +119,11 @@ pub(crate) fn close_position(
     //     }
     // }
 
-    let mut position = get_position(deps.storage, Some(identifier.clone()))?
-        .ok_or(ContractError::NoPositionFound { identifier })?;
+    let mut position = get_position(deps.storage, Some(identifier.clone()))?.ok_or(
+        ContractError::NoPositionFound {
+            identifier: identifier.clone(),
+        },
+    )?;
 
     if position.receiver != info.sender {
         return Err(ContractError::Unauthorized);
@@ -150,22 +153,21 @@ pub(crate) fn close_position(
             .plus_seconds(position.unlocking_duration)
             .seconds();
 
-        let identifier = (POSITION_ID_COUNTER
+        let identifier = POSITION_ID_COUNTER
             .may_load(deps.storage)?
             .unwrap_or_default()
-            + 1u64)
-            .to_string();
-        POSITION_ID_COUNTER.update(deps.storage, |id| Ok(id.unwrap_or_default() + 1u64))?;
+            + 1u64;
+        POSITION_ID_COUNTER.save(deps.storage, &identifier)?;
 
         let partial_position = Position {
-            identifier,
+            identifier: identifier.to_string(),
             lp_asset,
             unlocking_duration: position.unlocking_duration,
             open: false,
             expiring_at: Some(expires_at),
             receiver: position.receiver.clone(),
         };
-        POSITIONS.save(deps.storage, &identifier, &partial_position)?;
+        POSITIONS.save(deps.storage, &identifier.to_string(), &partial_position)?;
 
         attributes.push(("close_in_full", false.to_string()));
     } else {
@@ -189,8 +191,11 @@ pub(crate) fn withdraw_position(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    let mut position = get_position(deps.storage, Some(identifier.clone()))?
-        .ok_or(ContractError::NoPositionFound { identifier })?;
+    let mut position = get_position(deps.storage, Some(identifier.clone()))?.ok_or(
+        ContractError::NoPositionFound {
+            identifier: identifier.clone(),
+        },
+    )?;
 
     if position.receiver != info.sender {
         return Err(ContractError::Unauthorized);
@@ -212,7 +217,7 @@ pub(crate) fn withdraw_position(
         let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
 
         // send penalty to whale lair for distribution
-        messages.push(white_whale::whale_lair::fill_rewards_msg(
+        messages.push(white_whale_std::whale_lair::fill_rewards_msg(
             whale_lair_addr.into_string(),
             vec![penalty],
         )?);
@@ -233,7 +238,7 @@ pub(crate) fn withdraw_position(
     // sanity check
     if !position.lp_asset.amount.is_zero() {
         // withdraw the remaining LP tokens
-        messages.push(position.lp_asset.into_msg(position.receiver.clone())?);
+        messages.push(position.lp_asset.into_msg(position.receiver)?);
     }
 
     POSITIONS.remove(deps.storage, &identifier)?;
@@ -242,7 +247,7 @@ pub(crate) fn withdraw_position(
         .add_attributes(vec![
             ("action", "withdraw_position".to_string()),
             ("receiver", info.sender.to_string()),
-            ("identifier", identifier.clone().to_string()),
+            ("identifier", identifier.to_string()),
         ])
         .add_messages(messages))
 }
@@ -256,7 +261,7 @@ fn update_weights(
     fill: bool,
 ) -> Result<(), ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
         config.epoch_manager_addr.clone().into_string(),
     )?;
@@ -270,7 +275,7 @@ fn update_weights(
         lp_weight = lp_weight.checked_add(weight)?;
     } else {
         // closing position
-        lp_weight = lp_weight.saturating_sub(weight)?;
+        lp_weight = lp_weight.saturating_sub(weight);
     }
 
     LP_WEIGHTS_HISTORY.update::<_, StdError>(
@@ -287,7 +292,7 @@ fn update_weights(
         address_lp_weight = address_lp_weight.checked_add(weight)?;
     } else {
         // closing position
-        address_lp_weight = address_lp_weight.saturating_sub(weight)?;
+        address_lp_weight = address_lp_weight.saturating_sub(weight);
     }
 
     ADDRESS_LP_WEIGHT_HISTORY.update::<_, StdError>(

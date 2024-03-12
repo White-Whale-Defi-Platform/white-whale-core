@@ -6,8 +6,8 @@ use cosmwasm_std::{
     StdResult, Uint128, WasmMsg,
 };
 
-use white_whale::pool_network::incentive::Flow;
-use white_whale::pool_network::{
+use white_whale_std::pool_network::incentive::Flow;
+use white_whale_std::pool_network::{
     asset::{Asset, AssetInfo},
     incentive::Curve,
 };
@@ -42,10 +42,10 @@ pub fn open_flow(
 
     let config = CONFIG.load(deps.storage)?;
 
-    let incentive_factory_config: white_whale::pool_network::incentive_factory::ConfigResponse =
+    let incentive_factory_config: white_whale_std::pool_network::incentive_factory::ConfigResponse =
         deps.querier.query_wasm_smart(
             config.factory_address.into_string(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Config {},
         )?;
 
     let mut messages: Vec<CosmosMsg> = vec![];

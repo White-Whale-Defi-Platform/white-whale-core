@@ -1,7 +1,7 @@
 use cosmwasm_std::{DepsMut, Reply, Response, StdError, StdResult};
 use protobuf::Message;
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::{response::MsgInstantiateContractResponse, state::CONFIG};
 

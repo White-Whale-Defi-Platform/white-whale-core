@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 
 use cosmwasm_std::{Addr, Uint128};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive::{Curve, Flow};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::incentive::{Curve, Flow};
 
 use crate::helpers::{get_filtered_flow, get_flow_asset_amount_at_epoch};
 

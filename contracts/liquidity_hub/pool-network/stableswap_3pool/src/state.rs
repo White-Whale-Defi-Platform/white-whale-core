@@ -1,8 +1,8 @@
 use cosmwasm_std::{StdError, StdResult, Storage, Uint128};
 use cw_storage_plus::Item;
 
-use white_whale::pool_network::asset::{Asset, TrioInfoRaw};
-use white_whale::pool_network::trio::Config;
+use white_whale_std::pool_network::asset::{Asset, TrioInfoRaw};
+use white_whale_std::pool_network::trio::Config;
 
 pub const LP_SYMBOL: &str = "uLP";
 

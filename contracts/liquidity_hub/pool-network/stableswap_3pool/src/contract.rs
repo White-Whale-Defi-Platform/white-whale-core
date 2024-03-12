@@ -1,21 +1,19 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Binary, Decimal, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError,
-    StdResult,
+    to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult,
 };
 use cw2::{get_contract_version, set_contract_version};
 use protobuf::Message;
 use semver::Version;
 
-use white_whale::pool_network::asset::{AssetInfoRaw, TrioInfoRaw};
-use white_whale::pool_network::trio::{
+use white_whale_std::pool_network::asset::{AssetInfoRaw, TrioInfoRaw};
+use white_whale_std::pool_network::trio::{
     Config, ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
-use crate::helpers::has_factory_token;
 use crate::response::MsgInstantiateContractResponse;
 use crate::state::{
     ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES, CONFIG,
@@ -46,10 +44,6 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    if has_factory_token(&msg.asset_infos) && msg.pool_fees.burn_fee.share > Decimal::zero() {
-        return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-    }
 
     let trio_info: &TrioInfoRaw = &TrioInfoRaw {
         contract_addr: deps.api.addr_canonicalize(env.contract.address.as_str())?,
@@ -103,6 +97,7 @@ pub fn instantiate(
         initial_amp_block: env.block.height,
         future_amp_block: env.block.height,
     };
+
     CONFIG.save(deps.storage, &config)?;
 
     // Instantiate the collected protocol fees
@@ -210,6 +205,7 @@ pub fn execute(
             feature_toggle,
             amp_factor,
         ),
+
         ExecuteMsg::CollectProtocolFees {} => commands::collect_protocol_fees(deps),
     }
 }
@@ -279,7 +275,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

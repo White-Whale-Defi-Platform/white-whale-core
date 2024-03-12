@@ -3,12 +3,12 @@ use cosmwasm_std::testing::{mock_info, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
     from_json, Addr, Empty, Env, MessageInfo, OwnedDeps, Response, StdResult, Uint64,
 };
-use white_whale::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 
-use white_whale::fee_distributor::{
+use white_whale_std::fee_distributor::{
     ClaimableEpochsResponse, Config, Epoch, EpochResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::contract::{execute, instantiate, query};
 use crate::state::{get_expiring_epoch, EPOCHS, LAST_CLAIMED_EPOCH};
@@ -34,7 +34,7 @@ impl TestingRobot {
             grace_period: Uint64::new(2),
             epoch_config: EpochConfig {
                 duration: Uint64::new(86_400_000_000_000u64), // a day
-                genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
             },
             distribution_asset: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -173,7 +173,7 @@ impl TestingRobot {
             QueryMsg::CurrentEpoch {},
         )
         .unwrap();
-        let res: EpochResponse = from_json(&query_res).unwrap();
+        let res: EpochResponse = from_json(query_res).unwrap();
 
         response(Ok(res.epoch));
 
@@ -191,7 +191,7 @@ impl TestingRobot {
             QueryMsg::Epoch { id },
         )
         .unwrap();
-        let res: EpochResponse = from_json(&query_res).unwrap();
+        let res: EpochResponse = from_json(query_res).unwrap();
 
         response(Ok((self, res.epoch)));
 
@@ -221,7 +221,7 @@ impl TestingRobot {
             .unwrap()
         };
 
-        let res: ClaimableEpochsResponse = from_json(&query_res).unwrap();
+        let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
 
         response(Ok((self, res.epochs)));
 
@@ -238,7 +238,7 @@ impl TestingRobot {
             QueryMsg::Config {},
         )
         .unwrap();
-        let config: Config = from_json(&query_res).unwrap();
+        let config: Config = from_json(query_res).unwrap();
 
         response(Ok((self, config)));
 

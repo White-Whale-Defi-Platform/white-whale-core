@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Deps, Order, StdError, StdResult};
 use cw_controllers::HooksResponse;
 
-use white_whale::epoch_manager::epoch_manager::{ConfigResponse, EpochResponse};
+use white_whale_std::epoch_manager::epoch_manager::{ConfigResponse, EpochResponse};
 
 use crate::state::{ADMIN, CONFIG, EPOCHS, HOOKS};
 

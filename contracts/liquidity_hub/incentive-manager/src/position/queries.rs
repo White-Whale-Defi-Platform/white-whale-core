@@ -1,12 +1,12 @@
 use crate::state::{CONFIG, LAST_CLAIMED_EPOCH};
 use crate::ContractError;
 use cosmwasm_std::{Addr, Deps};
-use white_whale::epoch_manager::common::get_current_epoch;
-use white_whale::incentive_manager::RewardsResponse;
+use white_whale_std::epoch_manager::common::get_current_epoch;
+use white_whale_std::incentive_manager::RewardsResponse;
 
 pub(crate) fn get_rewards(deps: Deps, address: Addr) -> Result<RewardsResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch = get_current_epoch(deps.as_ref(), config.epoch_manager_addr.into_string())?;
+    let current_epoch = get_current_epoch(deps, config.epoch_manager_addr.into_string())?;
 
     let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;
 

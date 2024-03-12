@@ -16,7 +16,7 @@ pub(crate) fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     }
 
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
         config.epoch_manager_addr.clone().into_string(),
     )?;

@@ -4,13 +4,13 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
-use white_whale::fee_collector::{Config, ContractType, ExecuteMsg, FactoryType, FeesFor};
-use white_whale::fee_distributor::Epoch;
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::pool_network::factory::{PairsResponse, QueryMsg};
-use white_whale::pool_network::router;
-use white_whale::pool_network::router::SwapOperation;
-use white_whale::vault_network::vault_factory::VaultsResponse;
+use white_whale_std::fee_collector::{Config, ContractType, ExecuteMsg, FactoryType, FeesFor};
+use white_whale_std::fee_distributor::Epoch;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::factory::{PairsResponse, QueryMsg};
+use white_whale_std::pool_network::router;
+use white_whale_std::pool_network::router::SwapOperation;
+use white_whale_std::vault_network::vault_factory::VaultsResponse;
 
 use crate::contract::{FEES_AGGREGATION_REPLY_ID, FEES_COLLECTION_REPLY_ID};
 use crate::queries::query_distribution_asset;
@@ -48,12 +48,12 @@ pub fn collect_fees(deps: DepsMut, collect_fees_for: FeesFor) -> Result<Response
 /// Builds the message to collect the fees for the given contract
 fn collect_fees_for_contract(contract: Addr, contract_type: ContractType) -> StdResult<CosmosMsg> {
     let collect_protocol_fees_msg = match contract_type {
-        ContractType::Vault {} => {
-            to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::CollectProtocolFees {})?
-        }
-        ContractType::Pool {} => {
-            to_json_binary(&white_whale::pool_network::pair::ExecuteMsg::CollectProtocolFees {})?
-        }
+        ContractType::Vault {} => to_json_binary(
+            &white_whale_std::vault_network::vault::ExecuteMsg::CollectProtocolFees {},
+        )?,
+        ContractType::Pool {} => to_json_binary(
+            &white_whale_std::pool_network::pair::ExecuteMsg::CollectProtocolFees {},
+        )?,
     };
 
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -77,7 +77,7 @@ fn collect_fees_for_factory(
                 deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                     contract_addr: factory.to_string(),
                     msg: to_json_binary(
-                        &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                        &white_whale_std::vault_network::vault_factory::QueryMsg::Vaults {
                             start_after,
                             limit,
                         },
@@ -183,7 +183,7 @@ pub fn aggregate_fees(
                         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                             contract_addr: factory.to_string(),
                             msg: to_json_binary(
-                                &white_whale::vault_network::vault_factory::QueryMsg::Vaults {
+                                &white_whale_std::vault_network::vault_factory::QueryMsg::Vaults {
                                     start_after,
                                     limit,
                                 },

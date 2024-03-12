@@ -2,13 +2,13 @@ use cosmwasm_std::{Addr, Coin, StdResult, Timestamp, Uint128};
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor};
 
-use white_whale::fee_distributor::EpochResponse;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive::{
+use white_whale_std::fee_distributor::EpochResponse;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::incentive::{
     Curve, Flow, FlowIdentifier, FlowResponse, GlobalWeightResponse, PositionsResponse,
     RewardsResponse, RewardsShareResponse,
 };
-use white_whale::pool_network::incentive_factory::{
+use white_whale_std::pool_network::incentive_factory::{
     IncentiveResponse, IncentivesResponse, InstantiateMsg,
 };
 
@@ -57,7 +57,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -343,16 +343,14 @@ impl TestingSuite {
         lp_address: AssetInfo,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
+        let msg = white_whale_std::pool_network::incentive_factory::ExecuteMsg::CreateIncentive {
             lp_asset: lp_address,
         };
 
-        result(self.app.execute_contract(
-            sender,
-            self.incentive_factory_addr.clone(),
-            &msg,
-            &vec![],
-        ));
+        result(
+            self.app
+                .execute_contract(sender, self.incentive_factory_addr.clone(), &msg, &[]),
+        );
 
         self
     }
@@ -369,7 +367,7 @@ impl TestingSuite {
         funds: &Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenFlow {
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::OpenFlow {
             start_epoch,
             end_epoch,
             curve,
@@ -392,12 +390,10 @@ impl TestingSuite {
         flow_identifier: FlowIdentifier,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::CloseFlow { flow_identifier };
+        let msg =
+            white_whale_std::pool_network::incentive::ExecuteMsg::CloseFlow { flow_identifier };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -412,7 +408,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::OpenPosition {
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::OpenPosition {
             amount,
             unbonding_duration,
             receiver,
@@ -433,13 +429,11 @@ impl TestingSuite {
         unbonding_duration: u64,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg =
-            white_whale::pool_network::incentive::ExecuteMsg::ClosePosition { unbonding_duration };
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::ClosePosition {
+            unbonding_duration,
+        };
 
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -454,7 +448,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::ExpandPosition {
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::ExpandPosition {
             amount,
             unbonding_duration,
             receiver,
@@ -474,12 +468,9 @@ impl TestingSuite {
         sender: Addr,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::Claim {};
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Claim {};
         println!("-------------- claiming {}", sender);
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -490,11 +481,8 @@ impl TestingSuite {
         sender: Addr,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::Withdraw {};
-        result(
-            self.app
-                .execute_contract(sender, incentive_addr, &msg, &vec![]),
-        );
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Withdraw {};
+        result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self
     }
@@ -504,7 +492,7 @@ impl TestingSuite {
         epoch_amount: u64,
         incentive_addresses_to_snapshot_global_weight_for: Vec<Addr>,
     ) -> &mut Self {
-        let msg = white_whale::fee_distributor::ExecuteMsg::NewEpoch {};
+        let msg = white_whale_std::fee_distributor::ExecuteMsg::NewEpoch {};
 
         for _ in 0..epoch_amount {
             self.app
@@ -512,7 +500,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
 
@@ -532,7 +520,7 @@ impl TestingSuite {
         &mut self,
         epoch_amount: u64,
     ) -> &mut Self {
-        let msg = white_whale::fee_distributor::ExecuteMsg::NewEpoch {};
+        let msg = white_whale_std::fee_distributor::ExecuteMsg::NewEpoch {};
 
         for _ in 0..epoch_amount {
             self.app
@@ -540,7 +528,7 @@ impl TestingSuite {
                     self.senders[0].clone(),
                     self.fee_distributor_addr.clone(),
                     &msg,
-                    &vec![],
+                    &[],
                 )
                 .unwrap();
         }
@@ -553,13 +541,13 @@ impl TestingSuite {
         incentive_addr: Addr,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::TakeGlobalWeightSnapshot {};
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::TakeGlobalWeightSnapshot {};
 
         result(self.app.execute_contract(
             self.senders[0].clone(),
             incentive_addr.clone(),
             &msg,
-            &vec![],
+            &[],
         ));
 
         self
@@ -575,7 +563,7 @@ impl TestingSuite {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::pool_network::incentive::ExecuteMsg::ExpandFlow {
+        let msg = white_whale_std::pool_network::incentive::ExecuteMsg::ExpandFlow {
             flow_identifier,
             end_epoch,
             flow_asset,
@@ -598,7 +586,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let current_epoch_response: StdResult<EpochResponse> = self.app.wrap().query_wasm_smart(
             &self.fee_distributor_addr,
-            &white_whale::fee_distributor::QueryMsg::CurrentEpoch {},
+            &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
         );
 
         result(current_epoch_response);
@@ -613,7 +601,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let incentive_response: StdResult<IncentiveResponse> = self.app.wrap().query_wasm_smart(
             &self.incentive_factory_addr,
-            &white_whale::pool_network::incentive_factory::QueryMsg::Incentive {
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentive {
                 lp_asset: lp_address,
             },
         );
@@ -631,7 +619,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let incentive_response: StdResult<IncentivesResponse> = self.app.wrap().query_wasm_smart(
             &self.incentive_factory_addr,
-            &white_whale::pool_network::incentive_factory::QueryMsg::Incentives {
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Incentives {
                 start_after,
                 limit,
             },
@@ -650,8 +638,8 @@ impl TestingSuite {
     ) -> &mut Self {
         let global_weight_response: StdResult<GlobalWeightResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
-                &white_whale::pool_network::incentive::QueryMsg::GlobalWeight { epoch_id },
+                incentive_addr,
+                &white_whale_std::pool_network::incentive::QueryMsg::GlobalWeight { epoch_id },
             );
 
         result(global_weight_response);
@@ -667,8 +655,8 @@ impl TestingSuite {
     ) -> &mut Self {
         let current_epoch_rewards_share: StdResult<RewardsShareResponse> =
             self.app.wrap().query_wasm_smart(
-                &incentive_addr,
-                &white_whale::pool_network::incentive::QueryMsg::CurrentEpochRewardsShare {
+                incentive_addr,
+                &white_whale_std::pool_network::incentive::QueryMsg::CurrentEpochRewardsShare {
                     address: address.to_string(),
                 },
             );
@@ -686,7 +674,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let flow_response: StdResult<Option<FlowResponse>> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Flow {
+            &white_whale_std::pool_network::incentive::QueryMsg::Flow {
                 flow_identifier,
                 start_epoch: None,
                 end_epoch: None,
@@ -707,7 +695,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let flows_response: StdResult<Vec<Flow>> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Flows {
+            &white_whale_std::pool_network::incentive::QueryMsg::Flows {
                 start_epoch,
                 end_epoch,
             },
@@ -726,7 +714,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let positions_response: StdResult<PositionsResponse> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Positions {
+            &white_whale_std::pool_network::incentive::QueryMsg::Positions {
                 address: address.to_string(),
             },
         );
@@ -744,7 +732,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let rewards_response: StdResult<RewardsResponse> = self.app.wrap().query_wasm_smart(
             incentive_addr,
-            &white_whale::pool_network::incentive::QueryMsg::Rewards {
+            &white_whale_std::pool_network::incentive::QueryMsg::Rewards {
                 address: address.to_string(),
             },
         );
@@ -756,13 +744,13 @@ impl TestingSuite {
 
     pub(crate) fn query_incentive_factory_config(
         &mut self,
-        result: impl Fn(StdResult<white_whale::pool_network::incentive_factory::ConfigResponse>),
+        result: impl Fn(StdResult<white_whale_std::pool_network::incentive_factory::ConfigResponse>),
     ) -> &mut Self {
         let config_response: StdResult<
-            white_whale::pool_network::incentive_factory::ConfigResponse,
+            white_whale_std::pool_network::incentive_factory::ConfigResponse,
         > = self.app.wrap().query_wasm_smart(
             self.incentive_factory_addr.clone(),
-            &white_whale::pool_network::incentive_factory::QueryMsg::Config {},
+            &white_whale_std::pool_network::incentive_factory::QueryMsg::Config {},
         );
 
         result(config_response);
@@ -772,12 +760,12 @@ impl TestingSuite {
     pub(crate) fn query_incentive_config(
         &mut self,
         incentive: Addr,
-        result: impl Fn(StdResult<white_whale::pool_network::incentive::ConfigResponse>),
+        result: impl Fn(StdResult<white_whale_std::pool_network::incentive::ConfigResponse>),
     ) -> &mut Self {
-        let config_response: StdResult<white_whale::pool_network::incentive::ConfigResponse> =
+        let config_response: StdResult<white_whale_std::pool_network::incentive::ConfigResponse> =
             self.app.wrap().query_wasm_smart(
                 incentive,
-                &white_whale::pool_network::incentive::QueryMsg::Config {},
+                &white_whale_std::pool_network::incentive::QueryMsg::Config {},
             );
 
         result(config_response);
@@ -873,7 +861,7 @@ fn instantiate_contract(
             )
         }
         InstatiateContract::FeeCollector => {
-            let msg = white_whale::fee_collector::InstantiateMsg {};
+            let msg = white_whale_std::fee_collector::InstantiateMsg {};
 
             let fee_collector_id = suite.app.store_code(fee_collector_contract());
 
@@ -893,7 +881,7 @@ fn instantiate_contract(
             initial_balances,
             mint,
         } => {
-            let msg = white_whale::pool_network::token::InstantiateMsg {
+            let msg = white_whale_std::pool_network::token::InstantiateMsg {
                 name,
                 symbol,
                 decimals,

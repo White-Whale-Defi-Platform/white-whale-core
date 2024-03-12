@@ -1,6 +1,6 @@
 use cosmwasm_schema::write_api;
 
-use white_whale::pool_network::incentive_factory::{
+use white_whale_std::pool_network::incentive_factory::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 

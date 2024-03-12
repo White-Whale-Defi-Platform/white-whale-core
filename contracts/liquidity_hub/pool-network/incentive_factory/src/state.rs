@@ -1,6 +1,6 @@
 use cosmwasm_std::Addr;
 use cw_storage_plus::{Item, Map};
-use white_whale::pool_network::incentive_factory::Config;
+use white_whale_std::pool_network::incentive_factory::Config;
 
 pub const CONFIG: Item<Config> = Item::new("config");
 

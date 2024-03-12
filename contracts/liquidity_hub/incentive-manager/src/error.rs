@@ -16,7 +16,7 @@ pub enum ContractError {
     SemVer(String),
 
     #[error("Unauthorized")]
-    Unauthorized {},
+    Unauthorized,
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),

@@ -1,6 +1,6 @@
 [package]
 name = "fee_distributor"
-version = "0.9.1"
+version = "0.9.2"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition.workspace = true
 description = "Contract to distribute the fees collected by the Fee Collector."
@@ -24,9 +24,10 @@ crate-type = ["cdylib", "rlib"]
 [features]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-token_factory = ["white-whale/token_factory"]
-osmosis_token_factory = ["white-whale/osmosis_token_factory"]
-injective = ["white-whale/injective"]
+token_factory = ["white-whale-std/token_factory"]
+osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
+injective = ["white-whale-std/injective"]
+osmosis = ["osmosis_token_factory"]
 
 [dependencies]
 cosmwasm-schema.workspace = true
@@ -38,7 +39,7 @@ schemars.workspace = true
 serde.workspace = true
 semver.workspace = true
 thiserror.workspace = true
-white-whale.workspace = true
+white-whale-std.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

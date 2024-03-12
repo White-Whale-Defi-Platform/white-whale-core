@@ -1,16 +1,20 @@
+use cosmwasm_std::testing::MockStorage;
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64,
+    coin, Addr, Coin, CosmosMsg, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
 };
-use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
+use cw20::{Cw20Coin, MinterResponse};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
-use cw_multi_test::{App, AppBuilder, AppResponse, BankKeeper, Executor, Wasm, WasmKeeper};
+use cw_multi_test::{
+    App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
+    GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
+};
 
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale::pool_network::pair::ExecuteMsg::{ProvideLiquidity, Swap};
-use white_whale::pool_network::pair::{PoolFee, SimulationResponse};
-use white_whale::vault_manager::{
-    Config, Cw20HookMsg, FilterVaultBy, InstantiateMsg, LpTokenType, PaybackAssetResponse,
-    ShareResponse, VaultsResponse,
+use white_whale_std::multi_test::stargate_mock::StargateMock;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity;
+use white_whale_std::pool_network::pair::{PoolFee, SimulationResponse};
+use white_whale_std::vault_manager::{
+    Config, FilterVaultBy, InstantiateMsg, PaybackAssetResponse, ShareResponse, VaultsResponse,
 };
 
 use crate::common::suite_contracts::{
@@ -18,8 +22,21 @@ use crate::common::suite_contracts::{
     whale_lair_contract,
 };
 
+type OsmosisTokenFactoryApp = App<
+    BankKeeper,
+    MockApiBech32,
+    MockStorage,
+    FailingModule<Empty, Empty, Empty>,
+    WasmKeeper<Empty, Empty>,
+    StakeKeeper,
+    DistributionKeeper,
+    IbcFailingModule,
+    GovFailingModule,
+    StargateMock,
+>;
+
 pub struct TestingSuite {
-    app: App<BankKeeper, MockApiBech32>,
+    app: OsmosisTokenFactoryApp,
     pub senders: [Addr; 3],
     pub whale_lair_addr: Addr,
     pub vault_manager_addr: Addr,
@@ -41,31 +58,6 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn get_time(&mut self) -> Timestamp {
-        self.app.block_info().time
-    }
-
-    #[track_caller]
-    pub(crate) fn increase_allowance(
-        &mut self,
-        sender: Addr,
-        cw20contract: Addr,
-        allowance: Uint128,
-        spender: Addr,
-    ) -> &mut Self {
-        let msg = cw20_base::msg::ExecuteMsg::IncreaseAllowance {
-            spender: spender.to_string(),
-            amount: allowance,
-            expires: None,
-        };
-
-        self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
-            .unwrap();
-
-        self
-    }
-
     #[track_caller]
     pub(crate) fn create_pool(
         &mut self,
@@ -80,7 +72,7 @@ impl TestingSuite {
         let fee_collector = self.create_fee_collector();
 
         // create whale lair
-        let msg = white_whale::pool_network::pair::InstantiateMsg {
+        let msg = white_whale_std::pool_network::pair::InstantiateMsg {
             asset_infos,
             token_code_id,
             asset_decimals,
@@ -127,6 +119,7 @@ impl TestingSuite {
             .with_api(MockApiBech32::new("migaloo"))
             .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
             .with_bank(bank)
+            .with_stargate(StargateMock {})
             .build(|router, _api, storage| {
                 balances.into_iter().for_each(|(account, amount)| {
                     router.bank.init_balance(storage, &account, amount).unwrap()
@@ -154,32 +147,8 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::TokenFactory,
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(1_000u128),
-            },
-        )
-    }
-
-    #[track_caller]
-    pub(crate) fn instantiate_with_cw20_lp_token(&mut self) -> &mut Self {
-        self.create_whale_lair();
-        let cw20_code_id = self.create_cw20_token();
-
-        // 17 May 2023 17:00:00 UTC
-        let timestamp = Timestamp::from_seconds(1684342800u64);
-        self.set_time(timestamp);
-
-        self.instantiate(
-            self.whale_lair_addr.to_string(),
-            LpTokenType::Cw20(cw20_code_id),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::new(1_000u128),
             },
         )
@@ -189,7 +158,7 @@ impl TestingSuite {
         let whale_lair_id = self.app.store_code(whale_lair_contract());
 
         // create whale lair
-        let msg = white_whale::whale_lair::InstantiateMsg {
+        let msg = white_whale_std::whale_lair::InstantiateMsg {
             unbonding_period: Uint64::new(86400u64),
             growth_rate: Decimal::one(),
             bonding_assets: vec![
@@ -221,7 +190,7 @@ impl TestingSuite {
         let fee_collector_contract = self.app.store_code(fee_collector_contract());
 
         // create whale lair
-        let msg = white_whale::fee_collector::InstantiateMsg {};
+        let msg = white_whale_std::fee_collector::InstantiateMsg {};
 
         let creator = self.creator().clone();
 
@@ -239,7 +208,7 @@ impl TestingSuite {
 
     #[track_caller]
     pub fn create_cw20_token(&mut self) -> u64 {
-        let msg = white_whale::pool_network::token::InstantiateMsg {
+        let msg = white_whale_std::pool_network::token::InstantiateMsg {
             name: "mocktoken".to_string(),
             symbol: "MOCK".to_string(),
             decimals: 6,
@@ -285,12 +254,10 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
-        lp_token_type: LpTokenType,
-        vault_creation_fee: Asset,
+        vault_creation_fee: Coin,
     ) -> &mut Self {
         let msg = InstantiateMsg {
             owner: self.creator().to_string(),
-            lp_token_type,
             whale_lair_addr,
             vault_creation_fee,
         };
@@ -312,40 +279,6 @@ impl TestingSuite {
             .unwrap();
         self
     }
-
-    #[track_caller]
-    pub(crate) fn instantiate_err(
-        &mut self,
-        lp_token_type: LpTokenType,
-        vault_creation_fee: Asset,
-        error: impl Fn(anyhow::Error),
-    ) -> &mut Self {
-        let creator = self.creator().clone();
-
-        let msg = InstantiateMsg {
-            owner: creator.clone().to_string(),
-            lp_token_type,
-            whale_lair_addr: self.whale_lair_addr.to_string(),
-            vault_creation_fee,
-        };
-
-        let vault_manager_id = self.app.store_code(vault_manager_contract());
-
-        let err = self
-            .app
-            .instantiate_contract(
-                vault_manager_id,
-                creator.clone(),
-                &msg,
-                &[],
-                "mock vault manager",
-                Some(creator.into_string()),
-            )
-            .unwrap_err();
-
-        error(err);
-        self
-    }
 }
 
 /// execute messages
@@ -357,7 +290,7 @@ impl TestingSuite {
         action: cw_ownable::Action,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::UpdateOwnership(action);
+        let msg = white_whale_std::vault_manager::ExecuteMsg::UpdateOwnership(action);
 
         result(
             self.app
@@ -371,14 +304,14 @@ impl TestingSuite {
     pub(crate) fn create_vault(
         &mut self,
         sender: Addr,
-        asset_info: AssetInfo,
+        asset_denom: String,
         vault_identifier: Option<String>,
-        fees: white_whale::vault_manager::VaultFee,
+        fees: white_whale_std::vault_manager::VaultFee,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::CreateVault {
-            asset_info,
+        let msg = white_whale_std::vault_manager::ExecuteMsg::CreateVault {
+            asset_denom,
             fees,
             vault_identifier,
         };
@@ -395,15 +328,11 @@ impl TestingSuite {
     pub(crate) fn deposit(
         &mut self,
         sender: Addr,
-        asset: Asset,
         vault_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::Deposit {
-            asset,
-            vault_identifier,
-        };
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Deposit { vault_identifier };
 
         result(
             self.app
@@ -417,36 +346,16 @@ impl TestingSuite {
     pub(crate) fn withdraw(
         &mut self,
         sender: Addr,
-        asset: Asset,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        match asset.info {
-            AssetInfo::Token { contract_addr } => {
-                let msg = cw20::Cw20ExecuteMsg::Send {
-                    contract: self.vault_manager_addr.to_string(),
-                    amount: asset.amount,
-                    msg: to_json_binary(&Cw20HookMsg::Withdraw).unwrap(),
-                };
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Withdraw {};
+        let vault_manager = self.vault_manager_addr.clone();
 
-                result(self.app.execute_contract(
-                    sender,
-                    Addr::unchecked(contract_addr),
-                    &msg,
-                    &funds,
-                ));
-            }
-            AssetInfo::NativeToken { .. } => {
-                let msg = white_whale::vault_manager::ExecuteMsg::Withdraw {};
-
-                let vault_manager = self.vault_manager_addr.clone();
-
-                result(
-                    self.app
-                        .execute_contract(sender, vault_manager, &msg, &funds),
-                );
-            }
-        }
+        result(
+            self.app
+                .execute_contract(sender, vault_manager, &msg, &funds),
+        );
 
         self
     }
@@ -455,18 +364,16 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         whale_lair_addr: Option<String>,
-        vault_creation_fee: Option<Asset>,
-        cw20_lp_code_id: Option<u64>,
+        vault_creation_fee: Option<Coin>,
         flash_loan_enabled: Option<bool>,
         deposit_enabled: Option<bool>,
         withdraw_enabled: Option<bool>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::UpdateConfig {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             vault_creation_fee,
-            cw20_lp_code_id,
             flash_loan_enabled,
             deposit_enabled,
             withdraw_enabled,
@@ -484,12 +391,12 @@ impl TestingSuite {
     pub(crate) fn flashloan(
         &mut self,
         sender: Addr,
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
         payload: Vec<CosmosMsg>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale::vault_manager::ExecuteMsg::FlashLoan {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::FlashLoan {
             asset,
             vault_identifier,
             payload,
@@ -511,13 +418,11 @@ impl TestingSuite {
     ) -> &mut Self {
         // the values here don't matter as this is the test it would give an error, as only the
         // contract itself can make callbacks
-        let msg = white_whale::vault_manager::ExecuteMsg::Callback(
-            white_whale::vault_manager::CallbackMsg::AfterFlashloan {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Callback(
+            white_whale_std::vault_manager::CallbackMsg::AfterFlashloan {
                 old_asset_balance: Uint128::zero(),
-                loan_asset: Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "".to_string(),
-                    },
+                loan_asset: Coin {
+                    denom: "".to_string(),
                     amount: Default::default(),
                 },
                 sender: sender.clone(),
@@ -543,7 +448,7 @@ impl TestingSuite {
         let ownership_response: StdResult<cw_ownable::Ownership<String>> =
             self.app.wrap().query_wasm_smart(
                 &self.vault_manager_addr,
-                &white_whale::vault_manager::QueryMsg::Ownership {},
+                &white_whale_std::vault_manager::QueryMsg::Ownership {},
             );
 
         result(ownership_response);
@@ -559,7 +464,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Vault { filter_by },
+            &white_whale_std::vault_manager::QueryMsg::Vault { filter_by },
         );
 
         result(vaults_response);
@@ -576,7 +481,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Vaults { start_after, limit },
+            &white_whale_std::vault_manager::QueryMsg::Vaults { start_after, limit },
         );
 
         result(vaults_response);
@@ -587,34 +492,12 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_balance(
         &mut self,
-        asset_info: AssetInfo,
+        denom: String,
         address: Addr,
         result: impl Fn(Uint128),
     ) -> &mut Self {
-        let balance: Uint128 = match asset_info {
-            AssetInfo::Token { contract_addr } => {
-                let balance_response: StdResult<BalanceResponse> =
-                    self.app.wrap().query_wasm_smart(
-                        &contract_addr,
-                        &cw20_base::msg::QueryMsg::Balance {
-                            address: address.to_string(),
-                        },
-                    );
-
-                if balance_response.is_err() {
-                    Uint128::zero()
-                } else {
-                    balance_response.unwrap().balance
-                }
-            }
-            AssetInfo::NativeToken { denom } => {
-                let balance_response = self.app.wrap().query_balance(address, denom.clone());
-
-                balance_response.unwrap_or(coin(0, denom)).amount
-            }
-        };
-
-        result(balance);
+        let balance_response = self.app.wrap().query_balance(address, denom.clone());
+        result(balance_response.unwrap_or(coin(0, denom)).amount);
 
         self
     }
@@ -622,7 +505,7 @@ impl TestingSuite {
     pub(crate) fn query_config(&mut self, result: impl Fn(StdResult<Config>)) -> &mut Self {
         let response: StdResult<Config> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Config {},
+            &white_whale_std::vault_manager::QueryMsg::Config {},
         );
 
         result(response);
@@ -632,12 +515,12 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_share(
         &mut self,
-        lp_share: Asset,
+        lp_share: Coin,
         result: impl Fn(StdResult<ShareResponse>),
     ) -> &mut Self {
         let response: StdResult<ShareResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::Share { lp_share },
+            &white_whale_std::vault_manager::QueryMsg::Share { lp_share },
         );
 
         result(response);
@@ -648,13 +531,13 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_payback(
         &mut self,
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
         result: impl Fn(StdResult<PaybackAssetResponse>),
     ) -> &mut Self {
         let response: StdResult<PaybackAssetResponse> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale::vault_manager::QueryMsg::PaybackAmount {
+            &white_whale_std::vault_manager::QueryMsg::PaybackAmount {
                 asset,
                 vault_identifier,
             },
@@ -687,26 +570,6 @@ impl TestingSuite {
 
         self
     }
-    #[track_caller]
-    pub(crate) fn swap(
-        &mut self,
-        sender: Addr,
-        offer_asset: Asset,
-        pool: Addr,
-        funds: &[Coin],
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let msg = Swap {
-            offer_asset,
-            belief_price: None,
-            max_spread: None,
-            to: None,
-        };
-
-        result(self.app.execute_contract(sender, pool, &msg, funds));
-
-        self
-    }
 
     #[track_caller]
     pub(crate) fn simulate_swap(
@@ -717,7 +580,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             pool,
-            &white_whale::pool_network::pair::QueryMsg::Simulation { offer_asset },
+            &white_whale_std::pool_network::pair::QueryMsg::Simulation { offer_asset },
         );
 
         result(response);

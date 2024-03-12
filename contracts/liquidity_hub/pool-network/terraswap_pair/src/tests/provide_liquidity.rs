@@ -7,14 +7,14 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 
-use white_whale::fee::Fee;
+use white_whale_std::fee::Fee;
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgMint;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
+use white_whale_std::pool_network::denom::MsgMint;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
@@ -30,6 +30,7 @@ use cosmwasm_std::coin;
 #[cfg(feature = "injective")]
 use cw_multi_test::Executor;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_cw20_lp() {
     let mut deps = mock_dependencies(&[Coin {
@@ -159,7 +160,7 @@ fn provide_liquidity_cw20_lp() {
 
     assert_eq!(res.messages.len(), 3usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_initial_lp_msg = res.messages.get(1).expect("no message");
     let mint_msg = res.messages.get(2).expect("no message");
     assert_eq!(
@@ -255,7 +256,7 @@ fn provide_liquidity_cw20_lp() {
     let res: Response = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2usize);
 
-    let transfer_from_msg = res.messages.get(0).expect("no message");
+    let transfer_from_msg = res.messages.first().expect("no message");
     let mint_msg = res.messages.get(1).expect("no message");
     assert_eq!(
         transfer_from_msg,
@@ -500,6 +501,7 @@ fn provide_liquidity_cw20_lp() {
     let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_zero_amount() {
     let mut deps = mock_dependencies(&[Coin {
@@ -600,6 +602,7 @@ fn provide_liquidity_zero_amount() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn provide_liquidity_invalid_minimum_lp_amount() {
     let mut deps = mock_dependencies(&[Coin {

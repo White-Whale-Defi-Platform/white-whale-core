@@ -3,7 +3,7 @@ use cosmwasm_std::{
     Uint256, WasmMsg,
 };
 
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::helpers::{get_flow_asset_amount_at_epoch, get_flow_current_end_epoch};
 use crate::state::{EpochId, ADDRESS_WEIGHT_HISTORY, GLOBAL_WEIGHT_SNAPSHOT, LAST_CLAIMED_EPOCH};

@@ -1,11 +1,11 @@
 use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
-use white_whale::fee::VaultFee;
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::vault_network::vault::InstantiateMsg;
-use white_whale::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+use white_whale_std::fee::VaultFee;
+use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::traits::AssetReference;
+use white_whale_std::vault_network::vault::InstantiateMsg;
+use white_whale_std::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
 
 use crate::{
-    asset::AssetReference,
     err::{StdResult, VaultFactoryError},
     state::{CONFIG, TMP_VAULT_ASSET, VAULTS},
 };
@@ -74,9 +74,9 @@ mod tests {
         WasmMsg,
     };
     use cw_multi_test::Executor;
-    use white_whale::fee::{Fee, VaultFee};
-    use white_whale::pool_network::asset::AssetInfo;
-    use white_whale::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
+    use white_whale_std::fee::{Fee, VaultFee};
+    use white_whale_std::pool_network::asset::AssetInfo;
+    use white_whale_std::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
 
     use crate::{
         contract::execute,
@@ -97,7 +97,7 @@ mod tests {
         let (res, _, env) = mock_execute(
             5,
             6,
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -115,14 +115,16 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
-                            owner: env.contract.address.to_string(),
-                            asset_info,
-                            token_id: 6,
-                            vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string(),
-                            token_factory_lp: false,
-                        })
+                        msg: to_json_binary(
+                            &white_whale_std::vault_network::vault::InstantiateMsg {
+                                owner: env.contract.address.to_string(),
+                                asset_info,
+                                token_id: 6,
+                                vault_fees: get_fees(),
+                                fee_collector_addr: "fee_collector".to_string(),
+                                token_factory_lp: false,
+                            }
+                        )
                         .unwrap(),
                         funds: vec![],
                         label: "White Whale uluna Vault".to_string()
@@ -142,7 +144,7 @@ mod tests {
         let (res, _, env) = mock_execute(
             5,
             6,
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: true,
@@ -160,14 +162,16 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
-                            owner: env.contract.address.to_string(),
-                            asset_info,
-                            token_id: 6,
-                            vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string(),
-                            token_factory_lp: true,
-                        })
+                        msg: to_json_binary(
+                            &white_whale_std::vault_network::vault::InstantiateMsg {
+                                owner: env.contract.address.to_string(),
+                                asset_info,
+                                token_id: 6,
+                                vault_fees: get_fees(),
+                                fee_collector_addr: "fee_collector".to_string(),
+                                token_factory_lp: true,
+                            }
+                        )
                         .unwrap(),
                         funds: vec![],
                         label: "White Whale uluna Vault".to_string()
@@ -192,7 +196,7 @@ mod tests {
             deps.as_mut(),
             env,
             bad_actor,
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info,
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -218,7 +222,7 @@ mod tests {
         app.execute_contract(
             creator.sender.clone(),
             factory_addr.clone(),
-            &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -232,7 +236,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr.clone(),
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+                &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: asset_info.clone(),
                 },
             )
@@ -242,7 +246,7 @@ mod tests {
         let res = app.execute_contract(
             creator.sender,
             factory_addr,
-            &white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            &white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info,
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -270,7 +274,7 @@ mod tests {
             deps.as_mut(),
             env.clone(),
             mock_creator(),
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
@@ -300,7 +304,7 @@ mod tests {
             deps.as_mut(),
             env,
             mock_creator(),
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: AssetInfo::NativeToken {
                     denom: "uluna".to_string(),
                 },
@@ -337,7 +341,7 @@ mod tests {
         let (res, _, env) = mock_execute(
             5,
             6,
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -355,14 +359,16 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
-                            owner: env.contract.address.to_string(),
-                            asset_info,
-                            token_id: 6,
-                            vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string(),
-                            token_factory_lp: false,
-                        })
+                        msg: to_json_binary(
+                            &white_whale_std::vault_network::vault::InstantiateMsg {
+                                owner: env.contract.address.to_string(),
+                                asset_info,
+                                token_id: 6,
+                                vault_fees: get_fees(),
+                                fee_collector_addr: "fee_collector".to_string(),
+                                token_factory_lp: false,
+                            }
+                        )
                         .unwrap(),
                         funds: vec![],
                         label: "White Whale ibc/4CD5...3D04 Vault".to_string()
@@ -383,7 +389,7 @@ mod tests {
         let (res, _, env) = mock_execute(
             5,
             6,
-            white_whale::vault_network::vault_factory::ExecuteMsg::CreateVault {
+            white_whale_std::vault_network::vault_factory::ExecuteMsg::CreateVault {
                 asset_info: asset_info.clone(),
                 fees: get_fees(),
                 token_factory_lp: false,
@@ -401,14 +407,16 @@ mod tests {
                     msg: WasmMsg::Instantiate {
                         admin: Some(env.contract.address.to_string()),
                         code_id: 5,
-                        msg: to_json_binary(&white_whale::vault_network::vault::InstantiateMsg {
-                            owner: env.contract.address.to_string(),
-                            asset_info,
-                            token_id: 6,
-                            vault_fees: get_fees(),
-                            fee_collector_addr: "fee_collector".to_string(),
-                            token_factory_lp: false,
-                        })
+                        msg: to_json_binary(
+                            &white_whale_std::vault_network::vault::InstantiateMsg {
+                                owner: env.contract.address.to_string(),
+                                asset_info,
+                                token_id: 6,
+                                vault_fees: get_fees(),
+                                fee_collector_addr: "fee_collector".to_string(),
+                                token_factory_lp: false,
+                            }
+                        )
                         .unwrap(),
                         funds: vec![],
                         label: "White Whale peggy0x87a...1B5 Vault".to_string()

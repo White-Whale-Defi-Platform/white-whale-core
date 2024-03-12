@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_json_binary, Binary, Decimal, Deps, Env, Uint128};
 use cw20::{BalanceResponse, Cw20QueryMsg};
 
-use white_whale::pool_network::asset::{get_total_share, AssetInfo};
+use white_whale_std::pool_network::asset::{get_total_share, AssetInfo};
 
 use crate::error::VaultError;
 use crate::state::COLLECTED_PROTOCOL_FEES;
@@ -47,8 +47,8 @@ pub fn get_share(deps: Deps, env: Env, amount: Uint128) -> Result<Binary, VaultE
 mod test {
     use cosmwasm_std::{coins, from_json, testing::mock_env, Addr, Uint128};
 
-    use white_whale::pool_network::asset::{Asset, AssetInfo};
-    use white_whale::vault_network::vault::Config;
+    use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+    use white_whale_std::vault_network::vault::Config;
 
     use crate::state::COLLECTED_PROTOCOL_FEES;
     use crate::{
@@ -113,10 +113,10 @@ mod test {
             .unwrap();
 
         let res: Uint128 = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 env,
-                white_whale::vault_network::vault::QueryMsg::Share {
+                white_whale_std::vault_network::vault::QueryMsg::Share {
                     amount: Uint128::new(15_000),
                 },
             )
@@ -184,10 +184,10 @@ mod test {
             .unwrap();
 
         let res: Uint128 = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 env,
-                white_whale::vault_network::vault::QueryMsg::Share {
+                white_whale_std::vault_network::vault::QueryMsg::Share {
                     amount: Uint128::new(15_000),
                 },
             )

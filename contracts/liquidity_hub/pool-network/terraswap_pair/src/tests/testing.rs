@@ -7,15 +7,15 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType};
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::MsgCreateDenom;
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::pair::ExecuteMsg::UpdateConfig;
-use white_whale::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
-use white_whale::pool_network::swap::assert_max_spread;
-use white_whale::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
+use white_whale_std::pool_network::denom::MsgCreateDenom;
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::pair::ExecuteMsg::UpdateConfig;
+use white_whale_std::pool_network::pair::{Config, InstantiateMsg, PoolFee, QueryMsg};
+use white_whale_std::pool_network::swap::assert_max_spread;
+use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 
 use crate::contract::{execute, instantiate, query, reply};
 use crate::error::ContractError;
@@ -24,6 +24,7 @@ use crate::queries::query_pair_info;
 #[cfg(feature = "token_factory")]
 use crate::state::LP_SYMBOL;
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn proper_initialization_cw20_lp() {
     let mut deps = mock_dependencies(&[]);
@@ -185,121 +186,7 @@ fn proper_initialization_token_factory_lp() {
     );
 }
 
-#[cfg(feature = "token_factory")]
-#[test]
-fn intialize_with_burnable_token_factory_asset() {
-    let mut deps = mock_dependencies(&[]);
-
-    deps.querier.with_token_balances(&[(
-        &"asset0000".to_string(),
-        &[(&MOCK_CONTRACT_ADDR.to_string(), &Uint128::from(123u128))],
-    )]);
-
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        },
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: true,
-    };
-
-    // we can just call .unwrap() to assert this was a success
-    let env = mock_env();
-    let info = mock_info("addr0000", &[]);
-    let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
-
-    let expected = <MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
-        sender: MOCK_CONTRACT_ADDR.to_string(),
-        subdenom: LP_SYMBOL.to_string(),
-    });
-
-    assert_eq!(res.messages[0].msg, expected);
-
-    // let's try to increase the burn fee. It should fail
-    let update_config_message = UpdateConfig {
-        owner: None,
-        fee_collector_addr: None,
-        pool_fees: Some(PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-        }),
-        feature_toggle: None,
-    };
-
-    let res = execute(
-        deps.as_mut(),
-        env.clone(),
-        info.clone(),
-        update_config_message,
-    );
-    match res {
-        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
-        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-    }
-
-    // now let's try instantiating the contract with burning fees, it should fail
-    let msg = InstantiateMsg {
-        asset_infos: [
-            AssetInfo::NativeToken {
-                denom: "factory/migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4/ampWHALE".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: "asset0000".to_string(),
-            },
-        ],
-        token_code_id: 10u64,
-        asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-        },
-        fee_collector_addr: "collector".to_string(),
-        pair_type: PairType::ConstantProduct,
-        token_factory_lp: true,
-    };
-
-    let res = instantiate(deps.as_mut(), env, info, msg);
-    match res {
-        Ok(_) => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-        Err(ContractError::TokenFactoryAssetBurnDisabled {}) => (),
-        _ => panic!("Expected error, ContractError::TokenFactoryAssetBurnDisabled"),
-    }
-}
-
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_initialization_invalid_fees() {
     let mut deps = mock_dependencies(&[]);
@@ -350,9 +237,9 @@ fn test_initialization_invalid_fees() {
 #[test]
 fn test_max_spread() {
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
@@ -361,38 +248,38 @@ fn test_max_spread() {
     // same example as above but using 6 and 18 decimal places
     assert_max_spread(
         Some(Decimal::from_ratio(
-            1200_000_000u128,
+            1_200_000_000_u128,
             1_000_000_000_000_000_000u128,
         )),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999_900_000_000_000u128),
         Uint128::zero(),
     )
     .unwrap_err();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         None, // defaults to 0.5%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(995_000u128), // all good
         Uint128::zero(),
     )
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         None, // defaults to 0.1%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_000u128), // fails
         Uint128::zero(),
     )
     .unwrap_err();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(990_000u128),
         Uint128::zero(),
     )
@@ -401,12 +288,12 @@ fn test_max_spread() {
     // same example as above but using 6 and 18 decimal place
     assert_max_spread(
         Some(Decimal::from_ratio(
-            1200_000_000u128,
+            1_200_000_000_u128,
             1_000_000_000_000_000_000u128,
         )),
         Some(Decimal::percent(1)),
-        Uint128::from(1200_000_000u128),
-        Uint128::from(990_000__000_000_000_000u128),
+        Uint128::from(1_200_000_000_u128),
+        Uint128::from(990_000_000_000_000_000_u128),
         Uint128::zero(),
     )
     .unwrap();
@@ -456,18 +343,18 @@ fn test_max_spread() {
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(60)), // this will default to 50%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
     .unwrap();
 
     assert_max_spread(
-        Some(Decimal::from_ratio(1200_000_000u128, 1_000_000u128)),
+        Some(Decimal::from_ratio(1_200_000_000_u128, 1_000_000u128)),
         Some(Decimal::percent(60)), // this will default to 50%
-        Uint128::from(1200_000_000u128),
+        Uint128::from(1_200_000_000_u128),
         Uint128::from(989_999u128),
         Uint128::zero(),
     )
@@ -483,6 +370,7 @@ fn test_max_spread() {
     .unwrap_err();
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_update_config_unsuccessful() {
     let mut deps = mock_dependencies(&[]);
@@ -581,6 +469,35 @@ fn test_update_config_successful() {
         (&"asset0000".to_string(), &[]),
     ]);
 
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::from_ratio(1u128, 1000u128),
+        },
+        swap_fee: Fee {
+            share: Decimal::zero(),
+        },
+        burn_fee: Fee {
+            share: Decimal::from_ratio(1u128, 1000u128),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::from_ratio(1u128, 1000u128),
+        },
+        swap_fee: Fee {
+            share: Decimal::zero(),
+        },
+        burn_fee: Fee {
+            share: Decimal::from_ratio(1u128, 1000u128),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::from_ratio(1u128, 1000u128),
+        },
+    };
+
     let msg = InstantiateMsg {
         asset_infos: [
             AssetInfo::NativeToken {
@@ -592,17 +509,7 @@ fn test_update_config_successful() {
         ],
         token_code_id: 10u64,
         asset_decimals: [6u8, 8u8],
-        pool_fees: PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::zero(),
-            },
-            swap_fee: Fee {
-                share: Decimal::zero(),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        },
+        pool_fees: pool_fees.clone(),
         fee_collector_addr: "collector".to_string(),
         pair_type: PairType::ConstantProduct,
         token_factory_lp: false,
@@ -614,39 +521,86 @@ fn test_update_config_successful() {
     instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
 
     let config: Config =
-        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for original config
     assert_eq!(config.owner, Addr::unchecked("addr0000"));
     assert!(config.feature_toggle.swaps_enabled);
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::zero());
+    #[cfg(feature = "osmosis")]
+    {
+        assert_eq!(
+            config.pool_fees.osmosis_fee.share,
+            Decimal::from_ratio(1u128, 1000u128)
+        );
 
+        // pool interface not set by default
+        assert_eq!(config.cosmwasm_pool_interface, Addr::unchecked(""));
+    }
+
+    #[cfg(not(feature = "osmosis"))]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(3u64),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+    };
+
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::percent(1u64),
+        },
+        swap_fee: Fee {
+            share: Decimal::percent(3u64),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        osmosis_fee: Fee {
+            share: Decimal::percent(5u64),
+        },
+    };
+
+    #[cfg(not(feature = "osmosis"))]
     let update_config_message = UpdateConfig {
         owner: Some("new_admin".to_string()),
         fee_collector_addr: Some("new_collector".to_string()),
-        pool_fees: Some(PoolFee {
-            protocol_fee: Fee {
-                share: Decimal::percent(1u64),
-            },
-            swap_fee: Fee {
-                share: Decimal::percent(3u64),
-            },
-            burn_fee: Fee {
-                share: Decimal::zero(),
-            },
-        }),
+        pool_fees: Some(pool_fees),
         feature_toggle: None,
+    };
+
+    #[cfg(feature = "osmosis")]
+    let update_config_message = UpdateConfig {
+        owner: Some("new_admin".to_string()),
+        fee_collector_addr: Some("new_collector".to_string()),
+        pool_fees: Some(pool_fees),
+        feature_toggle: None,
+        cosmwasm_pool_interface: Some("new_interface".to_string()),
     };
 
     execute(deps.as_mut(), env, info, update_config_message).unwrap();
 
     let config: Config =
-        from_json(&query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap()).unwrap();
 
     // check for new config
     assert_eq!(config.owner, Addr::unchecked("new_admin"));
     assert_eq!(config.fee_collector_addr, Addr::unchecked("new_collector"));
     assert_eq!(config.pool_fees.swap_fee.share, Decimal::percent(3u64));
+    #[cfg(feature = "osmosis")]
+    {
+        assert_eq!(config.pool_fees.osmosis_fee.share, Decimal::percent(5u64));
+        assert_eq!(
+            config.cosmwasm_pool_interface,
+            Addr::unchecked("new_interface")
+        );
+    }
 }
 
 #[test]

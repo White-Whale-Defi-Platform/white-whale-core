@@ -11,9 +11,9 @@ documentation.workspace = true
 publish.workspace = true
 
 exclude = [
-    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-    "contract.wasm",
-    "hash.txt",
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -22,9 +22,10 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [features]
-injective = ["white-whale/injective"]
-token_factory = ["white-whale/token_factory"]
-osmosis_token_factory = ["white-whale/osmosis_token_factory"]
+injective = ["white-whale-std/injective"]
+token_factory = ["white-whale-std/token_factory"]
+osmosis = ["osmosis_token_factory"]
+osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
 
@@ -39,10 +40,9 @@ schemars.workspace = true
 semver.workspace = true
 serde.workspace = true
 thiserror.workspace = true
-white-whale.workspace = true
+white-whale-std.workspace = true
 cw-utils.workspace = true
 cw-ownable.workspace = true
-sha2.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

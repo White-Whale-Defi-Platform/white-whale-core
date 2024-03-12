@@ -1,3 +1,11 @@
+#[cfg(feature = "osmosis")]
+use anybuf::Anybuf;
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use cosmwasm_std::coins;
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, OverflowError,
     Response, StdError, StdResult, Uint128, WasmMsg,
@@ -9,25 +17,18 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use cosmwasm_std::coins;
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
-use white_whale::pool_network::asset::is_factory_token;
-use white_whale::pool_network::asset::{
-    get_total_share, has_factory_token, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw,
-    MINIMUM_LIQUIDITY_AMOUNT,
+use white_whale_std::pool_network::asset::is_factory_token;
+use white_whale_std::pool_network::asset::{
+    get_total_share, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "token_factory")]
-use white_whale::pool_network::denom::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "injective")]
-use white_whale::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
-use white_whale::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
-use white_whale::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
-use white_whale::pool_network::{swap, U256};
+use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
+use white_whale_std::pool_network::pair::{Config, Cw20HookMsg, FeatureToggle, PoolFee};
+use white_whale_std::pool_network::{swap, U256};
 
 use crate::error::ContractError;
 use crate::helpers;
@@ -362,8 +363,13 @@ pub fn swap(
     let ask_decimal: u8;
 
     // To calculate pool amounts properly we should subtract user deposit and the protocol fees from the pool
+    #[cfg(not(feature = "osmosis"))]
+    let contract_addr = env.contract.address;
+    #[cfg(feature = "osmosis")]
+    let contract_addr = env.contract.address.clone();
+
     let pools = pair_info
-        .query_pools(&deps.querier, deps.api, env.contract.address)?
+        .query_pools(&deps.querier, deps.api, contract_addr)?
         .into_iter()
         .map(|mut pool| {
             // subtract the protocol fee from the pool
@@ -396,13 +402,13 @@ pub fn swap(
     }
 
     let offer_amount = offer_asset.amount;
-    let pool_fees = CONFIG.load(deps.storage)?.pool_fees;
+    let config = CONFIG.load(deps.storage)?;
 
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
         ask_pool.amount,
         offer_amount,
-        pool_fees,
+        config.pool_fees,
         &pair_info.pair_type,
         offer_decimal,
         ask_decimal,
@@ -413,10 +419,22 @@ pub fn swap(
         amount: swap_computation.return_amount,
     };
 
-    let fees = swap_computation
-        .swap_fee_amount
-        .checked_add(swap_computation.protocol_fee_amount)?
-        .checked_add(swap_computation.burn_fee_amount)?;
+    let fees = {
+        let base_fees = swap_computation
+            .swap_fee_amount
+            .checked_add(swap_computation.protocol_fee_amount)?
+            .checked_add(swap_computation.burn_fee_amount)?;
+
+        #[cfg(feature = "osmosis")]
+        {
+            base_fees.checked_add(swap_computation.osmosis_fee_amount)?
+        }
+
+        #[cfg(not(feature = "osmosis"))]
+        {
+            base_fees
+        }
+    };
 
     // check max spread limit if exist
     swap::assert_max_spread(
@@ -449,6 +467,35 @@ pub fn swap(
         )?;
 
         messages.push(burn_asset.into_burn_msg()?);
+    }
+
+    #[cfg(feature = "osmosis")]
+    if !swap_computation.osmosis_fee_amount.is_zero()
+        && info.sender != config.cosmwasm_pool_interface
+    {
+        // send osmosis fee to the Community Pool if the swap was not initiated by the osmosis pool manager via the
+        // cosmwasm pool interface
+        let denom = match ask_pool.info.clone() {
+            AssetInfo::Token { .. } => return Err(StdError::generic_err("Not supported").into()),
+            AssetInfo::NativeToken { denom } => denom,
+        };
+
+        //https://docs.cosmos.network/v0.45/core/proto-docs.html#cosmos.distribution.v1beta1.MsgFundCommunityPool
+        let community_pool_msg = CosmosMsg::Stargate {
+            type_url: "/cosmos.distribution.v1beta1.MsgFundCommunityPool".to_string(),
+            value: Anybuf::new()
+                .append_repeated_message(
+                    1,
+                    &[&Anybuf::new()
+                        .append_string(1, denom)
+                        .append_string(2, swap_computation.osmosis_fee_amount.to_string())],
+                )
+                .append_string(2, &env.contract.address)
+                .into_vec()
+                .into(),
+        };
+
+        messages.push(community_pool_msg);
     }
 
     // Store the protocol fees generated by this swap. The protocol fees are collected on the ask
@@ -489,10 +536,16 @@ pub fn swap(
             "burn_fee_amount",
             &swap_computation.burn_fee_amount.to_string(),
         ),
+        #[cfg(feature = "osmosis")]
+        (
+            "osmosis_fee_amount",
+            &swap_computation.osmosis_fee_amount.to_string(),
+        ),
         ("swap_type", pair_info.pair_type.get_label()),
     ]))
 }
 
+#[allow(unused_variables)]
 /// Updates the [Config] of the contract. Only the owner of the contract can do this.
 pub fn update_config(
     deps: DepsMut,
@@ -501,6 +554,7 @@ pub fn update_config(
     fee_collector_addr: Option<String>,
     pool_fees: Option<PoolFee>,
     feature_toggle: Option<FeatureToggle>,
+    cosmwasm_pool_interface: Option<String>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
     if deps.api.addr_validate(info.sender.as_str())? != config.owner {
@@ -515,20 +569,6 @@ pub fn update_config(
 
     if let Some(pool_fees) = pool_fees {
         pool_fees.is_valid()?;
-
-        let pair_info_raw = PAIR_INFO.load(deps.storage)?;
-
-        if has_factory_token(
-            &pair_info_raw
-                .asset_infos
-                .into_iter()
-                .map(|raw| raw.to_normal(deps.api).unwrap())
-                .collect::<Vec<AssetInfo>>(),
-        ) && pool_fees.burn_fee.share > Decimal::zero()
-        {
-            return Err(ContractError::TokenFactoryAssetBurnDisabled {});
-        }
-
         config.pool_fees = pool_fees;
     }
 
@@ -538,6 +578,12 @@ pub fn update_config(
 
     if let Some(fee_collector_addr) = fee_collector_addr {
         config.fee_collector_addr = deps.api.addr_validate(fee_collector_addr.as_str())?;
+    }
+
+    #[cfg(feature = "osmosis")]
+    if let Some(cosmwasm_pool_interface) = cosmwasm_pool_interface {
+        config.cosmwasm_pool_interface =
+            deps.api.addr_validate(cosmwasm_pool_interface.as_str())?;
     }
 
     CONFIG.save(deps.storage, &config)?;

@@ -1,19 +1,13 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Order, Response, StdError, Uint128,
-    Uint256, WasmMsg,
+    coins, ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    Order, Response, StdError, Uint128, Uint256, WasmMsg,
 };
 
-use white_whale::pool_network::asset::Asset;
-use white_whale::traits::AssetReference;
-use white_whale::vault_manager::{CallbackMsg, ExecuteMsg};
-use white_whale::whale_lair::fill_rewards_msg;
+use white_whale_std::vault_manager::{CallbackMsg, ExecuteMsg};
+use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
-use crate::helpers::{assert_asset, query_balances};
-
-use crate::queries::query_vaults;
-use crate::state::{
-    get_vault_by_identifier, CONFIG, MAX_LIMIT, ONGOING_FLASHLOAN, TEMP_BALANCES, VAULTS,
-};
+use crate::helpers::query_balances;
+use crate::state::{get_vault_by_identifier, CONFIG, ONGOING_FLASHLOAN, TEMP_BALANCES, VAULTS};
 use crate::ContractError;
 
 /// Takes a flashloan of the specified asset and executes the payload.
@@ -21,43 +15,49 @@ pub fn flash_loan(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset: Asset,
+    asset: Coin,
     vault_identifier: String,
     payload: Vec<CosmosMsg>,
 ) -> Result<Response, ContractError> {
     // check that flash loans are enabled
     let config = CONFIG.load(deps.storage)?;
-    if !config.flash_loan_enabled || ONGOING_FLASHLOAN.load(deps.storage)? {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure!(
+        config.flash_loan_enabled && !ONGOING_FLASHLOAN.load(deps.storage)?,
+        ContractError::Unauthorized {}
+    );
 
     let vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.to_owned())?;
 
-    // check that the asset sent matches the vault
-    assert_asset(&vault.asset.info, &asset.info)?;
+    // check that the asset requested matches the vault
+    ensure!(
+        vault.asset.denom == asset.denom,
+        ContractError::AssetMismatch {
+            expected: vault.asset.denom,
+            actual: asset.denom,
+        }
+    );
 
     // check if the vault has enough funds
-    if vault.asset.amount < asset.amount {
-        return Err(ContractError::InsufficientAssetBalance {
+    ensure!(
+        asset.amount <= vault.asset.amount,
+        ContractError::InsufficientAssetBalance {
             asset_balance: vault.asset.amount,
             requested_amount: asset.amount,
-        });
-    }
+        }
+    );
 
     // toggle on the flashloan indicator
     ONGOING_FLASHLOAN.update::<_, StdError>(deps.storage, |_| Ok(true))?;
 
-    let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
-
-    // store balances of all assets in the contract, so that we can check that other assets were not touched during the fashloan
-    let balances = query_balances(deps.as_ref(), env.contract.address.clone(), &vaults)?;
+    // store balances of all assets in the contract, so that we can check that other assets were not touched during the flashloan
+    let balances = query_balances(deps.as_ref(), env.contract.address.clone())?;
     for (asset_info_reference, balance) in &balances {
-        TEMP_BALANCES.save(deps.storage, asset_info_reference.as_slice(), balance)?;
+        TEMP_BALANCES.save(deps.storage, asset_info_reference.clone(), balance)?;
     }
 
     // store current balance for after trade profit check
     let old_asset_balance = *balances
-        .get(asset.info.get_reference())
+        .get(&asset.denom)
         .ok_or(ContractError::NonExistentVault {})?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -115,15 +115,12 @@ pub fn after_flashloan(
     deps: DepsMut,
     env: Env,
     old_balance: Uint128,
-    loan_asset: Asset,
+    loan_asset: Coin,
     vault_identifier: String,
     sender: Addr,
 ) -> Result<Response, ContractError> {
-    // query asset balances
-    let vaults = query_vaults(deps.as_ref(), None, Some(MAX_LIMIT))?.vaults;
-
-    // get balances of all assets in the vault
-    let new_balances = query_balances(deps.as_ref(), env.contract.address, &vaults)?;
+    // get balances of all assets in the vault manager
+    let new_balances = query_balances(deps.as_ref(), env.contract.address)?;
 
     // check that no LP assets where taken during the flashloan. When a native asset is all sent, it
     // disappears from the balance vector, thus we compare the length of the original balances
@@ -132,9 +129,10 @@ pub fn after_flashloan(
         .keys(deps.storage, None, None, Order::Ascending)
         .count();
 
-    if original_native_assets_count > new_balances.len() {
-        return Err(ContractError::FlashLoanLoss {});
-    }
+    ensure!(
+        original_native_assets_count <= new_balances.len(),
+        ContractError::FlashLoanLoss {}
+    );
 
     // check that all assets balances are equal or greater than before flashloan
     let any_balance_lower = new_balances
@@ -143,24 +141,22 @@ pub fn after_flashloan(
             // get old balance for the given asset. If not found (should only happen if a vault is
             // created during the flashloan process), default to zero.
             let old_balance = TEMP_BALANCES
-                .load(deps.storage, asset_info_reference)
+                .load(deps.storage, asset_info_reference.clone())
                 .map_or(Uint128::zero(), |old_balance| old_balance);
 
             new_balance < old_balance
         });
 
-    if any_balance_lower {
-        return Err(ContractError::FlashLoanLoss {});
-    }
+    ensure!(!any_balance_lower, ContractError::FlashLoanLoss {});
 
     TEMP_BALANCES.clear(deps.storage);
 
     let new_asset_balance = *new_balances
-        .get(loan_asset.info.get_reference())
+        .get(&loan_asset.denom)
         .ok_or(ContractError::NonExistentVault {})?;
 
     // calculate the fees for executing the flashloan
-    let mut vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.to_owned())?;
+    let mut vault = get_vault_by_identifier(&deps.as_ref(), vault_identifier.clone())?;
 
     // protocol fee goes to the bonders
     let protocol_fee = Uint128::try_from(
@@ -183,13 +179,14 @@ pub fn after_flashloan(
         .checked_add(protocol_fee)?
         .checked_add(flash_loan_fee)?;
 
-    if required_amount > new_asset_balance {
-        return Err(ContractError::NegativeProfit {
+    ensure!(
+        required_amount <= new_asset_balance,
+        ContractError::NegativeProfit {
             old_balance,
             current_balance: new_asset_balance,
             required_amount,
-        });
-    }
+        }
+    );
 
     // add the flashloan fee to the vault
     vault.asset.amount = vault.asset.amount.checked_add(flash_loan_fee)?;
@@ -204,25 +201,22 @@ pub fn after_flashloan(
     let mut messages: Vec<CosmosMsg> = vec![];
 
     if !profit.is_zero() {
-        let profit_asset = Asset {
-            info: loan_asset.info.clone(),
-            amount: profit,
-        };
-
         // send profit to sender
-        messages.push(profit_asset.into_msg(sender)?);
+        messages.push(
+            BankMsg::Send {
+                to_address: sender.to_string(),
+                amount: coins(profit.u128(), loan_asset.denom.clone()),
+            }
+            .into(),
+        );
     }
 
     let config = CONFIG.load(deps.storage)?;
-    let protocol_fee_asset = vec![Asset {
-        info: loan_asset.info,
-        amount: protocol_fee,
-    }];
 
     // send protocol fee to whale lair
-    messages.push(fill_rewards_msg(
+    messages.push(fill_rewards_msg_coin(
         config.whale_lair_addr.into_string(),
-        protocol_fee_asset,
+        coins(protocol_fee.u128(), loan_asset.denom),
     )?);
 
     // toggle off ongoing flashloan flag

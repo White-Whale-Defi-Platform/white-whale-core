@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Deps, StdError};
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::state::INCENTIVE_MAPPINGS;
 

@@ -2,9 +2,9 @@ use cosmwasm_std::{entry_point, Addr};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
+use white_whale_std::pool_network::asset::AssetInfo;
 
-use white_whale::pool_network::asset::AssetInfo;
-use white_whale::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
@@ -98,6 +98,9 @@ pub fn execute(
             //todo deposit in next epoch
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
         }
+        ExecuteMsg::FillRewardsCoin => {
+            Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+        }
     }
 }
 
@@ -148,7 +151,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    use white_whale::migrate_guards::check_contract_name;
+    use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 

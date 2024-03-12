@@ -12,14 +12,15 @@ use cosmwasm_std::{
     SubMsg, SubMsgResponse, SubMsgResult, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
-use white_whale::fee::Fee;
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::mock_querier::mock_dependencies;
-use white_whale::pool_network::trio::{
+use white_whale_std::fee::Fee;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::mock_querier::mock_dependencies;
+use white_whale_std::pool_network::trio::{
     Cw20HookMsg, ExecuteMsg, InstantiateMsg, PoolFee, QueryMsg, ReverseSimulationResponse,
     SimulationResponse,
 };
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_compute_swap_with_huge_pool_variance() {
     let offer_pool = Uint128::from(395451850234u128);
@@ -52,6 +53,7 @@ fn test_compute_swap_with_huge_pool_variance() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_native_to_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -156,7 +158,7 @@ fn try_native_to_token() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     //Expected return on a stable swap should about the same as input,
     // swap fee will be approximately 1_500_000_000 * 0.003   4_500_000
@@ -270,7 +272,7 @@ fn try_native_to_token() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -323,7 +325,7 @@ fn try_native_to_token() {
         .unwrap();
 
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
@@ -408,6 +410,7 @@ fn try_native_to_token() {
     );
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_swap_invalid_token() {
     let total_share = Uint128::from(30000000000u128);
@@ -519,6 +522,7 @@ fn try_swap_invalid_token() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn try_token_to_native() {
     let total_share = Uint128::from(20_000_000_000u128);
@@ -641,7 +645,7 @@ fn try_token_to_native() {
 
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     let expected_spread_amount = Uint128::new(830_233u128);
     //Expected return on a stable swap should about the same as input,
@@ -736,7 +740,7 @@ fn try_token_to_native() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -790,7 +794,7 @@ fn try_token_to_native() {
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
@@ -811,6 +815,9 @@ fn try_token_to_native() {
         .unwrap(),
     )
     .unwrap();
+
+    println!("reverse_simulation_res: {:?}", reverse_simulation_res);
+    println!("expected_swap_fee_amount: {:?}", expected_swap_fee_amount);
 
     assert!(
         (offer_amount.u128() as i128 - reverse_simulation_res.offer_amount.u128() as i128).abs()
@@ -895,6 +902,7 @@ fn try_token_to_native() {
     }
 }
 
+#[cfg(not(feature = "osmosis"))]
 #[test]
 fn test_swap_to_third_party() {
     let total_share = Uint128::from(30_000_000_000u128);
@@ -1030,7 +1038,7 @@ fn test_swap_to_third_party() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {

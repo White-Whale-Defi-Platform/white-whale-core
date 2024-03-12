@@ -3,7 +3,7 @@ use cosmwasm_std::{
     Addr, Env, OwnedDeps,
 };
 use cw_multi_test::{App, Executor};
-use white_whale::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::contract::instantiate;
 
@@ -29,7 +29,7 @@ pub fn mock_instantiate(
         deps.as_mut(),
         env.clone(),
         creator.clone(),
-        white_whale::vault_network::vault::InstantiateMsg {
+        white_whale_std::vault_network::vault::InstantiateMsg {
             owner: creator.sender.to_string(),
             token_id,
             asset_info,
@@ -54,7 +54,7 @@ pub fn app_mock_instantiate(app: &mut App, asset_info: AssetInfo) -> Addr {
         .instantiate_contract(
             fee_collector_id,
             mock_creator().sender,
-            &white_whale::fee_collector::InstantiateMsg {},
+            &white_whale_std::fee_collector::InstantiateMsg {},
             &[],
             "mock fee collector",
             None,
@@ -64,7 +64,7 @@ pub fn app_mock_instantiate(app: &mut App, asset_info: AssetInfo) -> Addr {
     app.instantiate_contract(
         vault_id,
         creator.clone().sender,
-        &white_whale::vault_network::vault::InstantiateMsg {
+        &white_whale_std::vault_network::vault::InstantiateMsg {
             owner: creator.sender.into_string(),
             token_id,
             asset_info,

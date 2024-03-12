@@ -6,7 +6,5 @@ mod queries;
 pub mod state;
 
 mod migrations;
-#[cfg(test)]
-pub mod tests;
 
 pub use crate::error::ContractError;

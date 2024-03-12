@@ -3,10 +3,10 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult}
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
-use white_whale::epoch_manager::epoch_manager::{
+use white_whale_std::epoch_manager::epoch_manager::{
     Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
 };
-use white_whale::migrate_guards::check_contract_name;
+use white_whale_std::migrate_guards::check_contract_name;
 
 use crate::error::ContractError;
 use crate::state::{ADMIN, CONFIG, EPOCHS};

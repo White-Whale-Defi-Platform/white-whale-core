@@ -3,8 +3,8 @@ use cosmwasm_std::{
     Response, StdResult, Uint128, WasmMsg,
 };
 
-use white_whale::pool_network::asset::{Asset, AssetInfo};
-use white_whale::pool_network::incentive::{Flow, FlowIdentifier};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::incentive::{Flow, FlowIdentifier};
 
 use crate::error::ContractError;
 use crate::execute::open_flow::DEFAULT_FLOW_DURATION;

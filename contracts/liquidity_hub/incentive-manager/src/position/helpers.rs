@@ -4,8 +4,8 @@ use cosmwasm_std::{
 };
 use cw_utils::PaymentError;
 
-use white_whale::incentive_manager::{EpochId, PositionParams};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::incentive_manager::EpochId;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
 use crate::ContractError;
@@ -128,11 +128,14 @@ pub fn get_latest_address_weight(
     storage: &dyn Storage,
     address: &Addr,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    Ok(ADDRESS_LP_WEIGHT_HISTORY
-        .prefix(address)
-        .range(storage, None, None, Order::Descending)
-        .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
-        .collect::<StdResult<(EpochId, Uint128)>>()?)
+    //todo this will likely change with the new implementation of the claim function
+    // Ok(ADDRESS_LP_WEIGHT_HISTORY
+    //     .prefix(address)
+    //     .range(storage, None, None, Order::Descending)
+    //     .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
+    //     .collect::<StdResult<(EpochId, Uint128)>>()?);
+    // dummy value meanwhile
+    Ok((0, Uint128::zero()))
 }
 
 /// Gets the latest available weight snapshot recorded for the given lp.
@@ -140,9 +143,12 @@ pub fn get_latest_lp_weight(
     storage: &dyn Storage,
     lp_asset_key: &[u8],
 ) -> Result<(EpochId, Uint128), ContractError> {
-    Ok(LP_WEIGHTS_HISTORY
-        .prefix(lp_asset_key)
-        .range(storage, None, None, Order::Descending)
-        .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
-        .collect::<StdResult<(EpochId, Uint128)>>()?)
+    //todo this will likely change with the new implementation of the claim function
+    // Ok(LP_WEIGHTS_HISTORY
+    //     .prefix(lp_asset_key)
+    //     .range(storage, None, None, Order::Descending)
+    //     .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
+    //     .collect::<StdResult<(EpochId, Uint128)>>()?)
+    // dummy value meanwhile
+    Ok((0, Uint128::zero()))
 }

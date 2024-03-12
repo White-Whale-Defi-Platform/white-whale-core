@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use white_whale::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use white_whale::vault_network::vault_router::ExecuteMsg;
+use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
 use crate::err::{StdResult, VaultRouterError};
 use crate::state::CONFIG;
@@ -23,10 +23,11 @@ pub fn next_loan(
 
     let Some(queried_vault) = deps.querier.query_wasm_smart::<Option<String>>(
         config.vault_factory,
-        &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+        &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
             asset_info: source_vault_asset,
         },
-    )? else {
+    )?
+    else {
         return Err(VaultRouterError::Unauthorized {});
     };
 
@@ -44,17 +45,19 @@ pub fn next_loan(
             vec![WasmMsg::Execute {
                 contract_addr: vault.clone(),
                 funds: vec![],
-                msg: to_json_binary(&white_whale::vault_network::vault::ExecuteMsg::FlashLoan {
-                    amount: asset.amount,
-                    msg: to_json_binary(&ExecuteMsg::NextLoan {
-                        initiator,
-                        source_vault: vault.to_string(),
-                        source_vault_asset_info: asset.info.clone(),
-                        to_loan: loans.to_vec(),
-                        payload,
-                        loaned_assets,
-                    })?,
-                })?,
+                msg: to_json_binary(
+                    &white_whale_std::vault_network::vault::ExecuteMsg::FlashLoan {
+                        amount: asset.amount,
+                        msg: to_json_binary(&ExecuteMsg::NextLoan {
+                            initiator,
+                            source_vault: vault.to_string(),
+                            source_vault_asset_info: asset.info.clone(),
+                            to_loan: loans.to_vec(),
+                            payload,
+                            loaned_assets,
+                        })?,
+                    },
+                )?,
             }
             .into()]
         }
@@ -85,9 +88,9 @@ pub fn next_loan(
 mod tests {
     use cosmwasm_std::{coins, Addr};
     use cw_multi_test::Executor;
-    use white_whale::pool_network::asset::AssetInfo;
+    use white_whale_std::pool_network::asset::AssetInfo;
 
-    use white_whale::vault_network::vault_router::ExecuteMsg;
+    use white_whale_std::vault_network::vault_router::ExecuteMsg;
 
     use crate::err::VaultRouterError;
     use crate::tests::mock_instantiate::{app_mock_instantiate, AppInstantiateResponse};
@@ -134,7 +137,7 @@ mod tests {
             .wrap()
             .query_wasm_smart(
                 factory_addr,
-                &white_whale::vault_network::vault_factory::QueryMsg::Vault {
+                &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
                     asset_info: AssetInfo::NativeToken {
                         denom: "uluna".to_string(),
                     },

@@ -1,18 +1,19 @@
 use cosmwasm_std::{
-    ensure, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError, Storage, Uint128,
+    ensure, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, Storage,
+    Uint128,
 };
-use white_whale::epoch_manager::common::validate_epoch;
 
-use white_whale::epoch_manager::hooks::EpochChangedHookMsg;
-use white_whale::incentive_manager::{Curve, Incentive, IncentiveParams};
+use white_whale_std::epoch_manager::common::validate_epoch;
+use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
+use white_whale_std::incentive_manager::{Curve, Incentive, IncentiveParams};
 
 use crate::helpers::{
-    assert_incentive_asset, process_incentive_creation_fee, validate_incentive_epochs,
+    assert_incentive_asset, process_incentive_creation_fee, validate_emergency_unlock_penalty,
+    validate_incentive_epochs,
 };
 use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
     get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
-    LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -54,7 +55,7 @@ fn create_incentive(
         Some(config.max_concurrent_incentives),
     )?;
 
-    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
         config.epoch_manager_addr.clone().into_string(),
     )?;
@@ -163,7 +164,7 @@ pub(crate) fn close_incentive(
 
     // validate that user is allowed to close the incentive. Only the incentive creator or the owner of the contract can close an incentive
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
         config.epoch_manager_addr.into_string(),
     )?;
@@ -221,9 +222,9 @@ fn expand_incentive(
     }
 
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch = white_whale::epoch_manager::common::get_current_epoch(
+    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
-        config.epoch_manager_addr.clone().into_string(),
+        config.epoch_manager_addr.into_string(),
     )?;
 
     // check if the incentive has already ended, can't be expanded
@@ -261,4 +262,102 @@ pub(crate) fn on_epoch_changed(
     // msg.current_epoch
 
     Ok(Response::default())
+}
+
+/// Updates the configuration of the contract
+pub(crate) fn update_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    whale_lair_addr: Option<String>,
+    epoch_manager_addr: Option<String>,
+    create_incentive_fee: Option<Coin>,
+    max_concurrent_incentives: Option<u32>,
+    max_incentive_epoch_buffer: Option<u32>,
+    min_unlocking_duration: Option<u64>,
+    max_unlocking_duration: Option<u64>,
+    emergency_unlock_penalty: Option<Decimal>,
+) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if let Some(whale_lair_addr) = whale_lair_addr {
+        config.whale_lair_addr = deps.api.addr_validate(&whale_lair_addr)?;
+    }
+
+    if let Some(epoch_manager_addr) = epoch_manager_addr {
+        config.epoch_manager_addr = deps.api.addr_validate(&epoch_manager_addr)?;
+    }
+
+    if let Some(create_incentive_fee) = create_incentive_fee {
+        config.create_incentive_fee = create_incentive_fee;
+    }
+
+    if let Some(max_concurrent_incentives) = max_concurrent_incentives {
+        if max_concurrent_incentives == 0u32 {
+            return Err(ContractError::UnspecifiedConcurrentIncentives);
+        }
+
+        config.max_concurrent_incentives = max_concurrent_incentives;
+    }
+
+    if let Some(max_incentive_epoch_buffer) = max_incentive_epoch_buffer {
+        config.max_incentive_epoch_buffer = max_incentive_epoch_buffer;
+    }
+
+    if let Some(max_unlocking_duration) = max_unlocking_duration {
+        if max_unlocking_duration < config.min_unlocking_duration {
+            return Err(ContractError::InvalidUnbondingRange {
+                min: config.min_unlocking_duration,
+                max: max_unlocking_duration,
+            });
+        }
+
+        config.max_unlocking_duration = max_unlocking_duration;
+    }
+
+    if let Some(min_unlocking_duration) = min_unlocking_duration {
+        if config.max_unlocking_duration < min_unlocking_duration {
+            return Err(ContractError::InvalidUnbondingRange {
+                min: min_unlocking_duration,
+                max: config.max_unlocking_duration,
+            });
+        }
+
+        config.min_unlocking_duration = min_unlocking_duration;
+    }
+
+    if let Some(emergency_unlock_penalty) = emergency_unlock_penalty {
+        config.emergency_unlock_penalty =
+            validate_emergency_unlock_penalty(emergency_unlock_penalty)?;
+    }
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::default().add_attributes(vec![
+        ("action", "update_config".to_string()),
+        ("whale_lair_addr", config.whale_lair_addr.to_string()),
+        ("epoch_manager_addr", config.epoch_manager_addr.to_string()),
+        ("create_flow_fee", config.create_incentive_fee.to_string()),
+        (
+            "max_concurrent_flows",
+            config.max_concurrent_incentives.to_string(),
+        ),
+        (
+            "max_flow_epoch_buffer",
+            config.max_incentive_epoch_buffer.to_string(),
+        ),
+        (
+            "min_unbonding_duration",
+            config.min_unlocking_duration.to_string(),
+        ),
+        (
+            "max_unbonding_duration",
+            config.max_unlocking_duration.to_string(),
+        ),
+        (
+            "emergency_unlock_penalty",
+            config.emergency_unlock_penalty.to_string(),
+        ),
+    ]))
 }
