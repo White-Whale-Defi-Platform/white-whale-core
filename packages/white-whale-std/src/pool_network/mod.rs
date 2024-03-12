@@ -1,6 +1,4 @@
 pub mod asset;
-#[cfg(feature = "token_factory")]
-pub mod denom;
 #[cfg(feature = "injective")]
 pub mod denom_injective;
 #[cfg(feature = "osmosis_token_factory")]

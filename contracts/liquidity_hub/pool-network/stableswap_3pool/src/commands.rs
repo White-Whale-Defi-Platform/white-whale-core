@@ -5,23 +5,13 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 use crate::contract::{MAX_AMP, MAX_AMP_CHANGE, MIN_AMP, MIN_RAMP_BLOCKS};
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use cosmwasm_std::coins;
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use white_whale_std::pool_network::asset::is_factory_token;
 use white_whale_std::pool_network::asset::{
     Asset, AssetInfo, AssetInfoRaw, TrioInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
 };
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "injective")]
 use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
 #[cfg(feature = "osmosis_token_factory")]
@@ -670,11 +660,7 @@ fn mint_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     if is_factory_token(liquidity_token.as_str()) {
         let mut messages = vec![];
         messages.push(<MsgMint as Into<CosmosMsg>>::into(MsgMint {
@@ -701,11 +687,7 @@ fn mint_lp_token_msg(
         })])
     }
 
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
+    #[cfg(all(not(feature = "osmosis_token_factory"), not(feature = "injective")))]
     Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_json_binary(&Cw20ExecuteMsg::Mint { recipient, amount })?,
@@ -720,11 +702,7 @@ fn burn_lp_token_msg(
     sender: String,
     amount: Uint128,
 ) -> Result<CosmosMsg, ContractError> {
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     if is_factory_token(liquidity_token.as_str()) {
         Ok(<MsgBurn as Into<CosmosMsg>>::into(MsgBurn {
             sender,
@@ -741,11 +719,7 @@ fn burn_lp_token_msg(
         }))
     }
 
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
+    #[cfg(all(not(feature = "osmosis_token_factory"), not(feature = "injective")))]
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_token,
         msg: to_json_binary(&Cw20ExecuteMsg::Burn { amount })?,

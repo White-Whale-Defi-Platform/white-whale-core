@@ -36,11 +36,7 @@ pub fn receive(
 mod test {
     use cosmwasm_std::{to_json_binary, Addr, Uint128};
 
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     use cosmwasm_std::testing::mock_info;
 
     use white_whale_std::pool_network::asset::AssetInfo;
@@ -99,11 +95,7 @@ mod test {
         assert_eq!(res.unwrap_err(), VaultError::Unauthorized {})
     }
 
-    #[cfg(any(
-        feature = "token_factory",
-        feature = "osmosis_token_factory",
-        feature = "injective"
-    ))]
+    #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
     #[test]
     fn cannot_receive_from_not_liquidity_token() {
         let (mut deps, env) = mock_instantiate(

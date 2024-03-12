@@ -5,14 +5,14 @@ use cosmwasm_std::{
 };
 use cw20::MinterResponse;
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use crate::state::LP_SYMBOL;
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use cosmwasm_std::CosmosMsg;
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, TrioInfo};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 use white_whale_std::pool_network::swap::assert_max_spread;
 use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
@@ -136,7 +136,7 @@ fn proper_initialization_cw20_lp() {
     );
 }
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 #[test]
 fn proper_initialization_tokenfactory_lp() {
     let mut deps = mock_dependencies(&[]);

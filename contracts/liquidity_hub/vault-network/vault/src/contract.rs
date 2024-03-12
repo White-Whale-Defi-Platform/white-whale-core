@@ -23,14 +23,8 @@ use crate::{
 };
 
 use crate::execute::receive::withdraw::withdraw;
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+#[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use cosmwasm_std::CosmosMsg;
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
 #[cfg(feature = "injective")]
 use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 #[cfg(feature = "osmosis_token_factory")]
@@ -101,11 +95,7 @@ pub fn instantiate(
             Ok(config)
         })?;
 
-        #[cfg(any(
-            feature = "token_factory",
-            feature = "osmosis_token_factory",
-            feature = "injective"
-        ))]
+        #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
         return Ok(
             response.add_message(<MsgCreateDenom as Into<CosmosMsg>>::into(MsgCreateDenom {
                 sender: env.contract.address.to_string(),

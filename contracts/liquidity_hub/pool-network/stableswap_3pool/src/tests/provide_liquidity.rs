@@ -1,9 +1,9 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 use cosmwasm_std::{coin, BankMsg};
 use cosmwasm_std::{
     to_json_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
@@ -12,8 +12,8 @@ use cosmwasm_std::{
 use cw20::Cw20ExecuteMsg;
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgMint;
+#[cfg(feature = "osmosis_token_factory")]
+use white_whale_std::pool_network::denom_osmosis::MsgMint;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 use white_whale_std::pool_network::trio::{ExecuteMsg, InstantiateMsg, PoolFee};
 
@@ -548,7 +548,7 @@ fn provide_liquidity_cw20_lp() {
     let _res = execute(deps.as_mut(), env, info, msg).unwrap();
 }
 
-#[cfg(feature = "token_factory")]
+#[cfg(feature = "osmosis_token_factory")]
 #[test]
 fn provide_liquidity_token_factory_lp() {
     let lp_denom = format!("{}/{MOCK_CONTRACT_ADDR}/{LP_SYMBOL}", "factory");
@@ -661,7 +661,7 @@ fn provide_liquidity_token_factory_lp() {
 
     let mint_initial_lp_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(white_whale_std::pool_network::denom::Coin {
+        amount: Some(white_whale_std::pool_network::denom_osmosis::Coin {
             denom: lp_denom.clone(),
             amount: (MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8)).to_string(),
         }),
@@ -669,7 +669,7 @@ fn provide_liquidity_token_factory_lp() {
 
     let mint_msg_expected = <MsgMint as Into<CosmosMsg>>::into(MsgMint {
         sender: MOCK_CONTRACT_ADDR.to_string(),
-        amount: Some(white_whale_std::pool_network::denom::Coin {
+        amount: Some(white_whale_std::pool_network::denom_osmosis::Coin {
             denom: lp_denom.clone(),
             amount: "6000".to_string(),
         }),
