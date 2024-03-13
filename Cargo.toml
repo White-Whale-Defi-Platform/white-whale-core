@@ -12,6 +12,7 @@ members = [
   "contracts/liquidity_hub/pool-manager",
   "contracts/liquidity_hub/epoch-manager",
   "contracts/liquidity_hub/vault-manager",
+  "contracts/liquidity_hub/bonding-manager",
 ]
 
 [workspace.package]
