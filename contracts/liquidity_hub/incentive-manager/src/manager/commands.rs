@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    ensure, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError, Storage,
-    Uint128,
+    ensure, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError,
+    Storage, Uint128,
 };
 
 use white_whale_std::epoch_manager::common::validate_epoch;
@@ -27,12 +27,12 @@ pub(crate) fn fill_incentive(
     // exists and if the sender is allow to refill it, otherwise create a new incentive
     if let Some(incentive_indentifier) = params.clone().incentive_identifier {
         let incentive_result = get_incentive_by_identifier(deps.storage, &incentive_indentifier);
-        match incentive_result {
+
+        if let Ok(incentive) = incentive_result {
             // the incentive exists, try to expand it
-            Ok(incentive) => return expand_incentive(deps, env, info, incentive, params),
-            // the incentive does not exist, try to create it
-            Err(_) => {}
+            return expand_incentive(deps, env, info, incentive, params);
         }
+        // the incentive does not exist, try to create it
     }
 
     // if no identifier was passed in the params or if the incentive does not exist, try to create the incentive
@@ -50,7 +50,7 @@ fn create_incentive(
     let config = CONFIG.load(deps.storage)?;
     let incentives = get_incentives_by_lp_asset(
         deps.storage,
-        &params.lp_asset,
+        &params.lp_denom,
         None,
         Some(config.max_concurrent_incentives),
     )?;
@@ -99,13 +99,7 @@ fn create_incentive(
     }
 
     // verify the incentive asset was sent
-    messages.append(&mut assert_incentive_asset(
-        deps.as_ref(),
-        &env,
-        &info,
-        &incentive_creation_fee,
-        &mut params,
-    )?);
+    assert_incentive_asset(&info, &incentive_creation_fee, &params)?;
 
     // assert epoch params are correctly set
     let (start_epoch, end_epoch) = validate_incentive_epochs(
@@ -122,10 +116,11 @@ fn create_incentive(
         .unwrap_or(incentive_id.to_string());
 
     // make sure another incentive with the same identifier doesn't exist
-    match get_incentive_by_identifier(deps.storage, &incentive_identifier) {
-        Ok(_) => return Err(ContractError::IncentiveAlreadyExists {}),
-        Err(_) => {} // the incentive does not exist, all good, continue
-    }
+    ensure!(
+        get_incentive_by_identifier(deps.storage, &incentive_identifier).is_err(),
+        ContractError::IncentiveAlreadyExists
+    );
+    // the incentive does not exist, all good, continue
 
     // create the incentive
     let incentive = Incentive {
@@ -135,7 +130,7 @@ fn create_incentive(
         //emitted_tokens: HashMap::new(),
         curve: params.curve.unwrap_or(Curve::Linear),
         incentive_asset: params.incentive_asset,
-        lp_asset: params.lp_asset,
+        lp_denom: params.lp_denom,
         owner: info.sender,
         claimed_amount: Uint128::zero(),
         expansion_history: Default::default(),
@@ -149,7 +144,7 @@ fn create_incentive(
         ("end_epoch", incentive.end_epoch.to_string()),
         ("curve", incentive.curve.to_string()),
         ("incentive_asset", incentive.incentive_asset.to_string()),
-        ("lp_asset", incentive.lp_asset.to_string()),
+        ("lp_denom", incentive.lp_denom),
     ]))
 }
 
@@ -169,12 +164,12 @@ pub(crate) fn close_incentive(
         config.epoch_manager_addr.into_string(),
     )?;
 
-    let mut incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
+    let incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
 
     if !(!incentive.is_expired(current_epoch.id)
         && (incentive.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?))
     {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::Unauthorized);
     }
 
     Ok(Response::default()
@@ -201,8 +196,14 @@ fn close_incentives(
             .incentive_asset
             .amount
             .saturating_sub(incentive.claimed_amount);
-        //TODO remake this into_msg since we are getting rid of the Asset struct in V2
-        messages.push(incentive.incentive_asset.into_msg(incentive.owner)?);
+
+        messages.push(
+            BankMsg::Send {
+                to_address: incentive.owner.into_string(),
+                amount: vec![incentive.incentive_asset],
+            }
+            .into(),
+        );
     }
 
     Ok(messages)
@@ -211,10 +212,10 @@ fn close_incentives(
 /// Expands an incentive with the given params
 fn expand_incentive(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
-    mut incentive: Incentive,
-    params: IncentiveParams,
+    incentive: Incentive,
+    _params: IncentiveParams,
 ) -> Result<Response, ContractError> {
     // only the incentive owner can expand it
     if incentive.owner != info.sender {
@@ -230,8 +231,10 @@ fn expand_incentive(
     // check if the incentive has already ended, can't be expanded
     ensure!(
         incentive.end_epoch >= current_epoch.id,
-        ContractError::IncentiveAlreadyEnded {}
+        ContractError::IncentiveAlreadyEnded
     );
+
+    //todo complete this
 
     Ok(Response::default().add_attributes(vec![
         ("action", "close_incentive".to_string()),
@@ -244,12 +247,10 @@ fn expand_incentive(
 
 pub(crate) fn on_epoch_changed(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
-    msg: EpochChangedHookMsg,
+    _msg: EpochChangedHookMsg,
 ) -> Result<Response, ContractError> {
-    cw_utils::nonpayable(&info)?;
-
     let config = CONFIG.load(deps.storage)?;
 
     // only the epoch manager can trigger this
@@ -261,9 +262,12 @@ pub(crate) fn on_epoch_changed(
     //
     // msg.current_epoch
 
+    //todo complete this
+
     Ok(Response::default())
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Updates the configuration of the contract
 pub(crate) fn update_config(
     deps: DepsMut,

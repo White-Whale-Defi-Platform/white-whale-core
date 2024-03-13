@@ -1,12 +1,11 @@
-use cosmwasm_std::{CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError};
+use cosmwasm_std::{
+    ensure, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError,
+};
 
 use white_whale_std::incentive_manager::Position;
-use white_whale_std::pool_network::asset::Asset;
 
 use crate::helpers::validate_unlocking_duration;
-use crate::position::helpers::{
-    calculate_weight, get_latest_address_weight, get_latest_lp_weight, validate_funds_sent,
-};
+use crate::position::helpers::{calculate_weight, get_latest_address_weight, get_latest_lp_weight};
 use crate::state::{
     get_position, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, LP_WEIGHTS_HISTORY, POSITIONS,
     POSITION_ID_COUNTER,
@@ -16,34 +15,20 @@ use crate::ContractError;
 /// Fills a position. If the position already exists, it will be expanded. Otherwise, a new position is created.
 pub(crate) fn fill_position(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     identifier: Option<String>,
-    lp_asset: Asset,
     unlocking_duration: u64,
     receiver: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
+    let lp_asset = cw_utils::one_coin(&info)?;
+
     // validate unlocking duration
     validate_unlocking_duration(&config, unlocking_duration)?;
 
-    let mut messages: Vec<CosmosMsg> = vec![];
-
-    //todo this will change when we remove the cw20 token support
-    // ensure the lp tokens are transferred to the contract. If the LP is a cw20 token, creates
-    // a transfer message
-    let transfer_token_msg =
-        validate_funds_sent(&deps.as_ref(), env.clone(), info.clone(), lp_asset.clone())?;
-
-    //todo this will go away after we remove the cw20 token support
-    if let Some(transfer_token_msg) = transfer_token_msg {
-        messages.push(transfer_token_msg.into());
-    }
-
     // if receiver was not specified, default to the sender of the message.
     let receiver = receiver
-        .clone()
         .map(|r| deps.api.addr_validate(&r))
         .transpose()?
         .map(|receiver| MessageInfo {
@@ -57,9 +42,13 @@ pub(crate) fn fill_position(
 
     if let Some(ref mut position) = position {
         // there is a position, fill it
-        position.lp_asset.amount = position.lp_asset.amount.checked_add(lp_asset.amount)?;
+        ensure!(
+            position.lp_asset.denom == lp_asset.denom,
+            ContractError::AssetMismatch
+        );
 
-        POSITIONS.save(deps.storage, &position.identifier, &position)?;
+        position.lp_asset.amount = position.lp_asset.amount.checked_add(lp_asset.amount)?;
+        POSITIONS.save(deps.storage, &position.identifier, position)?;
     } else {
         // No position found, create a new one
         let identifier = POSITION_ID_COUNTER
@@ -84,7 +73,7 @@ pub(crate) fn fill_position(
     }
 
     // Update weights for the LP and the user
-    update_weights(deps, &receiver, &lp_asset.clone(), unlocking_duration, true)?;
+    update_weights(deps, &receiver, &lp_asset, unlocking_duration, true)?;
 
     let action = match position {
         Some(_) => "expand_position",
@@ -105,7 +94,7 @@ pub(crate) fn close_position(
     env: Env,
     info: MessageInfo,
     identifier: String,
-    lp_asset: Option<Asset>,
+    lp_asset: Option<Coin>,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
@@ -140,9 +129,10 @@ pub(crate) fn close_position(
         // close position partially
 
         // check if the lp_asset requested to close matches the lp_asset of the position
-        if position.lp_asset.info != lp_asset.info {
-            return Err(ContractError::AssetMismatch);
-        }
+        ensure!(
+            lp_asset.denom == position.lp_asset.denom,
+            ContractError::AssetMismatch
+        );
 
         position.lp_asset.amount = position.lp_asset.amount.saturating_sub(lp_asset.amount);
 
@@ -209,15 +199,16 @@ pub(crate) fn withdraw_position(
 
         let penalty_fee = position.lp_asset.amount * emergency_unlock_penalty;
 
-        let penalty = Asset {
-            info: position.lp_asset.info.clone(),
+        let penalty = Coin {
+            denom: position.lp_asset.denom.to_string(),
             amount: penalty_fee,
         };
 
         let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
 
         // send penalty to whale lair for distribution
-        messages.push(white_whale_std::whale_lair::fill_rewards_msg(
+        //todo the whale lair needs to withdraw the LP tokens from the corresponding pool when this happens
+        messages.push(white_whale_std::whale_lair::fill_rewards_msg_coin(
             whale_lair_addr.into_string(),
             vec![penalty],
         )?);
@@ -238,7 +229,13 @@ pub(crate) fn withdraw_position(
     // sanity check
     if !position.lp_asset.amount.is_zero() {
         // withdraw the remaining LP tokens
-        messages.push(position.lp_asset.into_msg(position.receiver)?);
+        messages.push(
+            BankMsg::Send {
+                to_address: position.receiver.to_string(),
+                amount: vec![position.lp_asset],
+            }
+            .into(),
+        );
     }
 
     POSITIONS.remove(deps.storage, &identifier)?;
@@ -247,7 +244,7 @@ pub(crate) fn withdraw_position(
         .add_attributes(vec![
             ("action", "withdraw_position".to_string()),
             ("receiver", info.sender.to_string()),
-            ("identifier", identifier.to_string()),
+            ("identifier", identifier),
         ])
         .add_messages(messages))
 }
@@ -256,19 +253,19 @@ pub(crate) fn withdraw_position(
 fn update_weights(
     deps: DepsMut,
     receiver: &MessageInfo,
-    lp_asset: &Asset,
+    lp_asset: &Coin,
     unlocking_duration: u64,
     fill: bool,
 ) -> Result<(), ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
         deps.as_ref(),
-        config.epoch_manager_addr.clone().into_string(),
+        config.epoch_manager_addr.into_string(),
     )?;
 
     let weight = calculate_weight(lp_asset, unlocking_duration)?;
 
-    let (_, mut lp_weight) = get_latest_lp_weight(deps.storage, lp_asset.info.as_bytes())?;
+    let (_, mut lp_weight) = get_latest_lp_weight(deps.storage, lp_asset.denom.as_bytes())?;
 
     if fill {
         // filling position
@@ -280,7 +277,7 @@ fn update_weights(
 
     LP_WEIGHTS_HISTORY.update::<_, StdError>(
         deps.storage,
-        (lp_asset.info.as_bytes(), current_epoch.id + 1u64),
+        (lp_asset.denom.as_bytes(), current_epoch.id + 1u64),
         |_| Ok(lp_weight),
     )?;
 

@@ -5,7 +5,6 @@ use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 use crate::epoch_manager::hooks::EpochChangedHookMsg;
-use crate::pool_network::asset::{Asset, AssetInfo};
 
 /// The instantiation message
 #[cw_serde]
@@ -105,8 +104,8 @@ pub struct Config {
 /// Parameters for creating incentive
 #[cw_serde]
 pub struct IncentiveParams {
-    /// The LP asset to create the incentive for.
-    pub lp_asset: AssetInfo,
+    /// The LP asset denom to create the incentive for.
+    pub lp_denom: String,
     /// The epoch at which the incentive will start. If unspecified, it will start at the
     /// current epoch.
     pub start_epoch: Option<u64>,
@@ -116,7 +115,7 @@ pub struct IncentiveParams {
     /// The type of distribution curve. If unspecified, the distribution will be linear.
     pub curve: Option<Curve>,
     /// The asset to be distributed in this incentive.
-    pub incentive_asset: Asset,
+    pub incentive_asset: Coin,
     /// If set, it  will be used to identify the incentive.
     pub incentive_identifier: Option<String>,
 }
@@ -144,8 +143,6 @@ pub enum PositionAction {
     Fill {
         /// The identifier of the position.
         identifier: Option<String>,
-        /// The asset to add to the position.
-        lp_asset: Asset,
         /// The time it takes in seconds to unlock this position. This is used to identify the position to fill.
         unlocking_duration: u64,
         /// The receiver for the position.
@@ -157,7 +154,7 @@ pub enum PositionAction {
         /// The identifier of the position.
         identifier: String,
         /// The asset to add to the position. If not set, the position will be closed in full. If not, it could be partially closed.
-        lp_asset: Option<Asset>,
+        lp_asset: Option<Coin>,
     },
     /// Withdraws the LP tokens from a position after the position has been closed and the unlocking duration has passed.
     Withdraw {
@@ -178,10 +175,10 @@ pub struct Incentive {
     pub identifier: String,
     /// The account which opened the incentive and can manage it.
     pub owner: Addr,
-    /// The LP asset to create the incentive for.
-    pub lp_asset: AssetInfo,
+    /// The LP asset denom to create the incentive for.
+    pub lp_denom: String,
     /// The asset the incentive was created to distribute.
-    pub incentive_asset: Asset,
+    pub incentive_asset: Coin,
     /// The amount of the `incentive_asset` that has been claimed so far.
     pub claimed_amount: Uint128,
     /// The type of curve the incentive has.
@@ -227,7 +224,7 @@ pub struct Position {
     /// The identifier of the position.
     pub identifier: String,
     /// The amount of LP tokens that are put up to earn incentives.
-    pub lp_asset: Asset,
+    pub lp_asset: Coin,
     /// Represents the amount of time in seconds the user must wait after unlocking for the LP tokens to be released.
     pub unlocking_duration: u64,
     /// If true, the position is open. If false, the position is closed.

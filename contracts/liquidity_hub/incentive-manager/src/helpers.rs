@@ -1,11 +1,8 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{
-    wasm_execute, BankMsg, Coin, CosmosMsg, Decimal, Deps, Env, MessageInfo, Uint128,
-};
+use cosmwasm_std::{ensure, BankMsg, Coin, CosmosMsg, Decimal, MessageInfo, Uint128};
 
 use white_whale_std::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::ContractError;
 
@@ -39,38 +36,31 @@ pub(crate) fn process_incentive_creation_fee(
             // if the user is paying more than the incentive_creation_fee, check if it's trying to create
             // an incentive with the same asset as the incentive_creation_fee.
             // otherwise, refund the difference
-            match params.incentive_asset.info.clone() {
-                AssetInfo::Token { .. } => {}
-                AssetInfo::NativeToken {
-                    denom: incentive_asset_denom,
-                } => {
-                    if incentive_creation_fee.denom == incentive_asset_denom {
-                        // check if the amounts add up, i.e. the fee + incentive asset = paid amount. That is because the incentive asset
-                        // and the creation fee asset are the same, all go in the info.funds of the transaction
-                        if params
-                            .incentive_asset
-                            .amount
-                            .checked_add(incentive_creation_fee.amount)?
-                            != paid_fee_amount
-                        {
-                            return Err(ContractError::AssetMismatch);
+            if incentive_creation_fee.denom == params.incentive_asset.denom {
+                // check if the amounts add up, i.e. the fee + incentive asset = paid amount. That is because the incentive asset
+                // and the creation fee asset are the same, all go in the info.funds of the transaction
+
+                ensure!(
+                    params
+                        .incentive_asset
+                        .amount
+                        .checked_add(incentive_creation_fee.amount)?
+                        == paid_fee_amount,
+                    ContractError::AssetMismatch
+                );
+            } else {
+                let refund_amount = paid_fee_amount.saturating_sub(incentive_creation_fee.amount);
+                if refund_amount > Uint128::zero() {
+                    messages.push(
+                        BankMsg::Send {
+                            to_address: info.sender.clone().into_string(),
+                            amount: vec![Coin {
+                                amount: refund_amount,
+                                denom: incentive_creation_fee.denom.clone(),
+                            }],
                         }
-                    } else {
-                        let refund_amount =
-                            paid_fee_amount.saturating_sub(incentive_creation_fee.amount);
-                        if refund_amount > Uint128::zero() {
-                            messages.push(
-                                BankMsg::Send {
-                                    to_address: info.sender.clone().into_string(),
-                                    amount: vec![Coin {
-                                        amount: refund_amount,
-                                        denom: incentive_creation_fee.denom.clone(),
-                                    }],
-                                }
-                                .into(),
-                            );
-                        }
-                    }
+                        .into(),
+                    );
                 }
             }
         }
@@ -88,73 +78,33 @@ pub(crate) fn process_incentive_creation_fee(
 /// Asserts the incentive asset was sent correctly, considering the incentive creation fee if applicable.
 /// Returns a vector of messages to be sent (applies only when the incentive asset is a CW20 token)
 pub(crate) fn assert_incentive_asset(
-    deps: Deps,
-    env: &Env,
     info: &MessageInfo,
     incentive_creation_fee: &Coin,
-    params: &mut IncentiveParams,
-) -> Result<Vec<CosmosMsg>, ContractError> {
-    let mut messages: Vec<CosmosMsg> = vec![];
+    params: &IncentiveParams,
+) -> Result<(), ContractError> {
+    let coin_sent = info
+        .funds
+        .iter()
+        .find(|sent| sent.denom == params.incentive_asset.denom)
+        .ok_or(ContractError::AssetMismatch)?;
 
-    match params.incentive_asset.info.clone() {
-        AssetInfo::NativeToken {
-            denom: incentive_asset_denom,
-        } => {
-            let coin_sent = info
-                .funds
-                .iter()
-                .find(|sent| sent.denom == incentive_asset_denom)
-                .ok_or(ContractError::AssetMismatch)?;
-
-            if incentive_creation_fee.denom != incentive_asset_denom {
-                if coin_sent.amount != params.incentive_asset.amount {
-                    return Err(ContractError::AssetMismatch);
-                }
-            } else {
-                if params
-                    .incentive_asset
-                    .amount
-                    .checked_add(incentive_creation_fee.amount)?
-                    != coin_sent.amount
-                {
-                    return Err(ContractError::AssetMismatch);
-                }
-            }
-        }
-        //todo remove
-        AssetInfo::Token {
-            contract_addr: incentive_asset_contract_addr,
-        } => {
-            // make sure the incentive asset has enough allowance
-            let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
-                incentive_asset_contract_addr.clone(),
-                &cw20::Cw20QueryMsg::Allowance {
-                    owner: info.sender.clone().into_string(),
-                    spender: env.contract.address.clone().into_string(),
-                },
-            )?;
-
-            if allowance.allowance < params.incentive_asset.amount {
-                return Err(ContractError::AssetMismatch);
-            }
-
-            // create the transfer message to the incentive manager
-            messages.push(
-                wasm_execute(
-                    env.contract.address.clone().into_string(),
-                    &cw20::Cw20ExecuteMsg::TransferFrom {
-                        owner: info.sender.clone().into_string(),
-                        recipient: env.contract.address.clone().into_string(),
-                        amount: params.incentive_asset.amount,
-                    },
-                    vec![],
-                )?
-                .into(),
-            );
-        }
+    if incentive_creation_fee.denom != params.incentive_asset.denom {
+        ensure!(
+            coin_sent.amount == params.incentive_asset.amount,
+            ContractError::AssetMismatch
+        );
+    } else {
+        ensure!(
+            params
+                .incentive_asset
+                .amount
+                .checked_add(incentive_creation_fee.amount)?
+                == coin_sent.amount,
+            ContractError::AssetMismatch
+        );
     }
 
-    Ok(messages)
+    Ok(())
 }
 
 /// Validates the incentive epochs. Returns a tuple of (start_epoch, end_epoch) for the incentive.
@@ -167,7 +117,7 @@ pub(crate) fn validate_incentive_epochs(
     let end_epoch = params.end_epoch.unwrap_or(
         current_epoch
             .checked_add(DEFAULT_INCENTIVE_DURATION)
-            .ok_or(ContractError::InvalidEndEpoch {})?,
+            .ok_or(ContractError::InvalidEndEpoch)?,
     );
 
     // ensure the incentive is set to end in a future epoch

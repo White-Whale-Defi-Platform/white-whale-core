@@ -64,7 +64,7 @@ pub const INCENTIVES: IndexedMap<&String, Incentive, IncentiveIndexes> = Indexed
     "incentives",
     IncentiveIndexes {
         lp_asset: MultiIndex::new(
-            |_pk, i| i.lp_asset.to_string(),
+            |_pk, i| i.lp_denom.to_string(),
             "incentives",
             "incentives__lp_asset",
         ),
@@ -115,7 +115,7 @@ pub fn get_incentives(
 /// Gets incentives given an lp asset [AssetInfo]
 pub fn get_incentives_by_lp_asset(
     storage: &dyn Storage,
-    lp_asset: &AssetInfo,
+    lp_denom: &str,
     start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<Vec<Incentive>> {
@@ -125,7 +125,7 @@ pub fn get_incentives_by_lp_asset(
     INCENTIVES
         .idx
         .lp_asset
-        .prefix(lp_asset.to_string())
+        .prefix(lp_denom.to_owned())
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {

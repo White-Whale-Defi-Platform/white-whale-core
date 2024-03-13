@@ -65,9 +65,6 @@ pub enum ContractError {
         min: u128,
     },
 
-    #[error("The asset sent is not supported for fee payments")]
-    FeeAssetNotSupported,
-
     #[error("Incentive creation fee was not included")]
     IncentiveFeeMissing,
 
@@ -87,11 +84,8 @@ pub enum ContractError {
         required_amount: Uint128,
     },
 
-    #[error("Specified incentive asset was not transferred")]
-    IncentiveAssetNotSent,
-
     #[error("The end epoch for this incentive is invalid")]
-    InvalidEndEpoch {},
+    InvalidEndEpoch,
 
     #[error("Incentive end timestamp was set to a time in the past")]
     IncentiveEndsInPast,
@@ -103,7 +97,7 @@ pub enum ContractError {
     IncentiveStartTooFar,
 
     #[error("The incentive has already ended, can't be expanded")]
-    IncentiveAlreadyEnded {},
+    IncentiveAlreadyEnded,
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -154,7 +148,7 @@ pub enum ContractError {
     #[error("The emergency unlock penalty provided is invalid")]
     InvalidEmergencyUnlockPenalty,
 
-    #[error("There're pending rewards to be claimed before this action can be executed")]
+    #[error("There are pending rewards to be claimed before this action can be executed")]
     PendingRewards,
 }
 

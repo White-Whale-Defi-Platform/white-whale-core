@@ -1,83 +1,15 @@
-use cosmwasm_std::{
-    to_json_binary, Addr, Decimal256, Deps, Env, MessageInfo, Order, StdResult, Storage, Uint128,
-    WasmMsg,
-};
-use cw_utils::PaymentError;
+use cosmwasm_std::{Addr, Coin, Decimal256, Storage, Uint128};
 
 use white_whale_std::incentive_manager::EpochId;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
-use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
 use crate::ContractError;
-
-/// Validates that the message sender has sent the tokens to the contract.
-/// In case the `lp_token` is a cw20 token, check if the sender set the specified `amount` as an
-/// allowance for us to transfer for `lp_token`.
-///
-/// If `lp_token` is a native token, check if the funds were sent in the [`MessageInfo`] struct.
-///
-/// Returns the [`WasmMsg`] that will transfer the specified `amount` of the
-/// `lp_token` to the contract.
-pub fn validate_funds_sent(
-    deps: &Deps,
-    env: Env,
-    info: MessageInfo,
-    lp_asset: Asset,
-) -> Result<Option<WasmMsg>, ContractError> {
-    if lp_asset.amount.is_zero() {
-        return Err(ContractError::PaymentError(PaymentError::NoFunds {}));
-    }
-
-    let send_lp_deposit_msg = match lp_asset.info {
-        AssetInfo::Token { contract_addr } => {
-            let allowance: cw20::AllowanceResponse = deps.querier.query_wasm_smart(
-                contract_addr.clone(),
-                &cw20::Cw20QueryMsg::Allowance {
-                    owner: info.sender.clone().into_string(),
-                    spender: env.contract.address.clone().into_string(),
-                },
-            )?;
-
-            if allowance.allowance < lp_asset.amount {
-                return Err(ContractError::MissingPositionDeposit {
-                    allowance_amount: allowance.allowance,
-                    deposited_amount: lp_asset.amount,
-                });
-            }
-
-            // send the lp deposit to us
-            Some(WasmMsg::Execute {
-                contract_addr,
-                msg: to_json_binary(&cw20::Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.into_string(),
-                    recipient: env.contract.address.into_string(),
-                    amount: lp_asset.amount,
-                })?,
-                funds: vec![],
-            })
-        }
-        AssetInfo::NativeToken { denom } => {
-            let paid_amount = cw_utils::must_pay(&info, &denom)?;
-            if paid_amount != lp_asset.amount {
-                return Err(ContractError::MissingPositionDepositNative {
-                    desired_amount: lp_asset.amount,
-                    paid_amount,
-                });
-            }
-            // no message needed as native tokens are transferred together with the transaction
-            None
-        }
-    };
-
-    Ok(send_lp_deposit_msg)
-}
 
 const SECONDS_IN_DAY: u64 = 86400;
 const SECONDS_IN_YEAR: u64 = 31556926;
 
 /// Calculates the weight size for a user filling a position
 pub fn calculate_weight(
-    lp_asset: &Asset,
+    lp_asset: &Coin,
     unlocking_duration: u64,
 ) -> Result<Uint128, ContractError> {
     if !(SECONDS_IN_DAY..=SECONDS_IN_YEAR).contains(&unlocking_duration) {
@@ -125,8 +57,8 @@ pub fn calculate_weight(
 
 /// Gets the latest available weight snapshot recorded for the given address.
 pub fn get_latest_address_weight(
-    storage: &dyn Storage,
-    address: &Addr,
+    _storage: &dyn Storage,
+    _address: &Addr,
 ) -> Result<(EpochId, Uint128), ContractError> {
     //todo this will likely change with the new implementation of the claim function
     // Ok(ADDRESS_LP_WEIGHT_HISTORY
@@ -140,10 +72,11 @@ pub fn get_latest_address_weight(
 
 /// Gets the latest available weight snapshot recorded for the given lp.
 pub fn get_latest_lp_weight(
-    storage: &dyn Storage,
-    lp_asset_key: &[u8],
+    _storage: &dyn Storage,
+    _lp_asset_key: &[u8],
 ) -> Result<(EpochId, Uint128), ContractError> {
     //todo this will likely change with the new implementation of the claim function
+    // perhaps the lp_asset_key can become a String instead of bytes?
     // Ok(LP_WEIGHTS_HISTORY
     //     .prefix(lp_asset_key)
     //     .range(storage, None, None, Order::Descending)

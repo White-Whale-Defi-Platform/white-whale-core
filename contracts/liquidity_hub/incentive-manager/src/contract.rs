@@ -54,7 +54,7 @@ pub fn instantiate(
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
-        ("owner", msg.owner.to_string()),
+        ("owner", msg.owner),
         ("epoch_manager_addr", config.epoch_manager_addr.to_string()),
         ("whale_lair_addr", config.whale_lair_addr.to_string()),
         ("create_flow_fee", config.create_incentive_fee.to_string()),
@@ -108,18 +108,9 @@ pub fn execute(
         ExecuteMsg::ManagePosition { action } => match action {
             PositionAction::Fill {
                 identifier,
-                lp_asset,
                 unlocking_duration,
                 receiver,
-            } => fill_position(
-                deps,
-                env,
-                info,
-                identifier,
-                lp_asset,
-                unlocking_duration,
-                receiver,
-            ),
+            } => fill_position(deps, info, identifier, unlocking_duration, receiver),
             PositionAction::Close {
                 identifier,
                 lp_asset,

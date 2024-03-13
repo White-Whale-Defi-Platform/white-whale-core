@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Deps};
 use white_whale_std::epoch_manager::common::get_current_epoch;
 use white_whale_std::incentive_manager::RewardsResponse;
 
-pub(crate) fn get_rewards(deps: Deps, address: Addr) -> Result<RewardsResponse, ContractError> {
+pub(crate) fn _get_rewards(deps: Deps, address: Addr) -> Result<RewardsResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = get_current_epoch(deps, config.epoch_manager_addr.into_string())?;
 
@@ -18,7 +18,7 @@ pub(crate) fn get_rewards(deps: Deps, address: Addr) -> Result<RewardsResponse, 
         }
     }
 
-    let mut rewards = vec![];
+    let rewards = vec![];
 
     Ok(RewardsResponse { rewards })
 }
