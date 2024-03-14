@@ -43,7 +43,6 @@ thiserror.workspace = true
 white-whale-std.workspace = true
 cw-utils.workspace = true
 cw-ownable.workspace = true
-sha2.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

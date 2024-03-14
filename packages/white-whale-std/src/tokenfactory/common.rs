@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, CosmosMsg};
+use cosmwasm_std::{CosmosMsg, StdResult};
+
 #[cw_serde]
 enum Protocol {
     Injective,
@@ -54,20 +55,23 @@ impl MsgTypes {
 }
 
 pub(crate) trait EncodeMessage {
-    fn encode(sender: String, data: Self) -> Vec<u8>;
+    /// Encodes the data as a proto doc
+    fn encode(data: Self) -> Vec<u8>;
+
+    /// Decodes the data from a proto doc. Only used for tests.
+    fn decode(data: Vec<u8>) -> StdResult<Self>
+    where
+        Self: Sized;
 }
+
 #[allow(dead_code)]
-pub(crate) fn create_msg<M: EncodeMessage>(
-    sender: Addr,
-    message_data: M,
-    msg_type: &str,
-) -> CosmosMsg {
+pub(crate) fn create_msg<M: EncodeMessage>(message_data: M, msg_type: &str) -> CosmosMsg {
     CosmosMsg::Stargate {
         type_url: format!(
             "/{}.tokenfactory.v1beta1.{}",
             Protocol::from_features().as_str(),
             msg_type
         ),
-        value: M::encode(sender.into(), message_data).into(),
+        value: M::encode(message_data).into(),
     }
 }

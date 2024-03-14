@@ -1,8 +1,17 @@
 [package]
 name = "pool-manager"
 version = "0.1.0"
-authors = ["0xFable <0xfable@protonmail.com>"]
-edition = "2021"
+authors = [
+  "0xFable <0xfable@protonmail.com>",
+  "kaimen-sano <kaimen_sano@protonmail.com>",
+]
+edition.workspace = true
+description = "The Pool Manager is a contract that allows to manage multiple pools in a single contract."
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish.workspace = true
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -10,21 +19,8 @@ exclude = [
   "hash.txt",
 ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 crate-type = ["cdylib", "rlib"]
-
-[profile.release]
-opt-level = 3
-debug = false
-rpath = false
-lto = true
-debug-assertions = false
-codegen-units = 1
-panic = 'abort'
-incremental = false
-overflow-checks = true
 
 [features]
 # for quicker tests, cargo test --lib
@@ -37,14 +33,6 @@ osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 
 # use library feature to disable all instantiate/execute/query exports
 library = []
-
-[package.metadata.scripts]
-optimize = """docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.10
-"""
-
 
 [dependencies]
 cosmwasm-schema.workspace = true
@@ -64,5 +52,5 @@ semver.workspace = true
 [dev-dependencies]
 cw-multi-test.workspace = true
 anyhow.workspace = true
-test-case = "1.1"
+test-case.workspace = true
 whale-lair.workspace = true

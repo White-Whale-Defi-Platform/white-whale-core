@@ -72,7 +72,7 @@ mod test {
             .unwrap();
 
         let res: PaybackAmountResponse = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::GetPaybackAmount {

@@ -4,8 +4,6 @@ use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
-use white_whale_std::pool_network::asset::AssetInfo;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
@@ -20,9 +18,11 @@ pub enum ContractError {
     #[error("mismatch of sent {sent} but specified deposit amount of {wanted}")]
     FundsMismatch { sent: Uint128, wanted: Uint128 },
 
-    #[error("The asset \"{asset_info}\" with the identifier \"{identifier}\" already has a vault")]
+    #[error(
+        "The asset \"{asset_denom}\" with the identifier \"{identifier}\" already has a vault"
+    )]
     ExistingVault {
-        asset_info: AssetInfo,
+        asset_denom: String,
         identifier: String,
     },
 

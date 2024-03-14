@@ -1,24 +1,17 @@
-use std::collections::HashMap;
+use white_whale_std::pool_manager::Cw20HookMsg;
+use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
 
-use white_whale_std::pool_manager::{Cw20HookMsg, SwapOperation};
-use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
-
-use anyhow::{Ok, Result as AnyResult};
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, Coin, Decimal, Deps, Empty, StdResult, Timestamp, Uint128, Uint64,
+    to_json_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
-    WasmKeeper,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale_std::{
-    pool_network::{
-        asset::{Asset, AssetInfo, PairType},
-        pair::PoolFee,
-    },
-    vault_manager::LpTokenType,
+use white_whale_std::pool_network::{
+    asset::{Asset, AssetInfo, PairType},
+    pair::PoolFee,
 };
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -94,7 +87,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -139,7 +132,6 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
-        _lp_token_type: LpTokenType,
         _vault_creation_fee: Asset,
     ) -> &mut Self {
         let cw20_token_id = self.app.store_code(cw20_token_contract());
@@ -185,7 +177,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::TokenFactory,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -206,7 +197,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::Cw20(cw20_code_id),
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -301,7 +291,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
             denom: native_token_denom.clone(),
-            decimals: decimals,
+            decimals,
         };
 
         let _creator = self.creator().clone();
@@ -472,7 +462,7 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Asset>,
+        _assets: Vec<Asset>,
         amount: Uint128,
         liquidity_token: Addr,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -482,11 +472,8 @@ impl TestingSuite {
         // Send the cw20 amount with a message
         let msg = cw20::Cw20ExecuteMsg::Send {
             contract: self.vault_manager_addr.to_string(),
-            amount: amount,
-            msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {
-                pair_identifier: pair_identifier,
-            })
-            .unwrap(),
+            amount,
+            msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity { pair_identifier }).unwrap(),
         };
 
         result(
@@ -521,7 +508,7 @@ impl TestingSuite {
         denom: String,
         result: impl Fn(StdResult<Coin>),
     ) -> &mut Self {
-        let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(&addr, denom);
+        let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(addr, denom);
 
         result(balance_resp);
 
@@ -535,9 +522,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
             &self.vault_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::Pair {
-                pair_identifier: pair_identifier,
-            },
+            &white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier },
         );
 
         result(pair_info_response);
@@ -626,7 +611,7 @@ impl TestingSuite {
                     .app
                     .wrap()
                     .query_wasm_smart(
-                        &contract_addr,
+                        contract_addr,
                         &cw20_base::msg::QueryMsg::Balance { address: sender },
                     )
                     .unwrap();
@@ -639,7 +624,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_lp_token(&mut self, identifier: String, sender: String) -> AssetInfo {
+    pub(crate) fn query_lp_token(&mut self, identifier: String, _sender: String) -> AssetInfo {
         // Get the LP token from Config
         let lp_token_response: NPairInfo = self
             .app

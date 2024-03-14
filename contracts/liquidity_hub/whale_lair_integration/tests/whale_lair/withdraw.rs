@@ -3,7 +3,7 @@ use cosmwasm_std::{coins, Event, Uint128};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 use white_whale_std::whale_lair::WithdrawableResponse;
 
-use crate::tests::robot::TestingRobot;
+use crate::robot::TestingRobot;
 
 #[test]
 fn test_withdraw_successfully() {

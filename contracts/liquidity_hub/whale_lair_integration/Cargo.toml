@@ -1,0 +1,39 @@
+[package]
+name = "whale_lair_integration"
+version = "0.9.2"
+authors = ["Kerber0x <kerber0x@protonmail.com>"]
+edition.workspace = true
+description = "Integration testing for the whale-lair contract"
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish.workspace = true
+
+exclude = [
+  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+path = "lib.rs"
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+
+[dependencies]
+# cosmwasm-schema.workspace = true
+# cw-storage-plus.workspace = true
+# cw2.workspace = true
+# schemars.workspace = true
+# semver.workspace = true
+# serde.workspace = true
+# thiserror.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+cosmwasm-std.workspace = true
+cw-multi-test.workspace = true
+white-whale-std.workspace = true
+white-whale-testing.workspace = true

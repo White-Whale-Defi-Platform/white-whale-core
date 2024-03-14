@@ -27,7 +27,7 @@ fn create_new_epoch_successfully() {
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::CurrentEpoch {}).unwrap();
-    let epoch_response: EpochResponse = from_json(&query_res).unwrap();
+    let epoch_response: EpochResponse = from_json(query_res).unwrap();
 
     let current_epoch = EpochV2 {
         id: 124,
@@ -46,12 +46,12 @@ fn create_new_epoch_successfully() {
     );
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Epoch { id: 124 }).unwrap();
-    let epoch_response: EpochResponse = from_json(&query_res).unwrap();
+    let epoch_response: EpochResponse = from_json(query_res).unwrap();
 
     assert_eq!(epoch_response.epoch, current_epoch);
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Epoch { id: 123 }).unwrap();
-    let epoch_response: EpochResponse = from_json(&query_res).unwrap();
+    let epoch_response: EpochResponse = from_json(query_res).unwrap();
 
     assert_eq!(
         epoch_response.epoch,
