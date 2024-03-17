@@ -29,3 +29,4 @@ pub mod traits;
 pub mod vault_manager;
 pub mod vault_network;
 pub mod whale_lair;
+pub mod bonding_manager;

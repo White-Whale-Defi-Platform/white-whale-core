@@ -96,7 +96,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test 0.20.0",
+ "cw-multi-test",
  "cw-storage-plus",
  "cw2",
  "schemars",

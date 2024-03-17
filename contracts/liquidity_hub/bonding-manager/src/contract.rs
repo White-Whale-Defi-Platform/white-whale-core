@@ -1,14 +1,17 @@
-use cosmwasm_std::{entry_point, Addr};
+use cosmwasm_std::{entry_point, Addr, Uint64};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
+use cw_storage_plus::Endian;
 use semver::Version;
-use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::{self, AssetInfo};
 
-use white_whale_std::whale_lair::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::bonding_manager::{
+    Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
 use crate::{commands, migrations, queries};
 
 // version info for migration info
@@ -47,6 +50,7 @@ pub fn instantiate(
         growth_rate: msg.growth_rate,
         bonding_assets: msg.bonding_assets,
         fee_distributor_addr: Addr::unchecked(""),
+        grace_period: Uint64::new(21),
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -94,9 +98,61 @@ pub fn execute(
             fee_distributor_addr,
         ),
         ExecuteMsg::FillRewards { .. } => {
-            //unimplemented!();
-            //todo deposit in next epoch
+            // Use aggregate_coins to get the total amount of new coins
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+        }
+        ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),
+        ExecuteMsg::EpochChangedHook { msg } => {
+            // Epoch has been updated, update rewards bucket
+            // and forward the expiring epoch
+
+            let new_epoch_id = msg.current_epoch.id;
+            let expiring_epoch_id = new_epoch_id.checked_sub(1u64.into()).unwrap();
+            let next_epoch_id = new_epoch_id.checked_add(1u64.into()).unwrap();
+
+            // Add a new rewards bucket for the new epoch
+            // Add a new rewards bucket for the next epoch
+            // Remove the rewards bucket for the expiring epoch
+            // Save the next_epoch_id to the contract state
+
+            /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+            // Add a new rewards bucket for the new epoch
+            EPOCHS.save(
+                deps.storage,
+                &next_epoch_id.to_be_bytes(),
+                &Epoch {
+                    id: next_epoch_id.into(),
+                    start_time: msg.current_epoch.start_time,
+                    ..Epoch::default()
+                },
+            )?;
+            // Load all the available assets from the expiring epoch
+            let amount_to_be_forwarded = EPOCHS
+                .load(deps.storage, &expiring_epoch_id.to_be_bytes())?
+                .available;
+            EPOCHS.update(
+                deps.storage,
+                &new_epoch_id.to_be_bytes(),
+                |epoch| -> StdResult<_> {
+                    let mut epoch = epoch.unwrap_or_default();
+                    epoch.available =
+                        asset::aggregate_coins(epoch.available, amount_to_be_forwarded)?;
+                    Ok(epoch)
+                },
+            )?;
+            // Set the available assets for the expiring epoch to an empty vec now that they have been forwarded
+            EPOCHS.update(
+                deps.storage,
+                &expiring_epoch_id.to_be_bytes(),
+                |epoch| -> StdResult<_> {
+                    let mut epoch = epoch.unwrap_or_default();
+                    epoch.available = vec![];
+                    Ok(epoch)
+                },
+            )?;
+
+            Ok(Response::default()
+                .add_attributes(vec![("action", "epoch_changed_hook".to_string())]))
         }
     }
 }
@@ -160,10 +216,6 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
             current_version: storage_version,
             new_version: version,
         });
-    }
-
-    if storage_version < Version::parse("0.9.0")? {
-        migrations::migrate_to_v090(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
