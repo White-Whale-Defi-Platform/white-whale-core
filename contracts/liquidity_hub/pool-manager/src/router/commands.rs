@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cosmwasm_std::{
     coin, Addr, BankMsg, Decimal, DepsMut, MessageInfo, Response, StdError, Uint128,
 };
@@ -10,30 +8,8 @@ use white_whale_std::{
 
 use crate::{state::MANAGER_CONFIG, swap::perform_swap::perform_swap, ContractError};
 
-/// Checks that an arbitrary amount of [`SwapOperation`]s will not result in
-/// multiple output tokens.
-///
-/// Also checks that the output of each swap acts as the input of the next swap.
+/// Checks that the output of each [`SwapOperation`] acts as the input of the next swap.
 fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError> {
-    // first check that there is only one output
-    let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
-    for operation in operations.iter() {
-        let (offer_asset_info, ask_asset_info, ..) = match operation {
-            SwapOperation::WhaleSwap {
-                token_in_info: offer_asset_info,
-                token_out_info: ask_asset_info,
-                ..
-            } => (offer_asset_info, ask_asset_info),
-        };
-
-        ask_asset_map.remove(&offer_asset_info.to_string());
-        ask_asset_map.insert(ask_asset_info.to_string(), true);
-    }
-
-    if ask_asset_map.keys().len() != 1 {
-        return Err(ContractError::MultipleOutputToken {});
-    }
-
     // check that the output of each swap is the input of the next swap
     let mut previous_output_info = operations
         .first()
@@ -44,7 +20,7 @@ fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError
     for operation in operations {
         if operation.get_input_asset_info() != &previous_output_info {
             return Err(ContractError::NonConsecutiveSwapOperations {
-                previous_output: previous_output_info.to_owned(),
+                previous_output: previous_output_info,
                 next_input: operation.get_input_asset_info().clone(),
             });
         }
