@@ -3225,7 +3225,7 @@ fn collect_and_distribute_fees_successfully() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -3275,7 +3275,7 @@ fn collect_and_distribute_fees_successfully() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -3289,7 +3289,7 @@ fn collect_and_distribute_fees_successfully() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -3328,7 +3328,7 @@ fn collect_and_distribute_fees_successfully() {
             &pool_network::pair::ExecuteMsg::Swap {
                 offer_asset: Asset {
                     info: AssetInfo::NativeToken {
-                        denom: native_token.clone().to_string(),
+                        denom: native_token.to_string(),
                     },
                     amount: Uint128::new(200_000u128),
                 },
@@ -3337,7 +3337,7 @@ fn collect_and_distribute_fees_successfully() {
                 to: None,
             },
             &[Coin {
-                denom: native_token.clone().to_string(),
+                denom: native_token.to_string(),
                 amount: Uint128::new(200_000u128),
             }],
         )
@@ -3642,7 +3642,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -3692,7 +3692,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -3706,7 +3706,7 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -4608,7 +4608,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -4658,7 +4658,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -4672,7 +4672,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -5169,7 +5169,7 @@ fn create_epoch_unsuccessfully() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -5219,7 +5219,7 @@ fn create_epoch_unsuccessfully() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -5233,7 +5233,7 @@ fn create_epoch_unsuccessfully() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -5674,7 +5674,7 @@ fn decrease_grace_period_fee_distributor() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -5724,7 +5724,7 @@ fn decrease_grace_period_fee_distributor() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -5738,7 +5738,7 @@ fn decrease_grace_period_fee_distributor() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -6109,7 +6109,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -6159,7 +6159,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -6173,7 +6173,7 @@ fn users_cannot_claim_rewards_from_past_epochs() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -6676,7 +6676,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -6726,7 +6726,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -6740,7 +6740,7 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -7335,7 +7335,7 @@ fn user_weight_accounts_for_unbondings() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -7385,7 +7385,7 @@ fn user_weight_accounts_for_unbondings() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -7399,7 +7399,7 @@ fn user_weight_accounts_for_unbondings() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -8191,7 +8191,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -8241,7 +8241,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -8255,7 +8255,7 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],
@@ -8714,7 +8714,7 @@ fn collect_distribute_with_unbonders() {
                             denom: "uwhale".to_string(),
                         },
                         AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                     ],
                     pool_fees: PoolFee {
@@ -8764,7 +8764,7 @@ fn collect_distribute_with_unbonders() {
                     },
                     Asset {
                         info: AssetInfo::NativeToken {
-                            denom: native_token.clone().to_string(),
+                            denom: native_token.to_string(),
                         },
                         amount: Uint128::new(500_000u128),
                     },
@@ -8778,7 +8778,7 @@ fn collect_distribute_with_unbonders() {
                     amount: Uint128::new(500_000u128),
                 },
                 Coin {
-                    denom: native_token.clone().to_string(),
+                    denom: native_token.to_string(),
                     amount: Uint128::new(500_000u128),
                 },
             ],

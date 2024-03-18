@@ -245,14 +245,6 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
         migrations::migrate_to_v120(deps.branch())?;
     }
 
-    #[cfg(not(feature = "injective"))]
-    if storage_version
-        < Version::parse("1.3.0")
-            .map_err(|_| StdError::parse_err("Version", "Failed to parse version"))?
-    {
-        migrations::migrate_to_v130(deps.branch())?;
-    }
-
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())

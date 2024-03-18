@@ -22,6 +22,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          body_path: artifact_versions.txt
+          append_body: true
+          generate_release_notes: true
           files: |
             cosmwasm-artifacts_no-token-factory.tar.gz
             artifact_versions.txt

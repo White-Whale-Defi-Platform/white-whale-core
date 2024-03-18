@@ -55,7 +55,7 @@ pub fn provide_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    assets: Vec<Asset>,
+    mut assets: Vec<Asset>,
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
     pair_identifier: String,
@@ -77,7 +77,7 @@ pub fn provide_liquidity(
     let mut pool_assets = pair.assets.clone();
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    for (i, pool) in assets.clone().iter_mut().enumerate() {
+    for (i, pool) in assets.iter_mut().enumerate() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
         if let AssetInfo::Token { contract_addr, .. } = &pool.info {
             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -142,7 +142,7 @@ pub fn provide_liquidity(
                 }
 
                 messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
-                    liquidity_token.to_string(),
+                    liquidity_token,
                     &info.sender,
                     &env.contract.address,
                     share,
@@ -187,7 +187,7 @@ pub fn provide_liquidity(
                 )?;
 
                 messages.append(&mut white_whale_std::lp_common::mint_lp_token_msg(
-                    liquidity_token.to_string(),
+                    liquidity_token,
                     &info.sender,
                     &env.contract.address,
                     amount,
@@ -240,7 +240,7 @@ pub fn withdraw_liquidity(
         ));
     }
     // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+    let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier)?;
 
     let liquidity_token = match pair.liquidity_token {
         AssetInfo::Token { contract_addr } => contract_addr,

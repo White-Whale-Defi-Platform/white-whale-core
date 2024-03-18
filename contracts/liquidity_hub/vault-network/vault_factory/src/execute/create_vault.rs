@@ -1,11 +1,11 @@
 use cosmwasm_std::{to_json_binary, DepsMut, Env, MessageInfo, ReplyOn, Response, SubMsg, WasmMsg};
 use white_whale_std::fee::VaultFee;
 use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::traits::AssetReference;
 use white_whale_std::vault_network::vault::InstantiateMsg;
 use white_whale_std::vault_network::vault_factory::INSTANTIATE_VAULT_REPLY_ID;
 
 use crate::{
-    asset::AssetReference,
     err::{StdResult, VaultFactoryError},
     state::{CONFIG, TMP_VAULT_ASSET, VAULTS},
 };
