@@ -12,27 +12,44 @@ use crate::{state::MANAGER_CONFIG, swap::perform_swap::perform_swap, ContractErr
 
 /// Checks that an arbitrary amount of [`SwapOperation`]s will not result in
 /// multiple output tokens.
-fn assert_operations(operations: &[SwapOperation]) -> Result<(), ContractError> {
+///
+/// Also checks that the output of each swap acts as the input of the next swap.
+fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError> {
+    // first check that there is only one output
     let mut ask_asset_map: HashMap<String, bool> = HashMap::new();
     for operation in operations.iter() {
-        let (offer_asset, ask_asset, _pool_identifier) = match operation {
+        let (offer_asset_info, ask_asset_info, ..) = match operation {
             SwapOperation::WhaleSwap {
                 token_in_info: offer_asset_info,
                 token_out_info: ask_asset_info,
-                pool_identifier,
-            } => (
-                offer_asset_info.clone(),
-                ask_asset_info.clone(),
-                pool_identifier.clone(),
-            ),
+                ..
+            } => (offer_asset_info, ask_asset_info),
         };
 
-        ask_asset_map.remove(&offer_asset.to_string());
-        ask_asset_map.insert(ask_asset.to_string(), true);
+        ask_asset_map.remove(&offer_asset_info.to_string());
+        ask_asset_map.insert(ask_asset_info.to_string(), true);
     }
 
     if ask_asset_map.keys().len() != 1 {
         return Err(ContractError::MultipleOutputToken {});
+    }
+
+    // check that the output of each swap is the input of the next swap
+    let mut previous_output_info = operations
+        .first()
+        .ok_or(ContractError::NoSwapOperationsProvided {})?
+        .get_input_asset_info()
+        .clone();
+
+    for operation in operations {
+        if operation.get_input_asset_info() != &previous_output_info {
+            return Err(ContractError::NonConsecutiveSwapOperations {
+                previous_output: previous_output_info.to_owned(),
+                next_input: operation.get_input_asset_info().clone(),
+            });
+        }
+
+        previous_output_info = operation.get_target_asset_info();
     }
 
     Ok(())
@@ -91,7 +108,7 @@ pub fn execute_swap_operations(
         info: offer_asset_info.to_owned(),
     };
 
-    assert_operations(&operations)?;
+    assert_operations(operations.clone())?;
 
     // we return the output to the sender if no alternative recipient was specified.
     let to = to.unwrap_or(info.sender.clone());
@@ -102,6 +119,8 @@ pub fn execute_swap_operations(
 
     // stores messages for sending fees after the swaps
     let mut fee_messages = vec![];
+    // stores swap attributes to add to tx info
+    let mut swap_attributes = vec![];
 
     for operation in operations {
         match operation {
@@ -111,13 +130,27 @@ pub fn execute_swap_operations(
                 ..
             } => match &token_in_info {
                 AssetInfo::NativeToken { .. } => {
+                    // inside assert_operations() we have already checked that
+                    // the output of each swap is the input of the next swap.
+
                     let swap_result = perform_swap(
                         deps.branch(),
-                        previous_swap_output,
+                        previous_swap_output.clone(),
                         pool_identifier,
                         None,
                         max_spread,
                     )?;
+                    swap_attributes.push((
+                        "swap",
+                        format!(
+                            "in={}, out={}, burn_fee={}, protocol_fee={}, swap_fee={}",
+                            previous_swap_output,
+                            swap_result.return_asset,
+                            swap_result.burn_fee_asset,
+                            swap_result.protocol_fee_asset,
+                            swap_result.swap_fee_asset
+                        ),
+                    ));
 
                     // update the previous swap output
                     previous_swap_output = swap_result.return_asset;
@@ -174,5 +207,6 @@ pub fn execute_swap_operations(
             ("offer_amount", &offer_asset.amount.to_string()),
             ("return_info", &target_asset_info.to_string()),
             ("return_amount", &receiver_balance.to_string()),
-        ]))
+        ])
+        .add_attributes(swap_attributes))
 }

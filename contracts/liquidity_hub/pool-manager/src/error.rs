@@ -7,6 +7,7 @@ use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -135,6 +136,13 @@ pub enum ContractError {
 
     #[error("Must provide swap operations to execute")]
     NoSwapOperationsProvided {},
+
+    #[error("Attempt to perform non-consecutive swap operation from previous output of {previous_output} to next input of {next_input}")]
+    NonConsecutiveSwapOperations {
+        previous_output: AssetInfo,
+        next_input: AssetInfo,
+    },
+
     #[error("Invalid pair creation fee, expected {expected} got {amount}")]
     InvalidPairCreationFee {
         amount: cosmwasm_std::Uint128,
