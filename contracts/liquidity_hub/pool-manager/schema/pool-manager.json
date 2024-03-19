@@ -309,6 +309,61 @@
         "additionalProperties": false
       },
       {
+        "description": "Execute multiple [`SwapOperations`] to allow for multi-hop swaps.",
+        "type": "object",
+        "required": [
+          "execute_swap_operations"
+        ],
+        "properties": {
+          "execute_swap_operations": {
+            "type": "object",
+            "required": [
+              "operations"
+            ],
+            "properties": {
+              "max_spread": {
+                "description": "The (optional) maximum spread to incur when performing any swap.\n\nIf left unspecified, there is no limit to what spread the transaction can incur.",
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Decimal"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "minimum_receive": {
+                "description": "The minimum amount of the output (i.e., final swap operation token) required for the message to succeed.",
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "operations": {
+                "description": "The operations that should be performed in sequence.\n\nThe amount in each swap will be the output from the previous swap.\n\nThe first swap will use whatever funds are sent in the [`MessageInfo`].",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/SwapOperation"
+                }
+              },
+              "to": {
+                "description": "The (optional) recipient of the output tokens.\n\nIf left unspecified, tokens will be sent to the sender of the message.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Adds swap routes to the router.",
         "type": "object",
         "required": [

@@ -57,6 +57,7 @@ pub(crate) trait EncodeMessage {
     fn encode(sender: String, data: Self) -> Vec<u8>;
 }
 #[allow(dead_code)]
+#[cfg(feature = "token_factory")]
 pub(crate) fn create_msg<M: EncodeMessage>(
     sender: Addr,
     message_data: M,

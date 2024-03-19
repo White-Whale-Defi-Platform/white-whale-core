@@ -614,21 +614,6 @@
           "additionalProperties": false
         }
       ]
-    },
-    "WeightedVoteOption": {
-      "type": "object",
-      "required": [
-        "option",
-        "weight"
-      ],
-      "properties": {
-        "option": {
-          "$ref": "#/definitions/VoteOption"
-        },
-        "weight": {
-          "$ref": "#/definitions/Decimal"
-        }
-      }
     }
   }
 }
