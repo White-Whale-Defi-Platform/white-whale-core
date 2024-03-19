@@ -31,7 +31,6 @@ pub struct SwapResult {
 /// The resulting [`SwapResult`] has actions that should be taken, as the swap has been performed.
 /// In other words, the caller of the `perform_swap` function _should_ make use
 /// of each field in [`SwapResult`] (besides fields like `spread_amount`).
-#[must_use]
 pub fn perform_swap(
     deps: DepsMut,
     offer_asset: Asset,

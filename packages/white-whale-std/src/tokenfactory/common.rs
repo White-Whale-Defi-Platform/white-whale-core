@@ -1,5 +1,9 @@
+#[cfg(feature = "token_factory")]
 use cosmwasm_schema::cw_serde;
+#[cfg(feature = "token_factory")]
 use cosmwasm_std::{Addr, CosmosMsg};
+
+#[cfg(feature = "token_factory")]
 #[cw_serde]
 enum Protocol {
     Injective,
@@ -7,6 +11,7 @@ enum Protocol {
     Osmosis,
 }
 
+#[cfg(feature = "token_factory")]
 impl Protocol {
     #![allow(dead_code)]
     #[allow(unreachable_code)]
