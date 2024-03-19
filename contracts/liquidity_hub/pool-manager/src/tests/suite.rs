@@ -523,7 +523,7 @@ impl TestingSuite {
     pub(crate) fn query_balance(
         &mut self,
         addr: String,
-        denom: String,
+        denom: impl Into<String>,
         result: impl Fn(StdResult<Coin>),
     ) -> &mut Self {
         let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(&addr, denom);
