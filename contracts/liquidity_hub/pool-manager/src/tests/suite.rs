@@ -1,24 +1,17 @@
-use std::collections::HashMap;
-
 use white_whale_std::pool_manager::{Cw20HookMsg, SwapOperation};
-use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, NPairInfo, QueryMsg};
+use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
 
-use anyhow::{Ok, Result as AnyResult};
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, Coin, Decimal, Deps, Empty, StdResult, Timestamp, Uint128, Uint64,
+    to_json_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, Router,
-    WasmKeeper,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale_std::{
-    pool_network::{
-        asset::{Asset, AssetInfo, PairType},
-        pair::PoolFee,
-    },
-    vault_manager::LpTokenType,
+use white_whale_std::pool_network::{
+    asset::{Asset, AssetInfo, PairType},
+    pair::PoolFee,
 };
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -94,7 +87,7 @@ impl TestingSuite {
         };
 
         self.app
-            .execute_contract(sender, cw20contract, &msg, &vec![])
+            .execute_contract(sender, cw20contract, &msg, &[])
             .unwrap();
 
         self
@@ -139,7 +132,6 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
-        _lp_token_type: LpTokenType,
         _vault_creation_fee: Asset,
     ) -> &mut Self {
         let cw20_token_id = self.app.store_code(cw20_token_contract());
@@ -185,7 +177,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::TokenFactory,
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -198,7 +189,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn instantiate_with_cw20_lp_token(&mut self) -> &mut Self {
         self.create_whale_lair();
-        let cw20_code_id = self.create_cw20_token();
+        let _cw20_code_id = self.create_cw20_token();
         println!("cw20_code_id: {}", self.whale_lair_addr);
         // 17 May 2023 17:00:00 UTC
         let timestamp = Timestamp::from_seconds(1684342800u64);
@@ -206,7 +197,6 @@ impl TestingSuite {
 
         self.instantiate(
             self.whale_lair_addr.to_string(),
-            LpTokenType::Cw20(cw20_code_id),
             Asset {
                 info: AssetInfo::NativeToken {
                     denom: "uwhale".to_string(),
@@ -301,7 +291,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
             denom: native_token_denom.clone(),
-            decimals: decimals,
+            decimals,
         };
 
         let _creator = self.creator().clone();
@@ -477,7 +467,7 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Asset>,
+        _assets: Vec<Asset>,
         amount: Uint128,
         liquidity_token: Addr,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -526,7 +516,7 @@ impl TestingSuite {
         denom: impl Into<String>,
         result: impl Fn(StdResult<Coin>),
     ) -> &mut Self {
-        let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(&addr, denom);
+        let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(addr, denom);
 
         result(balance_resp);
 
@@ -631,7 +621,7 @@ impl TestingSuite {
                     .app
                     .wrap()
                     .query_wasm_smart(
-                        &contract_addr,
+                        contract_addr,
                         &cw20_base::msg::QueryMsg::Balance { address: sender },
                     )
                     .unwrap();
@@ -644,7 +634,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_lp_token(&mut self, identifier: String, sender: String) -> AssetInfo {
+    pub(crate) fn query_lp_token(&mut self, identifier: String, _sender: String) -> AssetInfo {
         // Get the LP token from Config
         let lp_token_response: NPairInfo = self
             .app

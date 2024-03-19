@@ -116,7 +116,7 @@ impl TestingRobot {
                     grace_period: Uint64::new(1),
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                        genesis_epoch: Uint64::new(1_678_802_400_000_000_000_u64), // March 14, 2023 2:00:00 PM
                     },
                     distribution_asset: AssetInfo::NativeToken {
                         denom: "uwhale".to_string(),

@@ -69,7 +69,7 @@ mod test {
             .unwrap();
 
         let res: ProtocolFeesResponse = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::ProtocolFees { all_time: false },
@@ -116,7 +116,7 @@ mod test {
             .unwrap();
 
         let res: ProtocolFeesResponse = from_json(
-            &query(
+            query(
                 deps.as_ref(),
                 mock_env(),
                 QueryMsg::ProtocolFees { all_time: true },
@@ -154,7 +154,7 @@ mod test {
             .unwrap();
 
         let res: ProtocolFeesResponse =
-            from_json(&query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap()).unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::BurnedFees {}).unwrap()).unwrap();
         assert_eq!(
             res,
             ProtocolFeesResponse {

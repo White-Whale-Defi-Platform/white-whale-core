@@ -1,7 +1,6 @@
 use crate::fee::Fee;
-use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Decimal, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, CosmosMsg, Decimal, StdError, StdResult, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 use std::fmt::{Display, Formatter};
 
@@ -10,23 +9,19 @@ use std::fmt::{Display, Formatter};
 pub struct InstantiateMsg {
     /// The owner of the contract
     pub owner: String,
-    /// The type of LP token to use, whether a cw20 token or a token factory token
-    pub lp_token_type: LpTokenType,
     /// The whale lair address, where protocol fees are distributed
     pub whale_lair_addr: String,
     /// The fee to create a vault
-    pub vault_creation_fee: Asset,
+    pub vault_creation_fee: Coin,
 }
 
 /// Configuration for the contract (manager)
 #[cw_serde]
 pub struct Config {
-    /// The type of LP token to use, whether a cw20 token or a token factory token
-    pub lp_token_type: LpTokenType,
     /// The whale lair contract address
     pub whale_lair_addr: Addr,
     /// The fee to create a new vault
-    pub vault_creation_fee: Asset,
+    pub vault_creation_fee: Coin,
     /// If flash-loans are enabled
     pub flash_loan_enabled: bool,
     /// If deposits are enabled
@@ -35,37 +30,13 @@ pub struct Config {
     pub withdraw_enabled: bool,
 }
 
-/// The type of LP token to use, whether a cw20 token or a token factory token
-#[cw_serde]
-pub enum LpTokenType {
-    Cw20(u64),
-    TokenFactory,
-}
-
-impl LpTokenType {
-    pub fn get_cw20_code_id(&self) -> StdResult<u64> {
-        match self {
-            LpTokenType::TokenFactory => Err(StdError::generic_err("Not a cw20 token")),
-            LpTokenType::Cw20(code_id) => Ok(*code_id),
-        }
-    }
-}
-impl Display for LpTokenType {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        match self {
-            LpTokenType::Cw20(value) => write!(f, "cw20({})", value),
-            LpTokenType::TokenFactory => write!(f, "token_factory"),
-        }
-    }
-}
-
 /// Vault representation
 #[cw_serde]
 pub struct Vault {
     /// The asset the vault manages
-    pub asset: Asset,
+    pub asset: Coin,
     /// The LP asset
-    pub lp_asset: AssetInfo,
+    pub lp_denom: String,
     /// The fees associated with the vault
     pub fees: VaultFee,
     /// Identifier associated with the vault
@@ -114,7 +85,7 @@ pub enum ExecuteMsg {
     /// Creates a new vault given the asset info the vault should manage deposits and withdrawals
     /// for and the fees
     CreateVault {
-        asset_info: AssetInfo,
+        asset_denom: String,
         fees: VaultFee,
         vault_identifier: Option<String>,
     },
@@ -122,24 +93,19 @@ pub enum ExecuteMsg {
     /// If a field is not specified, it will not be modified.
     UpdateConfig {
         whale_lair_addr: Option<String>,
-        vault_creation_fee: Option<Asset>,
-        cw20_lp_code_id: Option<u64>,
+        vault_creation_fee: Option<Coin>,
         flash_loan_enabled: Option<bool>,
         deposit_enabled: Option<bool>,
         withdraw_enabled: Option<bool>,
     },
     /// Deposits a given asset into the vault manager.
-    Deposit {
-        asset: Asset,
-        vault_identifier: String,
-    },
+    Deposit { vault_identifier: String },
     /// Withdraws from the vault manager. Used when the LP token is a token manager token.
     Withdraw,
-    Receive(Cw20ReceiveMsg),
     /// Retrieves the desired `asset` and runs the `payload`, paying the required amount back to the vault
     /// after running the messages in the payload, and returning the profit to the sender.
     FlashLoan {
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
         payload: Vec<CosmosMsg>,
     },
@@ -170,11 +136,11 @@ pub enum QueryMsg {
     },
     /// Retrieves the share of the assets stored in the vault that a given `lp_share` is entitled to.
     #[returns(ShareResponse)]
-    Share { lp_share: Asset },
+    Share { lp_share: Coin },
     /// Retrieves the [`Uint128`] amount that must be sent back to the contract to pay off a loan taken out.
     #[returns(PaybackAssetResponse)]
     PaybackAmount {
-        asset: Asset,
+        asset: Coin,
         vault_identifier: String,
     },
 }
@@ -190,12 +156,12 @@ pub struct VaultsResponse {
 pub enum FilterVaultBy {
     Asset(AssetQueryParams),
     Identifier(String),
-    LpAsset(AssetInfo),
+    LpAsset(String),
 }
 
 #[cw_serde]
 pub struct AssetQueryParams {
-    pub asset_info: AssetInfo,
+    pub asset_denom: String,
     pub start_after: Option<Vec<u8>>,
     pub limit: Option<u32>,
 }
@@ -205,24 +171,10 @@ pub struct AssetQueryParams {
 pub enum CallbackMsg {
     AfterFlashloan {
         old_asset_balance: Uint128,
-        loan_asset: Asset,
+        loan_asset: Coin,
         vault_identifier: String,
         sender: Addr,
     },
-}
-
-/// Cw20 hook messages
-#[cw_serde]
-pub enum Cw20HookMsg {
-    /// Withdraws a given amount from the vault.
-    Withdraw,
-}
-
-#[cw_serde]
-pub struct Cw20ReceiveMsg {
-    pub sender: String,
-    pub amount: Uint128,
-    pub msg: Binary,
 }
 
 /// Response for the PaybackAmount query. Contains the amount that must be paid back to the contract
@@ -230,7 +182,7 @@ pub struct Cw20ReceiveMsg {
 #[cw_serde]
 pub struct PaybackAssetResponse {
     /// The asset info of the asset that must be paid back
-    pub asset_info: AssetInfo,
+    pub asset_denom: String,
     /// The total amount that must be returned. Equivalent to `amount` + `protocol_fee` + `flash_loan_fee`.
     pub payback_amount: Uint128,
     /// The amount of fee paid to the protocol
@@ -243,5 +195,5 @@ pub struct PaybackAssetResponse {
 #[cw_serde]
 pub struct ShareResponse {
     /// The amount of assets that the given `lp_share` is entitled to.
-    pub share: Asset,
+    pub share: Coin,
 }

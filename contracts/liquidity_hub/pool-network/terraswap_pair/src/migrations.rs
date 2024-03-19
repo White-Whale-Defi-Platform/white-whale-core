@@ -1,21 +1,31 @@
 #![cfg(not(tarpaulin_include))]
 use cosmwasm_schema::cw_serde;
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 use cosmwasm_std::Uint128;
-use cosmwasm_std::{Addr, CanonicalAddr, Decimal, DepsMut, StdError};
+use cosmwasm_std::{Addr, DepsMut, StdError};
+#[cfg(not(feature = "osmosis"))]
+use cosmwasm_std::{CanonicalAddr, Decimal};
 use cw_storage_plus::Item;
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 use schemars::JsonSchema;
-#[cfg(not(feature = "injective"))]
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 use serde::{Deserialize, Serialize};
 
+#[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
+use crate::state::PAIR_INFO;
+
+#[cfg(not(feature = "osmosis"))]
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network;
+#[cfg(not(feature = "osmosis"))]
 use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairType};
 use white_whale_std::pool_network::pair::{Config, FeatureToggle};
 
+#[cfg(not(feature = "osmosis"))]
 use crate::helpers::instantiate_fees;
-use crate::state::{ALL_TIME_BURNED_FEES, CONFIG, PAIR_INFO};
+#[cfg(not(feature = "osmosis"))]
+use crate::state::ALL_TIME_BURNED_FEES;
+use crate::state::CONFIG;
 
 #[cfg(all(not(feature = "injective"), not(feature = "osmosis")))]
 /// Migrate state of the factory from PascalCase to snake_case for the following items:

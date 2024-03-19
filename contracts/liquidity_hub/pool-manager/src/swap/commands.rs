@@ -2,19 +2,7 @@ use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::{state::MANAGER_CONFIG, ContractError};
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use cosmwasm_std::coins;
-#[cfg(any(feature = "token_factory", feature = "osmosis_token_factory"))]
-use white_whale_std::pool_network::asset::is_factory_token;
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::MsgCreateDenom;
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 
-#[cfg(feature = "token_factory")]
-use white_whale_std::pool_network::denom::{Coin, MsgBurn, MsgMint};
-#[cfg(feature = "osmosis_token_factory")]
-use white_whale_std::pool_network::denom_osmosis::{Coin, MsgBurn, MsgMint};
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 

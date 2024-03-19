@@ -3,7 +3,7 @@
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
-use cosmwasm_std::{coins, Coin};
+use cosmwasm_std::Coin;
 use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 #[cfg(any(
@@ -26,40 +26,31 @@ pub fn mint_lp_token_msg(
     recipient: &Addr,
     sender: &Addr,
     amount: Uint128,
-) -> StdResult<Vec<CosmosMsg>> {
+) -> StdResult<CosmosMsg> {
     #[cfg(any(
         feature = "token_factory",
         feature = "osmosis_token_factory",
         feature = "injective"
     ))]
     if is_factory_token(liquidity_asset.as_str()) {
-        let mut messages = vec![];
-        messages.push(tokenfactory::mint::mint(
+        return Ok(tokenfactory::mint::mint(
             sender.clone(),
             Coin {
-                denom: liquidity_asset.clone(),
+                denom: liquidity_asset,
                 amount,
             },
+            recipient.clone().into_string(),
         ));
-
-        if sender != recipient {
-            messages.push(CosmosMsg::Bank(cosmwasm_std::BankMsg::Send {
-                to_address: recipient.clone().into_string(),
-                amount: coins(amount.u128(), liquidity_asset.as_str()),
-            }));
-        }
-
-        return Ok(messages);
     }
 
-    Ok(vec![CosmosMsg::Wasm(WasmMsg::Execute {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: liquidity_asset,
         msg: to_json_binary(&cw20::Cw20ExecuteMsg::Mint {
             recipient: recipient.clone().into_string(),
             amount,
         })?,
         funds: vec![],
-    })])
+    }))
 }
 
 /// Creates the Burn LP message
@@ -76,11 +67,12 @@ pub fn burn_lp_asset_msg(
     ))]
     if is_factory_token(liquidity_asset.as_str()) {
         return Ok(tokenfactory::burn::burn(
-            sender,
+            sender.clone(),
             Coin {
                 denom: liquidity_asset,
                 amount,
             },
+            sender.into_string(),
         ));
     }
 

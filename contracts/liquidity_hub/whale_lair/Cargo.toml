@@ -39,8 +39,3 @@ semver.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 white-whale-std.workspace = true
-
-[dev-dependencies]
-cw-multi-test.workspace = true
-anyhow.workspace = true
-white-whale-testing.workspace = true

@@ -260,11 +260,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
+#[allow(unused_mut)]
 #[cfg(not(tarpaulin_include))]
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     use white_whale_std::migrate_guards::check_contract_name;
 
+    #[cfg(not(feature = "osmosis"))]
     use crate::migrations;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;

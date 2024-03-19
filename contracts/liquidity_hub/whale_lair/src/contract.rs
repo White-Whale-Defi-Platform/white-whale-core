@@ -98,6 +98,9 @@ pub fn execute(
             //todo deposit in next epoch
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
         }
+        ExecuteMsg::FillRewardsCoin => {
+            Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+        }
     }
 }
 

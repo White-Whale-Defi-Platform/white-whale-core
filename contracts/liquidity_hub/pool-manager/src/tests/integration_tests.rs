@@ -3,7 +3,6 @@ use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 use white_whale_std::pool_network::pair::PoolFee;
-use white_whale_std::vault_manager::LpTokenType;
 
 use super::suite::TestingSuite;
 
@@ -16,7 +15,6 @@ fn instantiate_normal() {
 
     suite.instantiate(
         suite.senders[0].to_string(),
-        LpTokenType::TokenFactory,
         Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -25,10 +23,9 @@ fn instantiate_normal() {
         },
     );
 
-    let cw20_code_id = suite.create_cw20_token();
+    let _cw20_code_id = suite.create_cw20_token();
     suite.instantiate(
         suite.senders[0].to_string(),
-        LpTokenType::Cw20(cw20_code_id),
         Asset {
             info: AssetInfo::NativeToken {
                 denom: "uwhale".to_string(),
@@ -108,8 +105,8 @@ fn deposit_and_withdraw_sanity_check() {
         coin(1_000_000_001u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
+    let _other = suite.senders[1].clone();
+    let _unauthorized = suite.senders[2].clone();
     // Asset infos with uwhale and uluna
 
     let asset_infos = vec![
@@ -221,11 +218,11 @@ fn deposit_and_withdraw_cw20() {
         coin(1_000_000_001u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
+    let _other = suite.senders[1].clone();
+    let _unauthorized = suite.senders[2].clone();
     // Asset infos with uwhale and cw20
 
-    let cw20_code_id = suite.create_cw20_token();
+    let _cw20_code_id = suite.create_cw20_token();
 
     let asset_infos = vec![
         AssetInfo::NativeToken {
@@ -373,11 +370,11 @@ mod pair_creation_failures {
             coin(1_000_000_001u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
-        let other = suite.senders[1].clone();
-        let unauthorized = suite.senders[2].clone();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and cw20
 
-        let cw20_code_id = suite.create_cw20_token();
+        let _cw20_code_id = suite.create_cw20_token();
 
         let asset_infos = vec![
             AssetInfo::NativeToken {
@@ -1929,7 +1926,7 @@ mod swapping {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
             swap_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_00u128),
+                share: Decimal::from_ratio(1u128, 10_000_u128),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -2149,8 +2146,8 @@ mod swapping {
             coin(1_000_000_000_001u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
-        let other = suite.senders[1].clone();
-        let unauthorized = suite.senders[2].clone();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
         let asset_infos = vec![

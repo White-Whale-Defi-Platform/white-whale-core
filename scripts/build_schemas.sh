@@ -48,6 +48,12 @@ for component in "$projectRootPath"/contracts/liquidity_hub/*/; do
 	echo "Generating schemas for $(basename $component)..."
 	if [[ -f "$component/Cargo.toml" ]]; then
 		# it was a single contract (such as fee_collector)
+
+		if [[ $(basename $component) == "fee_collector_integration" || $(basename $component) == "whale_lair_integration" ]]; then
+			echo "Skipping $component"
+			continue
+		fi
+
 		echo "generating for $component"
 		cd $component && cargo schema --locked
 	else

@@ -153,7 +153,7 @@ fn try_native_to_token() {
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = ((ask_pool - accrued protocol fees) * offer_amount / (offer_pool - accrued protocol fees + offer_amount))
@@ -277,7 +277,7 @@ fn try_native_to_token() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -324,7 +324,7 @@ fn try_native_to_token() {
         .unwrap();
 
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
@@ -638,7 +638,7 @@ fn try_token_to_native() {
     assert_eq!(res.messages.len(), 3);
     #[cfg(not(feature = "osmosis"))]
     assert_eq!(res.messages.len(), 2);
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     // current price is 1.5, so expected return without spread is 1000
     // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount))
@@ -678,7 +678,7 @@ fn try_token_to_native() {
         let expected_burn_msg = SubMsg {
             id: 0,
             msg: CosmosMsg::Bank(BankMsg::Burn {
-                amount: coins(expected_burn_fee_amount.u128().into(), "uusd"),
+                amount: coins(expected_burn_fee_amount.u128(), "uusd"),
             }),
             gas_limit: None,
             reply_on: ReplyOn::Never,
@@ -776,7 +776,7 @@ fn try_token_to_native() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -829,7 +829,7 @@ fn try_token_to_native() {
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
@@ -1064,7 +1064,7 @@ fn test_swap_to_third_party() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -1143,7 +1143,7 @@ fn stableswap_reverse_simulation() {
 
     // check reverse simulation res
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
@@ -1264,7 +1264,7 @@ fn stableswap_with_different_precisions() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    let msg_transfer = res.messages.get(0).expect("no message");
+    let msg_transfer = res.messages.first().expect("no message");
 
     let expected_spread_amount = Uint128::new(0);
     let expected_swap_fee_amount = asset_return_amount.multiply_ratio(1u128, 400u128); // 0.25%
@@ -1338,7 +1338,7 @@ fn stableswap_with_different_precisions() {
         .unwrap();
 
     let simulation_res: SimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::Simulation {
@@ -1385,7 +1385,7 @@ fn stableswap_with_different_precisions() {
         .unwrap();
 
     let reverse_simulation_res: ReverseSimulationResponse = from_json(
-        &query(
+        query(
             deps.as_ref(),
             mock_env(),
             QueryMsg::ReverseSimulation {
