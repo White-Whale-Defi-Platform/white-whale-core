@@ -120,7 +120,7 @@ pub fn perform_swap(
     };
     // Prepare a message to send the swap fee to the swap fee collector
     let swap_fee_asset = Asset {
-        info: ask_pool.info.clone(),
+        info: ask_pool.info,
         amount: swap_computation.swap_fee_amount,
     };
 

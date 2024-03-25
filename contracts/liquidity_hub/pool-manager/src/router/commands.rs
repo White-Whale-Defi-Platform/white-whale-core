@@ -177,7 +177,7 @@ pub fn execute_swap_operations(
         .add_messages(fee_messages)
         .add_attributes(vec![
             ("action", "execute_swap_operations"),
-            ("sender", &info.sender.as_str()),
+            ("sender", info.sender.as_str()),
             ("receiver", to.as_str()),
             ("offer_info", &offer_asset.info.to_string()),
             ("offer_amount", &offer_asset.amount.to_string()),
