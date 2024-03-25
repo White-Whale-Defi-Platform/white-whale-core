@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
-use crate::{liquidity, manager, queries, swap};
+use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -94,21 +94,12 @@ pub fn execute(
             to,
             pair_identifier,
         } => {
-            // check if the swap feature is enabled
-            let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
-            if !feature_toggle.swaps_enabled {
-                return Err(ContractError::OperationDisabled("swap".to_string()));
-            }
-
-            if !offer_asset.is_native_token() {
-                return Err(ContractError::Unauthorized {});
-            }
-
             let to_addr = if let Some(to_addr) = to {
                 Some(deps.api.addr_validate(&to_addr)?)
             } else {
                 None
             };
+
             swap::commands::swap(
                 deps,
                 env,
@@ -157,23 +148,22 @@ pub fn execute(
         //     )
 
         // },
-        // ExecuteMsg::ExecuteSwapOperations {
-        //     operations,
-        //     minimum_receive,
-        //     to,
-        //     max_spread,
-        // } => {
-        //     let api = deps.api;
-        //     router::commands::execute_swap_operations(
-        //         deps,
-        //         env,
-        //         info.sender,
-        //         operations,
-        //         minimum_receive,
-        //         optional_addr_validate(api, to)?,
-        //         max_spread,
-        //     )
-        // }
+        ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive,
+            to,
+            max_spread,
+        } => {
+            let api = deps.api;
+            router::commands::execute_swap_operations(
+                deps,
+                info,
+                operations,
+                minimum_receive,
+                optional_addr_validate(api, to)?,
+                max_spread,
+            )
+        }
         // ExecuteMsg::ExecuteSwapOperation {
         //     operation,
         //     to,

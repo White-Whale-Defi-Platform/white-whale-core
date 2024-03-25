@@ -7,6 +7,7 @@ use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
+use white_whale_std::pool_network::asset::AssetInfo;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -35,9 +36,6 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("The provided assets are both the same")]
     SameAsset {},
-
-    #[error("Invalid operations; multiple output token")]
-    MultipleOutputToken {},
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -135,11 +133,21 @@ pub enum ContractError {
 
     #[error("Must provide swap operations to execute")]
     NoSwapOperationsProvided {},
+
+    #[error("Attempt to perform non-consecutive swap operation from previous output of {previous_output} to next input of {next_input}")]
+    NonConsecutiveSwapOperations {
+        previous_output: AssetInfo,
+        next_input: AssetInfo,
+    },
+
     #[error("Invalid pair creation fee, expected {expected} got {amount}")]
     InvalidPairCreationFee {
         amount: cosmwasm_std::Uint128,
         expected: cosmwasm_std::Uint128,
     },
+
+    #[error("Funds for {denom} were missing when performing swap")]
+    MissingNativeSwapFunds { denom: String },
 }
 
 impl From<semver::Error> for ContractError {
