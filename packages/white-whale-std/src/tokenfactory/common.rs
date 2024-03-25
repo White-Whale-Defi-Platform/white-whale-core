@@ -56,7 +56,7 @@ impl MsgTypes {
     }
 }
 
-pub(crate) trait EncodeMessage {
+pub trait EncodeMessage {
     /// Encodes the data as a proto doc
     fn encode(data: Self) -> Vec<u8>;
 

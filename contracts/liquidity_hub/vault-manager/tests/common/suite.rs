@@ -9,13 +9,13 @@ use cw_multi_test::{
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
 
-use white_whale_std::multi_test::stargate_mock::StargateMock;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity;
 use white_whale_std::pool_network::pair::{PoolFee, SimulationResponse};
 use white_whale_std::vault_manager::{
     Config, FilterVaultBy, InstantiateMsg, PaybackAssetResponse, ShareResponse, VaultsResponse,
 };
+use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
     cw20_token_contract, fee_collector_contract, pair_contract, vault_manager_contract,

@@ -11,9 +11,9 @@ documentation.workspace = true
 publish.workspace = true
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+	"contract.wasm",
+	"hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -51,3 +51,4 @@ terraswap-token.workspace = true
 terraswap-pair.workspace = true
 fee_collector.workspace = true
 anyhow.workspace = true
+white-whale-testing.workspace = true
