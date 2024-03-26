@@ -194,8 +194,23 @@ pub fn migrate_to_v13x(deps: DepsMut) -> Result<(), StdError> {
         pub swap_fee: Fee,
     }
 
-    const CONFIG_V110: Item<ConfigV110> = Item::new("config");
-    let config_v110 = CONFIG_V110.load(deps.storage)?;
+    const CONFIG_V110: Item<ConfigV110> = Item::new("leaderboard");
+    let leaderboard = CONFIG_V110.load(deps.storage)?;
+
+    let mut start_from: Option<String> = None;
+    for (addr, amount) in leaderboard.iter() {
+        let leaderboard = deps.api.query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: "guppy_furnace".to_string(),
+            msg: to_binary(&LeaderBoard {
+                start_from: start_from,
+                limit: 30,
+            })?,
+        }))?;
+
+        LEADERBOARD.save(deps.storage, &"uguppy", &leaderboard)?;
+
+        start_from = Some(leaderboard.last()?);
+    }
 
     // Add burn fee to config. Zero fee is used as default.
     let config = Config {

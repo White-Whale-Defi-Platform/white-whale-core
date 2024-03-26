@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    CheckedFromRatioError, ConversionOverflowError, DivideByZeroError, OverflowError, StdError,
-    Uint128,
+    CheckedFromRatioError, CheckedMultiplyFractionError, ConversionOverflowError,
+    DivideByZeroError, OverflowError, StdError, Uint128,
 };
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
@@ -29,6 +29,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     CheckedFromRatioError(#[from] CheckedFromRatioError),
+
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error("{0}")]
     ConversionOverflowError(#[from] ConversionOverflowError),
@@ -96,8 +99,8 @@ pub enum ContractError {
     #[error("Incentive start timestamp is too far into the future")]
     IncentiveStartTooFar,
 
-    #[error("The incentive has already ended, can't be expanded")]
-    IncentiveAlreadyEnded,
+    #[error("The incentive has already expired, can't be expanded")]
+    IncentiveAlreadyExpired,
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {

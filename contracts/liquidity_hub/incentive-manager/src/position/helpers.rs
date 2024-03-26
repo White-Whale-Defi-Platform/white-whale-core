@@ -1,7 +1,8 @@
-use cosmwasm_std::{Addr, Coin, Decimal256, Storage, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal256, Order, StdError, Storage, Uint128};
 
 use white_whale_std::incentive_manager::EpochId;
 
+use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
 use crate::ContractError;
 
 const SECONDS_IN_DAY: u64 = 86400;
@@ -57,31 +58,44 @@ pub fn calculate_weight(
 
 /// Gets the latest available weight snapshot recorded for the given address.
 pub fn get_latest_address_weight(
-    _storage: &dyn Storage,
-    _address: &Addr,
+    storage: &dyn Storage,
+    address: &Addr,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    //todo this will likely change with the new implementation of the claim function
-    // Ok(ADDRESS_LP_WEIGHT_HISTORY
-    //     .prefix(address)
-    //     .range(storage, None, None, Order::Descending)
-    //     .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
-    //     .collect::<StdResult<(EpochId, Uint128)>>()?);
-    // dummy value meanwhile
-    Ok((0, Uint128::zero()))
+    let result = ADDRESS_LP_WEIGHT_HISTORY
+        .prefix(address)
+        .range(storage, None, None, Order::Descending)
+        .take(1usize)
+        // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
+        .next()
+        .transpose();
+
+    return_latest_weight(result)
 }
 
 /// Gets the latest available weight snapshot recorded for the given lp.
 pub fn get_latest_lp_weight(
-    _storage: &dyn Storage,
-    _lp_asset_key: &[u8],
+    storage: &dyn Storage,
+    lp_asset: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    //todo this will likely change with the new implementation of the claim function
-    // perhaps the lp_asset_key can become a String instead of bytes?
-    // Ok(LP_WEIGHTS_HISTORY
-    //     .prefix(lp_asset_key)
-    //     .range(storage, None, None, Order::Descending)
-    //     .take(1) // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
-    //     .collect::<StdResult<(EpochId, Uint128)>>()?)
-    // dummy value meanwhile
-    Ok((0, Uint128::zero()))
+    let result = LP_WEIGHTS_HISTORY
+        .prefix(lp_asset)
+        .range(storage, None, None, Order::Descending)
+        .take(1usize)
+        // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
+        .next()
+        .transpose();
+
+    return_latest_weight(result)
+}
+
+/// Helper function to return the weight from the result. If the result is None, i.e. the weight
+/// was not found in the map, it returns (0, 0).
+fn return_latest_weight(
+    weight_result: Result<Option<(EpochId, Uint128)>, StdError>,
+) -> Result<(EpochId, Uint128), ContractError> {
+    match weight_result {
+        Ok(Some(item)) => Ok(item),
+        Ok(None) => Ok((0u64, Uint128::zero())),
+        Err(std_err) => Err(std_err.into()),
+    }
 }

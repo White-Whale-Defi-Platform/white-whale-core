@@ -114,21 +114,21 @@ pub(crate) fn validate_incentive_epochs(
     max_incentive_epoch_buffer: u64,
 ) -> Result<(u64, u64), ContractError> {
     // assert epoch params are correctly set
-    let end_epoch = params.end_epoch.unwrap_or(
+    let preliminary_end_epoch = params.preliminary_end_epoch.unwrap_or(
         current_epoch
             .checked_add(DEFAULT_INCENTIVE_DURATION)
             .ok_or(ContractError::InvalidEndEpoch)?,
     );
 
     // ensure the incentive is set to end in a future epoch
-    if current_epoch > end_epoch {
+    if current_epoch > preliminary_end_epoch {
         return Err(ContractError::IncentiveEndsInPast);
     }
 
     let start_epoch = params.start_epoch.unwrap_or(current_epoch);
 
     // ensure that start date is before end date
-    if start_epoch > end_epoch {
+    if start_epoch > preliminary_end_epoch {
         return Err(ContractError::IncentiveStartTimeAfterEndTime);
     }
 
@@ -137,7 +137,7 @@ pub(crate) fn validate_incentive_epochs(
         return Err(ContractError::IncentiveStartTooFar);
     }
 
-    Ok((start_epoch, end_epoch))
+    Ok((start_epoch, preliminary_end_epoch))
 }
 
 //todo maybe move this to position helpers??

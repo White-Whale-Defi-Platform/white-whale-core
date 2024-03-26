@@ -3,17 +3,19 @@ use cosmwasm_std::{
     Storage, Uint128,
 };
 
+use white_whale_std::coin::{get_subdenom, is_factory_token};
 use white_whale_std::epoch_manager::common::validate_epoch;
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
+use white_whale_std::incentive_manager::MIN_INCENTIVE_AMOUNT;
 use white_whale_std::incentive_manager::{Curve, Incentive, IncentiveParams};
 
 use crate::helpers::{
     assert_incentive_asset, process_incentive_creation_fee, validate_emergency_unlock_penalty,
     validate_incentive_epochs,
 };
-use crate::manager::MIN_INCENTIVE_AMOUNT;
 use crate::state::{
     get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
+    LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -73,18 +75,20 @@ fn create_incentive(
     }
 
     // check if more incentives can be created for this particular LP asset
-    if incentives.len() == config.max_concurrent_incentives as usize {
-        return Err(ContractError::TooManyIncentives {
+    ensure!(
+        incentives.len() < config.max_concurrent_incentives as usize,
+        ContractError::TooManyIncentives {
             max: config.max_concurrent_incentives,
-        });
-    }
+        }
+    );
 
     // check the incentive is being created with a valid amount
-    if params.incentive_asset.amount < MIN_INCENTIVE_AMOUNT {
-        return Err(ContractError::InvalidIncentiveAmount {
-            min: MIN_INCENTIVE_AMOUNT.u128(),
-        });
-    }
+    ensure!(
+        params.incentive_asset.amount >= MIN_INCENTIVE_AMOUNT,
+        ContractError::InvalidIncentiveAmount {
+            min: MIN_INCENTIVE_AMOUNT.u128()
+        }
+    );
 
     let incentive_creation_fee = config.create_incentive_fee.clone();
 
@@ -102,7 +106,7 @@ fn create_incentive(
     assert_incentive_asset(&info, &incentive_creation_fee, &params)?;
 
     // assert epoch params are correctly set
-    let (start_epoch, end_epoch) = validate_incentive_epochs(
+    let (start_epoch, preliminary_end_epoch) = validate_incentive_epochs(
         &params,
         current_epoch.id,
         u64::from(config.max_incentive_epoch_buffer),
@@ -122,26 +126,38 @@ fn create_incentive(
     );
     // the incentive does not exist, all good, continue
 
+    // calculates the emission rate
+    let emission_rate = params
+        .incentive_asset
+        .amount
+        .checked_div_floor((preliminary_end_epoch.saturating_sub(start_epoch), 1u64))?;
+
     // create the incentive
     let incentive = Incentive {
         identifier: incentive_identifier,
         start_epoch,
-        end_epoch,
-        //emitted_tokens: HashMap::new(),
+        preliminary_end_epoch,
         curve: params.curve.unwrap_or(Curve::Linear),
         incentive_asset: params.incentive_asset,
         lp_denom: params.lp_denom,
         owner: info.sender,
         claimed_amount: Uint128::zero(),
-        expansion_history: Default::default(),
+        emission_rate,
+        last_epoch_claimed: current_epoch.id - 1,
     };
+
+    INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "create_incentive".to_string()),
         ("incentive_creator", incentive.owner.to_string()),
         ("incentive_identifier", incentive.identifier),
         ("start_epoch", incentive.start_epoch.to_string()),
-        ("end_epoch", incentive.end_epoch.to_string()),
+        (
+            "preliminary_end_epoch",
+            incentive.preliminary_end_epoch.to_string(),
+        ),
+        ("emission_rate", emission_rate.to_string()),
         ("curve", incentive.curve.to_string()),
         ("incentive_asset", incentive.incentive_asset.to_string()),
         ("lp_denom", incentive.lp_denom),
@@ -214,13 +230,11 @@ fn expand_incentive(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    incentive: Incentive,
-    _params: IncentiveParams,
+    mut incentive: Incentive,
+    params: IncentiveParams,
 ) -> Result<Response, ContractError> {
     // only the incentive owner can expand it
-    if incentive.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
+    ensure!(incentive.owner == info.sender, ContractError::Unauthorized);
 
     let config = CONFIG.load(deps.storage)?;
     let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
@@ -228,43 +242,74 @@ fn expand_incentive(
         config.epoch_manager_addr.into_string(),
     )?;
 
-    // check if the incentive has already ended, can't be expanded
+    // check if the incentive has already expired, can't be expanded
     ensure!(
-        incentive.end_epoch >= current_epoch.id,
-        ContractError::IncentiveAlreadyEnded
+        incentive.is_expired(current_epoch.id),
+        ContractError::IncentiveAlreadyExpired
     );
 
-    //todo complete this
+    // check that the asset sent matches the asset expected
+    ensure!(
+        incentive.incentive_asset.denom == params.incentive_asset.denom,
+        ContractError::AssetMismatch
+    );
+
+    // increase the total amount of the incentive
+    incentive.incentive_asset.amount = incentive
+        .incentive_asset
+        .amount
+        .checked_add(params.incentive_asset.amount)?;
+    INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
 
     Ok(Response::default().add_attributes(vec![
-        ("action", "close_incentive".to_string()),
+        ("action", "expand_incentive".to_string()),
         ("incentive_identifier", incentive.identifier),
+        ("expanded_by", params.incentive_asset.to_string()),
+        ("total_incentive", incentive.incentive_asset.to_string()),
     ]))
 }
 
-//todo maybe this is not necessary
 /// EpochChanged hook implementation. Updates the LP_WEIGHTS.
-
 pub(crate) fn on_epoch_changed(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
-    _msg: EpochChangedHookMsg,
+    msg: EpochChangedHookMsg,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-
     // only the epoch manager can trigger this
-    if info.sender != config.epoch_manager_addr {
-        return Err(ContractError::Unauthorized {});
+    ensure!(
+        info.sender == config.epoch_manager_addr,
+        ContractError::Unauthorized
+    );
+
+    // get all LP tokens and update the LP_WEIGHTS_HISTORY
+    let lp_assets = deps
+        .querier
+        .query_all_balances(env.contract.address)?
+        .into_iter()
+        .filter(|asset| {
+            if is_factory_token(asset.denom.as_str()) {
+                //todo remove this hardcoded uLP and point to the pool manager const
+                get_subdenom(asset.denom.as_str()) == "uLP"
+            } else {
+                false
+            }
+        })
+        .collect::<Vec<Coin>>();
+
+    for lp_asset in &lp_assets {
+        LP_WEIGHTS_HISTORY.save(
+            deps.storage,
+            (&lp_asset.denom, msg.current_epoch.id),
+            &lp_asset.amount,
+        )?;
     }
-    //
-    // LP_WEIGHTS_HISTORY.
-    //
-    // msg.current_epoch
 
-    //todo complete this
-
-    Ok(Response::default())
+    Ok(Response::default().add_attributes(vec![
+        ("action", "on_epoch_changed".to_string()),
+        ("epoch", msg.current_epoch.to_string()),
+    ]))
 }
 
 #[allow(clippy::too_many_arguments)]

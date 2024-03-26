@@ -16,7 +16,7 @@ pub const POSITION_ID_COUNTER: Item<u64> = Item::new("position_id_counter");
 
 /// The positions that a user has. Positions can be open or closed.
 /// The key is the position identifier
-pub const POSITIONS: IndexedMap<&String, Position, PositionIndexes> = IndexedMap::new(
+pub const POSITIONS: IndexedMap<&str, Position, PositionIndexes> = IndexedMap::new(
     "positions",
     PositionIndexes {
         lp_asset: MultiIndex::new(
@@ -50,7 +50,7 @@ impl<'a> IndexList<Position> for PositionIndexes<'a> {
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch");
 
 /// The history of total weight (sum of all individual weights) of an LP asset at a given epoch
-pub const LP_WEIGHTS_HISTORY: Map<(&[u8], EpochId), Uint128> = Map::new("lp_weights_history");
+pub const LP_WEIGHTS_HISTORY: Map<(&str, EpochId), Uint128> = Map::new("lp_weights_history");
 
 /// The address lp weight history, i.e. how much lp weight an address had at a given epoch
 pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
@@ -60,7 +60,7 @@ pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");
 
 /// Incentives map
-pub const INCENTIVES: IndexedMap<&String, Incentive, IncentiveIndexes> = IndexedMap::new(
+pub const INCENTIVES: IndexedMap<&str, Incentive, IncentiveIndexes> = IndexedMap::new(
     "incentives",
     IncentiveIndexes {
         lp_asset: MultiIndex::new(

@@ -90,7 +90,7 @@ pub(crate) fn fill_position(
 
 /// Closes an existing position
 pub(crate) fn close_position(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     identifier: String,
@@ -114,9 +114,10 @@ pub(crate) fn close_position(
         },
     )?;
 
-    if position.receiver != info.sender {
-        return Err(ContractError::Unauthorized);
-    }
+    ensure!(
+        position.receiver == info.sender,
+        ContractError::Unauthorized
+    );
 
     let mut attributes = vec![
         ("action", "close_position".to_string()),
@@ -124,7 +125,7 @@ pub(crate) fn close_position(
         ("identifier", identifier.to_string()),
     ];
 
-    // check if it's gonna be closed in full or partially
+    // check if it's going to be closed in full or partially
     if let Some(lp_asset) = lp_asset {
         // close position partially
 
@@ -158,13 +159,20 @@ pub(crate) fn close_position(
             receiver: position.receiver.clone(),
         };
         POSITIONS.save(deps.storage, &identifier.to_string(), &partial_position)?;
-
-        attributes.push(("close_in_full", false.to_string()));
     } else {
         // close position in full
         position.open = false;
-        attributes.push(("close_in_full", true.to_string()));
     }
+    let close_in_full = !position.open;
+    attributes.push(("close_in_full", close_in_full.to_string()));
+
+    update_weights(
+        deps.branch(),
+        &info,
+        &position.lp_asset,
+        position.unlocking_duration,
+        false,
+    )?;
 
     POSITIONS.save(deps.storage, &identifier, &position)?;
 
@@ -265,7 +273,7 @@ fn update_weights(
 
     let weight = calculate_weight(lp_asset, unlocking_duration)?;
 
-    let (_, mut lp_weight) = get_latest_lp_weight(deps.storage, lp_asset.denom.as_bytes())?;
+    let (_, mut lp_weight) = get_latest_lp_weight(deps.storage, &lp_asset.denom)?;
 
     if fill {
         // filling position
@@ -277,7 +285,7 @@ fn update_weights(
 
     LP_WEIGHTS_HISTORY.update::<_, StdError>(
         deps.storage,
-        (lp_asset.denom.as_bytes(), current_epoch.id + 1u64),
+        (&lp_asset.denom, current_epoch.id + 1u64),
         |_| Ok(lp_weight),
     )?;
 
@@ -292,6 +300,7 @@ fn update_weights(
         address_lp_weight = address_lp_weight.saturating_sub(weight);
     }
 
+    //todo if the address weight is zero, remove it from the storage?
     ADDRESS_LP_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
         (&receiver.sender, current_epoch.id + 1u64),

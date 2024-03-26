@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -109,9 +107,9 @@ pub struct IncentiveParams {
     /// The epoch at which the incentive will start. If unspecified, it will start at the
     /// current epoch.
     pub start_epoch: Option<u64>,
-    /// The epoch at which the incentive should end. If unspecified, the incentive will default to end at
-    /// 14 epochs from the current one.
-    pub end_epoch: Option<u64>,
+    /// The epoch at which the incentive should preliminarily end (if it's not expanded). If
+    /// unspecified, the incentive will default to end at 14 epochs from the current one.
+    pub preliminary_end_epoch: Option<u64>,
     /// The type of distribution curve. If unspecified, the distribution will be linear.
     pub curve: Option<Curve>,
     /// The asset to be distributed in this incentive.
@@ -181,23 +179,26 @@ pub struct Incentive {
     pub incentive_asset: Coin,
     /// The amount of the `incentive_asset` that has been claimed so far.
     pub claimed_amount: Uint128,
+    /// The amount of the `incentive_asset` that is to be distributed every epoch.
+    pub emission_rate: Uint128,
     /// The type of curve the incentive has.
     pub curve: Curve,
     /// The epoch at which the incentive starts.
     pub start_epoch: EpochId,
-    /// The epoch at which the incentive ends.
-    pub end_epoch: EpochId,
-    /// emitted tokens
-    //pub emitted_tokens: HashMap<u64, Uint128>,
-    /// A map containing the amount of tokens it was expanded to at a given epoch. This is used
-    /// to calculate the right amount of tokens to distribute at a given epoch when a incentive is expanded.
-    pub expansion_history: BTreeMap<EpochId, Uint128>,
+    /// The epoch at which the incentive will preliminary end (in case it's not expanded).
+    pub preliminary_end_epoch: EpochId,
+    /// The last epoch this incentive was claimed.
+    pub last_epoch_claimed: EpochId,
 }
 
 impl Incentive {
-    /// Returns true if the incentive is expired at the given epoch.
-    pub fn is_expired(&self, epoch: u64) -> bool {
-        epoch > self.end_epoch + DEFAULT_INCENTIVE_DURATION
+    /// Returns true if the incentive is expired
+    pub fn is_expired(&self, epoch_id: EpochId) -> bool {
+        self.incentive_asset
+            .amount
+            .saturating_sub(self.claimed_amount)
+            < MIN_INCENTIVE_AMOUNT
+            || epoch_id >= self.last_epoch_claimed + DEFAULT_INCENTIVE_DURATION
     }
 }
 
@@ -214,9 +215,6 @@ impl std::fmt::Display for Curve {
         }
     }
 }
-
-/// Default incentive duration in epochs
-pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
 
 /// Represents an LP position.
 #[cw_serde]
@@ -240,3 +238,9 @@ pub struct RewardsResponse {
     /// The rewards that is available to a user if they executed the `claim` function at this point.
     pub rewards: Vec<Coin>,
 }
+
+/// Minimum amount of an asset to create an incentive with
+pub const MIN_INCENTIVE_AMOUNT: Uint128 = Uint128::new(1_000u128);
+
+/// Default incentive duration in epochs
+pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
