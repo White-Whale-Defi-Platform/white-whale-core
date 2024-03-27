@@ -4,16 +4,10 @@ use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_json, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response,
-};
+use cosmwasm_std::{to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
-use cw20::Cw20ReceiveMsg;
 use semver::Version;
-use white_whale_std::pool_manager::{
-    Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
-};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use white_whale_std::pool_network::pair::FeatureToggle;
 
 // version info for migration info
@@ -57,7 +51,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CreatePair {
-            asset_infos,
+            asset_denoms,
             pool_fees,
             pair_type,
             token_factory_lp,
@@ -66,7 +60,7 @@ pub fn execute(
             deps,
             env,
             info,
-            asset_infos,
+            asset_denoms,
             pool_fees,
             pair_type,
             token_factory_lp,
@@ -88,7 +82,7 @@ pub fn execute(
         ),
         ExecuteMsg::Swap {
             offer_asset,
-            ask_asset,
+            ask_asset_denom,
             belief_price,
             max_spread,
             to,
@@ -106,7 +100,7 @@ pub fn execute(
                 info.clone(),
                 info.sender,
                 offer_asset,
-                ask_asset,
+                ask_asset_denom,
                 belief_price,
                 max_spread,
                 to_addr,
@@ -137,17 +131,6 @@ pub fn execute(
                 )?,
             )
         }
-        ExecuteMsg::Receive(msg) => receive_cw20(deps, env, info, msg),
-        // ExecuteMsg::AssertMinimumReceive { asset_info, prev_balance, minimum_receive, receiver } => {
-        //     router::commands::assert_minimum_receive(
-        //         deps.as_ref(),
-        //         asset_info,
-        //         prev_balance,
-        //         minimum_receive,
-        //         deps.api.addr_validate(&receiver)?,
-        //     )
-
-        // },
         ExecuteMsg::ExecuteSwapOperations {
             operations,
             minimum_receive,
@@ -198,74 +181,6 @@ fn optional_addr_validate(
     Ok(addr)
 }
 
-/// Receives cw20 tokens. Used to swap and withdraw from the pool.
-pub fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    let contract_addr = info.sender.clone();
-    let feature_toggle: FeatureToggle = MANAGER_CONFIG.load(deps.storage)?.feature_toggle;
-
-    match from_json(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Swap {
-            ask_asset,
-            belief_price,
-            max_spread,
-            to,
-            pair_identifier,
-        }) => {
-            // check if the swap feature is enabled
-            if !feature_toggle.swaps_enabled {
-                return Err(ContractError::OperationDisabled("swap".to_string()));
-            }
-
-            let to_addr = if let Some(to_addr) = to {
-                Some(deps.api.addr_validate(to_addr.as_str())?)
-            } else {
-                None
-            };
-
-            crate::swap::commands::swap(
-                deps,
-                env,
-                info,
-                Addr::unchecked(cw20_msg.sender),
-                Asset {
-                    info: AssetInfo::Token {
-                        contract_addr: contract_addr.to_string(),
-                    },
-                    amount: cw20_msg.amount,
-                },
-                ask_asset,
-                belief_price,
-                max_spread,
-                to_addr,
-                pair_identifier,
-            )
-        }
-        Ok(Cw20HookMsg::WithdrawLiquidity { pair_identifier }) => {
-            // check if the withdrawal feature is enabled
-            if !feature_toggle.withdrawals_enabled {
-                return Err(ContractError::OperationDisabled(
-                    "withdraw_liquidity".to_string(),
-                ));
-            }
-
-            let sender_addr = deps.api.addr_validate(cw20_msg.sender.as_str())?;
-            crate::liquidity::commands::withdraw_liquidity(
-                deps,
-                env,
-                sender_addr,
-                cw20_msg.amount,
-                pair_identifier,
-            )
-        }
-        Err(err) => Err(ContractError::Std(err)),
-    }
-}
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
@@ -310,12 +225,12 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         //     deps, env, ask_amount, operations,
         // )?)?),
         QueryMsg::SwapRoute {
-            offer_asset_info,
-            ask_asset_info,
+            offer_asset_denom,
+            ask_asset_denom,
         } => Ok(to_json_binary(&get_swap_route(
             deps,
-            offer_asset_info,
-            ask_asset_info,
+            offer_asset_denom,
+            ask_asset_denom,
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),

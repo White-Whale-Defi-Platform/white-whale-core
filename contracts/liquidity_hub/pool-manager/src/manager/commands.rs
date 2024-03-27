@@ -1,14 +1,11 @@
 use cosmwasm_std::{
-    attr, instantiate2_address, to_json_binary, Attribute, CodeInfoResponse, CosmosMsg, DepsMut,
-    Env, MessageInfo, Response, Uint128, WasmMsg,
+    attr, coins, instantiate2_address, to_json_binary, Attribute, CodeInfoResponse, Coin,
+    CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
 };
 use cw20::MinterResponse;
 use sha2::{Digest, Sha256};
 use white_whale_std::{
-    pool_network::{
-        asset::{Asset, AssetInfo, PairType},
-        pair::PoolFee,
-    },
+    pool_network::{asset::PairType, pair::PoolFee, querier::query_native_decimals},
     whale_lair::fill_rewards_msg,
 };
 
@@ -87,7 +84,7 @@ pub fn create_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset_infos: Vec<AssetInfo>, //Review just a vec<asset>
+    asset_denoms: Vec<String>, //Review just a vec<asset>
     pool_fees: PoolFee,
     pair_type: PairType,
     token_factory_lp: bool,
@@ -97,14 +94,9 @@ pub fn create_pair(
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
     // Check if fee was provided and is sufficient
-    let denom = match config.pool_creation_fee.info.clone() {
-        // this will never happen as the fee is always native, enforced when instantiating the contract
-        AssetInfo::Token { .. } => "".to_string(),
-        AssetInfo::NativeToken { denom } => denom,
-    };
     if !config.pool_creation_fee.amount.is_zero() {
         // verify fee payment
-        let amount = cw_utils::must_pay(&info, denom.as_str())?;
+        let amount = cw_utils::must_pay(&info, &config.pool_creation_fee.denom)?;
         if amount < config.pool_creation_fee.amount {
             return Err(ContractError::InvalidPairCreationFee {
                 amount,
@@ -117,10 +109,10 @@ pub fn create_pair(
     let mut messages: Vec<CosmosMsg> = vec![];
 
     // send vault creation fee to whale lair
-    let creation_fee = vec![Asset {
-        info: config.pool_creation_fee.info,
-        amount: config.pool_creation_fee.amount,
-    }];
+    let creation_fee = coins(
+        config.pool_creation_fee.amount.u128(),
+        config.pool_creation_fee.denom,
+    );
 
     // //send protocol fee to whale lair i.e the new fee_collector
     messages.push(fill_rewards_msg(
@@ -128,18 +120,22 @@ pub fn create_pair(
         creation_fee,
     )?);
 
-    let asset_decimals_vec = asset_infos
+    let asset_decimals_vec = asset_denoms
         .iter()
         .map(|asset| {
-            asset
-                .query_decimals(env.contract.address.clone(), &deps.querier)
-                .unwrap()
+            query_native_decimals(
+                &deps.querier,
+                env.contract.address.clone(),
+                asset.to_string(),
+            )
+            .unwrap()
         })
         .collect::<Vec<_>>();
+
     // Check if the asset infos are the same
-    if asset_infos
+    if asset_denoms
         .iter()
-        .any(|asset| asset_infos.iter().filter(|&a| a == asset).count() > 1)
+        .any(|asset| asset_denoms.iter().filter(|&a| a == asset).count() > 1)
     {
         return Err(ContractError::SameAsset {});
     }
@@ -156,7 +152,7 @@ pub fn create_pair(
     let pair = get_pair_by_identifier(&deps.as_ref(), identifier.clone());
     if pair.is_ok() {
         return Err(ContractError::PairExists {
-            asset_infos: asset_infos
+            asset_infos: asset_denoms
                 .iter()
                 .map(|i| i.to_string())
                 .collect::<Vec<_>>()
@@ -166,19 +162,15 @@ pub fn create_pair(
     }
 
     // prepare labels for creating the pair token with a meaningful name
-    let pair_label = asset_infos
-        .iter()
-        .map(|asset| asset.to_owned().get_label(&deps.as_ref()))
-        .collect::<Result<Vec<_>, _>>()?
-        .join("-");
+    let pair_label = asset_denoms.join("-");
 
     let mut attributes = Vec::<Attribute>::new();
 
     // Convert all asset_infos into assets with 0 balances
-    let assets = asset_infos
+    let assets = asset_denoms
         .iter()
-        .map(|asset_info| Asset {
-            info: asset_info.clone(),
+        .map(|asset_info| Coin {
+            denom: asset_info.clone(),
             amount: Uint128::zero(),
         })
         .collect::<Vec<_>>();
@@ -192,20 +184,19 @@ pub fn create_pair(
         ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
         let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
-        let denom = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
-        let lp_asset = AssetInfo::NativeToken { denom };
+        let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
 
         PAIRS.save(
             deps.storage,
             identifier.clone(),
             &PairInfo {
-                asset_infos: asset_infos.clone(),
+                asset_denoms: asset_denoms.clone(),
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 pool_fees,
                 assets,
-                balances: vec![Uint128::zero(); asset_infos.len()],
+                balances: vec![Uint128::zero(); asset_denoms.len()],
             },
         )?;
 
@@ -241,9 +232,8 @@ pub fn create_pair(
             .api
             .addr_humanize(&instantiate2_address(&checksum, &creator, &salt)?)?;
 
-        let lp_asset = AssetInfo::Token {
-            contract_addr: pair_lp_address.into_string(),
-        };
+        let lp_asset = pair_lp_address.into_string();
+
         // Now, after generating an address using instantiate 2 we can save this into PAIRS
         // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
 
@@ -251,13 +241,13 @@ pub fn create_pair(
             deps.storage,
             identifier.clone(),
             &PairInfo {
-                asset_infos: asset_infos.clone(),
+                asset_denoms: asset_denoms.clone(),
                 pair_type: pair_type.clone(),
                 liquidity_token: lp_asset.clone(),
                 asset_decimals: asset_decimals_vec,
                 assets,
                 pool_fees,
-                balances: vec![Uint128::zero(); asset_infos.len()],
+                balances: vec![Uint128::zero(); asset_denoms.len()],
             },
         )?;
 
