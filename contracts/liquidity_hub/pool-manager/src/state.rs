@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Deps, Order, StdResult, Storage};
+use cosmwasm_std::{Addr, Api, Coin, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale_std::pool_manager::{NPairInfo, SwapOperation};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
@@ -64,7 +64,7 @@ pub fn get_decimals(pair_info: &NPairInfo) -> Vec<u8> {
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
 
 // Dyanmic Maps for Fee and Pair info
-pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Asset>> = Map::new("collected_protocol_fees");
+pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Coin>> = Map::new("collected_protocol_fees");
 pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
 pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burned_fees");
@@ -127,7 +127,7 @@ pub struct Config {
     // The code ID for CW20
     pub token_code_id: u64,
     // We must set a creation fee on instantiation to prevent spamming of pools
-    pub pool_creation_fee: Asset,
+    pub pool_creation_fee: Coin,
     //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
 }

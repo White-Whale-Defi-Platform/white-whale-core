@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 
 use crate::{state::MANAGER_CONFIG, ContractError};
 
@@ -16,26 +15,22 @@ pub fn swap(
     _env: Env,
     info: MessageInfo,
     sender: Addr,
-    offer_asset: Asset,
-    _ask_asset: AssetInfo,
+    offer_asset: Coin,
+    _ask_asset: String,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
-    // ensure only native tokens are being swapped
-    // in the future, we are removing cw20 tokens
-    if !offer_asset.is_native_token() {
-        return Err(ContractError::Unauthorized {});
-    }
-
     let config = MANAGER_CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
     if !config.feature_toggle.swaps_enabled {
         return Err(ContractError::OperationDisabled("swap".to_string()));
     }
 
-    offer_asset.assert_sent_native_token_balance(&info)?;
+    if cw_utils::one_coin(&info)? != offer_asset {
+        return Err(ContractError::AssetMismatch {});
+    }
 
     // perform the swap
     let swap_result = perform_swap(
@@ -52,32 +47,30 @@ pub fn swap(
 
     // first we add the swap result
     if !swap_result.return_asset.amount.is_zero() {
-        messages.push(
-            swap_result
-                .return_asset
-                .clone()
-                .into_msg(receiver.clone())?,
-        );
+        messages.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: receiver.to_string(),
+            amount: vec![swap_result.return_asset.clone()],
+        }));
     }
     // then we add the fees
     if !swap_result.burn_fee_asset.amount.is_zero() {
-        messages.push(swap_result.burn_fee_asset.clone().into_burn_msg()?);
+        messages.push(CosmosMsg::Bank(BankMsg::Burn {
+            amount: vec![swap_result.burn_fee_asset.clone()],
+        }));
     }
+
     if !swap_result.protocol_fee_asset.amount.is_zero() {
-        messages.push(
-            swap_result
-                .protocol_fee_asset
-                .clone()
-                .into_msg(config.fee_collector_addr.clone())?,
-        );
+        messages.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.fee_collector_addr.to_string(),
+            amount: vec![swap_result.protocol_fee_asset.clone()],
+        }));
     }
+
     if !swap_result.swap_fee_asset.amount.is_zero() {
-        messages.push(
-            swap_result
-                .swap_fee_asset
-                .clone()
-                .into_msg(config.fee_collector_addr)?,
-        );
+        messages.push(CosmosMsg::Bank(BankMsg::Send {
+            to_address: config.fee_collector_addr.to_string(),
+            amount: vec![swap_result.swap_fee_asset.clone()],
+        }));
     }
 
     // 1. send collateral token from the contract to a user
@@ -86,8 +79,8 @@ pub fn swap(
         ("action", "swap"),
         ("sender", sender.as_str()),
         ("receiver", receiver.as_str()),
-        ("offer_asset", &offer_asset.info.to_string()),
-        ("ask_asset", &swap_result.return_asset.info.to_string()),
+        ("offer_asset", &offer_asset.denom.to_string()),
+        ("ask_asset", &swap_result.return_asset.denom.to_string()),
         ("offer_amount", &offer_asset.amount.to_string()),
         (
             "return_amount",
