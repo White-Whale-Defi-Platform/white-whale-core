@@ -694,21 +694,13 @@ mod router {
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
                 pool_identifier: "whale-uluna".to_string(),
             },
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
+                token_in_denom: "uluna".to_string(),
+                token_out_denom: "uusd".to_string(),
                 pool_identifier: "uluna-uusd".to_string(),
             },
         ];
@@ -1115,21 +1107,13 @@ mod router {
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
                 pool_identifier: "whale-uluna".to_string(),
             },
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
                 pool_identifier: "whale-uluna".to_string(),
             },
         ];
@@ -1145,12 +1129,8 @@ mod router {
                 assert_eq!(
                     result.unwrap_err().downcast_ref::<self::ContractError>(),
                     Some(&ContractError::NonConsecutiveSwapOperations {
-                        previous_output: AssetInfo::NativeToken {
-                            denom: "uluna".to_string()
-                        },
-                        next_input: AssetInfo::NativeToken {
-                            denom: "uwhale".to_string()
-                        }
+                        previous_output: "uluna".to_string(),
+                        next_input: "uwhale".to_string()
                     })
                 );
             },
@@ -1325,21 +1305,13 @@ mod router {
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
                 pool_identifier: "whale-uluna".to_string(),
             },
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
+                token_in_denom: "uluna".to_string(),
+                token_out_denom: "uusd".to_string(),
                 pool_identifier: "uluna-uusd".to_string(),
             },
         ];
@@ -1599,21 +1571,13 @@ mod router {
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
                 pool_identifier: "whale-uluna".to_string(),
             },
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
-                token_out_info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
+                token_in_denom: "uluna".to_string(),
+                token_out_denom: "uusd".to_string(),
                 pool_identifier: "uluna-uusd".to_string(),
             },
         ];

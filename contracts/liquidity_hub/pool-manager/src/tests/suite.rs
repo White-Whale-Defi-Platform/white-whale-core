@@ -1,10 +1,8 @@
-use white_whale_std::pool_manager::{Cw20HookMsg, SwapOperation};
+use white_whale_std::pool_manager::SwapOperation;
 use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
 
-use cosmwasm_std::{
-    to_json_binary, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
-};
-use cw20::{BalanceResponse, Cw20Coin, MinterResponse};
+use cosmwasm_std::{Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
+use cw20::{Cw20Coin, MinterResponse};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
 };
@@ -140,11 +138,9 @@ impl TestingSuite {
             token_code_id: cw20_token_id,
             pair_code_id: cw20_token_id,
             owner: self.creator().to_string(),
-            pool_creation_fee: Asset {
+            pool_creation_fee: Coin {
                 amount: Uint128::from(1_000u128),
-                info: AssetInfo::NativeToken {
-                    denom: "uusd".to_string(),
-                },
+                denom: "uusd".to_string(),
             },
         };
 
@@ -336,7 +332,7 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Asset>,
+        assets: Vec<Coin>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -359,8 +355,8 @@ impl TestingSuite {
     pub(crate) fn swap(
         &mut self,
         sender: Addr,
-        offer_asset: Asset,
-        ask_asset: AssetInfo,
+        offer_asset: Coin,
+        ask_asset_denom: String,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
@@ -370,7 +366,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
             offer_asset,
-            ask_asset,
+            ask_asset_denom,
             belief_price,
             max_spread,
             to,
@@ -415,7 +411,7 @@ impl TestingSuite {
     pub(crate) fn create_pair(
         &mut self,
         sender: Addr,
-        asset_infos: Vec<AssetInfo>,
+        asset_denoms: Vec<String>,
         pool_fees: PoolFee,
         pair_type: PairType,
         token_factory_lp: bool,
@@ -424,7 +420,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
-            asset_infos,
+            asset_denoms,
             pool_fees,
             pair_type,
             token_factory_lp,
@@ -446,7 +442,7 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Asset>,
+        assets: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
@@ -457,36 +453,6 @@ impl TestingSuite {
         result(
             self.app
                 .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
-        );
-
-        self
-    }
-
-    #[track_caller]
-    pub(crate) fn withdraw_liquidity_cw20(
-        &mut self,
-        sender: Addr,
-        pair_identifier: String,
-        _assets: Vec<Asset>,
-        amount: Uint128,
-        liquidity_token: Addr,
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        // Prepare a CW20 Transfer message with a CW20HookMsg to withdraw liquidity
-
-        // Send the cw20 amount with a message
-        let msg = cw20::Cw20ExecuteMsg::Send {
-            contract: self.pool_manager_addr.to_string(),
-            amount: amount,
-            msg: to_json_binary(&Cw20HookMsg::WithdrawLiquidity {
-                pair_identifier: pair_identifier,
-            })
-            .unwrap(),
-        };
-
-        result(
-            self.app
-                .execute_contract(sender, liquidity_token, &msg, &[]),
         );
 
         self
@@ -543,17 +509,17 @@ impl TestingSuite {
     pub(crate) fn query_simulation(
         &mut self,
         pair_identifier: String,
-        offer_asset: Asset,
-        ask_asset: AssetInfo,
+        offer_asset: Coin,
+        ask_asset: String,
         result: impl Fn(StdResult<SimulationResponse>),
     ) -> &mut Self {
         let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
-                ask_asset: Asset {
+                ask_asset: Coin {
                     amount: Uint128::zero(),
-                    info: ask_asset,
+                    denom: ask_asset,
                 },
                 pair_identifier,
             },
@@ -567,17 +533,17 @@ impl TestingSuite {
     pub(crate) fn query_reverse_simulation(
         &mut self,
         pair_identifier: String,
-        offer_asset: AssetInfo,
-        ask_asset: Asset,
+        offer_asset: String,
+        ask_asset: Coin,
         result: impl Fn(StdResult<ReverseSimulationResponse>),
     ) -> &mut Self {
         let pair_info_response: StdResult<ReverseSimulationResponse> =
             self.app.wrap().query_wasm_smart(
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
-                    offer_asset: Asset {
+                    offer_asset: Coin {
                         amount: Uint128::zero(),
-                        info: offer_asset,
+                        denom: offer_asset,
                     },
                     ask_asset,
                     pair_identifier,
@@ -609,32 +575,18 @@ impl TestingSuite {
 
         // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
 
-        let balance = match lp_token_response.liquidity_token {
-            AssetInfo::NativeToken { denom } => {
-                let balance_response: Uint128 =
-                    self.app.wrap().query_balance(sender, denom).unwrap().amount;
-
-                balance_response
-            }
-            AssetInfo::Token { contract_addr } => {
-                let balance_response: BalanceResponse = self
-                    .app
-                    .wrap()
-                    .query_wasm_smart(
-                        contract_addr,
-                        &cw20_base::msg::QueryMsg::Balance { address: sender },
-                    )
-                    .unwrap();
-
-                balance_response.balance
-            }
-        };
+        let balance: Uint128 = self
+            .app
+            .wrap()
+            .query_balance(sender, lp_token_response.liquidity_token)
+            .unwrap()
+            .amount;
 
         result(Result::Ok(balance));
         self
     }
 
-    pub(crate) fn query_lp_token(&mut self, identifier: String, _sender: String) -> AssetInfo {
+    pub(crate) fn query_lp_token(&mut self, identifier: String, _sender: String) -> String {
         // Get the LP token from Config
         let lp_token_response: NPairInfo = self
             .app
