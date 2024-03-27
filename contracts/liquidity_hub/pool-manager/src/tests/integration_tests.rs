@@ -109,14 +109,7 @@ fn deposit_and_withdraw_sanity_check() {
     let _unauthorized = suite.senders[2].clone();
     // Asset infos with uwhale and uluna
 
-    let asset_infos = vec![
-        AssetInfo::NativeToken {
-            denom: "uwhale".to_string(),
-        },
-        AssetInfo::NativeToken {
-            denom: "uluna".to_string(),
-        },
-    ];
+    let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
     // Default Pool fees white_whale_std::pool_network::pair::PoolFee
     #[cfg(not(feature = "osmosis"))]
@@ -171,16 +164,12 @@ fn deposit_and_withdraw_sanity_check() {
         creator.clone(),
         "whale-uluna".to_string(),
         vec![
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000000u128),
             },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+            Coin {
+                denom: "uluna".to_string(),
                 amount: Uint128::from(1000000u128),
             },
         ],
@@ -210,154 +199,6 @@ fn deposit_and_withdraw_sanity_check() {
     });
 }
 
-#[test]
-fn deposit_and_withdraw_cw20() {
-    let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_001u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "uluna".to_string()),
-        coin(1_000_000_001u128, "uusd".to_string()),
-    ]);
-    let creator = suite.creator();
-    let _other = suite.senders[1].clone();
-    let _unauthorized = suite.senders[2].clone();
-    // Asset infos with uwhale and cw20
-
-    let _cw20_code_id = suite.create_cw20_token();
-
-    let asset_infos = vec![
-        AssetInfo::NativeToken {
-            denom: "uwhale".to_string(),
-        },
-        AssetInfo::Token {
-            contract_addr: suite.cw20_tokens[0].to_string(),
-        },
-    ];
-
-    // Default Pool fees white_whale_std::pool_network::pair::PoolFee
-    #[cfg(not(feature = "osmosis"))]
-    let pool_fees = PoolFee {
-        protocol_fee: Fee {
-            share: Decimal::zero(),
-        },
-        swap_fee: Fee {
-            share: Decimal::zero(),
-        },
-        burn_fee: Fee {
-            share: Decimal::zero(),
-        },
-    };
-
-    #[cfg(feature = "osmosis")]
-    let pool_fees = PoolFee {
-        protocol_fee: Fee {
-            share: Decimal::zero(),
-        },
-        swap_fee: Fee {
-            share: Decimal::zero(),
-        },
-        burn_fee: Fee {
-            share: Decimal::zero(),
-        },
-        osmosis_fee: Fee {
-            share: Decimal::zero(),
-        },
-    };
-
-    // Create a pair
-    suite
-        .instantiate_with_cw20_lp_token()
-        .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-        .create_pair(
-            creator.clone(),
-            asset_infos,
-            pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
-            false,
-            None,
-            vec![coin(1000, "uusd")],
-            |result| {
-                result.unwrap();
-            },
-        );
-    suite.increase_allowance(
-        creator.clone(),
-        suite.cw20_tokens[0].clone(),
-        Uint128::from(1000000u128),
-        suite.pool_manager_addr.clone(),
-    );
-    // Lets try to add liquidity
-    suite.provide_liquidity(
-        creator.clone(),
-        "0".to_string(),
-        vec![
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::from(1000000u128),
-            },
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: suite.cw20_tokens[0].to_string(),
-                },
-                amount: Uint128::from(1000000u128),
-            },
-        ],
-        vec![Coin {
-            denom: "uwhale".to_string(),
-            amount: Uint128::from(1000000u128),
-        }],
-        |result| {
-            // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
-            for event in result.unwrap().events {
-                println!("{:?}", event);
-            }
-        },
-    );
-
-    suite.query_amount_of_lp_token("0".to_string(), creator.to_string(), |result| {
-        assert_eq!(
-            result.unwrap(),
-            Uint128::from(1000000u128) - MINIMUM_LIQUIDITY_AMOUNT
-        );
-    });
-    let assets = vec![
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::from(1000000u128),
-        },
-        Asset {
-            info: AssetInfo::Token {
-                contract_addr: suite.cw20_tokens[0].to_string(),
-            },
-            amount: Uint128::from(1000000u128),
-        },
-    ];
-
-    let lp_token = suite.query_lp_token("0".to_string(), creator.to_string());
-    let lp_token_addr = match lp_token {
-        AssetInfo::Token { contract_addr } => contract_addr,
-        _ => {
-            panic!("Liquidity token is not a cw20 token")
-        }
-    };
-    suite.withdraw_liquidity_cw20(
-        creator.clone(),
-        "0".to_string(),
-        assets,
-        Uint128::from(1000000u128) - MINIMUM_LIQUIDITY_AMOUNT,
-        Addr::unchecked(lp_token_addr),
-        |result| {
-            println!("{:?}", result);
-            for event in result.unwrap().events {
-                println!("{:?}", event);
-            }
-        },
-    );
-}
-
 mod pair_creation_failures {
 
     use super::*;
@@ -376,14 +217,7 @@ mod pair_creation_failures {
 
         let _cw20_code_id = suite.create_cw20_token();
 
-        let asset_infos = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: suite.cw20_tokens[0].to_string(),
-            },
-        ];
+        let asset_infos = vec!["uwhale".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
@@ -451,14 +285,7 @@ mod pair_creation_failures {
 
         let _cw20_code_id = suite.create_cw20_token();
 
-        let asset_infos = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::Token {
-                contract_addr: suite.cw20_tokens[0].to_string(),
-            },
-        ];
+        let asset_infos = vec!["uwhale".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
@@ -542,23 +369,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
-
-        let second_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        ];
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -624,16 +436,12 @@ mod router {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -659,16 +467,12 @@ mod router {
             creator.clone(),
             "uluna-uusd".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uusd".to_string(),
-                    },
+                Coin {
+                    denom: "uusd".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -771,23 +575,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
-
-        let second_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        ];
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
@@ -856,16 +645,12 @@ mod router {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -891,16 +676,12 @@ mod router {
             creator.clone(),
             "uluna-uusd".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uusd".to_string(),
-                    },
+                Coin {
+                    denom: "uusd".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -952,23 +733,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
-
-        let second_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        ];
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
@@ -1037,16 +803,12 @@ mod router {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1072,16 +834,12 @@ mod router {
             creator.clone(),
             "uluna-uusd".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uusd".to_string(),
-                    },
+                Coin {
+                    denom: "uusd".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1149,23 +907,8 @@ mod router {
         let unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
-
-        let second_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        ];
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
@@ -1235,16 +978,12 @@ mod router {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(liquidity_amount),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(liquidity_amount),
                 },
             ],
@@ -1270,16 +1009,12 @@ mod router {
             creator.clone(),
             "uluna-uusd".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(liquidity_amount),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uusd".to_string(),
-                    },
+                Coin {
+                    denom: "uusd".to_string(),
                     amount: Uint128::from(liquidity_amount),
                 },
             ],
@@ -1419,23 +1154,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
-
-        let second_pair = vec![
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uusd".to_string(),
-            },
-        ];
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1501,16 +1221,12 @@ mod router {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1536,16 +1252,12 @@ mod router {
             creator.clone(),
             "uluna-uusd".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uusd".to_string(),
-                    },
+                Coin {
+                    denom: "uusd".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1632,14 +1344,7 @@ mod swapping {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let asset_infos = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
+        let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
@@ -1695,16 +1400,12 @@ mod swapping {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1728,15 +1429,11 @@ mod swapping {
         let simulated_return_amount = RefCell::new(Uint128::zero());
         suite.query_simulation(
             "whale-uluna".to_string(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             |result| {
                 println!("{:?}", result);
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
@@ -1746,15 +1443,11 @@ mod swapping {
         // Now lets try a swap
         suite.swap(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             None,
             None,
             None,
@@ -1797,13 +1490,9 @@ mod swapping {
         let simulated_offer_amount = RefCell::new(Uint128::zero());
         suite.query_reverse_simulation(
             "whale-uluna".to_string(),
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            "uluna".to_string(),
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
             |result| {
@@ -1815,15 +1504,11 @@ mod swapping {
         // Now lets try a swap
         suite.swap(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+            Coin {
+                denom: "uluna".to_string(),
                 amount: Uint128::from(simulated_offer_amount.borrow().u128()),
             },
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             None,
             None,
             None,
@@ -1873,14 +1558,7 @@ mod swapping {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let asset_infos = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
+        let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
@@ -1936,16 +1614,12 @@ mod swapping {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000000u128),
                 },
             ],
@@ -1969,15 +1643,11 @@ mod swapping {
         let simulated_return_amount = RefCell::new(Uint128::zero());
         suite.query_simulation(
             "whale-uluna".to_string(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             |result| {
                 println!("{:?}", result);
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
@@ -1987,15 +1657,11 @@ mod swapping {
         // Now lets try a swap
         suite.swap(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             None,
             None,
             None,
@@ -2038,13 +1704,9 @@ mod swapping {
         let simulated_offer_amount = RefCell::new(Uint128::zero());
         suite.query_reverse_simulation(
             "whale-uluna".to_string(),
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            "uluna".to_string(),
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
             |result| {
@@ -2056,15 +1718,11 @@ mod swapping {
         // Now lets try a swap
         suite.swap(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uluna".to_string(),
-                },
+            Coin {
+                denom: "uluna".to_string(),
                 amount: Uint128::from(simulated_offer_amount.borrow().u128()),
             },
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "uwhale".to_string(),
             None,
             None,
             None,
@@ -2114,14 +1772,7 @@ mod swapping {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let asset_infos = vec![
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
-        ];
+        let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.001% and swap fee is 0.002% and burn fee is 0%
@@ -2177,16 +1828,12 @@ mod swapping {
             creator.clone(),
             "whale-uluna".to_string(),
             vec![
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
+                Coin {
+                    denom: "uwhale".to_string(),
                     amount: Uint128::from(1000_000000u128),
                 },
-                Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "uluna".to_string(),
-                    },
+                Coin {
+                    denom: "uluna".to_string(),
                     amount: Uint128::from(1000_000000u128),
                 },
             ],
@@ -2223,15 +1870,11 @@ mod swapping {
         // Total -> 9,900,693 (Returned Amount) + 99,010 (Spread)(0.009x%) + 198 (Swap Fee) + 99 (Protocol Fee) = 10,000,000 uLUNA
         suite.swap(
             creator.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
+            Coin {
+                denom: "uwhale".to_string(),
                 amount: Uint128::from(10000000u128),
             },
-            AssetInfo::NativeToken {
-                denom: "uluna".to_string(),
-            },
+            "uluna".to_string(),
             None,
             Some(Decimal::percent(1)),
             None,

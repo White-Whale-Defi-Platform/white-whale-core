@@ -67,11 +67,11 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn get_time(&mut self) -> Timestamp {
+    pub(crate) fn _get_time(&mut self) -> Timestamp {
         self.app.block_info().time
     }
 
-    pub(crate) fn increase_allowance(
+    pub(crate) fn _increase_allowance(
         &mut self,
         sender: Addr,
         cw20contract: Addr,
@@ -438,7 +438,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn withdraw_liquidity(
+    pub(crate) fn _withdraw_liquidity(
         &mut self,
         sender: Addr,
         pair_identifier: String,
@@ -489,7 +489,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_pair_info(
+    pub(crate) fn _query_pair_info(
         &self,
         pair_identifier: String,
         result: impl Fn(StdResult<NPairInfo>),
@@ -586,7 +586,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_lp_token(&mut self, identifier: String, _sender: String) -> String {
+    pub(crate) fn _query_lp_token(&mut self, identifier: String, _sender: String) -> String {
         // Get the LP token from Config
         let lp_token_response: NPairInfo = self
             .app
