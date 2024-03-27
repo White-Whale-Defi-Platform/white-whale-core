@@ -14,11 +14,11 @@ pub(crate) fn _get_rewards(deps: Deps, address: Addr) -> Result<RewardsResponse,
     if let Some(last_claimed_epoch) = last_claimed_epoch {
         // if the last claimed epoch is the same as the current epoch, then there is nothing to claim
         if current_epoch.id == last_claimed_epoch {
-            return Ok(RewardsResponse { rewards: vec![] });
+            return Ok(RewardsResponse::RewardsResponse { rewards: vec![] });
         }
     }
 
     let rewards = vec![];
 
-    Ok(RewardsResponse { rewards })
+    Ok(RewardsResponse::RewardsResponse { rewards })
 }

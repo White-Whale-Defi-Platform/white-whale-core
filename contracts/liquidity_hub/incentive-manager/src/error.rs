@@ -102,6 +102,9 @@ pub enum ContractError {
     #[error("The incentive has already expired, can't be expanded")]
     IncentiveAlreadyExpired,
 
+    #[error("The incentive doesn't have enough funds to pay out the reward")]
+    IncentiveExhausted,
+
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
         new_version: Version,

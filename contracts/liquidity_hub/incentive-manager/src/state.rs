@@ -209,3 +209,41 @@ pub fn get_open_positions_by_receiver(
 
     Ok(open_positions)
 }
+
+/// Gets the earliest entry of an address in the address lp weight history.
+/// If the address has no open positions, it returns an error.
+pub fn get_earliest_address_lp_weight(
+    storage: &dyn Storage,
+    address: &Addr,
+) -> Result<(EpochId, Uint128), ContractError> {
+    let earliest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
+        .prefix(address)
+        .range(storage, None, None, Order::Ascending)
+        .next()
+        .transpose();
+
+    match earliest_weight_history_result {
+        Ok(Some(item)) => Ok(item),
+        Ok(None) => Err(ContractError::NoOpenPositions),
+        Err(std_err) => Err(std_err.into()),
+    }
+}
+
+/// Gets the latest entry of an address in the address lp weight history.
+/// If the address has no open positions, it returns an error.
+pub fn get_latest_address_lp_weight(
+    storage: &dyn Storage,
+    address: &Addr,
+) -> Result<(EpochId, Uint128), ContractError> {
+    let latest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
+        .prefix(address)
+        .range(storage, None, None, Order::Descending)
+        .next()
+        .transpose();
+
+    match latest_weight_history_result {
+        Ok(Some(item)) => Ok(item),
+        Ok(None) => Err(ContractError::NoOpenPositions),
+        Err(std_err) => Err(std_err.into()),
+    }
+}

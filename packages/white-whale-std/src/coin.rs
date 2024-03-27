@@ -1,4 +1,6 @@
-use cosmwasm_std::{StdError, StdResult};
+use std::collections::HashMap;
+
+use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -132,3 +134,25 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
+
+/// Aggregates coins from two vectors, summing up the amounts of coins that are the same.
+pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
+    let mut aggregation_map: HashMap<String, Uint128> = HashMap::new();
+
+    // aggregate coins by denom
+    for coin in coins {
+        if let Some(existing_amount) = aggregation_map.get_mut(&coin.denom) {
+            *existing_amount = existing_amount.checked_add(coin.amount)?;
+        } else {
+            aggregation_map.insert(coin.denom.clone(), coin.amount);
+        }
+    }
+
+    // create a new vector from the aggregation map
+    let mut aggregated_coins: Vec<Coin> = Vec::new();
+    for (denom, amount) in aggregation_map {
+        aggregated_coins.push(Coin { denom, amount });
+    }
+
+    Ok(aggregated_coins)
+}

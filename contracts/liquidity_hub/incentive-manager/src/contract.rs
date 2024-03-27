@@ -104,7 +104,7 @@ pub fn execute(
         ExecuteMsg::EpochChangedHook(msg) => {
             manager::commands::on_epoch_changed(deps, env, info, msg)
         }
-        ExecuteMsg::Claim => incentive::commands::claim(deps, env, info),
+        ExecuteMsg::Claim => incentive::commands::claim(deps, info),
         ExecuteMsg::ManagePosition { action } => match action {
             PositionAction::Fill {
                 identifier,

@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
+use std::collections::HashMap;
 
 use crate::epoch_manager::hooks::EpochChangedHookMsg;
 
@@ -232,11 +233,18 @@ pub struct Position {
     /// The owner of the position.
     pub receiver: Addr,
 }
-
 #[cw_serde]
-pub struct RewardsResponse {
-    /// The rewards that is available to a user if they executed the `claim` function at this point.
-    pub rewards: Vec<Coin>,
+pub enum RewardsResponse {
+    RewardsResponse {
+        /// The rewards that is available to a user if they executed the `claim` function at this point.
+        rewards: Vec<Coin>,
+    },
+    ClaimRewards {
+        /// The rewards that is available to a user if they executed the `claim` function at this point.
+        rewards: Vec<Coin>,
+        /// The rewards that were claimed on each incentive, if any.
+        modified_incentives: HashMap<String, Uint128>,
+    },
 }
 
 /// Minimum amount of an asset to create an incentive with
