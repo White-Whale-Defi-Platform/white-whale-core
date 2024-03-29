@@ -196,7 +196,7 @@ pub fn create_pair(
         },
     )?;
 
-    attributes.push(attr("lp_asset", lp_asset.to_string()));
+    attributes.push(attr("lp_asset", lp_asset));
 
     // TODO: this is already checked in the beginning of the function
     // #[cfg(any(

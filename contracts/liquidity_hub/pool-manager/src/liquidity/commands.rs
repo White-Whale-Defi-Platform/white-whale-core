@@ -70,7 +70,7 @@ pub fn provide_liquidity(
     // // deduct protocol fee from pools
     // TODO: Replace with fill rewards msg
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
-        .load(deps.storage, &pair.liquidity_token.to_string())
+        .load(deps.storage, &pair.liquidity_token)
         .unwrap_or_default();
     for pool in pool_assets.iter_mut() {
         let protocol_fee =
