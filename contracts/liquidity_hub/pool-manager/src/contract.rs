@@ -25,7 +25,6 @@ pub fn instantiate(
     let config: Config = Config {
         fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         owner: deps.api.addr_validate(&msg.owner)?,
-        token_code_id: msg.token_code_id,
         // We must set a creation fee on instantiation to prevent spamming of pools
         pool_creation_fee: msg.pool_creation_fee,
         feature_toggle: FeatureToggle {

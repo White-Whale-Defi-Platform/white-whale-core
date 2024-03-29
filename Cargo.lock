@@ -945,6 +945,7 @@ dependencies = [
  "thiserror",
  "whale-lair",
  "white-whale-std",
+ "white-whale-testing",
 ]
 
 [[package]]

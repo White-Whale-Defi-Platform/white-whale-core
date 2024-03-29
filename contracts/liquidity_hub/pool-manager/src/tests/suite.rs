@@ -1,16 +1,18 @@
+use cosmwasm_std::testing::MockStorage;
 use white_whale_std::pool_manager::SwapOperation;
 use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
 
 use cosmwasm_std::{Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
-use cw20::{Cw20Coin, MinterResponse};
 use cw_multi_test::{
-    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, Executor, WasmKeeper,
+    App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, DistributionKeeper,
+    Executor, FailingModule, GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_std::pool_network::{
     asset::{Asset, AssetInfo, PairType},
     pair::PoolFee,
 };
+use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
@@ -18,16 +20,6 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
-    );
-
-    Box::new(contract)
-}
-
-fn cw20_token_contract() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new_with_empty(
-        cw20_base::contract::execute,
-        cw20_base::contract::instantiate,
-        cw20_base::contract::query,
     );
 
     Box::new(contract)
@@ -45,8 +37,21 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
+type OsmosisTokenFactoryApp = App<
+    BankKeeper,
+    MockApiBech32,
+    MockStorage,
+    FailingModule<Empty, Empty, Empty>,
+    WasmKeeper<Empty, Empty>,
+    StakeKeeper,
+    DistributionKeeper,
+    IbcFailingModule,
+    GovFailingModule,
+    StargateMock,
+>;
+
 pub struct TestingSuite {
-    app: App<BankKeeper, MockApiBech32>,
+    app: OsmosisTokenFactoryApp,
     pub senders: [Addr; 3],
     pub whale_lair_addr: Addr,
     pub pool_manager_addr: Addr,
@@ -111,6 +116,7 @@ impl TestingSuite {
             .with_api(MockApiBech32::new("migaloo"))
             .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
             .with_bank(bank)
+            .with_stargate(StargateMock {})
             .build(|router, _api, storage| {
                 balances.into_iter().for_each(|(account, amount)| {
                     router.bank.init_balance(storage, &account, amount).unwrap()
@@ -130,13 +136,11 @@ impl TestingSuite {
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
+        // TODO: remove this if unused
         _vault_creation_fee: Asset,
     ) -> &mut Self {
-        let cw20_token_id = self.app.store_code(cw20_token_contract());
         let msg = InstantiateMsg {
             fee_collector_addr: whale_lair_addr,
-            token_code_id: cw20_token_id,
-            pair_code_id: cw20_token_id,
             owner: self.creator().to_string(),
             pool_creation_fee: Coin {
                 amount: Uint128::from(1_000u128),
@@ -159,34 +163,14 @@ impl TestingSuite {
                 Some(creator.into_string()),
             )
             .unwrap();
+
         self
     }
 
     #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.create_whale_lair();
-        self.create_cw20_token();
 
-        // 17 May 2023 17:00:00 UTC
-        let timestamp = Timestamp::from_seconds(1684342800u64);
-        self.set_time(timestamp);
-
-        self.instantiate(
-            self.whale_lair_addr.to_string(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(1_000u128),
-            },
-        )
-    }
-
-    #[track_caller]
-    pub(crate) fn instantiate_with_cw20_lp_token(&mut self) -> &mut Self {
-        self.create_whale_lair();
-        let _cw20_code_id = self.create_cw20_token();
-        println!("cw20_code_id: {}", self.whale_lair_addr);
         // 17 May 2023 17:00:00 UTC
         let timestamp = Timestamp::from_seconds(1684342800u64);
         self.set_time(timestamp);
@@ -232,50 +216,6 @@ impl TestingSuite {
                 Some(creator.to_string()),
             )
             .unwrap();
-    }
-
-    #[track_caller]
-    pub fn create_cw20_token(&mut self) -> u64 {
-        let msg = white_whale_std::pool_network::token::InstantiateMsg {
-            name: "mocktoken".to_string(),
-            symbol: "MOCK".to_string(),
-            decimals: 6,
-            initial_balances: vec![
-                Cw20Coin {
-                    address: self.senders[0].to_string(),
-                    amount: Uint128::new(1_000_000_000_000u128),
-                },
-                Cw20Coin {
-                    address: self.senders[1].to_string(),
-                    amount: Uint128::new(1_000_000_000_000u128),
-                },
-                Cw20Coin {
-                    address: self.senders[2].to_string(),
-                    amount: Uint128::new(1_000_000_000_000u128),
-                },
-            ],
-            mint: Some(MinterResponse {
-                minter: self.senders[0].to_string(),
-                cap: None,
-            }),
-        };
-
-        let cw20_token_id = self.app.store_code(cw20_token_contract());
-
-        let creator = self.creator().clone();
-
-        self.cw20_tokens.append(&mut vec![self
-            .app
-            .instantiate_contract(
-                cw20_token_id,
-                creator.clone(),
-                &msg,
-                &[],
-                "mock cw20 token",
-                Some(creator.into_string()),
-            )
-            .unwrap()]);
-        cw20_token_id
     }
 
     #[track_caller]
@@ -438,11 +378,12 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn _withdraw_liquidity(
+    pub(crate) fn withdraw_liquidity(
         &mut self,
         sender: Addr,
         pair_identifier: String,
         assets: Vec<Coin>,
+        funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
@@ -452,7 +393,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
         );
 
         self

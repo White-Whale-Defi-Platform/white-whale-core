@@ -38,7 +38,7 @@ pub fn provide_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    assets: Vec<Coin>,
+    mut assets: Vec<Coin>,
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
     pair_identifier: String,
@@ -51,19 +51,21 @@ pub fn provide_liquidity(
         ));
     }
 
-    // Verify native assets are sent and balances are greater than zero
-    for asset in assets.iter() {
-        let amount = cw_utils::may_pay(&info, &asset.denom)?;
-        if amount.is_zero() {
-            return Err(ContractError::InvalidZeroAmount {});
-        }
-    }
-
     // Get the pair by the pair_identifier
     let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
 
     let mut pool_assets = pair.assets.clone();
     let mut messages: Vec<CosmosMsg> = vec![];
+
+    for (i, pool) in assets.iter_mut().enumerate() {
+        // Increment the pool asset amount by the amount sent
+        pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount).unwrap();
+    }
+
+    // After totting up the pool assets we need to check if any of them are zero
+    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
+        return Err(ContractError::InvalidZeroAmount {});
+    }
 
     // // deduct protocol fee from pools
     // TODO: Replace with fill rewards msg
@@ -87,6 +89,7 @@ pub fn provide_liquidity(
             if total_share == Uint128::zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                 // depositor preventing small liquidity providers from joining the pool
+
                 let share = Uint128::new(
                     (U256::from(pool_assets[0].amount.u128())
                         .checked_mul(U256::from(pool_assets[1].amount.u128()))

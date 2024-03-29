@@ -1,18 +1,12 @@
 use cosmwasm_std::{
-    attr, coins, instantiate2_address, to_json_binary, Attribute, CodeInfoResponse, Coin,
-    CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128, WasmMsg,
+    attr, coins, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
-use cw20::MinterResponse;
-use sha2::{Digest, Sha256};
 use white_whale_std::{
     pool_network::{asset::PairType, pair::PoolFee, querier::query_native_decimals},
     whale_lair::fill_rewards_msg,
 };
 
-use crate::{
-    state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER},
-    token::InstantiateMsg as TokenInstantiateMsg,
-};
+use crate::state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER};
 use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
@@ -175,106 +169,45 @@ pub fn create_pair(
         })
         .collect::<Vec<_>>();
 
-    #[allow(unreachable_code)]
-    let pair_creation_msg = if token_factory_lp {
+    // TODO: is this necessary?
+    if token_factory_lp {
         #[cfg(all(
             not(feature = "token_factory"),
             not(feature = "osmosis_token_factory"),
             not(feature = "injective")
         ))]
         return Err(ContractError::TokenFactoryNotEnabled {});
-        let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
-        let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
+    }
 
-        PAIRS.save(
-            deps.storage,
-            identifier.clone(),
-            &PairInfo {
-                asset_denoms: asset_denoms.clone(),
-                pair_type: pair_type.clone(),
-                liquidity_token: lp_asset.clone(),
-                asset_decimals: asset_decimals_vec,
-                pool_fees,
-                assets,
-                balances: vec![Uint128::zero(); asset_denoms.len()],
-            },
-        )?;
+    let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
+    let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
 
-        attributes.push(attr("lp_asset", lp_asset.to_string()));
+    PAIRS.save(
+        deps.storage,
+        identifier.clone(),
+        &PairInfo {
+            asset_denoms: asset_denoms.clone(),
+            pair_type: pair_type.clone(),
+            liquidity_token: lp_asset.clone(),
+            asset_decimals: asset_decimals_vec,
+            pool_fees,
+            assets,
+            balances: vec![Uint128::zero(); asset_denoms.len()],
+        },
+    )?;
 
-        #[cfg(any(
-            feature = "token_factory",
-            feature = "osmosis_token_factory",
-            feature = "injective"
-        ))]
-        Ok(white_whale_std::tokenfactory::create_denom::create_denom(
-            env.contract.address,
-            lp_symbol,
-        ))
-    } else {
-        // Create the LP token using instantiate2
-        let creator = deps.api.addr_canonicalize(env.contract.address.as_str())?;
-        let code_id = config.token_code_id;
-        let CodeInfoResponse { checksum, .. } = deps.querier.query_wasm_code_info(code_id)?;
-        let seed = format!(
-            "{}{}{}{}",
-            pair_label,
-            identifier,
-            info.sender.into_string(),
-            env.block.height
-        );
-        let mut hasher = Sha256::new();
-        hasher.update(seed.as_bytes());
-        let salt = hasher.finalize().to_vec();
+    attributes.push(attr("lp_asset", lp_asset.to_string()));
 
-        // Generate the LP address with instantiate2
-        let pair_lp_address = deps
-            .api
-            .addr_humanize(&instantiate2_address(&checksum, &creator, &salt)?)?;
-
-        let lp_asset = pair_lp_address.into_string();
-
-        // Now, after generating an address using instantiate 2 we can save this into PAIRS
-        // We still need to call instantiate2 otherwise this asset will not exist, if it fails the saving will be reverted
-
-        PAIRS.save(
-            deps.storage,
-            identifier.clone(),
-            &PairInfo {
-                asset_denoms: asset_denoms.clone(),
-                pair_type: pair_type.clone(),
-                liquidity_token: lp_asset.clone(),
-                asset_decimals: asset_decimals_vec,
-                assets,
-                pool_fees,
-                balances: vec![Uint128::zero(); asset_denoms.len()],
-            },
-        )?;
-
-        attributes.push(attr("lp_asset", lp_asset.to_string()));
-
-        let lp_token_name = format!("{pair_label}-LP");
-
-        Ok::<CosmosMsg, ContractError>(CosmosMsg::Wasm(WasmMsg::Instantiate2 {
-            admin: None,
-            code_id,
-            label: lp_token_name.to_owned(),
-            msg: to_json_binary(&TokenInstantiateMsg {
-                name: lp_token_name,
-                symbol: LP_SYMBOL.to_string(),
-                decimals: 6,
-                initial_balances: vec![],
-                mint: Some(MinterResponse {
-                    minter: env.contract.address.to_string(),
-                    cap: None,
-                }),
-            })?,
-            funds: vec![],
-            salt: salt.into(),
-        }))
-    }?;
-
-    messages.push(pair_creation_msg);
+    // TODO: this is already checked in the beginning of the function
+    // #[cfg(any(
+    //     feature = "token_factory",
+    //     feature = "osmosis_token_factory",
+    //     feature = "injective"
+    // ))]
+    messages.push(white_whale_std::tokenfactory::create_denom::create_denom(
+        env.contract.address,
+        lp_symbol,
+    ));
 
     // increase pair counter
     PAIR_COUNTER.update(deps.storage, |mut counter| -> Result<_, ContractError> {

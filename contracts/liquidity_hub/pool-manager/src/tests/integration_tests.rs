@@ -22,17 +22,6 @@ fn instantiate_normal() {
             amount: Uint128::new(1_000u128),
         },
     );
-
-    let _cw20_code_id = suite.create_cw20_token();
-    suite.instantiate(
-        suite.senders[0].to_string(),
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::new(1_000u128),
-        },
-    );
 }
 
 #[test]
@@ -103,6 +92,7 @@ fn deposit_and_withdraw_sanity_check() {
         coin(1_000_000_001u128, "uwhale".to_string()),
         coin(1_000_000_000u128, "uluna".to_string()),
         coin(1_000_000_001u128, "uusd".to_string()),
+        coin(999_000u128, "whale-uluna".to_string()),
     ]);
     let creator = suite.creator();
     let _other = suite.senders[1].clone();
@@ -143,7 +133,7 @@ fn deposit_and_withdraw_sanity_check() {
 
     // Create a pair
     suite
-        .instantiate_with_cw20_lp_token()
+        .instantiate_default()
         .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
         .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
         .create_pair(
@@ -166,36 +156,74 @@ fn deposit_and_withdraw_sanity_check() {
         vec![
             Coin {
                 denom: "uwhale".to_string(),
-                amount: Uint128::from(1000000u128),
+                amount: Uint128::from(1_000_000u128),
             },
             Coin {
                 denom: "uluna".to_string(),
-                amount: Uint128::from(1000000u128),
+                amount: Uint128::from(1_000_000u128),
             },
         ],
         vec![
             Coin {
                 denom: "uwhale".to_string(),
-                amount: Uint128::from(1000000u128),
+                amount: Uint128::from(1_000_000u128),
             },
             Coin {
                 denom: "uluna".to_string(),
-                amount: Uint128::from(1000000u128),
+                amount: Uint128::from(1_000_000u128),
             },
         ],
         |result| {
-            // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
-            for event in result.unwrap().events {
-                println!("{:?}", event);
-            }
+            // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
+            assert!(result.unwrap().events.iter().any(|event| {
+                event.attributes.iter().any(|attr| {
+                    attr.key == "share"
+                        && attr.value
+                            == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT).to_string()
+                })
+            }));
         },
     );
 
     suite.query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
         assert_eq!(
             result.unwrap(),
-            Uint128::from(1000000u128) - MINIMUM_LIQUIDITY_AMOUNT
+            Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
         );
+    });
+
+    // Lets try to withdraw liquidity
+    suite.withdraw_liquidity(
+        creator.clone(),
+        "whale-uluna".to_string(),
+        vec![
+            Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::from(1_000_000u128),
+            },
+            Coin {
+                denom: "uluna".to_string(),
+                amount: Uint128::from(1_000_000u128),
+            },
+        ],
+        vec![Coin {
+            denom: "whale-uluna".to_string(),
+            amount: Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT,
+        }],
+        |result| {
+            // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
+            assert!(result.unwrap().events.iter().any(|event| {
+                event.attributes.iter().any(|attr| {
+                    attr.key == "withdrawn_share"
+                        && attr.value
+                            == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT).to_string()
+                })
+            }));
+        },
+    );
+
+    suite.query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
+        assert_eq!(result.unwrap(), Uint128::zero());
     });
 }
 
@@ -214,8 +242,6 @@ mod pair_creation_failures {
         let _other = suite.senders[1].clone();
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and cw20
-
-        let _cw20_code_id = suite.create_cw20_token();
 
         let asset_infos = vec!["uwhale".to_string()];
 
@@ -250,7 +276,7 @@ mod pair_creation_failures {
         };
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .create_pair(
                 creator.clone(),
@@ -283,8 +309,6 @@ mod pair_creation_failures {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and cw20
 
-        let _cw20_code_id = suite.create_cw20_token();
-
         let asset_infos = vec!["uwhale".to_string()];
 
         // Default Pool fees white_whale_std::pool_network::pair::PoolFee
@@ -319,7 +343,7 @@ mod pair_creation_failures {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .create_pair(
                 creator.clone(),
@@ -343,7 +367,6 @@ mod pair_creation_failures {
                 vec![coin(1000, "uusd")],
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-                    println!("{:?}", err);
                     match err {
                         ContractError::PairExists { .. } => {}
                         _ => panic!("Wrong error type, should return ContractError::PairExists"),
@@ -402,7 +425,7 @@ mod router {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
@@ -611,7 +634,7 @@ mod router {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
@@ -769,7 +792,7 @@ mod router {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
@@ -943,7 +966,7 @@ mod router {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
@@ -1187,7 +1210,7 @@ mod router {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
@@ -1379,7 +1402,7 @@ mod swapping {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .create_pair(
@@ -1420,10 +1443,15 @@ mod swapping {
                 },
             ],
             |result| {
-                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
-                for event in result.unwrap().events {
-                    println!("{:?}", event);
-                }
+                // Ensure we got 999_000 in the response which is 1mil less the initial liquidity amount
+                assert!(result.unwrap().events.iter().any(|event| {
+                    event.attributes.iter().any(|attr| {
+                        attr.key == "share"
+                            && attr.value
+                                == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                    .to_string()
+                    })
+                }));
             },
         );
         let simulated_return_amount = RefCell::new(Uint128::zero());
@@ -1435,7 +1463,11 @@ mod swapping {
             },
             "uluna".to_string(),
             |result| {
-                println!("{:?}", result);
+                // Ensure that the return amount is 1_000 minus spread
+                assert_eq!(
+                    result.as_ref().unwrap().return_amount + result.as_ref().unwrap().spread_amount,
+                    Uint128::from(1000u128)
+                );
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
             },
         );
@@ -1593,7 +1625,7 @@ mod swapping {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .create_pair(
@@ -1807,7 +1839,7 @@ mod swapping {
 
         // Create a pair
         suite
-            .instantiate_with_cw20_lp_token()
+            .instantiate_default()
             .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
             .create_pair(
