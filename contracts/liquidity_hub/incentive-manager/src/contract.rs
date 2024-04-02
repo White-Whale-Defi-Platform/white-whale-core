@@ -152,8 +152,27 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_manager_config(deps)?)?),
+        QueryMsg::Config => Ok(to_json_binary(&queries::query_manager_config(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+        QueryMsg::Incentives {
+            filter_by,
+            start_after,
+            limit,
+        } => Ok(to_json_binary(&queries::query_incentives(
+            deps,
+            filter_by,
+            start_after,
+            limit,
+        )?)?),
+        QueryMsg::Positions {
+            address,
+            open_state,
+        } => Ok(to_json_binary(&queries::query_positions(
+            deps, address, open_state,
+        )?)?),
+        QueryMsg::Rewards { address } => {
+            Ok(to_json_binary(&queries::query_rewards(deps, address)?)?)
+        }
     }
 }
 

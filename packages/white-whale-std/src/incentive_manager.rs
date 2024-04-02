@@ -76,7 +76,42 @@ pub struct MigrateMsg {}
 pub enum QueryMsg {
     /// Retrieves the configuration of the manager.
     #[returns(Config)]
-    Config {},
+    Config,
+    /// Retrieves the configuration of the manager.
+    #[returns(IncentivesResponse)]
+    Incentives {
+        /// An optional parameter specifying what to filter incentives by.
+        /// Can be either the incentive identifier, lp denom or the incentive asset.
+        filter_by: Option<IncentivesBy>,
+        /// An optional parameter specifying what incentive (identifier) to start searching after.
+        start_after: Option<String>,
+        /// The amount of incentives to return.
+        /// If unspecified, will default to a value specified by the contract.
+        limit: Option<u32>,
+    },
+    /// Retrieves the positions for an address.
+    #[returns(PositionsResponse)]
+    Positions {
+        /// The address to get positions for.
+        address: String,
+        /// An optional parameter specifying to return only positions that match the given open state.
+        /// if true, it will return open positions. If false, it will return closed positions.
+        open_state: Option<bool>,
+    },
+    /// Retrieves the rewards for an address.
+    #[returns(RewardsResponse)]
+    Rewards {
+        /// The address to get all the incentive rewards for.
+        address: String,
+    },
+}
+
+/// Enum to filter incentives by identifier, lp denom or the incentive asset. Used in the Incentives query.
+#[cw_serde]
+pub enum IncentivesBy {
+    Identifier(String),
+    LPDenom(String),
+    IncentiveAsset(String),
 }
 
 /// Configuration for the contract (manager)
@@ -252,3 +287,16 @@ pub const MIN_INCENTIVE_AMOUNT: Uint128 = Uint128::new(1_000u128);
 
 /// Default incentive duration in epochs
 pub const DEFAULT_INCENTIVE_DURATION: u64 = 14u64;
+
+/// The response for the incentives query
+#[cw_serde]
+pub struct IncentivesResponse {
+    /// The list of incentives
+    pub incentives: Vec<Incentive>,
+}
+
+#[cw_serde]
+pub struct PositionsResponse {
+    /// All the positions a user has.
+    pub positions: Vec<Position>,
+}

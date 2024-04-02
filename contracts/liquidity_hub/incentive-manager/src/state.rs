@@ -4,7 +4,6 @@ use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 use white_whale_std::incentive_manager::{Config, EpochId, Incentive, Position};
-use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::ContractError;
 
@@ -63,7 +62,7 @@ pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");
 pub const INCENTIVES: IndexedMap<&str, Incentive, IncentiveIndexes> = IndexedMap::new(
     "incentives",
     IncentiveIndexes {
-        lp_asset: MultiIndex::new(
+        lp_denom: MultiIndex::new(
             |_pk, i| i.lp_denom.to_string(),
             "incentives",
             "incentives__lp_asset",
@@ -77,13 +76,13 @@ pub const INCENTIVES: IndexedMap<&str, Incentive, IncentiveIndexes> = IndexedMap
 );
 
 pub struct IncentiveIndexes<'a> {
-    pub lp_asset: MultiIndex<'a, String, Incentive, String>,
+    pub lp_denom: MultiIndex<'a, String, Incentive, String>,
     pub incentive_asset: MultiIndex<'a, String, Incentive, String>,
 }
 
 impl<'a> IndexList<Incentive> for IncentiveIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Incentive>> + '_> {
-        let v: Vec<&dyn Index<Incentive>> = vec![&self.lp_asset, &self.incentive_asset];
+        let v: Vec<&dyn Index<Incentive>> = vec![&self.lp_denom, &self.incentive_asset];
         Box::new(v.into_iter())
     }
 }
@@ -112,8 +111,8 @@ pub fn get_incentives(
         .collect()
 }
 
-/// Gets incentives given an lp asset [AssetInfo]
-pub fn get_incentives_by_lp_asset(
+/// Gets incentives given an lp denom.
+pub fn get_incentives_by_lp_denom(
     storage: &dyn Storage,
     lp_denom: &str,
     start_after: Option<String>,
@@ -124,7 +123,7 @@ pub fn get_incentives_by_lp_asset(
 
     INCENTIVES
         .idx
-        .lp_asset
+        .lp_denom
         .prefix(lp_denom.to_owned())
         .range(storage, start, None, Order::Ascending)
         .take(limit)
@@ -136,10 +135,10 @@ pub fn get_incentives_by_lp_asset(
         .collect()
 }
 
-/// Gets incentives given an incentive asset as [AssetInfo]
-pub fn get_incentive_by_asset(
+/// Gets all the incentives that are offering the given incentive_asset as a reward.
+pub fn get_incentives_by_incentive_asset(
     storage: &dyn Storage,
-    incentive_asset: &AssetInfo,
+    incentive_asset: &str,
     start_after: Option<String>,
     limit: Option<u32>,
 ) -> StdResult<Vec<Incentive>> {
@@ -149,7 +148,7 @@ pub fn get_incentive_by_asset(
     INCENTIVES
         .idx
         .incentive_asset
-        .prefix(incentive_asset.to_string())
+        .prefix(incentive_asset.to_owned())
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
@@ -184,15 +183,15 @@ pub fn get_position(
     }
 }
 
-//todo think of the limit when claiming rewards
-/// Gets the positions of the given receiver.
-pub fn get_open_positions_by_receiver(
+/// Gets all the positions of the given receiver.
+pub fn get_positions_by_receiver(
     storage: &dyn Storage,
     receiver: String,
+    open_state: Option<bool>,
 ) -> StdResult<Vec<Position>> {
     let limit = MAX_LIMIT as usize;
 
-    let open_positions = POSITIONS
+    let mut positions_by_receiver = POSITIONS
         .idx
         .receiver
         .prefix(receiver)
@@ -202,12 +201,16 @@ pub fn get_open_positions_by_receiver(
             let (_, position) = item?;
             Ok(position)
         })
-        .collect::<StdResult<Vec<Position>>>()?
-        .into_iter()
-        .filter(|position| position.open)
-        .collect::<Vec<Position>>();
+        .collect::<StdResult<Vec<Position>>>()?;
 
-    Ok(open_positions)
+    if let Some(open) = open_state {
+        positions_by_receiver = positions_by_receiver
+            .into_iter()
+            .filter(|position| position.open == open)
+            .collect::<Vec<Position>>();
+    }
+
+    Ok(positions_by_receiver)
 }
 
 /// Gets the earliest entry of an address in the address lp weight history.

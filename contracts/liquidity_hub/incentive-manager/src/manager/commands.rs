@@ -14,7 +14,7 @@ use crate::helpers::{
     validate_incentive_epochs,
 };
 use crate::state::{
-    get_incentive_by_identifier, get_incentives_by_lp_asset, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
+    get_incentive_by_identifier, get_incentives_by_lp_denom, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
     LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
@@ -50,7 +50,7 @@ fn create_incentive(
 ) -> Result<Response, ContractError> {
     // check if there are any expired incentives for this LP asset
     let config = CONFIG.load(deps.storage)?;
-    let incentives = get_incentives_by_lp_asset(
+    let incentives = get_incentives_by_lp_denom(
         deps.storage,
         &params.lp_denom,
         None,

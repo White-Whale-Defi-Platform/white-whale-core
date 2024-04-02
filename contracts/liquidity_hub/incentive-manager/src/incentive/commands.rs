@@ -8,9 +8,9 @@ use white_whale_std::coin::aggregate_coins;
 use white_whale_std::incentive_manager::{EpochId, Incentive, Position, RewardsResponse};
 
 use crate::state::{
-    get_earliest_address_lp_weight, get_incentives_by_lp_asset, get_latest_address_lp_weight,
-    get_open_positions_by_receiver, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, INCENTIVES,
-    LAST_CLAIMED_EPOCH, LP_WEIGHTS_HISTORY,
+    get_earliest_address_lp_weight, get_incentives_by_lp_denom, get_latest_address_lp_weight,
+    get_positions_by_receiver, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, INCENTIVES, LAST_CLAIMED_EPOCH,
+    LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -21,7 +21,7 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
 
     // check if the user has any open LP positions
     let open_positions =
-        get_open_positions_by_receiver(deps.storage, info.sender.clone().into_string())?;
+        get_positions_by_receiver(deps.storage, info.sender.clone().into_string(), Some(true))?;
     ensure!(!open_positions.is_empty(), ContractError::NoOpenPositions);
 
     let config = CONFIG.load(deps.storage)?;
@@ -89,7 +89,7 @@ pub(crate) fn calculate_rewards(
 ) -> Result<RewardsResponse, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    let incentives = get_incentives_by_lp_asset(
+    let incentives = get_incentives_by_lp_denom(
         deps.storage,
         &position.lp_asset.denom,
         None,
@@ -172,8 +172,6 @@ pub(crate) fn calculate_rewards(
     }
 
     rewards = aggregate_coins(rewards)?;
-
-    // todo modify incentives, i.e. incentive.claimed_amount
 
     if is_claim {
         Ok(RewardsResponse::ClaimRewards {
