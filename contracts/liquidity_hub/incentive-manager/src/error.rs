@@ -156,6 +156,12 @@ pub enum ContractError {
 
     #[error("There are pending rewards to be claimed before this action can be executed")]
     PendingRewards,
+
+    #[error("The incentive expansion amount must be a multiple of the emission rate, which is {emission_rate}")]
+    InvalidExpansionAmount {
+        /// The emission rate of the incentive
+        emission_rate: Uint128,
+    },
 }
 
 impl From<semver::Error> for ContractError {

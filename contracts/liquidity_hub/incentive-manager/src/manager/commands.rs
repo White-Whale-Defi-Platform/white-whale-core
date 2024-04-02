@@ -254,6 +254,14 @@ fn expand_incentive(
         ContractError::AssetMismatch
     );
 
+    // make sure the expansion is a multiple of the emission rate
+    ensure!(
+        params.incentive_asset.amount % incentive.emission_rate == Uint128::zero(),
+        ContractError::InvalidExpansionAmount {
+            emission_rate: incentive.emission_rate
+        }
+    );
+
     // increase the total amount of the incentive
     incentive.incentive_asset.amount = incentive
         .incentive_asset
