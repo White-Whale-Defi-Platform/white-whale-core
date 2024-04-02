@@ -1,4 +1,6 @@
-use cosmwasm_std::{entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
 
@@ -11,7 +13,7 @@ use crate::error::ContractError;
 use crate::helpers::validate_emergency_unlock_penalty;
 use crate::position::commands::{close_position, fill_position, withdraw_position};
 use crate::state::CONFIG;
-use crate::{incentive, manager};
+use crate::{incentive, manager, queries};
 
 const CONTRACT_NAME: &str = "white-whale_incentive-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -148,8 +150,11 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_manager_config(deps)?)?),
+        QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
