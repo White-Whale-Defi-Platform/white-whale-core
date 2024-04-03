@@ -14,7 +14,6 @@ use crate::state::{
 };
 use crate::ContractError;
 
-//todo maybe make it claim rewards PER position, or at least per lp_denom, the way it is now it can be computationally expensive
 /// Claims pending rewards for incentives where the user has LP
 pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
@@ -52,6 +51,7 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
                             let mut incentive = incentive.unwrap();
                             incentive.claimed_amount =
                                 incentive.claimed_amount.checked_add(claimed_reward)?;
+                            incentive.last_epoch_claimed = current_epoch.id;
                             Ok(incentive)
                         },
                     )?;
@@ -114,9 +114,11 @@ pub(crate) fn calculate_rewards(
     }
 
     let mut rewards: Vec<Coin> = vec![];
+    // what incentives are going to mutate when claiming rewards. Not used/returned when querying rewards.
     let mut modified_incentives: HashMap<String, Uint128> = HashMap::new();
 
     for incentive in incentives {
+        // skip expired incentives
         if incentive.is_expired(current_epoch_id) {
             continue;
         }
@@ -160,10 +162,12 @@ pub(crate) fn calculate_rewards(
                 ContractError::IncentiveExhausted
             );
 
-            rewards.push(Coin {
-                denom: incentive.incentive_asset.denom.clone(),
-                amount: reward,
-            });
+            if reward > Uint128::zero() {
+                rewards.push(Coin {
+                    denom: incentive.incentive_asset.denom.clone(),
+                    amount: reward,
+                });
+            }
 
             if is_claim {
                 modified_incentives.insert(incentive.identifier.clone(), reward);

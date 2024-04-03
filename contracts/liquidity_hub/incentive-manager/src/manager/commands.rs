@@ -4,7 +4,6 @@ use cosmwasm_std::{
 };
 
 use white_whale_std::coin::{get_subdenom, is_factory_token};
-use white_whale_std::epoch_manager::common::validate_epoch;
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale_std::incentive_manager::MIN_INCENTIVE_AMOUNT;
 use white_whale_std::incentive_manager::{Curve, Incentive, IncentiveParams};
@@ -21,7 +20,6 @@ use crate::ContractError;
 
 pub(crate) fn fill_incentive(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     params: IncentiveParams,
 ) -> Result<Response, ContractError> {
@@ -32,19 +30,18 @@ pub(crate) fn fill_incentive(
 
         if let Ok(incentive) = incentive_result {
             // the incentive exists, try to expand it
-            return expand_incentive(deps, env, info, incentive, params);
+            return expand_incentive(deps, info, incentive, params);
         }
         // the incentive does not exist, try to create it
     }
 
     // if no identifier was passed in the params or if the incentive does not exist, try to create the incentive
-    create_incentive(deps, env, info, params)
+    create_incentive(deps, info, params)
 }
 
 /// Creates an incentive with the given params
 fn create_incentive(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     mut params: IncentiveParams,
 ) -> Result<Response, ContractError> {
@@ -61,7 +58,6 @@ fn create_incentive(
         deps.as_ref(),
         config.epoch_manager_addr.clone().into_string(),
     )?;
-    validate_epoch(&current_epoch, env.block.time)?;
 
     let (expired_incentives, incentives): (Vec<_>, Vec<_>) = incentives
         .into_iter()
@@ -173,20 +169,14 @@ pub(crate) fn close_incentive(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    // validate that user is allowed to close the incentive. Only the incentive creator or the owner of the contract can close an incentive
-    let config = CONFIG.load(deps.storage)?;
-    let current_epoch = white_whale_std::epoch_manager::common::get_current_epoch(
-        deps.as_ref(),
-        config.epoch_manager_addr.into_string(),
-    )?;
-
+    // validate that user is allowed to close the incentive. Only the incentive creator or the owner
+    // of the contract can close an incentive
     let incentive = get_incentive_by_identifier(deps.storage, &incentive_identifier)?;
 
-    if !(!incentive.is_expired(current_epoch.id)
-        && (incentive.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?))
-    {
-        return Err(ContractError::Unauthorized);
-    }
+    ensure!(
+        incentive.owner == info.sender || cw_ownable::is_owner(deps.storage, &info.sender)?,
+        ContractError::Unauthorized
+    );
 
     Ok(Response::default()
         .add_messages(close_incentives(deps.storage, vec![incentive])?)
@@ -228,7 +218,6 @@ fn close_incentives(
 /// Expands an incentive with the given params
 fn expand_incentive(
     deps: DepsMut,
-    _env: Env,
     info: MessageInfo,
     mut incentive: Incentive,
     params: IncentiveParams,
@@ -267,6 +256,7 @@ fn expand_incentive(
         .incentive_asset
         .amount
         .checked_add(params.incentive_asset.amount)?;
+    // todo maybe increase the preliminary_end_epoch?
     INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -298,7 +288,7 @@ pub(crate) fn on_epoch_changed(
         .into_iter()
         .filter(|asset| {
             if is_factory_token(asset.denom.as_str()) {
-                //todo remove this hardcoded uLP and point to the pool manager const
+                //todo remove this hardcoded uLP and point to the pool manager const, to be moved to the white-whale-std package
                 get_subdenom(asset.denom.as_str()) == "uLP"
             } else {
                 false

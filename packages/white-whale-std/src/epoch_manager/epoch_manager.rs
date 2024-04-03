@@ -8,7 +8,7 @@ use cw_controllers::HooksResponse;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub start_epoch: EpochV2,
+    pub start_epoch: Epoch,
     pub epoch_config: EpochConfig,
 }
 
@@ -76,12 +76,12 @@ pub struct ConfigResponse {
 
 #[cw_serde]
 pub struct EpochResponse {
-    pub epoch: EpochV2,
+    pub epoch: Epoch,
 }
 
 #[cw_serde]
 pub struct ClaimableEpochsResponse {
-    pub epochs: Vec<EpochV2>,
+    pub epochs: Vec<Epoch>,
 }
 
 #[cw_serde]
@@ -104,20 +104,20 @@ impl Display for EpochConfig {
 
 #[cw_serde]
 #[derive(Default)]
-pub struct EpochV2 {
+pub struct Epoch {
     // Epoch identifier
     pub id: u64,
     // Epoch start time
     pub start_time: Timestamp,
 }
 
-impl EpochV2 {
+impl Epoch {
     pub fn to_epoch_response(self) -> EpochResponse {
         EpochResponse { epoch: self }
     }
 }
 
-impl Display for EpochV2 {
+impl Display for Epoch {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

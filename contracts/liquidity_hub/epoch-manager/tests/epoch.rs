@@ -3,7 +3,7 @@ use cosmwasm_std::testing::{mock_env, mock_info};
 
 use epoch_manager::contract::{execute, query};
 use epoch_manager::ContractError;
-use white_whale_std::epoch_manager::epoch_manager::{EpochResponse, EpochV2, ExecuteMsg, QueryMsg};
+use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochResponse, ExecuteMsg, QueryMsg};
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 
@@ -29,7 +29,7 @@ fn create_new_epoch_successfully() {
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::CurrentEpoch {}).unwrap();
     let epoch_response: EpochResponse = from_json(query_res).unwrap();
 
-    let current_epoch = EpochV2 {
+    let current_epoch = Epoch {
         id: 124,
         start_time: next_epoch_time,
     };
@@ -55,7 +55,7 @@ fn create_new_epoch_successfully() {
 
     assert_eq!(
         epoch_response.epoch,
-        EpochV2 {
+        Epoch {
             id: 123,
             start_time: next_epoch_time.minus_nanos(86400),
         }

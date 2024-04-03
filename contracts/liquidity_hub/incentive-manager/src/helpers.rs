@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{ensure, BankMsg, Coin, CosmosMsg, Decimal, MessageInfo, Uint128};
+use cosmwasm_std::{
+    ensure, BankMsg, Coin, CosmosMsg, Decimal, MessageInfo, OverflowError, OverflowOperation,
+    Uint128,
+};
 
 use white_whale_std::incentive_manager::{Config, IncentiveParams, DEFAULT_INCENTIVE_DURATION};
 
@@ -121,52 +124,43 @@ pub(crate) fn validate_incentive_epochs(
     );
 
     // ensure the incentive is set to end in a future epoch
-    if current_epoch > preliminary_end_epoch {
-        return Err(ContractError::IncentiveEndsInPast);
-    }
+    ensure!(
+        preliminary_end_epoch > current_epoch,
+        ContractError::IncentiveEndsInPast
+    );
 
     let start_epoch = params.start_epoch.unwrap_or(current_epoch);
 
     // ensure that start date is before end date
-    if start_epoch > preliminary_end_epoch {
-        return Err(ContractError::IncentiveStartTimeAfterEndTime);
-    }
+    ensure!(
+        start_epoch <= preliminary_end_epoch,
+        ContractError::IncentiveStartTimeAfterEndTime
+    );
 
     // ensure that start date is set within buffer
-    if start_epoch > current_epoch + max_incentive_epoch_buffer {
-        return Err(ContractError::IncentiveStartTooFar);
-    }
+    ensure!(
+        start_epoch
+            <= current_epoch
+                .checked_add(max_incentive_epoch_buffer)
+                .ok_or(ContractError::OverflowError(OverflowError {
+                    operation: OverflowOperation::Add,
+                    operand1: current_epoch.to_string(),
+                    operand2: max_incentive_epoch_buffer.to_string(),
+                }))?,
+        ContractError::IncentiveStartTooFar
+    );
 
     Ok((start_epoch, preliminary_end_epoch))
-}
-
-//todo maybe move this to position helpers??
-/// Validates the `unlocking_duration` specified in the position params is within the range specified
-/// in the config.
-pub(crate) fn validate_unlocking_duration(
-    config: &Config,
-    unlocking_duration: u64,
-) -> Result<(), ContractError> {
-    if unlocking_duration < config.min_unlocking_duration
-        || unlocking_duration > config.max_unlocking_duration
-    {
-        return Err(ContractError::InvalidUnlockingDuration {
-            min: config.min_unlocking_duration,
-            max: config.max_unlocking_duration,
-            specified: unlocking_duration,
-        });
-    }
-
-    Ok(())
 }
 
 /// Validates the emergency unlock penalty is within the allowed range (0-100%). Returns value it's validating, i.e. the penalty.
 pub(crate) fn validate_emergency_unlock_penalty(
     emergency_unlock_penalty: Decimal,
 ) -> Result<Decimal, ContractError> {
-    if emergency_unlock_penalty > Decimal::percent(100) {
-        return Err(ContractError::InvalidEmergencyUnlockPenalty);
-    }
+    ensure!(
+        emergency_unlock_penalty <= Decimal::percent(100),
+        ContractError::InvalidEmergencyUnlockPenalty
+    );
 
     Ok(emergency_unlock_penalty)
 }

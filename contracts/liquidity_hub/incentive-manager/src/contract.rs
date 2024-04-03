@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    ensure, entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -27,16 +27,19 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     // ensure that max_concurrent_incentives is non-zero
-    if msg.max_concurrent_incentives == 0 {
-        return Err(ContractError::UnspecifiedConcurrentIncentives);
-    }
+    ensure!(
+        msg.max_concurrent_incentives > 0,
+        ContractError::UnspecifiedConcurrentIncentives
+    );
 
-    if msg.max_unlocking_duration < msg.min_unlocking_duration {
-        return Err(ContractError::InvalidUnbondingRange {
+    // ensure the unlocking duration range is valid
+    ensure!(
+        msg.max_unlocking_duration > msg.min_unlocking_duration,
+        ContractError::InvalidUnbondingRange {
             min: msg.min_unlocking_duration,
             max: msg.max_unlocking_duration,
-        });
-    }
+        }
+    );
 
     let config = Config {
         epoch_manager_addr: deps.api.addr_validate(&msg.epoch_manager_addr)?,
@@ -92,7 +95,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::ManageIncentive { action } => match action {
             IncentiveAction::Fill { params } => {
-                manager::commands::fill_incentive(deps, env, info, params)
+                manager::commands::fill_incentive(deps, info, params)
             }
             IncentiveAction::Close {
                 incentive_identifier,

@@ -2,10 +2,11 @@ use cosmwasm_std::{
     ensure, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdError,
 };
 
-use white_whale_std::incentive_manager::Position;
+use white_whale_std::incentive_manager::{Position, RewardsResponse};
 
-use crate::helpers::validate_unlocking_duration;
+use crate::position::helpers::validate_unlocking_duration;
 use crate::position::helpers::{calculate_weight, get_latest_address_weight, get_latest_lp_weight};
+use crate::queries::query_rewards;
 use crate::state::{
     get_position, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, LP_WEIGHTS_HISTORY, POSITIONS,
     POSITION_ID_COUNTER,
@@ -98,15 +99,14 @@ pub(crate) fn close_position(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    //todo do this validation to see if there are pending rewards
-    //query and check if the user has pending rewards
-    // let rewards_query_result = get_rewards(deps.as_ref(), info.sender.clone().into_string());
-    // if let Ok(rewards_response) = rewards_query_result {
-    //     // can't close a position if there are pending rewards
-    //     if !rewards_response.rewards.is_empty() {
-    //         return Err(ContractError::PendingRewards);
-    //     }
-    // }
+    // check if the user has pending rewards. Can't close a position without claiming pending rewards first
+    let rewards_response = query_rewards(deps.as_ref(), info.sender.clone().into_string())?;
+    match rewards_response {
+        RewardsResponse::RewardsResponse { rewards } => {
+            ensure!(rewards.is_empty(), ContractError::PendingRewards)
+        }
+        _ => return Err(ContractError::Unauthorized),
+    }
 
     let mut position = get_position(deps.storage, Some(identifier.clone()))?.ok_or(
         ContractError::NoPositionFound {
@@ -129,9 +129,10 @@ pub(crate) fn close_position(
     if let Some(lp_asset) = lp_asset {
         // close position partially
 
-        // check if the lp_asset requested to close matches the lp_asset of the position
+        // make sure the lp_asset requested to close matches the lp_asset of the position, and since
+        // this is a partial close, the amount requested to close should be less than the amount in the position
         ensure!(
-            lp_asset.denom == position.lp_asset.denom,
+            lp_asset.denom == position.lp_asset.denom && lp_asset.amount < position.lp_asset.amount,
             ContractError::AssetMismatch
         );
 
@@ -208,6 +209,12 @@ pub(crate) fn withdraw_position(
 
         let penalty_fee = position.lp_asset.amount * emergency_unlock_penalty;
 
+        // sanity check
+        ensure!(
+            penalty_fee < position.lp_asset.amount,
+            ContractError::InvalidEmergencyUnlockPenalty
+        );
+
         let penalty = Coin {
             denom: position.lp_asset.denom.to_string(),
             amount: penalty_fee,
@@ -216,7 +223,6 @@ pub(crate) fn withdraw_position(
         let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
 
         // send penalty to whale lair for distribution
-        //todo the whale lair needs to withdraw the LP tokens from the corresponding pool when this happens
         messages.push(white_whale_std::whale_lair::fill_rewards_msg_coin(
             whale_lair_addr.into_string(),
             vec![penalty],

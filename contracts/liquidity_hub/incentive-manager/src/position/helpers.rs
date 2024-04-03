@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Coin, Decimal256, Order, StdError, Storage, Uint128};
 
-use white_whale_std::incentive_manager::EpochId;
+use white_whale_std::incentive_manager::{Config, EpochId};
 
 use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
 use crate::ContractError;
@@ -98,4 +98,23 @@ fn return_latest_weight(
         Ok(None) => Ok((0u64, Uint128::zero())),
         Err(std_err) => Err(std_err.into()),
     }
+}
+
+/// Validates the `unlocking_duration` specified in the position params is within the range specified
+/// in the config.
+pub(crate) fn validate_unlocking_duration(
+    config: &Config,
+    unlocking_duration: u64,
+) -> Result<(), ContractError> {
+    if unlocking_duration < config.min_unlocking_duration
+        || unlocking_duration > config.max_unlocking_duration
+    {
+        return Err(ContractError::InvalidUnlockingDuration {
+            min: config.min_unlocking_duration,
+            max: config.max_unlocking_duration,
+            specified: unlocking_duration,
+        });
+    }
+
+    Ok(())
 }
