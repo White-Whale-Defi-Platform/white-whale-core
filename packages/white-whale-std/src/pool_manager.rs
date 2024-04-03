@@ -34,6 +34,13 @@ pub enum SwapOperation {
 }
 
 impl SwapOperation {
+    /// Retrieves the `token_in_info` [`AssetInfo`] used for this swap operation.
+    pub fn get_input_asset_info(&self) -> &AssetInfo {
+        match self {
+            SwapOperation::WhaleSwap { token_in_info, .. } => token_in_info,
+        }
+    }
+
     pub fn get_target_asset_info(&self) -> AssetInfo {
         match self {
             SwapOperation::WhaleSwap { token_out_info, .. } => token_out_info.clone(),
@@ -166,13 +173,25 @@ pub enum ExecuteMsg {
         decimals: u8,
     },
 
-    // /// Execute multiple [SwapOperation]s, i.e. multi-hop swaps.
-    // ExecuteSwapOperations {
-    //     operations: Vec<SwapOperation>,
-    //     minimum_receive: Option<Uint128>,
-    //     to: Option<String>,
-    //     max_spread: Option<Decimal>,
-    // },
+    /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
+    ExecuteSwapOperations {
+        /// The operations that should be performed in sequence.
+        ///
+        /// The amount in each swap will be the output from the previous swap.
+        ///
+        /// The first swap will use whatever funds are sent in the [`MessageInfo`].
+        operations: Vec<SwapOperation>,
+        /// The minimum amount of the output (i.e., final swap operation token) required for the message to succeed.
+        minimum_receive: Option<Uint128>,
+        /// The (optional) recipient of the output tokens.
+        ///
+        /// If left unspecified, tokens will be sent to the sender of the message.
+        to: Option<String>,
+        /// The (optional) maximum spread to incur when performing any swap.
+        ///
+        /// If left unspecified, there is no limit to what spread the transaction can incur.
+        max_spread: Option<Decimal>,
+    },
     // /// Swap the offer to ask token. This message can only be called internally by the router contract.
     // ExecuteSwapOperation {
     //     operation: SwapOperation,
