@@ -18,9 +18,8 @@ pub enum SwapOperation {
     },
 }
 
-// TODO: is this really needed???
 impl SwapOperation {
-    /// Retrieves the `token_in_denom` [`AssetInfo`] used for this swap operation.
+    /// Retrieves the `token_in_denom` used for this swap operation.
     pub fn get_input_asset_info(&self) -> &String {
         match self {
             SwapOperation::WhaleSwap { token_in_denom, .. } => token_in_denom,
@@ -99,8 +98,9 @@ pub struct StableSwapParams {
 #[cw_serde]
 pub struct NPairInfo {
     pub asset_denoms: Vec<String>,
-    pub liquidity_token: String,
+    pub lp_denom: String,
     pub asset_decimals: Vec<u8>,
+    // TODO: balances is included in assets, might be redundant
     pub balances: Vec<Uint128>,
     pub assets: Vec<Coin>,
     pub pair_type: PairType,
@@ -129,12 +129,10 @@ pub enum ExecuteMsg {
         // TODO: Remap to NPoolFee maybe
         pool_fees: PoolFee,
         pair_type: PairType,
-        token_factory_lp: bool,
         pair_identifier: Option<String>,
     },
     /// Provides liquidity to the pool
     ProvideLiquidity {
-        assets: Vec<Coin>,
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
         pair_identifier: String,
@@ -148,13 +146,15 @@ pub enum ExecuteMsg {
         to: Option<String>,
         pair_identifier: String,
     },
-    // /// Withdraws liquidity from the pool. Used only when the LP is a token factory token.
+    // /// Withdraws liquidity from the pool.
     WithdrawLiquidity {
-        assets: Vec<Coin>,
         pair_identifier: String,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals { denom: String, decimals: u8 },
+    AddNativeTokenDecimals {
+        denom: String,
+        decimals: u8,
+    },
 
     /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
     ExecuteSwapOperations {
@@ -190,7 +190,9 @@ pub enum ExecuteMsg {
     //     receiver: String,
     // },
     /// Adds swap routes to the router.
-    AddSwapRoutes { swap_routes: Vec<SwapRoute> },
+    AddSwapRoutes {
+        swap_routes: Vec<SwapRoute>,
+    },
 }
 
 #[cw_ownable_query]

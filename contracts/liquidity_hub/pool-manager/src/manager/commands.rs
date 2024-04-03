@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    attr, coins, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
+    attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 use white_whale_std::{
     pool_network::{asset::PairType, pair::PoolFee, querier::query_native_decimals},
@@ -73,6 +73,7 @@ pub const LP_SYMBOL: &str = "uLP";
 /// # Ok(response)
 /// # }
 /// ```
+#[allow(unreachable_code)]
 #[allow(clippy::too_many_arguments)]
 pub fn create_pair(
     deps: DepsMut,
@@ -81,7 +82,6 @@ pub fn create_pair(
     asset_denoms: Vec<String>, //Review just a vec<asset>
     pool_fees: PoolFee,
     pair_type: PairType,
-    token_factory_lp: bool,
     pair_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
     // Load config for pool creation fee
@@ -103,10 +103,7 @@ pub fn create_pair(
     let mut messages: Vec<CosmosMsg> = vec![];
 
     // send vault creation fee to whale lair
-    let creation_fee = coins(
-        config.pool_creation_fee.amount.u128(),
-        config.pool_creation_fee.denom,
-    );
+    let creation_fee = vec![config.pool_creation_fee];
 
     // //send protocol fee to whale lair i.e the new fee_collector
     messages.push(fill_rewards_msg(
@@ -122,9 +119,8 @@ pub fn create_pair(
                 env.contract.address.clone(),
                 asset.to_string(),
             )
-            .unwrap()
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<u8>, _>>()?;
 
     // Check if the asset infos are the same
     if asset_denoms
@@ -143,7 +139,7 @@ pub fn create_pair(
     let identifier = pair_identifier.unwrap_or(pair_id.to_string());
 
     // check if there is an existing vault with the given identifier
-    let pair = get_pair_by_identifier(&deps.as_ref(), identifier.clone());
+    let pair = get_pair_by_identifier(&deps.as_ref(), &identifier);
     if pair.is_ok() {
         return Err(ContractError::PairExists {
             asset_infos: asset_denoms
@@ -169,26 +165,16 @@ pub fn create_pair(
         })
         .collect::<Vec<_>>();
 
-    // TODO: is this necessary?
-    if token_factory_lp {
-        #[cfg(all(
-            not(feature = "token_factory"),
-            not(feature = "osmosis_token_factory"),
-            not(feature = "injective")
-        ))]
-        return Err(ContractError::TokenFactoryNotEnabled {});
-    }
-
     let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
     let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
 
     PAIRS.save(
         deps.storage,
-        identifier.clone(),
+        &identifier,
         &PairInfo {
             asset_denoms: asset_denoms.clone(),
             pair_type: pair_type.clone(),
-            liquidity_token: lp_asset.clone(),
+            lp_denom: lp_asset.clone(),
             asset_decimals: asset_decimals_vec,
             pool_fees,
             assets,
@@ -198,12 +184,15 @@ pub fn create_pair(
 
     attributes.push(attr("lp_asset", lp_asset));
 
-    // TODO: this is already checked in the beginning of the function
-    // #[cfg(any(
-    //     feature = "token_factory",
-    //     feature = "osmosis_token_factory",
-    //     feature = "injective"
-    // ))]
+    #[cfg(all(
+        not(feature = "token_factory"),
+        not(feature = "osmosis_token_factory"),
+        not(feature = "injective")
+    ))]
+    {
+        return Err(ContractError::TokenFactoryNotEnabled {});
+    }
+
     messages.push(white_whale_std::tokenfactory::create_denom::create_denom(
         env.contract.address,
         lp_symbol,

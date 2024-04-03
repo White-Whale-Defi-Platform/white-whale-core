@@ -2,15 +2,15 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Api, Coin, Deps, Order, StdResult, Storage};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale_std::pool_manager::{NPairInfo, SwapOperation};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw};
+use white_whale_std::pool_network::asset::{Asset, AssetInfoRaw};
 use white_whale_std::pool_network::pair::FeatureToggle;
 
 use crate::ContractError;
 pub const LP_SYMBOL: &str = "uLP";
-pub const PAIRS: IndexedMap<String, NPairInfo, PairIndexes> = IndexedMap::new(
+pub const PAIRS: IndexedMap<&str, NPairInfo, PairIndexes> = IndexedMap::new(
     "pairs",
     PairIndexes {
-        lp_asset: UniqueIndex::new(|v| v.liquidity_token.to_string(), "pairs__lp_asset"),
+        lp_asset: UniqueIndex::new(|v| v.lp_denom.to_string(), "pairs__lp_asset"),
     },
 );
 
@@ -26,23 +26,13 @@ impl<'a> IndexList<NPairInfo> for PairIndexes<'a> {
     }
 }
 
-/// Gets the pair given an lp asset as [AssetInfo]
-pub fn get_pair_by_lp(deps: &Deps, lp_asset: &AssetInfo) -> Result<NPairInfo, ContractError> {
-    Ok(PAIRS
-        .idx
-        .lp_asset
-        .item(deps.storage, lp_asset.to_string())?
-        .map_or_else(|| Err(ContractError::ExistingPair {}), Ok)?
-        .1)
-}
-
 /// Gets the pair given its identifier
 pub fn get_pair_by_identifier(
     deps: &Deps,
-    vault_identifier: String,
+    pair_identifier: &str,
 ) -> Result<NPairInfo, ContractError> {
     PAIRS
-        .may_load(deps.storage, vault_identifier)?
+        .may_load(deps.storage, pair_identifier)?
         .ok_or(ContractError::ExistingPair {})
 }
 

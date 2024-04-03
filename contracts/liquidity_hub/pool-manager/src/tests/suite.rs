@@ -9,12 +9,14 @@ use cw_multi_test::{
 };
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_std::pool_network::{
-    asset::{Asset, AssetInfo, PairType},
+    asset::{AssetInfo, PairType},
     pair::PoolFee,
 };
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+
+use crate::liquidity::commands::LP_SYMBOL;
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new_with_empty(
         crate::contract::execute,
@@ -72,28 +74,12 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn _get_time(&mut self) -> Timestamp {
-        self.app.block_info().time
-    }
-
-    pub(crate) fn _increase_allowance(
-        &mut self,
-        sender: Addr,
-        cw20contract: Addr,
-        allowance: Uint128,
-        spender: Addr,
-    ) -> &mut Self {
-        let msg = cw20_base::msg::ExecuteMsg::IncreaseAllowance {
-            spender: spender.to_string(),
-            amount: allowance,
-            expires: None,
-        };
-
-        self.app
-            .execute_contract(sender, cw20contract, &msg, &[])
-            .unwrap();
-
-        self
+    pub(crate) fn get_lp_denom(&self, pair_id: String) -> String {
+        // TODO: this should have
+        format!(
+            "factory/{}/u{}.vault.{}.{}",
+            self.pool_manager_addr, pair_id, pair_id, LP_SYMBOL
+        )
     }
 }
 
@@ -133,12 +119,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn instantiate(
-        &mut self,
-        whale_lair_addr: String,
-        // TODO: remove this if unused
-        _vault_creation_fee: Asset,
-    ) -> &mut Self {
+    pub(crate) fn instantiate(&mut self, whale_lair_addr: String) -> &mut Self {
         let msg = InstantiateMsg {
             fee_collector_addr: whale_lair_addr,
             owner: self.creator().to_string(),
@@ -175,15 +156,7 @@ impl TestingSuite {
         let timestamp = Timestamp::from_seconds(1684342800u64);
         self.set_time(timestamp);
 
-        self.instantiate(
-            self.whale_lair_addr.to_string(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "uwhale".to_string(),
-                },
-                amount: Uint128::new(1_000u128),
-            },
-        )
+        self.instantiate(self.whale_lair_addr.to_string())
     }
 
     fn create_whale_lair(&mut self) {
@@ -272,12 +245,10 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Coin>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
-            assets,
             pair_identifier,
             slippage_tolerance: None,
             receiver: None,
@@ -354,7 +325,6 @@ impl TestingSuite {
         asset_denoms: Vec<String>,
         pool_fees: PoolFee,
         pair_type: PairType,
-        token_factory_lp: bool,
         pair_identifier: Option<String>,
         pair_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -363,7 +333,6 @@ impl TestingSuite {
             asset_denoms,
             pool_fees,
             pair_type,
-            token_factory_lp,
             pair_identifier,
         };
 
@@ -382,14 +351,10 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
-        assets: Vec<Coin>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
-            assets,
-            pair_identifier,
-        };
+        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier };
 
         result(
             self.app
@@ -424,6 +389,18 @@ impl TestingSuite {
         result: impl Fn(StdResult<Coin>),
     ) -> &mut Self {
         let balance_resp: StdResult<Coin> = self.app.wrap().query_balance(addr, denom);
+
+        result(balance_resp);
+
+        self
+    }
+
+    pub(crate) fn query_all_balances(
+        &mut self,
+        addr: String,
+        result: impl Fn(StdResult<Vec<Coin>>),
+    ) -> &mut Self {
+        let balance_resp: StdResult<Vec<Coin>> = self.app.wrap().query_all_balances(addr);
 
         result(balance_resp);
 
@@ -519,7 +496,7 @@ impl TestingSuite {
         let balance: Uint128 = self
             .app
             .wrap()
-            .query_balance(sender, lp_token_response.liquidity_token)
+            .query_balance(sender, lp_token_response.lp_denom)
             .unwrap()
             .amount;
 
@@ -541,6 +518,6 @@ impl TestingSuite {
             .unwrap();
 
         // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
-        lp_token_response.liquidity_token
+        lp_token_response.lp_denom
     }
 }

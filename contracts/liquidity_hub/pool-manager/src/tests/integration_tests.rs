@@ -1,7 +1,7 @@
 use crate::ContractError;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use white_whale_std::fee::Fee;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
+use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 use white_whale_std::pool_network::pair::PoolFee;
 
 use super::suite::TestingSuite;
@@ -13,15 +13,7 @@ use super::suite::TestingSuite;
 fn instantiate_normal() {
     let mut suite = TestingSuite::default_with_balances(vec![]);
 
-    suite.instantiate(
-        suite.senders[0].to_string(),
-        Asset {
-            info: AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
-            amount: Uint128::new(1_000u128),
-        },
-    );
+    suite.instantiate(suite.senders[0].to_string());
 }
 
 #[test]
@@ -89,17 +81,16 @@ fn verify_ownership() {
 #[test]
 fn deposit_and_withdraw_sanity_check() {
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_001u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "uluna".to_string()),
-        coin(1_000_000_001u128, "uusd".to_string()),
-        coin(999_000u128, "whale-uluna".to_string()),
+        coin(1_000_001u128, "uwhale".to_string()),
+        coin(1_000_001u128, "uluna".to_string()),
+        coin(1_000u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
     let _other = suite.senders[1].clone();
     let _unauthorized = suite.senders[2].clone();
-    // Asset infos with uwhale and uluna
 
-    let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
+    // Asset denoms with uwhale and uluna
+    let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
     // Default Pool fees white_whale_std::pool_network::pair::PoolFee
     #[cfg(not(feature = "osmosis"))]
@@ -138,10 +129,9 @@ fn deposit_and_withdraw_sanity_check() {
         .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
         .create_pair(
             creator.clone(),
-            asset_infos,
+            asset_denoms,
             pool_fees,
             white_whale_std::pool_network::asset::PairType::ConstantProduct,
-            false,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -149,82 +139,92 @@ fn deposit_and_withdraw_sanity_check() {
             },
         );
 
-    // Lets try to add liquidity
-    suite.provide_liquidity(
-        creator.clone(),
-        "whale-uluna".to_string(),
-        vec![
-            Coin {
-                denom: "uwhale".to_string(),
-                amount: Uint128::from(1_000_000u128),
-            },
-            Coin {
-                denom: "uluna".to_string(),
-                amount: Uint128::from(1_000_000u128),
-            },
-        ],
-        vec![
-            Coin {
-                denom: "uwhale".to_string(),
-                amount: Uint128::from(1_000_000u128),
-            },
-            Coin {
-                denom: "uluna".to_string(),
-                amount: Uint128::from(1_000_000u128),
-            },
-        ],
-        |result| {
-            // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
-            assert!(result.unwrap().events.iter().any(|event| {
-                event.attributes.iter().any(|attr| {
-                    attr.key == "share"
-                        && attr.value
-                            == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT).to_string()
-                })
-            }));
-        },
-    );
+    let contract_addr = suite.pool_manager_addr.clone();
+    let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
 
-    suite.query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
-        assert_eq!(
-            result.unwrap(),
-            Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
-        );
-    });
+    // Lets try to add liquidity
+    suite
+        .provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
+                assert!(result.unwrap().events.iter().any(|event| {
+                    event.attributes.iter().any(|attr| {
+                        attr.key == "share"
+                            && attr.value
+                                == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                    .to_string()
+                    })
+                }));
+            },
+        )
+        // creator should have 999_000 LP shares (1M - MINIMUM_LIQUIDITY_AMOUNT)
+        .query_all_balances(creator.to_string(), |result| {
+            let balances = result.unwrap();
+            assert!(balances.iter().any(|coin| {
+                coin.denom == lp_denom && coin.amount == Uint128::from(999_000u128)
+            }));
+        })
+        // contract should have 1_000 LP shares (MINIMUM_LIQUIDITY_AMOUNT)
+        .query_all_balances(contract_addr.to_string(), |result| {
+            let balances = result.unwrap();
+            // check that balances has 999_000 factory/migaloo1wug8sewp6cedgkmrmvhl3lf3tulagm9hnvy8p0rppz9yjw0g4wtqvk723g/uwhale-uluna.vault.whale-uluna.uLP
+            assert!(balances.iter().any(|coin| {
+                coin.denom == lp_denom.clone() && coin.amount == MINIMUM_LIQUIDITY_AMOUNT
+            }));
+        });
 
     // Lets try to withdraw liquidity
-    suite.withdraw_liquidity(
-        creator.clone(),
-        "whale-uluna".to_string(),
-        vec![
-            Coin {
-                denom: "uwhale".to_string(),
-                amount: Uint128::from(1_000_000u128),
+    suite
+        .withdraw_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            vec![Coin {
+                denom: lp_denom.clone(),
+                amount: Uint128::from(999_000u128),
+            }],
+            |result| {
+                // we're trading 999_000 shares for 1_000_000 of our liquidity
+                assert!(result.unwrap().events.iter().any(|event| {
+                    event.attributes.iter().any(|attr| {
+                        attr.key == "withdrawn_share"
+                            && attr.value
+                                == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                    .to_string()
+                    })
+                }));
             },
-            Coin {
-                denom: "uluna".to_string(),
-                amount: Uint128::from(1_000_000u128),
-            },
-        ],
-        vec![Coin {
-            denom: "whale-uluna".to_string(),
-            amount: Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT,
-        }],
-        |result| {
-            // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
-            assert!(result.unwrap().events.iter().any(|event| {
-                event.attributes.iter().any(|attr| {
-                    attr.key == "withdrawn_share"
-                        && attr.value
-                            == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT).to_string()
-                })
+        )
+        // creator should have 0 LP shares in the contract and 0 LP shares in their account balance
+        .query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
+            assert_eq!(result.unwrap(), Uint128::zero());
+        })
+        .query_balance(creator.to_string(), lp_denom, |result| {
+            assert_eq!(result.unwrap().amount, Uint128::zero());
+        })
+        // creator should 999_000 uwhale and 999_000 uluna (1M - MINIMUM_LIQUIDITY_AMOUNT)
+        .query_all_balances(creator.to_string(), |result| {
+            let balances = result.unwrap();
+            assert!(balances.iter().any(|coin| {
+                coin.denom == "uwhale".to_string()
+                    && coin.amount == Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
             }));
-        },
-    );
-
-    suite.query_amount_of_lp_token("whale-uluna".to_string(), creator.to_string(), |result| {
-        assert_eq!(result.unwrap(), Uint128::zero());
-    });
+            assert!(balances.iter().any(|coin| {
+                coin.denom == "uluna".to_string()
+                    && coin.amount == Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
+            }));
+        });
 }
 
 mod pair_creation_failures {
@@ -283,7 +283,6 @@ mod pair_creation_failures {
                 asset_infos,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 None,
                 vec![coin(90, "uusd")],
                 |result| {
@@ -350,7 +349,6 @@ mod pair_creation_failures {
                 asset_infos.clone(),
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("mycoolpair".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -362,7 +360,6 @@ mod pair_creation_failures {
                 asset_infos,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("mycoolpair".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -434,7 +431,6 @@ mod router {
                 first_pair,
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -446,7 +442,6 @@ mod router {
                 second_pair,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -468,16 +463,6 @@ mod router {
                     amount: Uint128::from(1000000u128),
                 },
             ],
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
@@ -489,16 +474,6 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
-            vec![
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uusd".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -643,7 +618,6 @@ mod router {
                 first_pair,
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -655,7 +629,6 @@ mod router {
                 second_pair,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -677,16 +650,6 @@ mod router {
                     amount: Uint128::from(1000000u128),
                 },
             ],
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
@@ -698,16 +661,6 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
-            vec![
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uusd".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -801,7 +754,6 @@ mod router {
                 first_pair,
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -813,7 +765,6 @@ mod router {
                 second_pair,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -835,16 +786,6 @@ mod router {
                     amount: Uint128::from(1000000u128),
                 },
             ],
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
@@ -856,16 +797,6 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
-            vec![
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uusd".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -975,7 +906,6 @@ mod router {
                 first_pair,
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -987,7 +917,6 @@ mod router {
                 second_pair,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1010,16 +939,6 @@ mod router {
                     amount: Uint128::from(liquidity_amount),
                 },
             ],
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(liquidity_amount),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(liquidity_amount),
-                },
-            ],
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
@@ -1031,16 +950,6 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
-            vec![
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(liquidity_amount),
-                },
-                Coin {
-                    denom: "uusd".to_string(),
-                    amount: Uint128::from(liquidity_amount),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -1219,7 +1128,6 @@ mod router {
                 first_pair,
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1231,7 +1139,6 @@ mod router {
                 second_pair,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1253,16 +1160,6 @@ mod router {
                     amount: Uint128::from(1000000u128),
                 },
             ],
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
@@ -1274,16 +1171,6 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
-            vec![
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uusd".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -1410,7 +1297,6 @@ mod swapping {
                 asset_infos,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1422,16 +1308,6 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1633,7 +1509,6 @@ mod swapping {
                 asset_infos,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1645,16 +1520,6 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1847,7 +1712,6 @@ mod swapping {
                 asset_infos,
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                false,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1859,16 +1723,6 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000_000000u128),
-                },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000_000000u128),
-                },
-            ],
             vec![
                 Coin {
                     denom: "uwhale".to_string(),

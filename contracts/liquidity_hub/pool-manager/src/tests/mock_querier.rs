@@ -3,20 +3,27 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::panic;
 
-use cosmwasm_std::testing::{MockQuerier, MockApi, MockStorage, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Coin, ContractInfoResponse, ContractResult, Empty,
-    OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError, SystemResult, Uint128, WasmQuery, CodeInfoResponse, HexBinary, Addr,
+    from_binary, from_slice, to_binary, Addr, CodeInfoResponse, Coin, ContractInfoResponse,
+    ContractResult, Empty, HexBinary, OwnedDeps, Querier, QuerierResult, QueryRequest, SystemError,
+    SystemResult, Uint128, WasmQuery,
 };
 use cw20::{BalanceResponse as Cw20BalanceResponse, Cw20QueryMsg, TokenInfoResponse};
-use white_whale_std::pool_network::temp_mock_api::MockSimpleApi;
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairInfo, PairType, TrioInfo};
-use white_whale_std::pool_network::factory::{NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg};
-use white_whale_std::pool_network::pair::{PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg, self};
+use white_whale_std::pool_network::factory::{
+    NativeTokenDecimalsResponse, QueryMsg as FactoryQueryMsg,
+};
+use white_whale_std::pool_network::pair::{
+    self, PoolResponse as PairPoolResponse, QueryMsg as PairQueryMsg,
+};
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
+use white_whale_std::pool_network::temp_mock_api::MockSimpleApi;
 use white_whale_std::pool_network::trio;
-use white_whale_std::pool_network::trio::{PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg};
+use white_whale_std::pool_network::trio::{
+    PoolResponse as TrioPoolResponse, QueryMsg as TrioQueryMsg,
+};
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
 pub fn mock_dependencies(
@@ -38,7 +45,6 @@ pub struct WasmMockQuerier {
     token_querier: TokenQuerier,
     pool_factory_querier: PoolFactoryQuerier,
 }
-
 
 #[derive(Clone, Default)]
 pub struct TokenQuerier {
@@ -121,57 +127,57 @@ impl Querier for WasmMockQuerier {
 impl WasmMockQuerier {
     pub fn handle_query(&self, request: &QueryRequest<Empty>) -> QuerierResult {
         match &request {
-            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => {
-                match from_binary(msg) {
-                    Ok(white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier }) => {
-                        
-                        match self
-                            .pool_factory_querier
-                            .pairs
-                            .get(&pair_identifier)
-                        {
-                            Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No pair info exists".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+            QueryRequest::Wasm(WasmQuery::Smart { contract_addr, msg }) => match from_binary(msg) {
+                Ok(white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier }) => {
+                    match self.pool_factory_querier.pairs.get(&pair_identifier) {
+                        Some(v) => SystemResult::Ok(ContractResult::Ok(to_binary(v).unwrap())),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No pair info exists".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    Ok(white_whale_std::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
-                        match self.pool_factory_querier.native_token_decimals.get(&denom) {
-                            Some(decimals) => SystemResult::Ok(ContractResult::Ok(
-                                to_binary(&NativeTokenDecimalsResponse {
-                                    decimals: *decimals,
-                                })
-                                .unwrap(),
-                            )),
-                            None => SystemResult::Err(SystemError::InvalidRequest {
-                                error: "No decimal info exist".to_string(),
-                                request: msg.as_slice().into(),
-                            }),
-                        }
+                }
+                Ok(white_whale_std::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
+                    match self.pool_factory_querier.native_token_decimals.get(&denom) {
+                        Some(decimals) => SystemResult::Ok(ContractResult::Ok(
+                            to_binary(&NativeTokenDecimalsResponse {
+                                decimals: *decimals,
+                            })
+                            .unwrap(),
+                        )),
+                        None => SystemResult::Err(SystemError::InvalidRequest {
+                            error: "No decimal info exist".to_string(),
+                            request: msg.as_slice().into(),
+                        }),
                     }
-                    _ => match from_binary(msg) {
-                       
-                        Ok(white_whale_std::pool_manager::QueryMsg::Simulation { offer_asset, ask_asset, pair_identifier }) => {
-                            SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
-                                return_amount: offer_asset.amount,
-                                swap_fee_amount: Uint128::zero(),
-                                spread_amount: Uint128::zero(),
-                                protocol_fee_amount: Uint128::zero(),
-                                burn_fee_amount: Uint128::zero(),
-                            })))
-                        }
-                        Ok(white_whale_std::pool_manager::QueryMsg::ReverseSimulation { ask_asset, offer_asset, pair_identifier }) => SystemResult::Ok(
-                            ContractResult::from(to_binary(&ReverseSimulationResponse {
-                                offer_amount: ask_asset.amount,
-                                swap_fee_amount: Uint128::zero(),
-                                spread_amount: Uint128::zero(),
-                                protocol_fee_amount: Uint128::zero(),
-                                burn_fee_amount: Uint128::zero(),
-                            })),
-                        ),
-                        _ => match from_binary(msg).unwrap() {
+                }
+                _ => match from_binary(msg) {
+                    Ok(white_whale_std::pool_manager::QueryMsg::Simulation {
+                        offer_asset,
+                        ask_asset,
+                        pair_identifier,
+                    }) => SystemResult::Ok(ContractResult::from(to_binary(&SimulationResponse {
+                        return_amount: offer_asset.amount,
+                        swap_fee_amount: Uint128::zero(),
+                        spread_amount: Uint128::zero(),
+                        protocol_fee_amount: Uint128::zero(),
+                        burn_fee_amount: Uint128::zero(),
+                    }))),
+                    Ok(white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
+                        ask_asset,
+                        offer_asset,
+                        pair_identifier,
+                    }) => SystemResult::Ok(ContractResult::from(to_binary(
+                        &ReverseSimulationResponse {
+                            offer_amount: ask_asset.amount,
+                            swap_fee_amount: Uint128::zero(),
+                            spread_amount: Uint128::zero(),
+                            protocol_fee_amount: Uint128::zero(),
+                            burn_fee_amount: Uint128::zero(),
+                        },
+                    ))),
+                    _ => {
+                        match from_binary(msg).unwrap() {
                             Cw20QueryMsg::TokenInfo {} => {
                                 let balances: &HashMap<String, Uint128> =
                                 match self.token_querier.balances.get(contract_addr) {
@@ -235,10 +241,10 @@ impl WasmMockQuerier {
                             }
 
                             _ => panic!("DO NOT ENTER HERE"),
-                        },
-                    },
-                }
-            }
+                        }
+                    }
+                },
+            },
             QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {
                 let mut contract_info_response = ContractInfoResponse::default();
                 contract_info_response.code_id = 0u64;
@@ -248,7 +254,7 @@ impl WasmMockQuerier {
                 SystemResult::Ok(ContractResult::Ok(
                     to_binary(&contract_info_response).unwrap(),
                 ))
-            },
+            }
             QueryRequest::Wasm(WasmQuery::CodeInfo { code_id }) => {
                 let mut default = CodeInfoResponse::default();
 
@@ -256,7 +262,10 @@ impl WasmMockQuerier {
                     11 => {
                         default.code_id = 67;
                         default.creator = Addr::unchecked("creator").to_string();
-                        default.checksum =HexBinary::from_hex(&sha256::digest(format!("code_checksum_{}", code_id)))
+                        default.checksum = HexBinary::from_hex(&sha256::digest(format!(
+                            "code_checksum_{}",
+                            code_id
+                        )))
                         .unwrap();
                         SystemResult::Ok(to_binary(&default).into())
                     }

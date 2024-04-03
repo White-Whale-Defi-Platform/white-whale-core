@@ -38,7 +38,7 @@ pub fn perform_swap(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
 ) -> Result<SwapResult, ContractError> {
-    let mut pair_info = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+    let mut pair_info = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
     let pools = &pair_info.assets;
 
     // compute the offer and ask pool
@@ -100,11 +100,11 @@ pub fn perform_swap(
     if offer_asset.denom == pools[0].denom {
         pair_info.assets[0].amount += offer_amount;
         pair_info.assets[1].amount -= swap_computation.return_amount;
-        PAIRS.save(deps.storage, pair_identifier, &pair_info)?;
+        PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
     } else {
         pair_info.assets[1].amount += offer_amount;
         pair_info.assets[0].amount -= swap_computation.return_amount;
-        PAIRS.save(deps.storage, pair_identifier, &pair_info)?;
+        PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
     }
 
     // TODO: Might be handy to make the below fees into a helper method

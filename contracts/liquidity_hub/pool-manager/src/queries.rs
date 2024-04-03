@@ -34,7 +34,7 @@ pub fn query_simulation(
     _ask_asset: Coin,
     pair_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, pair_identifier)?;
+    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Coin;
@@ -104,7 +104,7 @@ pub fn query_reverse_simulation(
     _offer_asset: Coin,
     pair_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, pair_identifier)?;
+    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
 
     let decimals = get_decimals(&pair_info);

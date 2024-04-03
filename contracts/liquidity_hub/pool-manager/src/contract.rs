@@ -53,7 +53,6 @@ pub fn execute(
             asset_denoms,
             pool_fees,
             pair_type,
-            token_factory_lp,
             pair_identifier,
         } => manager::commands::create_pair(
             deps,
@@ -62,11 +61,9 @@ pub fn execute(
             asset_denoms,
             pool_fees,
             pair_type,
-            token_factory_lp,
             pair_identifier,
         ),
         ExecuteMsg::ProvideLiquidity {
-            assets,
             slippage_tolerance,
             receiver,
             pair_identifier,
@@ -74,7 +71,6 @@ pub fn execute(
             deps,
             env,
             info,
-            assets,
             slippage_tolerance,
             receiver,
             pair_identifier,
@@ -106,16 +102,16 @@ pub fn execute(
                 pair_identifier,
             )
         }
-        ExecuteMsg::WithdrawLiquidity {
-            assets: _,
-            pair_identifier,
-        } => liquidity::commands::withdraw_liquidity(
-            deps,
-            env,
-            info.sender,
-            info.funds[0].amount,
-            pair_identifier,
-        ),
+        ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
+            liquidity::commands::withdraw_liquidity(
+                deps,
+                env,
+                // TODO: why not sending info instead? there's no check that funds are sent
+                info.sender,
+                info.funds[0].amount,
+                pair_identifier,
+            )
+        }
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             manager::commands::add_native_token_decimals(deps, env, denom, decimals)
         }
@@ -233,9 +229,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-        QueryMsg::Pair { pair_identifier } => {
-            Ok(to_json_binary(&PAIRS.load(deps.storage, pair_identifier)?)?)
-        }
+        QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(
+            &PAIRS.load(deps.storage, &pair_identifier)?,
+        )?),
     }
 }
 
