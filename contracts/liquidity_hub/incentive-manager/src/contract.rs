@@ -11,9 +11,8 @@ use white_whale_std::vault_manager::MigrateMsg;
 
 use crate::error::ContractError;
 use crate::helpers::validate_emergency_unlock_penalty;
-use crate::position::commands::{close_position, fill_position, withdraw_position};
 use crate::state::CONFIG;
-use crate::{incentive, manager, queries};
+use crate::{incentive, manager, position, queries};
 
 const CONTRACT_NAME: &str = "white-whale_incentive-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -112,15 +111,23 @@ pub fn execute(
                 identifier,
                 unlocking_duration,
                 receiver,
-            } => fill_position(deps, info, identifier, unlocking_duration, receiver),
+            } => position::commands::fill_position(
+                deps,
+                info,
+                identifier,
+                unlocking_duration,
+                receiver,
+            ),
             PositionAction::Close {
                 identifier,
                 lp_asset,
-            } => close_position(deps, env, info, identifier, lp_asset),
+            } => position::commands::close_position(deps, env, info, identifier, lp_asset),
             PositionAction::Withdraw {
                 identifier,
                 emergency_unlock,
-            } => withdraw_position(deps, env, info, identifier, emergency_unlock),
+            } => {
+                position::commands::withdraw_position(deps, env, info, identifier, emergency_unlock)
+            }
         },
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,

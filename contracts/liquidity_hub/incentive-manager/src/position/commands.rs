@@ -195,9 +195,10 @@ pub(crate) fn withdraw_position(
         },
     )?;
 
-    if position.receiver != info.sender {
-        return Err(ContractError::Unauthorized);
-    }
+    ensure!(
+        position.receiver == info.sender,
+        ContractError::Unauthorized
+    );
 
     let mut messages: Vec<CosmosMsg> = vec![];
 

@@ -18,29 +18,21 @@ pub const POSITION_ID_COUNTER: Item<u64> = Item::new("position_id_counter");
 pub const POSITIONS: IndexedMap<&str, Position, PositionIndexes> = IndexedMap::new(
     "positions",
     PositionIndexes {
-        lp_asset: MultiIndex::new(
-            |_pk, p| p.lp_asset.to_string(),
-            "positions",
-            "positions__lp_asset",
-        ),
         receiver: MultiIndex::new(
             |_pk, p| p.receiver.to_string(),
             "positions",
             "positions__receiver",
         ),
-        open: MultiIndex::new(|_pk, p| p.open.to_string(), "positions", "positions__open"),
     },
 );
 
 pub struct PositionIndexes<'a> {
-    pub lp_asset: MultiIndex<'a, String, Position, String>,
     pub receiver: MultiIndex<'a, String, Position, String>,
-    pub open: MultiIndex<'a, String, Position, String>,
 }
 
 impl<'a> IndexList<Position> for PositionIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Position>> + '_> {
-        let v: Vec<&dyn Index<Position>> = vec![&self.lp_asset, &self.receiver, &self.open];
+        let v: Vec<&dyn Index<Position>> = vec![&self.receiver];
         Box::new(v.into_iter())
     }
 }
