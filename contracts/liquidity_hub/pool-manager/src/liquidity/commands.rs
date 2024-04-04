@@ -57,6 +57,8 @@ pub fn provide_liquidity(
     let mut assets = info.funds.clone();
     let mut messages: Vec<CosmosMsg> = vec![];
 
+    //TODO verify that the assets sent in info match the ones from the pool!!!
+
     for (i, pool) in assets.iter_mut().enumerate() {
         // Increment the pool asset amount by the amount sent
         pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount)?;

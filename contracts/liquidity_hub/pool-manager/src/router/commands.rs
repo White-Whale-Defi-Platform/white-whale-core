@@ -155,7 +155,7 @@ pub fn execute_swap_operations(
             ("receiver", to.as_str()),
             ("offer_info", offer_asset.denom.to_string().as_str()),
             ("offer_amount", &offer_asset.amount.to_string()),
-            ("return_info", &target_asset_denom),
+            ("return_denom", &target_asset_denom),
             ("return_amount", &receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))
