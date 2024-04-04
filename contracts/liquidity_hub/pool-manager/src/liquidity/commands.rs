@@ -1,5 +1,5 @@
-use cosmwasm_std::{to_json_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
     helpers::{self},
@@ -12,7 +12,6 @@ use crate::{
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
-use cw20::Cw20ExecuteMsg;
 use white_whale_std::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
     U256,
@@ -21,13 +20,10 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
 
 /// Gets the protocol fee amount for the given asset_id
-pub fn get_protocol_fee_for_asset(
-    collected_protocol_fees: Vec<Asset>,
-    asset_id: String,
-) -> Uint128 {
+pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: String) -> Uint128 {
     let protocol_fee_asset = collected_protocol_fees
         .iter()
-        .find(|&protocol_fee_asset| protocol_fee_asset.clone().get_id() == asset_id.clone())
+        .find(|&protocol_fee_asset| protocol_fee_asset.clone().denom == asset_id.clone())
         .cloned();
 
     // get the protocol fee for the given pool_asset
@@ -42,7 +38,6 @@ pub fn provide_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    mut assets: Vec<Asset>,
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
     pair_identifier: String,
@@ -54,32 +49,21 @@ pub fn provide_liquidity(
             "provide_liquidity".to_string(),
         ));
     }
-    // Verify native assets are sent
-    for asset in assets.iter() {
-        asset.assert_sent_native_token_balance(&info)?;
-    }
+
     // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier.clone())?;
+    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
 
     let mut pool_assets = pair.assets.clone();
+    let mut assets = info.funds.clone();
     let mut messages: Vec<CosmosMsg> = vec![];
 
+    //TODO verify that the assets sent in info match the ones from the pool!!!
+
     for (i, pool) in assets.iter_mut().enumerate() {
-        // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.to_string(),
-                msg: to_json_binary(&Cw20ExecuteMsg::TransferFrom {
-                    owner: info.sender.to_string(),
-                    recipient: env.contract.address.clone().to_string(),
-                    amount: pool.amount,
-                })?,
-                funds: vec![],
-            }));
-        }
         // Increment the pool asset amount by the amount sent
-        pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount).unwrap();
+        pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount)?;
     }
+
     // After totting up the pool assets we need to check if any of them are zero
     if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
         return Err(ContractError::InvalidZeroAmount {});
@@ -88,18 +72,15 @@ pub fn provide_liquidity(
     // // deduct protocol fee from pools
     // TODO: Replace with fill rewards msg
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
-        .load(deps.storage, &pair.liquidity_token.to_string())
+        .load(deps.storage, &pair.lp_denom)
         .unwrap_or_default();
     for pool in pool_assets.iter_mut() {
         let protocol_fee =
-            get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().get_id());
+            get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().denom);
         pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
     }
 
-    let liquidity_token = match pair.liquidity_token.clone() {
-        AssetInfo::Token { contract_addr } => deps.api.addr_validate(&contract_addr)?.to_string(),
-        AssetInfo::NativeToken { denom } => denom,
-    };
+    let liquidity_token = pair.lp_denom.clone();
 
     // Compute share and other logic based on the number of assets
     let _share = Uint128::zero();
@@ -110,6 +91,7 @@ pub fn provide_liquidity(
             if total_share == Uint128::zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                 // depositor preventing small liquidity providers from joining the pool
+
                 let share = Uint128::new(
                     (U256::from(pool_assets[0].amount.u128())
                         .checked_mul(U256::from(pool_assets[1].amount.u128()))
@@ -129,10 +111,10 @@ pub fn provide_liquidity(
                 }
 
                 messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-                    liquidity_token,
-                    &info.sender,
+                    liquidity_token.clone(),
                     &env.contract.address,
-                    share,
+                    &env.contract.address,
+                    MINIMUM_LIQUIDITY_AMOUNT,
                 )?);
 
                 share
@@ -173,13 +155,6 @@ pub fn provide_liquidity(
                     total_share,
                 )?;
 
-                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-                    liquidity_token,
-                    &info.sender,
-                    &env.contract.address,
-                    amount,
-                )?);
-
                 share
             }
         }
@@ -192,8 +167,17 @@ pub fn provide_liquidity(
 
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
+
+    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+        liquidity_token,
+        &info.sender,
+        &env.contract.address,
+        share,
+    )?);
+
     pair.assets = pool_assets.clone();
-    PAIRS.save(deps.storage, pair_identifier, &pair)?;
+    PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "provide_liquidity"),
         ("sender", info.sender.as_str()),
@@ -214,7 +198,7 @@ pub fn provide_liquidity(
 /// the swap fees accrued by its share of the pool.
 pub fn withdraw_liquidity(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     sender: Addr,
     amount: Uint128,
     pair_identifier: String,
@@ -226,57 +210,49 @@ pub fn withdraw_liquidity(
             "withdraw_liquidity".to_string(),
         ));
     }
-    // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), pair_identifier)?;
 
-    let liquidity_token = match pair.liquidity_token {
-        AssetInfo::Token { contract_addr } => contract_addr,
-        AssetInfo::NativeToken { denom } => denom,
-    };
+    // Get the pair by the pair_identifier
+    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
+    let liquidity_token = pair.lp_denom.clone();
+
     // Get the total share of the pool
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
     // Get the ratio of the amount to withdraw to the total share
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
+
     // Use the ratio to calculate the amount of each pool asset to refund
-    let refund_assets: Result<Vec<Asset>, OverflowError> = pair
+    let refund_assets: Vec<Coin> = pair
         .assets
         .iter()
         .map(|pool_asset| {
-            // Calc fees and use FillRewards message
-            // let protocol_fee = get_protocol_fee_for_asset(
-            //     collected_protocol_fees.clone(),
-            //     pool_asset.clone().get_id(),
-            // );
-
-            // subtract the protocol_fee from the amount of the pool_asset
             let refund_amount = pool_asset.amount;
-            Ok(Asset {
-                info: pool_asset.info.clone(),
+            Ok(Coin {
+                denom: pool_asset.denom.clone(),
                 amount: refund_amount * share_ratio,
             })
         })
-        .collect();
+        .collect::<Result<Vec<Coin>, OverflowError>>()?;
 
-    let refund_assets = refund_assets?;
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    // TODO: Combine the two below for loops to improve BigO time
     // Transfer the refund assets to the sender
-    for asset in refund_assets.clone() {
-        messages.push(asset.clone().into_msg(sender.clone())?);
-    }
+    messages.push(CosmosMsg::Bank(BankMsg::Send {
+        to_address: sender.to_string(),
+        amount: refund_assets.clone(),
+    }));
+
     // Deduct balances on pair_info by the amount of each refund asset
     for (i, pool_asset) in pair.assets.iter_mut().enumerate() {
-        pool_asset.amount = pool_asset
-            .amount
-            .checked_sub(refund_assets[i].amount)
-            .unwrap();
+        pool_asset.amount = pool_asset.amount.checked_sub(refund_assets[i].amount)?;
     }
+
+    PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+
     // Burn the LP tokens
     messages.push(white_whale_std::lp_common::burn_lp_asset_msg(
         liquidity_token,
-        sender.clone(),
+        env.contract.address,
         amount,
     )?);
 
