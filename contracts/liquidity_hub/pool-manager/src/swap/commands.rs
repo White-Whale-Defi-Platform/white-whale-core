@@ -79,8 +79,8 @@ pub fn swap(
         ("action", "swap"),
         ("sender", sender.as_str()),
         ("receiver", receiver.as_str()),
-        ("offer_asset", &offer_asset.denom),
-        ("ask_asset", &swap_result.return_asset.denom),
+        ("offer_denom", &offer_asset.denom),
+        ("ask_denom", &swap_result.return_asset.denom),
         ("offer_amount", &offer_asset.amount.to_string()),
         (
             "return_amount",
