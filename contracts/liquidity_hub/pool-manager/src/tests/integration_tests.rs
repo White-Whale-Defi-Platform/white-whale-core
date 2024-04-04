@@ -78,6 +78,7 @@ fn verify_ownership() {
         });
 }
 
+// add features `token_factory` so tests are compiled using the correct flag
 #[test]
 fn deposit_and_withdraw_sanity_check() {
     let mut suite = TestingSuite::default_with_balances(vec![

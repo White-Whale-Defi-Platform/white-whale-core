@@ -55,9 +55,10 @@ pub fn execute_swap_operations(
         .get_input_asset_info();
 
     let offer_asset = Coin {
-        denom: offer_asset_denom.to_owned(),
+        denom: offer_asset_denom.to_string(),
         amount: cw_utils::must_pay(&info, offer_asset_denom)?,
-    };
+    }
+    .clone();
 
     assert_operations(operations.clone())?;
 
@@ -152,7 +153,7 @@ pub fn execute_swap_operations(
             ("action", "execute_swap_operations"),
             ("sender", info.sender.as_str()),
             ("receiver", to.as_str()),
-            ("offer_info", &offer_asset.denom),
+            ("offer_info", offer_asset.denom.to_string().as_str()),
             ("offer_amount", &offer_asset.amount.to_string()),
             ("return_info", &target_asset_denom),
             ("return_amount", &receiver_balance.to_string()),
