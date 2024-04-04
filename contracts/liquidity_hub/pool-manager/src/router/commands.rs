@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Response, Uint128,
+    attr, coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Response, Uint128,
 };
 use white_whale_std::pool_manager::SwapOperation;
 
@@ -57,8 +57,7 @@ pub fn execute_swap_operations(
     let offer_asset = Coin {
         denom: offer_asset_denom.to_string(),
         amount: cw_utils::must_pay(&info, offer_asset_denom)?,
-    }
-    .clone();
+    };
 
     assert_operations(operations.clone())?;
 
@@ -150,13 +149,13 @@ pub fn execute_swap_operations(
         })
         .add_messages(fee_messages)
         .add_attributes(vec![
-            ("action", "execute_swap_operations"),
-            ("sender", info.sender.as_str()),
-            ("receiver", to.as_str()),
-            ("offer_info", offer_asset.denom.to_string().as_str()),
-            ("offer_amount", &offer_asset.amount.to_string()),
-            ("return_denom", &target_asset_denom),
-            ("return_amount", &receiver_balance.to_string()),
+            attr("action", "execute_swap_operations"),
+            attr("sender", info.sender.as_str()),
+            attr("receiver", to.as_str()),
+            attr("offer_info", offer_asset.denom),
+            attr("offer_amount", offer_asset.amount),
+            attr("return_denom", &target_asset_denom),
+            attr("return_amount", receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))
 }
