@@ -3,7 +3,7 @@ extern crate core;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
 use incentive_manager::ContractError;
-use white_whale_std::incentive_manager::{IncentiveAction, IncentiveParams, IncentivesBy};
+use white_whale_std::incentive_manager::{Config, IncentiveAction, IncentiveParams, IncentivesBy};
 
 use crate::common::suite::TestingSuite;
 use crate::common::MOCK_CONTRACT_ADDR;
@@ -88,68 +88,6 @@ fn instantiate_incentive_manager() {
         31_536_000,
         Decimal::percent(10), //10% penalty
     );
-}
-
-#[test]
-fn verify_ownership() {
-    let mut suite = TestingSuite::default_with_balances(vec![]);
-    let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
-
-    suite
-        .instantiate_default()
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), creator);
-        })
-        .update_ownership(
-            unauthorized,
-            cw_ownable::Action::TransferOwnership {
-                new_owner: other.to_string(),
-                expiry: None,
-            },
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::OwnershipError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
-                }
-            },
-        )
-        .update_ownership(
-            creator,
-            cw_ownable::Action::TransferOwnership {
-                new_owner: other.to_string(),
-                expiry: None,
-            },
-            |result| {
-                result.unwrap();
-            },
-        )
-        .update_ownership(
-            other.clone(),
-            cw_ownable::Action::AcceptOwnership,
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), other);
-        })
-        .update_ownership(
-            other.clone(),
-            cw_ownable::Action::RenounceOwnership,
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert!(ownership.owner.is_none());
-        });
 }
 
 #[test]
@@ -874,4 +812,272 @@ fn close_incentives() {
         .query_balance("ulab".to_string(), other.clone(), |balance| {
             assert_eq!(balance, Uint128::new(100_000_0000));
         });
+}
+
+#[test]
+fn verify_ownership() {
+    let mut suite = TestingSuite::default_with_balances(vec![]);
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let unauthorized = suite.senders[2].clone();
+
+    suite
+        .instantiate_default()
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), creator);
+        })
+        .update_ownership(
+            unauthorized,
+            cw_ownable::Action::TransferOwnership {
+                new_owner: other.to_string(),
+                expiry: None,
+            },
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            },
+        )
+        .update_ownership(
+            creator,
+            cw_ownable::Action::TransferOwnership {
+                new_owner: other.to_string(),
+                expiry: None,
+            },
+            |result| {
+                result.unwrap();
+            },
+        )
+        .update_ownership(
+            other.clone(),
+            cw_ownable::Action::AcceptOwnership,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), other);
+        })
+        .update_ownership(
+            other.clone(),
+            cw_ownable::Action::RenounceOwnership,
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_ownership(|result| {
+            let ownership = result.unwrap();
+            assert!(ownership.owner.is_none());
+        });
+}
+
+#[test]
+fn test_epoch_change_hook() {}
+
+#[test]
+pub fn update_config() {
+    let lp_denom = "factory/pool/uLP".to_string();
+
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "ulab".to_string()),
+        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, lp_denom.clone()),
+    ]);
+
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let another = suite.senders[2].clone();
+
+    suite.instantiate_default();
+
+    let whale_lair = suite.whale_lair_addr.clone();
+    let epoch_manager = suite.epoch_manager_addr.clone();
+
+    let expected_config = Config {
+        whale_lair_addr: whale_lair,
+        epoch_manager_addr: epoch_manager,
+        create_incentive_fee: Coin {
+            denom: "uwhale".to_string(),
+            amount: Uint128::new(1_000u128),
+        },
+        max_concurrent_incentives: 2u32,
+        max_incentive_epoch_buffer: 14u32,
+        min_unlocking_duration: 86_400u64,
+        max_unlocking_duration: 31_536_000u64,
+        emergency_unlock_penalty: Decimal::percent(10),
+    };
+
+    suite.query_config(|result| {
+            let config = result.unwrap();
+            assert_eq!(config, expected_config);
+        })
+        .update_config(
+            other.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(3u32),
+            Some(15u32),
+                 Some(172_800u64),
+                Some(864_000u64),
+                Some(Decimal::percent(50)),
+            vec![coin(1_000, "uwhale")],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            }
+        ) .update_config(
+            other.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(0u32),
+            Some(15u32),
+                 Some(172_800u64),
+                Some(864_000u64),
+                Some(Decimal::percent(50)),
+            vec![],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
+                }
+            }
+        ).update_config(
+            creator.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(0u32),
+            Some(15u32),
+                 Some(172_800u64),
+                Some(864_000u64),
+                Some(Decimal::percent(50)),
+            vec![],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::UnspecifiedConcurrentIncentives { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::UnspecifiedConcurrentIncentives"),
+                }
+            }
+        ).update_config(
+            creator.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(5u32),
+            Some(15u32),
+                 Some(80_800u64),
+                Some(80_000u64),
+                Some(Decimal::percent(50)),
+            vec![],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidUnbondingRange { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidUnbondingRange"),
+                }
+            }
+        ).update_config(
+            creator.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(5u32),
+            Some(15u32),
+                 Some(300_000u64),
+                Some(200_000u64),
+                Some(Decimal::percent(50)),
+            vec![],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidUnbondingRange { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidUnbondingRange"),
+                }
+            }
+        ).update_config(
+            creator.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(5u32),
+            Some(15u32),
+                 Some(100_000u64),
+                Some(200_000u64),
+                Some(Decimal::percent(105)),
+            vec![],
+            |result|{
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidEmergencyUnlockPenalty { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::InvalidEmergencyUnlockPenalty"),
+                }
+            }
+        ).update_config(
+            creator.clone(),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+            Some(MOCK_CONTRACT_ADDR.to_string()),
+                Some(Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(2_000u128),
+                }),
+                Some(5u32),
+            Some(15u32),
+                 Some(100_000u64),
+                Some(200_000u64),
+                Some(Decimal::percent(20)),
+            vec![],
+            |result|{
+                result.unwrap();
+            }
+        );
+
+    let expected_config = Config {
+        whale_lair_addr: Addr::unchecked(MOCK_CONTRACT_ADDR),
+        epoch_manager_addr: Addr::unchecked(MOCK_CONTRACT_ADDR),
+        create_incentive_fee: Coin {
+            denom: "uwhale".to_string(),
+            amount: Uint128::new(2_000u128),
+        },
+        max_concurrent_incentives: 5u32,
+        max_incentive_epoch_buffer: 15u32,
+        min_unlocking_duration: 100_000u64,
+        max_unlocking_duration: 200_000u64,
+        emergency_unlock_penalty: Decimal::percent(20),
+    };
+
+    suite.query_config(|result| {
+        let config = result.unwrap();
+        assert_eq!(config, expected_config);
+    });
 }
