@@ -746,6 +746,7 @@ dependencies = [
 name = "incentive-manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
@@ -755,11 +756,15 @@ dependencies = [
  "cw2",
  "cw20",
  "cw20-base",
+ "epoch-manager",
  "schemars",
  "semver",
  "serde",
+ "terraswap-pair",
  "thiserror",
+ "whale-lair",
  "white-whale-std",
+ "white-whale-testing",
 ]
 
 [[package]]
