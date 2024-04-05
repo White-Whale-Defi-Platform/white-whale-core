@@ -735,3 +735,143 @@ fn expand_incentives() {
             },
         );
 }
+#[test]
+fn close_incentives() {
+    let lp_denom = "factory/pool/uLP".to_string();
+
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "ulab".to_string()),
+        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, lp_denom.clone()),
+    ]);
+
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let another = suite.senders[2].clone();
+
+    suite
+        .instantiate_default()
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(4_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(4_000, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Close {
+                incentive_identifier: "incentive_1".to_string(),
+            },
+            vec![coin(1_000, "uwhale")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Close {
+                incentive_identifier: "incentive_2".to_string(),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::NonExistentIncentive { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::NonExistentIncentive"
+                    ),
+                }
+            },
+        )
+        .manage_incentive(
+            another.clone(),
+            IncentiveAction::Close {
+                incentive_identifier: "incentive_1".to_string(),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .query_balance("ulab".to_string(), other.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(99_999_6000));
+        })
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Close {
+                incentive_identifier: "incentive_1".to_string(),
+            },
+            vec![],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_balance("ulab".to_string(), other.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(100_000_0000));
+        });
+
+    suite
+        .instantiate_default()
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(4_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(4_000, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_balance("ulab".to_string(), other.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(99_999_6000));
+        })
+        // the owner of the contract can also close incentives
+        .manage_incentive(
+            creator.clone(),
+            IncentiveAction::Close {
+                incentive_identifier: "incentive_1".to_string(),
+            },
+            vec![],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_balance("ulab".to_string(), other.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(100_000_0000));
+        });
+}
