@@ -115,7 +115,9 @@ fn create_incentive(
         .incentive_identifier
         .unwrap_or(incentive_id.to_string());
 
-    // make sure another incentive with the same identifier doesn't exist
+    // sanity check. Make sure another incentive with the same identifier doesn't exist. Theoretically this should
+    // never happen, since the fill_incentive function would try to expand the incentive if a user tries
+    // filling an incentive with an identifier that already exists
     ensure!(
         get_incentive_by_identifier(deps.storage, &incentive_identifier).is_err(),
         ContractError::IncentiveAlreadyExists

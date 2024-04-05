@@ -11,7 +11,7 @@ use white_whale_std::vault_manager::MigrateMsg;
 
 use crate::error::ContractError;
 use crate::helpers::validate_emergency_unlock_penalty;
-use crate::state::CONFIG;
+use crate::state::{CONFIG, INCENTIVE_COUNTER};
 use crate::{incentive, manager, position, queries};
 
 const CONTRACT_NAME: &str = "white-whale_incentive-manager";
@@ -53,7 +53,7 @@ pub fn instantiate(
     };
 
     CONFIG.save(deps.storage, &config)?;
-
+    INCENTIVE_COUNTER.save(deps.storage, &0)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
 
     Ok(Response::default().add_attributes(vec![

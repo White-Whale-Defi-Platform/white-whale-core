@@ -6,7 +6,7 @@ use cw_multi_test::{
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
 
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
 use white_whale_std::incentive_manager::{
     Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, PositionAction,
     PositionsResponse, RewardsResponse,
@@ -17,7 +17,7 @@ use white_whale_std::pool_network::pair::{PoolFee, SimulationResponse};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
-    epoch_manager_contract, incentive_manager_contract, pair_contract, whale_lair_contract,
+    epoch_manager_contract, incentive_manager_contract, whale_lair_contract,
 };
 use crate::common::MOCK_CONTRACT_ADDR;
 
@@ -53,46 +53,6 @@ impl TestingSuite {
         let mut block_info = self.app.block_info();
         block_info.time = timestamp;
         self.app.set_block(block_info);
-
-        self
-    }
-
-    #[track_caller]
-    pub(crate) fn create_pool(
-        &mut self,
-        asset_infos: [AssetInfo; 2],
-        asset_decimals: [u8; 2],
-        pool_fees: PoolFee,
-        pair_type: PairType,
-        token_factory_lp: bool,
-    ) -> &mut Self {
-        let pair_id = self.app.store_code(pair_contract());
-        let fee_collector = self.create_epoch_manager();
-
-        // create whale lair
-        let msg = white_whale_std::pool_network::pair::InstantiateMsg {
-            asset_infos,
-            token_code_id: 100, //dummy value, we are using token factory
-            asset_decimals,
-            pool_fees,
-            fee_collector_addr: MOCK_CONTRACT_ADDR.to_string(), // doesn't matter, not gonna interact with it
-            pair_type,
-            token_factory_lp,
-        };
-
-        let creator = self.creator().clone();
-
-        self.pools.append(&mut vec![self
-            .app
-            .instantiate_contract(
-                pair_id,
-                creator.clone(),
-                &msg,
-                &[],
-                "pool",
-                Some(creator.into_string()),
-            )
-            .unwrap()]);
 
         self
     }
@@ -151,7 +111,7 @@ impl TestingSuite {
                 denom: "uwhale".to_string(),
                 amount: Uint128::new(1_000u128),
             },
-            7,
+            2,
             14,
             86_400,
             31_536_000,
@@ -196,7 +156,10 @@ impl TestingSuite {
 
         // create epoch manager
         let msg = white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
-            start_epoch: Default::default(),
+            start_epoch: Epoch {
+                id: 10,
+                start_time: Timestamp::from_nanos(1712242800_000000000u64),
+            },
             epoch_config: EpochConfig {
                 duration: Uint64::new(86400_000000000u64),
                 genesis_epoch: Uint64::new(1712242800_000000000u64), // April 4th 2024 15:00:00 UTC
@@ -519,41 +482,75 @@ impl TestingSuite {
     }
 }
 
-// pools interactions
+/// Epoch manager actions
 impl TestingSuite {
     #[track_caller]
-    pub(crate) fn provide_liquidity(
+    pub(crate) fn create_epoch(
         &mut self,
         sender: Addr,
-        assets: [Asset; 2],
-        pool: Addr,
-        funds: &[Coin],
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = ProvideLiquidity {
-            assets,
-            slippage_tolerance: None,
-            receiver: None,
-        };
+        let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
 
-        result(self.app.execute_contract(sender, pool, &msg, funds));
+        result(
+            self.app
+                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &vec![]),
+        );
 
         self
     }
 
     #[track_caller]
-    pub(crate) fn simulate_swap(
+    pub(crate) fn add_hook(
         &mut self,
-        offer_asset: Asset,
-        pool: Addr,
-        result: impl Fn(StdResult<SimulationResponse>),
+        sender: Addr,
+        contract_addr: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
-            pool,
-            &white_whale_std::pool_network::pair::QueryMsg::Simulation { offer_asset },
+        let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
+            contract_addr: contract_addr.to_string(),
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &funds),
         );
 
-        result(response);
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn remove_hook(
+        &mut self,
+        sender: Addr,
+        contract_addr: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::RemoveHook {
+            contract_addr: contract_addr.to_string(),
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_current_epoch(
+        &mut self,
+        result: impl Fn(StdResult<EpochResponse>),
+    ) -> &mut Self {
+        let current_epoch_response: StdResult<EpochResponse> = self.app.wrap().query_wasm_smart(
+            &self.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        );
+
+        result(current_epoch_response);
 
         self
     }

@@ -133,7 +133,7 @@ pub(crate) fn validate_incentive_epochs(
 
     // ensure that start date is before end date
     ensure!(
-        start_epoch <= preliminary_end_epoch,
+        start_epoch < preliminary_end_epoch,
         ContractError::IncentiveStartTimeAfterEndTime
     );
 

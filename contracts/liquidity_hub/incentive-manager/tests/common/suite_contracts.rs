@@ -36,16 +36,3 @@ pub fn epoch_manager_contract() -> Box<dyn Contract<Empty>> {
 
     Box::new(contract)
 }
-
-/// Creates a pair contract
-pub fn pair_contract() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(
-        terraswap_pair::contract::execute,
-        terraswap_pair::contract::instantiate,
-        terraswap_pair::contract::query,
-    )
-    .with_reply(terraswap_pair::contract::reply)
-    .with_migrate(terraswap_pair::contract::migrate);
-
-    Box::new(contract)
-}

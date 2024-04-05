@@ -1,3 +1,4 @@
+use std::clone::Clone;
 use std::string::ToString;
 
 use cosmwasm_std::{Addr, Order, StdResult, Storage, Uint128};
@@ -60,7 +61,7 @@ pub const INCENTIVES: IndexedMap<&str, Incentive, IncentiveIndexes> = IndexedMap
             "incentives__lp_asset",
         ),
         incentive_asset: MultiIndex::new(
-            |_pk, i| i.incentive_asset.to_string(),
+            |_pk, i| i.incentive_asset.denom.clone(),
             "incentives",
             "incentives__incentive_asset",
         ),

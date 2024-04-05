@@ -760,7 +760,6 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "terraswap-pair",
  "thiserror",
  "whale-lair",
  "white-whale-std",
