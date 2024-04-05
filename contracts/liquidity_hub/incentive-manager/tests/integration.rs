@@ -166,13 +166,6 @@ fn create_incentives() {
     let creator = suite.creator();
     let other = suite.senders[1].clone();
 
-    // suite
-    //     .instantiate_default()
-    //     .query_current_epoch(|result| {
-    //     let current_epoch = result.unwrap();
-    //     println!("Current epoch: {:?}", current_epoch);
-    // });
-
     // try all misconfigurations when creating an incentive
     suite
         .instantiate_default()
@@ -568,6 +561,177 @@ fn create_incentives() {
             |result| {
                 let incentives_response = result.unwrap();
                 assert_eq!(incentives_response.incentives.len(), 2);
+            },
+        );
+}
+
+#[test]
+fn expand_incentives() {
+    let lp_denom = "factory/pool/uLP".to_string();
+
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "ulab".to_string()),
+        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, lp_denom.clone()),
+    ]);
+
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+
+    suite
+        .instantiate_default()
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(4_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(4_000, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_incentive(
+            creator.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(8_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(4_000, "ulab")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::new(8_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(8_000, "uwhale")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::AssetMismatch { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
+                }
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(4_100u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(4_100, "ulab")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::InvalidExpansionAmount { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::InvalidExpansionAmount"
+                    ),
+                }
+            },
+        )
+        .query_incentives(
+            Some(IncentivesBy::Identifier("incentive_1".to_string())),
+            None,
+            None,
+            |result| {
+                let incentives_response = result.unwrap();
+                let incentive = incentives_response.incentives[0].clone();
+                assert_eq!(
+                    incentive.incentive_asset,
+                    Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(4_000)
+                    }
+                );
+
+                assert_eq!(incentive.preliminary_end_epoch, 28);
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(28),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(5_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(5_000u128, "ulab")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_incentives(
+            Some(IncentivesBy::Identifier("incentive_1".to_string())),
+            None,
+            None,
+            |result| {
+                let incentives_response = result.unwrap();
+                let incentive = incentives_response.incentives[0].clone();
+                assert_eq!(
+                    incentive.incentive_asset,
+                    Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(9_000)
+                    }
+                );
+
+                assert_eq!(incentive.preliminary_end_epoch, 38);
             },
         );
 }

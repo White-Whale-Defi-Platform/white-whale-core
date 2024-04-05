@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-use std::collections::HashMap;
 
 use crate::epoch_manager::hooks::EpochChangedHookMsg;
 
@@ -234,7 +235,8 @@ impl Incentive {
             .amount
             .saturating_sub(self.claimed_amount)
             < MIN_INCENTIVE_AMOUNT
-            || epoch_id >= self.last_epoch_claimed + DEFAULT_INCENTIVE_DURATION
+            || (epoch_id > self.start_epoch
+                && epoch_id >= self.last_epoch_claimed + DEFAULT_INCENTIVE_DURATION)
     }
 }
 
@@ -268,6 +270,7 @@ pub struct Position {
     /// The owner of the position.
     pub receiver: Addr,
 }
+
 #[cw_serde]
 pub enum RewardsResponse {
     RewardsResponse {

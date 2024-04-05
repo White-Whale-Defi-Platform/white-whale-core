@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     ensure, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response, StdError,
-    Storage, Uint128,
+    Storage, Uint128, Uint64,
 };
 
 use white_whale_std::coin::{get_subdenom, is_factory_token};
@@ -235,7 +235,7 @@ fn expand_incentive(
 
     // check if the incentive has already expired, can't be expanded
     ensure!(
-        incentive.is_expired(current_epoch.id),
+        !incentive.is_expired(current_epoch.id),
         ContractError::IncentiveAlreadyExpired
     );
 
@@ -258,7 +258,18 @@ fn expand_incentive(
         .incentive_asset
         .amount
         .checked_add(params.incentive_asset.amount)?;
-    // todo maybe increase the preliminary_end_epoch?
+
+    let additional_epochs = params
+        .incentive_asset
+        .amount
+        .checked_div(incentive.emission_rate)?;
+
+    // adjust the preliminary end_epoch
+    incentive.preliminary_end_epoch = incentive
+        .preliminary_end_epoch
+        .checked_add(Uint64::try_from(additional_epochs)?.u64())
+        .ok_or(ContractError::InvalidEndEpoch)?;
+
     INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
 
     Ok(Response::default().add_attributes(vec![
