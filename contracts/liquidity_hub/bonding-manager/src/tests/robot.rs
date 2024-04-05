@@ -1,25 +1,39 @@
-use cosmwasm_std::{coin, Addr, Coin, Decimal, StdResult, Uint64};
+use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
+use crate::contract::query;
+use crate::state::{EPOCHS, LAST_CLAIMED_EPOCH};
+use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::Epoch;
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
-use white_whale_std::whale_lair::{
+use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
+use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 use white_whale_testing::integration::contracts::{
-    store_fee_collector_code, store_fee_distributor_code, whale_lair_contract,
+    store_fee_collector_code, store_fee_distributor_code,
 };
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
-use crate::state::EPOCHS;
+pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        crate::contract::execute,
+        crate::contract::instantiate,
+        crate::contract::query,
+    )
+    .with_migrate(crate::contract::migrate);
 
+    Box::new(contract)
+}
 pub struct TestingRobot {
     app: App,
     pub sender: Addr,
     pub another_sender: Addr,
     whale_lair_addr: Addr,
+    owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
+    env: cosmwasm_std::Env,
 }
 
 /// instantiate / execute messages
@@ -54,7 +68,8 @@ impl TestingRobot {
             sender,
             another_sender,
             whale_lair_addr: Addr::unchecked(""),
-            owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
+            owned_deps: mock_dependencies(),
+            env: mock_env(),
         }
     }
 
@@ -108,6 +123,7 @@ impl TestingRobot {
         let whale_lair_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
+        println!("whale_lair_addr: {}", whale_lair_addr);
 
         let fee_distributor_address = self
             .app
@@ -143,7 +159,7 @@ impl TestingRobot {
             .execute_contract(self.sender.clone(), whale_lair_addr.clone(), &msg, &[])
             .unwrap();
         self.whale_lair_addr = whale_lair_addr;
-
+        println!("fee_distributor_address: {}", fee_distributor_address);
         self
     }
 
@@ -166,7 +182,7 @@ impl TestingRobot {
     pub(crate) fn bond(
         &mut self,
         sender: Addr,
-        asset: Asset,
+        asset: Coin,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -180,11 +196,10 @@ impl TestingRobot {
         self
     }
 
-
     pub(crate) fn unbond(
         &mut self,
         sender: Addr,
-        asset: Asset,
+        asset: Coin,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::Unbond { asset };
@@ -233,6 +248,31 @@ impl TestingRobot {
                 .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
         );
 
+        self
+    }
+
+    pub(crate) fn add_epochs_to_state(&mut self, epochs: Vec<Epoch>) -> &mut Self {
+        for epoch in epochs {
+            EPOCHS
+                .save(
+                    &mut self.owned_deps.storage,
+                    &epoch.id.to_be_bytes(),
+                    &epoch,
+                )
+                .unwrap();
+        }
+
+        self
+    }
+
+    pub(crate) fn add_last_claimed_epoch_to_state(
+        &mut self,
+        address: Addr,
+        epoch_id: Uint64,
+    ) -> &mut Self {
+        LAST_CLAIMED_EPOCH
+            .save(&mut self.owned_deps.storage, &address, &epoch_id)
+            .unwrap();
         self
     }
 }
@@ -302,6 +342,36 @@ impl TestingRobot {
         self
     }
 
+    // pub(crate) fn query_claimable_epochs(
+    //     &mut self,
+    //     address: Option<Addr>,
+    //     response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
+    // ) -> &mut Self {
+    //     let query_res = if let Some(address) = address {
+    //         query(
+    //             self.owned_deps.as_ref(),
+    //             self.env.clone(),
+    //             QueryMsg::Claimable {
+    //                 address: address.to_string(),
+    //             },
+    //         )
+    //         .unwrap()
+    //     } else {
+    //         query(
+    //             self.owned_deps.as_ref(),
+    //             self.env.clone(),
+    //             QueryMsg::ClaimableEpochs {},
+    //         )
+    //         .unwrap()
+    //     };
+
+    //     let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
+
+    //     response(Ok((self, res.epochs)));
+
+    //     self
+    // }
+
     pub(crate) fn query_bonded(
         &mut self,
         address: String,
@@ -359,6 +429,7 @@ impl TestingRobot {
                 &QueryMsg::Withdrawable { address, denom },
             )
             .unwrap();
+        println!("withdrawable_response: {:?}", withdrawable_response);
 
         response(Ok((self, withdrawable_response)));
 

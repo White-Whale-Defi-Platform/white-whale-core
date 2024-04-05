@@ -1,12 +1,15 @@
-use cosmwasm_std::{coins, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128};
 
-use white_whale_std::whale_lair::{Bond, BondedResponse, BondingWeightResponse, UnbondingResponse};
+use white_whale_std::bonding_manager::{
+    Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
+};
 
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::tests::robot::TestingRobot;
 
 #[test]
+#[track_caller]
 fn test_unbond_successfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
@@ -16,10 +19,8 @@ fn test_unbond_successfully() {
         .instantiate_default()
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -38,10 +39,8 @@ fn test_unbond_successfully() {
         )
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(300u128),
             },
             |_res| {},
@@ -53,10 +52,8 @@ fn test_unbond_successfully() {
             UnbondingResponse {
                 total_amount: Uint128::new(300u128),
                 unbonding_requests: vec![Bond {
-                    asset: Asset {
-                        info: AssetInfo::NativeToken {
-                            denom: "ampWHALE".to_string(),
-                        },
+                    asset: Coin {
+                        denom: "ampWHALE".to_string(),
                         amount: Uint128::new(300u128),
                     },
                     timestamp: Timestamp::from_nanos(1571797429879305533u64),
@@ -76,10 +73,8 @@ fn test_unbond_successfully() {
             sender.to_string(),
             BondedResponse {
                 total_bonded: Uint128::new(700u128),
-                bonded_assets: vec![Asset {
-                    info: AssetInfo::NativeToken {
-                        denom: "ampWHALE".to_string(),
-                    },
+                bonded_assets: vec![Coin {
+                    denom: "ampWHALE".to_string(),
                     amount: Uint128::new(700u128),
                 }],
                 first_bonded_epoch_id: Default::default(),
@@ -98,10 +93,8 @@ fn test_unbond_successfully() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(200u128),
             },
             |_res| {},
@@ -113,20 +106,16 @@ fn test_unbond_successfully() {
                 total_amount: Uint128::new(500u128),
                 unbonding_requests: vec![
                     Bond {
-                        asset: Asset {
-                            info: AssetInfo::NativeToken {
-                                denom: "ampWHALE".to_string(),
-                            },
+                        asset: Coin {
+                            denom: "ampWHALE".to_string(),
                             amount: Uint128::new(300u128),
                         },
                         timestamp: Timestamp::from_nanos(1571797429879305533u64),
                         weight: Uint128::zero(),
                     },
                     Bond {
-                        asset: Asset {
-                            info: AssetInfo::NativeToken {
-                                denom: "ampWHALE".to_string(),
-                            },
+                        asset: Coin {
+                            denom: "ampWHALE".to_string(),
                             amount: Uint128::new(200u128),
                         },
                         timestamp: Timestamp::from_nanos(1571797449879305533u64),
@@ -137,10 +126,8 @@ fn test_unbond_successfully() {
         )
         .bond(
             another_sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
+            Coin {
+                denom: "bWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "bWHALE"),
@@ -153,16 +140,12 @@ fn test_unbond_successfully() {
                 BondedResponse {
                     total_bonded: Uint128::new(1_500u128),
                     bonded_assets: vec![
-                        Asset {
-                            info: AssetInfo::NativeToken {
-                                denom: "ampWHALE".to_string(),
-                            },
+                        Coin {
+                            denom: "ampWHALE".to_string(),
                             amount: Uint128::new(500u128),
                         },
-                        Asset {
-                            info: AssetInfo::NativeToken {
-                                denom: "bWHALE".to_string(),
-                            },
+                        Coin {
+                            denom: "bWHALE".to_string(),
                             amount: Uint128::new(1_000u128),
                         },
                     ],
@@ -181,10 +164,8 @@ fn test_unbond_all_successfully() {
         .instantiate_default()
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -203,10 +184,8 @@ fn test_unbond_all_successfully() {
         )
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1000u128),
             },
             |res| {
@@ -216,6 +195,7 @@ fn test_unbond_all_successfully() {
 }
 
 #[test]
+#[track_caller]
 fn test_unbonding_query_pagination() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
@@ -224,10 +204,9 @@ fn test_unbonding_query_pagination() {
         .instantiate_default()
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -236,10 +215,9 @@ fn test_unbonding_query_pagination() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(100u128),
             },
             |_res| {},
@@ -247,10 +225,9 @@ fn test_unbonding_query_pagination() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(100u128),
             },
             |_res| {},
@@ -258,10 +235,9 @@ fn test_unbonding_query_pagination() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(100u128),
             },
             |_res| {},
@@ -269,10 +245,9 @@ fn test_unbonding_query_pagination() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(100u128),
             },
             |_res| {},
@@ -290,40 +265,36 @@ fn test_unbonding_query_pagination() {
                         total_amount: Uint128::new(400u128),
                         unbonding_requests: vec![
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797439879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797449879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797459879305533u64),
@@ -346,20 +317,18 @@ fn test_unbonding_query_pagination() {
                         total_amount: Uint128::new(200u128),
                         unbonding_requests: vec![
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    // Change 'Asset' to 'Coin'
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797439879305533u64),
@@ -382,20 +351,16 @@ fn test_unbonding_query_pagination() {
                         total_amount: Uint128::new(200u128),
                         unbonding_requests: vec![
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797429879305533u64),
                                 weight: Uint128::zero(),
                             },
                             Bond {
-                                asset: Asset {
-                                    info: AssetInfo::NativeToken {
-                                        denom: "ampWHALE".to_string()
-                                    },
+                                asset: Coin {
+                                    denom: "ampWHALE".to_string(),
                                     amount: Uint128::new(100u128),
                                 },
                                 timestamp: Timestamp::from_nanos(1571797439879305533u64),
@@ -417,10 +382,9 @@ fn test_unbond_unsuccessfully() {
         .instantiate_default()
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -429,10 +393,9 @@ fn test_unbond_unsuccessfully() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::Token {
-                    contract_addr: "wrong_token".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "wrong_token".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             |res| {
@@ -442,10 +405,9 @@ fn test_unbond_unsuccessfully() {
         )
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "bWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             |res| {
@@ -455,10 +417,9 @@ fn test_unbond_unsuccessfully() {
         )
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(2_000u128),
             },
             |res| {
@@ -468,10 +429,9 @@ fn test_unbond_unsuccessfully() {
         )
         .unbond(
             sender,
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                // Change 'Asset' to 'Coin'
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(0u128),
             },
             |res| {

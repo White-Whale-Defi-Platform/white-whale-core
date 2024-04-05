@@ -1,7 +1,7 @@
-use cosmwasm_std::{coins, Event, Uint128};
+use cosmwasm_std::{coins, Coin, Event, Uint128};
 
+use white_whale_std::bonding_manager::WithdrawableResponse;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
-use white_whale_std::whale_lair::WithdrawableResponse;
 
 use crate::tests::robot::TestingRobot;
 
@@ -15,10 +15,8 @@ fn test_withdraw_successfully() {
         .instantiate_default()
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -27,10 +25,8 @@ fn test_withdraw_successfully() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(300u128),
             },
             |_res| {},
@@ -78,10 +74,8 @@ fn test_withdraw_unsuccessfully() {
         })
         .bond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
@@ -90,10 +84,8 @@ fn test_withdraw_unsuccessfully() {
         .fast_forward(10u64)
         .unbond(
             sender.clone(),
-            Asset {
-                info: AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
+            Coin {
+                denom: "ampWHALE".to_string(),
                 amount: Uint128::new(300u128),
             },
             |_res| {},

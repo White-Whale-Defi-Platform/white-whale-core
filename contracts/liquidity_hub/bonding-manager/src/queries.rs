@@ -103,7 +103,7 @@ pub(crate) fn query_unbonding(
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
-
+    println!("unbonding: {:?}", unbonding);
     // aggregate all the amounts in unbonding vec and return uint128
     let unbonding_amount = unbonding.iter().try_fold(Uint128::zero(), |acc, bond| {
         acc.checked_add(bond.asset.amount)

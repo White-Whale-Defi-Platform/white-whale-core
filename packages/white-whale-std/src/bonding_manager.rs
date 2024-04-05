@@ -1,7 +1,11 @@
-use crate::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use crate::{
+    epoch_manager::epoch_manager::EpochV2,
+    pool_network::asset::{Asset, AssetInfo, ToCoins},
+};
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
 };
 
 #[cw_serde]
@@ -17,12 +21,31 @@ pub struct Config {
     pub bonding_assets: Vec<AssetInfo>,
     /// Address of the fee distributor contract.
     pub fee_distributor_addr: Addr,
+    /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
+    pub grace_period: Uint64,
+}
+
+#[cw_serde]
+#[derive(Default)]
+pub struct Epoch {
+    // Epoch identifier
+    pub id: Uint64,
+    // Epoch start time
+    pub start_time: Timestamp,
+    // Initial fees to be distributed in this epoch.
+    pub total: Vec<Coin>,
+    // Fees left to be claimed on this epoch. These available fees are forwarded when the epoch expires.
+    pub available: Vec<Coin>,
+    // Fees that were claimed on this epoch. For keeping record on the total fees claimed.
+    pub claimed: Vec<Coin>,
+    // Global index taken at the time of Epoch Creation
+    pub global_index: GlobalIndex,
 }
 
 #[cw_serde]
 pub struct Bond {
     /// The amount of bonded tokens.
-    pub asset: Asset,
+    pub asset: Coin,
     /// The timestamp at which the bond was done.
     pub timestamp: Timestamp,
     /// The weight of the bond at the given block height.
@@ -32,10 +55,8 @@ pub struct Bond {
 impl Default for Bond {
     fn default() -> Self {
         Self {
-            asset: Asset {
-                info: AssetInfo::NativeToken {
-                    denom: String::new(),
-                },
+            asset: Coin {
+                denom: String::new(),
                 amount: Uint128::zero(),
             },
             timestamp: Timestamp::default(),
@@ -50,7 +71,7 @@ pub struct GlobalIndex {
     /// The total amount of tokens bonded in the contract.
     pub bonded_amount: Uint128,
     /// Assets that are bonded in the contract.
-    pub bonded_assets: Vec<Asset>,
+    pub bonded_assets: Vec<Coin>,
     /// The timestamp at which the total bond was registered.
     pub timestamp: Timestamp,
     /// The total weight of the bond at the given block height.
@@ -68,13 +89,24 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
+pub struct EpochChangedHookMsg {
+    pub current_epoch: EpochV2,
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     /// Bonds the specified [Asset].
-    Bond { asset: Asset },
+    Bond {
+        asset: Coin,
+    },
     /// Unbonds the specified [Asset].
-    Unbond { asset: Asset },
+    Unbond {
+        asset: Coin,
+    },
     /// Sends withdrawable unbonded tokens to the user.
-    Withdraw { denom: String },
+    Withdraw {
+        denom: String,
+    },
     /// Updates the [Config] of the contract.
     UpdateConfig {
         owner: Option<String>,
@@ -82,14 +114,19 @@ pub enum ExecuteMsg {
         growth_rate: Option<Decimal>,
         fee_distributor_addr: Option<String>,
     },
+    Claim {},
 
     /// V2 MESSAGES
 
     /// Fills the whale lair with new rewards.
-    FillRewards { assets: Vec<Asset> },
-    /// Fills the whale lair with new rewards.
-    
-    FillRewardsCoin,
+    FillRewards {
+        assets: Vec<Coin>,
+    },
+
+    /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+    EpochChangedHook {
+        msg: EpochChangedHookMsg,
+    },
 }
 
 #[cw_serde]
@@ -142,7 +179,7 @@ pub struct MigrateMsg {}
 #[cw_serde]
 pub struct BondedResponse {
     pub total_bonded: Uint128,
-    pub bonded_assets: Vec<Asset>,
+    pub bonded_assets: Vec<Coin>,
     pub first_bonded_epoch_id: Uint64,
 }
 
@@ -174,8 +211,18 @@ pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Asset>) -> StdResult<
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr,
         msg: to_json_binary(&ExecuteMsg::FillRewards {
-            assets: assets.clone(),
+            assets: assets.to_coins()?,
         })?,
         funds: assets.to_coins()?,
     }))
+}
+
+#[cw_serde]
+pub struct EpochResponse {
+    pub epoch: Epoch,
+}
+
+#[cw_serde]
+pub struct ClaimableEpochsResponse {
+    pub epochs: Vec<Epoch>,
 }

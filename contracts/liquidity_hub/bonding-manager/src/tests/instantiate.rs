@@ -1,8 +1,8 @@
 use cosmwasm_std::{Addr, Decimal, Uint64};
 
 use crate::tests::robot::TestingRobot;
+use white_whale_std::bonding_manager::Config;
 use white_whale_std::pool_network::asset::AssetInfo;
-use white_whale_std::whale_lair::Config;
 
 #[test]
 fn test_instantiate_successfully() {
@@ -26,6 +26,7 @@ fn test_instantiate_successfully() {
             owner: Addr::unchecked("owner"),
             unbonding_period: Uint64::new(1_000u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),

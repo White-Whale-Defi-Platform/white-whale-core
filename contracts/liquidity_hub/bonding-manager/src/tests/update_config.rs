@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 
+use white_whale_std::bonding_manager::Config;
 use white_whale_std::pool_network::asset::AssetInfo;
-use white_whale_std::whale_lair::Config;
 
 use crate::tests::robot::TestingRobot;
 
@@ -16,6 +16,7 @@ fn test_update_config_successfully() {
             owner: Addr::unchecked("owner"),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -40,6 +41,7 @@ fn test_update_config_successfully() {
             owner: owner.clone(),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -61,6 +63,7 @@ fn test_update_config_successfully() {
             owner: Addr::unchecked("new_owner"),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -83,6 +86,7 @@ fn test_update_config_unsuccessfully() {
             owner: Addr::unchecked("owner"),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -113,6 +117,7 @@ fn test_update_config_unsuccessfully() {
             owner: Addr::unchecked("owner"),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
@@ -143,6 +148,7 @@ fn test_update_config_unsuccessfully() {
             owner: Addr::unchecked("owner"),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
+            grace_period: Uint64::new(21u64),
             bonding_assets: vec![
                 AssetInfo::NativeToken {
                     denom: "ampWHALE".to_string(),
