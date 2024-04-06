@@ -36,7 +36,6 @@ if [[ "$fail_diff_flag" == true ]]; then
 	files=$(git ls-files --modified --others --exclude-standard '*.json')
 
 	if [ -n "$files" ]; then
-		echo "missing some jobs"
 		exit 1
 	fi
 fi
