@@ -37,4 +37,4 @@
 - [ ] I updated/added relevant documentation.
 - [ ] The code is formatted properly `cargo fmt --all --`.
 - [ ] Clippy doesn't report any issues `cargo clippy -- -D warnings`.
-- [ ] I have regenerated the schemas if needed `cargo schema`.
+- [ ] I have regenerated the schemas if needed with `just schemas`.

@@ -78,7 +78,7 @@ pub mod tasks {
         let cargo = env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
         let metadata = Command::new(cargo)
             .current_dir(project_root())
-            .args(&["metadata", "--no-deps", "--format-version", "1"])
+            .args(["metadata", "--no-deps", "--format-version", "1"])
             .output()
             .expect("Failed to fetch workspace metadata");
 
