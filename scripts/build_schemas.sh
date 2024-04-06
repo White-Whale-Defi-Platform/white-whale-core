@@ -12,7 +12,7 @@ function display_usage() {
 
 fail_diff_flag=false
 
-while getopts ":f:d:" opt; do
+while getopts ":d:h:" opt; do
 	case $opt in
 	d)
 		fail_diff_flag="$OPTARG"
@@ -29,18 +29,13 @@ while getopts ":f:d:" opt; do
 	esac
 done
 
-# First argument, whether or not to run git diff and exit with an error on any json file diff, not used by default
-if [[ -z $1 ]]; then
-	fail_diff_flag=false
-else
-	fail_diff_flag=$1
-fi
-
-projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
-
 # Generates schemas for contracts
 cargo xtask generate_schemas
 
 if [[ "$fail_diff_flag" == true ]]; then
-	git diff --exit-code -- '*.json'
+	files=$(git ls-files --modified --others --exclude-standard '*.json')
+
+	if [ -n files ]; then
+		exit 1
+	fi
 fi
