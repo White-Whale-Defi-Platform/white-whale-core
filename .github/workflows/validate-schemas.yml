@@ -17,9 +17,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Validate schemas are up to date
-        run: |
-          chmod +x ./scripts/build_schemas.sh
-          ./scripts/build_schemas.sh -d true
+        run: ./scripts/build_schemas.sh -d true
 
       - name: Add comment if failed
         if: ${{ failure() }}
