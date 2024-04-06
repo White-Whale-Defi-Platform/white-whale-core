@@ -7,7 +7,7 @@
     "asset_denoms",
     "assets",
     "balances",
-    "liquidity_token",
+    "lp_denom",
     "pair_type",
     "pool_fees"
   ],
@@ -38,7 +38,7 @@
         "$ref": "#/definitions/Uint128"
       }
     },
-    "liquidity_token": {
+    "lp_denom": {
       "type": "string"
     },
     "pair_type": {

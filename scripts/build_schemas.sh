@@ -6,25 +6,20 @@ function display_usage() {
 	echo "Schema generator"
 	echo -e "\nUsage: $0 [flags].\n"
 	echo -e "Available flags:\n"
-	echo -e "  -f \tSpecify the feature to use (token_factory|osmosis_token_factory|...)"
-	echo -e "  -d \tEnable diff check (true|false)"
+	echo -e "  -d \tEnable diff check (true|false), defaults to false"
+	echo -e "  -h \tDisplay this help menu"
 }
 
-if [ -z $1 ]; then
-	display_usage
-	exit 0
-fi
-
-feature_flag=""
 fail_diff_flag=false
 
 while getopts ":f:d:" opt; do
 	case $opt in
-	f)
-		feature_flag="$OPTARG"
-		;;
 	d)
 		fail_diff_flag="$OPTARG"
+		;;
+	h)
+		display_usage
+		exit 0
 		;;
 	\?)
 		echo "Invalid option: -$OPTARG" >&2
@@ -43,32 +38,9 @@ fi
 
 projectRootPath=$(realpath "$0" | sed 's|\(.*\)/.*|\1|' | cd ../ | pwd)
 
-# Generates schemas for contracts in the liquidity_hub
-for component in "$projectRootPath"/contracts/liquidity_hub/*/; do
-	echo "Generating schemas for $(basename $component)..."
-	if [[ -f "$component/Cargo.toml" ]]; then
-		# it was a single contract (such as fee_collector)
+# Generates schemas for contracts
+cargo xtask generate_schemas
 
-		if [[ $(basename $component) == "fee_collector_integration" || $(basename $component) == "whale_lair_integration" ]]; then
-			echo "Skipping $component"
-			continue
-		fi
-
-		echo "generating for $component"
-		cd $component && cargo schema --locked
-	else
-		echo "folder $component"
-
-		# it was a directory (such as pool_network), do it for all files inside the directory
-		for contract in "$component"*/; do
-			echo "generating for $contract"
-
-			cd $contract && cargo schema --locked
-
-			# Optionally fail on any unaccounted changes in json schema files
-			if [[ "$fail_diff_flag" == true ]]; then
-				git diff --exit-code -- '*.json'
-			fi
-		done
-	fi
-done
+if [[ "$fail_diff_flag" == true ]]; then
+	git diff --exit-code -- '*.json'
+fi

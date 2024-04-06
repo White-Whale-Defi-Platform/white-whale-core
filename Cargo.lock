@@ -1744,6 +1744,7 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "cw20",
+ "cw20-base",
  "osmosis-std-derive",
  "prost 0.11.9",
  "prost-types",
@@ -1892,6 +1893,16 @@ name = "windows_x86_64_msvc"
 version = "0.52.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
+
+[[package]]
+name = "xtask"
+version = "0.0.0"
+dependencies = [
+ "cosmwasm-schema",
+ "serde",
+ "serde_json",
+ "white-whale-std",
+]
 
 [[package]]
 name = "zeroize"
