@@ -1,5 +1,5 @@
 {
-  "contract_name": "xtask",
+  "contract_name": "pool-manager",
   "contract_version": "0.1.0",
   "idl_version": "1.0.0",
   "instantiate": {

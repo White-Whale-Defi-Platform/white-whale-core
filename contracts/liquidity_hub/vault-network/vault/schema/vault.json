@@ -1,5 +1,5 @@
 {
-  "contract_name": "xtask",
+  "contract_name": "vault",
   "contract_version": "1.2.6",
   "idl_version": "1.0.0",
   "instantiate": {

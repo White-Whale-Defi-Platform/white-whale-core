@@ -1,5 +1,5 @@
 {
-  "contract_name": "xtask",
+  "contract_name": "terraswap-router",
   "contract_version": "1.1.1",
   "idl_version": "1.0.0",
   "instantiate": {

@@ -1,5 +1,5 @@
 {
-  "contract_name": "xtask",
+  "contract_name": "frontend-helper",
   "contract_version": "1.0.0",
   "idl_version": "1.0.0",
   "instantiate": {

@@ -1,5 +1,5 @@
 {
-  "contract_name": "xtask",
+  "contract_name": "terraswap-token",
   "contract_version": "1.0.2",
   "idl_version": "1.0.0",
   "instantiate": {
