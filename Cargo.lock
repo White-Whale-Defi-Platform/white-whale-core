@@ -1896,7 +1896,7 @@ checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
 
 [[package]]
 name = "xtask"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "cosmwasm-schema",
  "serde",

@@ -4,6 +4,7 @@
 
 [package]
 name = "xtask"
+version = "1.0.0"
 description = "Generate cosmwasm schemas for white-whale-core workspace members"
 authors.workspace = true
 edition.workspace = true
