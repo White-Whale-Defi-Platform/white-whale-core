@@ -96,7 +96,7 @@ pub struct StableSwapParams {
 // Store PairInfo to N
 // We define a custom struct for which allows for dynamic but defined pairs
 #[cw_serde]
-pub struct NPairInfo {
+pub struct PairInfo {
     pub asset_denoms: Vec<String>,
     pub lp_denom: String,
     pub asset_decimals: Vec<u8>,
@@ -108,7 +108,7 @@ pub struct NPairInfo {
     // TODO: Add stable swap params
     // pub stable_swap_params: Option<StableSwapParams>
 }
-impl NPairInfo {}
+impl PairInfo {}
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -242,6 +242,6 @@ pub enum QueryMsg {
     //     ask_amount: Uint128,
     //     operations: Vec<SwapOperation>,
     // },
-    #[returns(NPairInfo)]
+    #[returns(PairInfo)]
     Pair { pair_identifier: String },
 }

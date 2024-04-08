@@ -1,5 +1,5 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
-use white_whale_std::pool_manager::NPairInfo;
+use white_whale_std::pool_manager::PairInfo;
 
 use crate::{
     helpers,
@@ -18,7 +18,7 @@ pub struct SwapResult {
     pub swap_fee_asset: Coin,
 
     /// The pair that was traded.
-    pub pair_info: NPairInfo,
+    pub pair_info: PairInfo,
     /// The amount of spread that occurred during the swap from the original exchange rate.
     pub spread_amount: Uint128,
 }
@@ -100,12 +100,12 @@ pub fn perform_swap(
     if offer_asset.denom == pools[0].denom {
         pair_info.assets[0].amount += offer_amount;
         pair_info.assets[1].amount -= swap_computation.return_amount;
-        PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
     } else {
         pair_info.assets[1].amount += offer_amount;
         pair_info.assets[0].amount -= swap_computation.return_amount;
-        PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
     }
+
+    PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
 
     // TODO: Might be handy to make the below fees into a helper method
     // burn ask_asset from the pool

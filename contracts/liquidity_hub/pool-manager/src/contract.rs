@@ -4,7 +4,9 @@ use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{
+    entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+};
 use cw2::set_contract_version;
 use semver::Version;
 use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
@@ -23,7 +25,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config: Config = Config {
-        fee_collector_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
+        whale_lair_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
         owner: deps.api.addr_validate(&msg.owner)?,
         // We must set a creation fee on instantiation to prevent spamming of pools
         pool_creation_fee: msg.pool_creation_fee,
@@ -161,6 +163,7 @@ pub fn execute(
     }
 }
 
+//todo remove. solution: just embed the content of the function where it's used
 // Came from router can probably go
 #[allow(dead_code)]
 fn optional_addr_validate(

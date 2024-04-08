@@ -12,7 +12,7 @@ use crate::{
     ContractError,
 };
 
-use white_whale_std::pool_manager::NPairInfo as PairInfo;
+use white_whale_std::pool_manager::PairInfo;
 use white_whale_std::pool_network::querier::query_balance;
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
@@ -91,7 +91,7 @@ pub fn create_pair(
     if !config.pool_creation_fee.amount.is_zero() {
         // verify fee payment
         let amount = cw_utils::must_pay(&info, &config.pool_creation_fee.denom)?;
-        if amount < config.pool_creation_fee.amount {
+        if amount != config.pool_creation_fee.amount {
             return Err(ContractError::InvalidPairCreationFee {
                 amount,
                 expected: config.pool_creation_fee.amount,
@@ -102,23 +102,27 @@ pub fn create_pair(
     // Prepare the sending of pair creation fee
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    // send vault creation fee to whale lair
+    // send pool creation fee to whale lair
     let creation_fee = vec![config.pool_creation_fee];
 
-    // //send protocol fee to whale lair i.e the new fee_collector
+    // send pair creation fee to whale lair i.e the new fee_collector
     messages.push(fill_rewards_msg(
-        config.fee_collector_addr.into_string(),
+        config.whale_lair_addr.into_string(),
         creation_fee,
     )?);
 
     let asset_decimals_vec = asset_denoms
         .iter()
         .map(|asset| {
-            query_native_decimals(
-                &deps.querier,
-                env.contract.address.clone(),
-                asset.to_string(),
-            )
+            //todo pass the asset_decimals in the create_pair msg. Let the user creating the pool
+            // defining the decimals, they are incentivized to do it right as they are paying a fee
+
+            // query_native_decimals(
+            //     &deps.querier,
+            //     env.contract.address.clone(),
+            //     asset.to_string(),
+            // )
+            0u8
         })
         .collect::<Result<Vec<u8>, _>>()?;
 
@@ -134,11 +138,10 @@ pub fn create_pair(
     pool_fees.is_valid()?;
 
     let pair_id = PAIR_COUNTER.load(deps.storage)?;
-    // if no identifier is provided, use the vault counter (id) as identifier
-    // TODO: Review, do we really want this or just use the pair_id? Pair_id is simple u64 values while identifier is a string
+    // if no identifier is provided, use the pool counter (id) as identifier
     let identifier = pair_identifier.unwrap_or(pair_id.to_string());
 
-    // check if there is an existing vault with the given identifier
+    // check if there is an existing pool with the given identifier
     let pair = get_pair_by_identifier(&deps.as_ref(), &identifier);
     if pair.is_ok() {
         return Err(ContractError::PairExists {
@@ -165,7 +168,7 @@ pub fn create_pair(
         })
         .collect::<Vec<_>>();
 
-    let lp_symbol = format!("{pair_label}.vault.{identifier}.{LP_SYMBOL}");
+    let lp_symbol = format!("{pair_label}.pool.{identifier}.{LP_SYMBOL}");
     let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
 
     PAIRS.save(
