@@ -100,8 +100,6 @@ pub struct PairInfo {
     pub asset_denoms: Vec<String>,
     pub lp_denom: String,
     pub asset_decimals: Vec<u8>,
-    // TODO: balances is included in assets, might be redundant
-    pub balances: Vec<Uint128>,
     pub assets: Vec<Coin>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,

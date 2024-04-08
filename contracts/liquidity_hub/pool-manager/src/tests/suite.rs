@@ -77,7 +77,7 @@ impl TestingSuite {
     pub(crate) fn get_lp_denom(&self, pair_id: String) -> String {
         // TODO: this should have
         format!(
-            "factory/{}/u{}.vault.{}.{}",
+            "factory/{}/u{}.pool.{}.{}",
             self.pool_manager_addr, pair_id, pair_id, LP_SYMBOL
         )
     }
