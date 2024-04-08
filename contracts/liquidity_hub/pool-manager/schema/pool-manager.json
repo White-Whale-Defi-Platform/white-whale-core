@@ -60,8 +60,7 @@
             "required": [
               "asset_denoms",
               "pair_type",
-              "pool_fees",
-              "token_factory_lp"
+              "pool_fees"
             ],
             "properties": {
               "asset_denoms": {
@@ -81,9 +80,6 @@
               },
               "pool_fees": {
                 "$ref": "#/definitions/PoolFee"
-              },
-              "token_factory_lp": {
-                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -101,16 +97,9 @@
           "provide_liquidity": {
             "type": "object",
             "required": [
-              "assets",
               "pair_identifier"
             ],
             "properties": {
-              "assets": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/Coin"
-                }
-              },
               "pair_identifier": {
                 "type": "string"
               },
@@ -201,16 +190,9 @@
           "withdraw_liquidity": {
             "type": "object",
             "required": [
-              "assets",
               "pair_identifier"
             ],
             "properties": {
-              "assets": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/Coin"
-                }
-              },
               "pair_identifier": {
                 "type": "string"
               }
@@ -901,14 +883,13 @@
     },
     "pair": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "NPairInfo",
+      "title": "PairInfo",
       "type": "object",
       "required": [
         "asset_decimals",
         "asset_denoms",
         "assets",
-        "balances",
-        "liquidity_token",
+        "lp_denom",
         "pair_type",
         "pool_fees"
       ],
@@ -933,13 +914,7 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "balances": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Uint128"
-          }
-        },
-        "liquidity_token": {
+        "lp_denom": {
           "type": "string"
         },
         "pair_type": {
