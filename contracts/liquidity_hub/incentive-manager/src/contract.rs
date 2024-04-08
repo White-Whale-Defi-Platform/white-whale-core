@@ -183,6 +183,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::Rewards { address } => {
             Ok(to_json_binary(&queries::query_rewards(deps, address)?)?)
         }
+        QueryMsg::LPWeight { denom, epoch_id } => Ok(to_json_binary(&queries::query_lp_weight(
+            deps, denom, epoch_id,
+        )?)?),
     }
 }
 

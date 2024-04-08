@@ -105,6 +105,14 @@ pub enum QueryMsg {
         /// The address to get all the incentive rewards for.
         address: String,
     },
+    /// Retrieves the total LP weight in the contract for a given denom on a given epoch.
+    #[returns(LpWeightResponse)]
+    LPWeight {
+        /// The denom to get the total LP weight for.
+        denom: String,
+        /// The epoch id to get the LP weight for.
+        epoch_id: EpochId,
+    },
 }
 
 /// Enum to filter incentives by identifier, lp denom or the incentive asset. Used in the Incentives query.
@@ -302,4 +310,13 @@ pub struct IncentivesResponse {
 pub struct PositionsResponse {
     /// All the positions a user has.
     pub positions: Vec<Position>,
+}
+
+/// The response for the LP weight query
+#[cw_serde]
+pub struct LpWeightResponse {
+    /// The total lp weight in the contract
+    pub lp_weight: Uint128,
+    /// The epoch id corresponding to the lp weight in the contract
+    pub epoch_id: EpochId,
 }

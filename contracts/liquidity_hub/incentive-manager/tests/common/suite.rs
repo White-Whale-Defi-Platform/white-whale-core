@@ -8,8 +8,8 @@ use cw_multi_test::{
 
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
 use white_whale_std::incentive_manager::{
-    Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, PositionAction,
-    PositionsResponse, RewardsResponse,
+    Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, LpWeightResponse,
+    PositionAction, PositionsResponse, RewardsResponse,
 };
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 use white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity;
@@ -52,6 +52,13 @@ impl TestingSuite {
     pub(crate) fn set_time(&mut self, timestamp: Timestamp) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = timestamp;
+        self.app.set_block(block_info);
+
+        self
+    }
+    pub(crate) fn add_one_day(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_days(1);
         self.app.set_block(block_info);
 
         self
@@ -460,6 +467,26 @@ impl TestingSuite {
             &self.incentive_manager_addr,
             &white_whale_std::incentive_manager::QueryMsg::Rewards {
                 address: address.to_string(),
+            },
+        );
+
+        result(rewards_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_lp_weight(
+        &mut self,
+        denom: &str,
+        epoch_id: u64,
+        result: impl Fn(StdResult<LpWeightResponse>),
+    ) -> &mut Self {
+        let rewards_response: StdResult<LpWeightResponse> = self.app.wrap().query_wasm_smart(
+            &self.incentive_manager_addr,
+            &white_whale_std::incentive_manager::QueryMsg::LPWeight {
+                denom: denom.to_string(),
+                epoch_id,
             },
         );
 

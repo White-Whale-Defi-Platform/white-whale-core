@@ -3,7 +3,10 @@ extern crate core;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
 use incentive_manager::ContractError;
-use white_whale_std::incentive_manager::{Config, IncentiveAction, IncentiveParams, IncentivesBy};
+use white_whale_std::incentive_manager::{
+    Config, IncentiveAction, IncentiveParams, IncentivesBy, LpWeightResponse, Position,
+    PositionAction, RewardsResponse,
+};
 
 use crate::common::suite::TestingSuite;
 use crate::common::MOCK_CONTRACT_ADDR;
@@ -1080,4 +1083,569 @@ pub fn update_config() {
         let config = result.unwrap();
         assert_eq!(config, expected_config);
     });
+}
+
+#[test]
+pub fn test_manage_position() {
+    let lp_denom = "factory/pool/uLP".to_string();
+
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "ulab".to_string()),
+        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, lp_denom.clone()),
+        coin(1_000_000_000u128, "invalid_lp".clone()),
+    ]);
+
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let another = suite.senders[2].clone();
+
+    suite.instantiate_default();
+
+    let incentive_manager = suite.incentive_manager_addr.clone();
+
+    suite
+        .add_hook(creator.clone(), incentive_manager, vec![], |result| {
+            result.unwrap();
+        })
+        .manage_incentive(
+            creator.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom.clone(),
+                    start_epoch: Some(12),
+                    preliminary_end_epoch: Some(16),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(8_000u128),
+                    },
+                    incentive_identifier: None,
+                },
+            },
+            vec![coin(8_000, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_lp_weight(&lp_denom, 10, |result| {
+            let err = result.unwrap_err().to_string();
+
+            assert_eq!(
+                err,
+                "Generic error: Querier contract error: There's no snapshot of the LP \
+           weight in the contract for the epoch 10"
+            );
+        })
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 80_400,
+                receiver: None,
+            },
+            vec![coin(1_000, lp_denom.clone())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidUnlockingDuration { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::InvalidUnlockingDuration"
+                    ),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 32_536_000,
+                receiver: None,
+            },
+            vec![coin(1_000, lp_denom.clone())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidUnlockingDuration { .. } => {}
+                    _ => panic!(
+                        "Wrong error type, should return ContractError::InvalidUnlockingDuration"
+                    ),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 32_536_000,
+                receiver: None,
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(1_000, lp_denom.clone())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_lp_weight(&lp_denom, 11, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    lp_weight: Uint128::new(1_000),
+                    epoch_id: 11
+                }
+            );
+        })
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(1_000, "invalid_lp".to_string())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::AssetMismatch { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
+                }
+            },
+        )
+        .query_positions(creator.clone(), Some(true), |result| {
+            let positions = result.unwrap();
+            assert_eq!(positions.positions.len(), 1);
+            assert_eq!(
+                positions.positions[0],
+                Position {
+                    identifier: "creator_position".to_string(),
+                    lp_asset: Coin {
+                        denom: "factory/pool/uLP".to_string(),
+                        amount: Uint128::new(1_000)
+                    },
+                    unlocking_duration: 86400,
+                    open: true,
+                    expiring_at: None,
+                    receiver: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3")
+                }
+            );
+        })
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(5_000, lp_denom.clone())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_lp_weight(&lp_denom, 11, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    lp_weight: Uint128::new(6_000),
+                    epoch_id: 11
+                }
+            );
+        })
+        .query_positions(creator.clone(), Some(true), |result| {
+            let positions = result.unwrap();
+            assert_eq!(positions.positions.len(), 1);
+            assert_eq!(
+                positions.positions[0],
+                Position {
+                    identifier: "creator_position".to_string(),
+                    lp_asset: Coin {
+                        denom: "factory/pool/uLP".to_string(),
+                        amount: Uint128::new(6_000)
+                    },
+                    unlocking_duration: 86400,
+                    open: true,
+                    expiring_at: None,
+                    receiver: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3")
+                }
+            );
+        })
+        .query_lp_weight(&lp_denom, 11, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    lp_weight: Uint128::new(6_000),
+                    epoch_id: 11
+                }
+            );
+        })
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 11);
+        });
+
+    // make sure snapshots are working correctly
+    suite
+        .query_lp_weight(&lp_denom, 15, |result| {
+            let err = result.unwrap_err().to_string();
+
+            assert_eq!(
+            err,
+            "Generic error: Querier contract error: There's no snapshot of the LP weight in the \
+            contract for the epoch 15"
+        );
+        })
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 12);
+        })
+        .query_lp_weight(&lp_denom, 12, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    lp_weight: Uint128::new(6_000), //snapshot taken from the previous epoch
+                    epoch_id: 12
+                }
+            );
+        })
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                //refill position
+                identifier: Some("creator_position".to_string()),
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(1_000, lp_denom.clone())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_lp_weight(&lp_denom, 12, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    // should be the same for epoch 12, as the weight for new positions is added
+                    // to the next epoch
+                    lp_weight: Uint128::new(6_000),
+                    epoch_id: 12
+                }
+            );
+        });
+
+    suite.query_current_epoch(|result| {
+        let epoch_response = result.unwrap();
+        assert_eq!(epoch_response.epoch.id, 12);
+    });
+
+    suite
+        .manage_position(
+            creator.clone(),
+            PositionAction::Close {
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.clone(),
+                    amount: Uint128::new(4_000),
+                }),
+            },
+            vec![coin(4_000, lp_denom.clone())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Close {
+                // remove 4_000 from the 7_000 position
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.clone(),
+                    amount: Uint128::new(4_000),
+                }),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PendingRewards { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PendingRewards"),
+                }
+            },
+        )
+        .claim(
+            creator.clone(),
+            vec![coin(4_000, lp_denom.clone())],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::PaymentError { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::PaymentError"),
+                }
+            },
+        )
+        .claim(other.clone(), vec![], |result| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+            match err {
+                ContractError::NoOpenPositions { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NoOpenPositions"),
+            }
+        })
+        .query_balance("ulab".to_string(), creator.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(999_992_000));
+        })
+        .claim(creator.clone(), vec![], |result| {
+            result.unwrap();
+        })
+        .query_balance("ulab".to_string(), creator.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(999_994_000));
+        })
+        .query_incentives(None, None, None, |result| {
+            let incentives_response = result.unwrap();
+            assert_eq!(incentives_response.incentives.len(), 1);
+            assert_eq!(
+                incentives_response.incentives[0].claimed_amount,
+                Uint128::new(2_000),
+            );
+        })
+        .manage_position(
+            creator.clone(),
+            PositionAction::Close {
+                identifier: "non_existent__position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.clone(),
+                    amount: Uint128::new(4_000),
+                }),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::NoPositionFound { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::NoPositionFound"),
+                }
+            },
+        )
+        .manage_position(
+            other.clone(),
+            PositionAction::Close {
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.clone(),
+                    amount: Uint128::new(4_000),
+                }),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::Unauthorized { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Close {
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: "invalid_lp".to_string(),
+                    amount: Uint128::new(4_000),
+                }),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::AssetMismatch { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(), // someone tries to close the creator's position
+            PositionAction::Close {
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.to_string(),
+                    amount: Uint128::new(10_000),
+                }),
+            },
+            vec![],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::AssetMismatch { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
+                }
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Close {
+                // remove 5_000 from the 7_000 position
+                identifier: "creator_position".to_string(),
+                lp_asset: Some(Coin {
+                    denom: lp_denom.clone(),
+                    amount: Uint128::new(5_000),
+                }),
+            },
+            vec![],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_lp_weight(&lp_denom, 12, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    // should be the same for epoch 12, as the weight for new positions is added
+                    // to the next epoch
+                    lp_weight: Uint128::new(6_000),
+                    epoch_id: 12
+                }
+            );
+        })
+        .query_lp_weight(&lp_denom, 13, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    // should be the same for epoch 12, as the weight for new positions is added
+                    // to the next epoch
+                    lp_weight: Uint128::new(5_000),
+                    epoch_id: 13
+                }
+            );
+        })
+        // create a few epochs without any changes in the weight
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .query_lp_weight(&lp_denom, 14, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    // should be the same for epoch 13, as nobody changed their positions
+                    lp_weight: Uint128::new(5_000),
+                    epoch_id: 14
+                }
+            );
+        })
+        .query_lp_weight(&lp_denom, 15, |result| {
+            let lp_weight = result.unwrap();
+            assert_eq!(
+                lp_weight,
+                LpWeightResponse {
+                    // should be the same for epoch 13, as nobody changed their positions
+                    lp_weight: Uint128::new(5_000),
+                    epoch_id: 15
+                }
+            );
+        })
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 15);
+        })
+        .add_one_day()
+        .create_epoch(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .query_rewards(creator.clone(), |result| {
+            let rewards_response = result.unwrap();
+            match rewards_response {
+                RewardsResponse::RewardsResponse { rewards } => {
+                    assert_eq!(rewards.len(), 1);
+                    assert_eq!(
+                        rewards[0],
+                        Coin {
+                            denom: "ulab".to_string(),
+                            amount: Uint128::new(6_000)
+                        }
+                    );
+                }
+                RewardsResponse::ClaimRewards { .. } => {
+                    panic!("shouldn't return this but RewardsResponse")
+                }
+            }
+        })
+        .query_incentives(None, None, None, |result| {
+            let incentives_response = result.unwrap();
+            assert_eq!(
+                incentives_response.incentives[0].claimed_amount,
+                Uint128::new(2_000)
+            );
+        })
+        .claim(creator.clone(), vec![], |result| {
+            result.unwrap();
+        })
+        .query_balance("ulab".to_string(), creator.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(1000_000_000));
+        })
+        .query_incentives(None, None, None, |result| {
+            let incentives_response = result.unwrap();
+            assert_eq!(
+                incentives_response.incentives[0].incentive_asset.amount,
+                incentives_response.incentives[0].claimed_amount
+            );
+            assert!(incentives_response.incentives[0].is_expired(15));
+        })
+        .query_rewards(creator.clone(), |result| {
+            let rewards_response = result.unwrap();
+            match rewards_response {
+                RewardsResponse::RewardsResponse { rewards } => {
+                    assert!(rewards.is_empty());
+                }
+                RewardsResponse::ClaimRewards { .. } => {
+                    panic!("shouldn't return this but RewardsResponse")
+                }
+            }
+        })
+        .claim(creator.clone(), vec![], |result| {
+            result.unwrap();
+        })
+        .query_balance("ulab".to_string(), creator.clone(), |balance| {
+            assert_eq!(balance, Uint128::new(1000_000_000));
+        });
 }

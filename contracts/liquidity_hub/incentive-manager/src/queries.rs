@@ -1,14 +1,15 @@
 use cosmwasm_std::Deps;
-use white_whale_std::coin::aggregate_coins;
 
+use white_whale_std::coin::aggregate_coins;
 use white_whale_std::incentive_manager::{
-    Config, IncentivesBy, IncentivesResponse, PositionsResponse, RewardsResponse,
+    Config, EpochId, IncentivesBy, IncentivesResponse, LpWeightResponse, PositionsResponse,
+    RewardsResponse,
 };
 
 use crate::incentive::commands::calculate_rewards;
 use crate::state::{
     get_incentive_by_identifier, get_incentives, get_incentives_by_incentive_asset,
-    get_incentives_by_lp_denom, get_positions_by_receiver, CONFIG,
+    get_incentives_by_lp_denom, get_positions_by_receiver, CONFIG, LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -92,5 +93,21 @@ pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsRespon
 
     Ok(RewardsResponse::RewardsResponse {
         rewards: aggregate_coins(total_rewards)?,
+    })
+}
+
+/// Queries the total lp weight for the given denom on the given epoch, i.e. the lp weight snapshot.
+pub(crate) fn query_lp_weight(
+    deps: Deps,
+    denom: String,
+    epoch_id: EpochId,
+) -> Result<LpWeightResponse, ContractError> {
+    let lp_weight = LP_WEIGHTS_HISTORY
+        .may_load(deps.storage, (denom.as_str(), epoch_id))?
+        .ok_or(ContractError::LpWeightNotFound { epoch_id })?;
+
+    Ok(LpWeightResponse {
+        lp_weight,
+        epoch_id,
     })
 }

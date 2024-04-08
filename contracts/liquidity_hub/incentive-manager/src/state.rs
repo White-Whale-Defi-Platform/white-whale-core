@@ -243,3 +243,25 @@ pub fn get_latest_address_lp_weight(
         Err(std_err) => Err(std_err.into()),
     }
 }
+
+/// Gets the latest entry of the LP_WEIGHT_HISTORY for the given lp denom.
+/// If there's no LP weight history for the given lp denom, i.e. nobody opened a position ever before,
+/// it returns 0 for the weight.
+pub fn get_latest_lp_weight_record(
+    storage: &dyn Storage,
+    lp_denom: &str,
+    epoch_id: EpochId,
+) -> Result<(EpochId, Uint128), ContractError> {
+    let latest_weight_history_result = LP_WEIGHTS_HISTORY
+        .prefix(lp_denom)
+        .range(storage, None, None, Order::Descending)
+        .next()
+        .transpose();
+
+    match latest_weight_history_result {
+        Ok(Some(item)) => Ok(item),
+        // if the lp weight was not found in the map, it returns 0 for the weight.
+        Ok(None) => Ok((epoch_id, Uint128::zero())),
+        Err(std_err) => Err(std_err.into()),
+    }
+}

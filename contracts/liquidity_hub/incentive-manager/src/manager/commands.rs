@@ -13,8 +13,8 @@ use crate::helpers::{
     validate_incentive_epochs,
 };
 use crate::state::{
-    get_incentive_by_identifier, get_incentives_by_lp_denom, CONFIG, INCENTIVES, INCENTIVE_COUNTER,
-    LP_WEIGHTS_HISTORY,
+    get_incentive_by_identifier, get_incentives_by_lp_denom, get_latest_lp_weight_record, CONFIG,
+    INCENTIVES, INCENTIVE_COUNTER, LP_WEIGHTS_HISTORY,
 };
 use crate::ContractError;
 
@@ -124,7 +124,8 @@ fn create_incentive(
     );
     // the incentive does not exist, all good, continue
 
-    // calculates the emission rate
+    // calculates the emission rate. The way it's calculated, it makes the last epoch to be
+    // non-inclusive, i.e. the last epoch is not counted in the emission
     let emission_rate = params
         .incentive_asset
         .amount
@@ -295,7 +296,7 @@ pub(crate) fn on_epoch_changed(
     );
 
     // get all LP tokens and update the LP_WEIGHTS_HISTORY
-    let lp_assets = deps
+    let lp_denoms = deps
         .querier
         .query_all_balances(env.contract.address)?
         .into_iter()
@@ -307,14 +308,29 @@ pub(crate) fn on_epoch_changed(
                 false
             }
         })
-        .collect::<Vec<Coin>>();
+        .map(|asset| asset.denom)
+        .collect::<Vec<String>>();
 
-    for lp_asset in &lp_assets {
-        LP_WEIGHTS_HISTORY.save(
-            deps.storage,
-            (&lp_asset.denom, msg.current_epoch.id),
-            &lp_asset.amount,
-        )?;
+    for lp_denom in &lp_denoms {
+        let lp_weight_option =
+            LP_WEIGHTS_HISTORY.may_load(deps.storage, (lp_denom, msg.current_epoch.id))?;
+
+        // if the weight for this LP token at this epoch has already been recorded, i.e. someone
+        // opened or closed positions in the previous epoch, skip it
+        if lp_weight_option.is_some() {
+            continue;
+        } else {
+            // if the weight for this LP token at this epoch has not been recorded, i.e. no one
+            // opened or closed positions in the previous epoch, get the last recorded weight
+            let (_, latest_lp_weight_record) =
+                get_latest_lp_weight_record(deps.storage, lp_denom, msg.current_epoch.id)?;
+
+            LP_WEIGHTS_HISTORY.save(
+                deps.storage,
+                (lp_denom, msg.current_epoch.id),
+                &latest_lp_weight_record,
+            )?;
+        }
     }
 
     Ok(Response::default().add_attributes(vec![

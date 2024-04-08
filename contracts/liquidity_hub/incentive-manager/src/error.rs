@@ -7,6 +7,8 @@ use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
+use white_whale_std::incentive_manager::EpochId;
+
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -162,6 +164,9 @@ pub enum ContractError {
         /// The emission rate of the incentive
         emission_rate: Uint128,
     },
+
+    #[error("There's no snapshot of the LP weight in the contract for the epoch {epoch_id}")]
+    LpWeightNotFound { epoch_id: EpochId },
 }
 
 impl From<semver::Error> for ContractError {

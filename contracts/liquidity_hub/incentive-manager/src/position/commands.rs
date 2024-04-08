@@ -39,25 +39,32 @@ pub(crate) fn fill_position(
         .unwrap_or_else(|| info.clone());
 
     // check if there's an existing open position with the given `identifier`
-    let mut position = get_position(deps.storage, identifier)?;
+    let mut position = get_position(deps.storage, identifier.clone())?;
 
     if let Some(ref mut position) = position {
-        // there is a position, fill it
+        // there is a position, refill it
         ensure!(
             position.lp_asset.denom == lp_asset.denom,
             ContractError::AssetMismatch
         );
 
+        // if the position is found, ignore if there's a change in the unlocking_duration as it is
+        // considered the same position, so use the existing unlocking_duration and only update the
+        // amount of the LP asset
+
         position.lp_asset.amount = position.lp_asset.amount.checked_add(lp_asset.amount)?;
         POSITIONS.save(deps.storage, &position.identifier, position)?;
     } else {
         // No position found, create a new one
-        let identifier = POSITION_ID_COUNTER
+        let position_id_counter = POSITION_ID_COUNTER
             .may_load(deps.storage)?
             .unwrap_or_default()
             + 1u64;
 
-        POSITION_ID_COUNTER.save(deps.storage, &identifier)?;
+        POSITION_ID_COUNTER.save(deps.storage, &position_id_counter)?;
+
+        // if no identifier was provided, use the counter as the identifier
+        let identifier = identifier.unwrap_or(position_id_counter.to_string());
 
         POSITIONS.save(
             deps.storage,

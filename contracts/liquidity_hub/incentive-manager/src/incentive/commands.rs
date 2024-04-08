@@ -49,9 +49,16 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
                         &incentive_identifier,
                         |incentive| -> Result<_, ContractError> {
                             let mut incentive = incentive.unwrap();
+                            incentive.last_epoch_claimed = current_epoch.id;
                             incentive.claimed_amount =
                                 incentive.claimed_amount.checked_add(claimed_reward)?;
-                            incentive.last_epoch_claimed = current_epoch.id;
+
+                            // sanity check to make sure an incentive doesn't get drained
+                            ensure!(
+                                incentive.claimed_amount <= incentive.incentive_asset.amount,
+                                ContractError::IncentiveExhausted
+                            );
+
                             Ok(incentive)
                         },
                     )?;
@@ -67,11 +74,18 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
     // sync the address lp weight history for the user
     sync_address_lp_weight_history(deps.storage, &info.sender, &current_epoch.id)?;
 
-    Ok(Response::default()
-        .add_message(CosmosMsg::Bank(BankMsg::Send {
+    let mut messages = vec![];
+
+    // don't send any bank message if there's nothing to send
+    if !total_rewards.is_empty() {
+        messages.push(CosmosMsg::Bank(BankMsg::Send {
             to_address: info.sender.to_string(),
             amount: aggregate_coins(total_rewards)?,
-        }))
+        }));
+    }
+
+    Ok(Response::default()
+        .add_messages(messages)
         .add_attributes(vec![("action", "claim".to_string())]))
 }
 
@@ -105,7 +119,7 @@ pub(crate) fn calculate_rewards(
             return if is_claim {
                 Ok(RewardsResponse::ClaimRewards {
                     rewards: vec![],
-                    modified_incentives: Default::default(),
+                    modified_incentives: HashMap::new(),
                 })
             } else {
                 Ok(RewardsResponse::RewardsResponse { rewards: vec![] })
@@ -145,8 +159,9 @@ pub(crate) fn calculate_rewards(
 
         for epoch_id in start_from_epoch..=until_epoch {
             let user_weight = user_weights[&epoch_id];
-            let total_lp_weight =
-                LP_WEIGHTS_HISTORY.load(deps.storage, (&position.lp_asset.denom, epoch_id))?;
+            let total_lp_weight = LP_WEIGHTS_HISTORY
+                .may_load(deps.storage, (&position.lp_asset.denom, epoch_id))?
+                .ok_or(ContractError::LpWeightNotFound { epoch_id })?;
 
             let user_share = (user_weight, total_lp_weight);
 
@@ -170,7 +185,16 @@ pub(crate) fn calculate_rewards(
             }
 
             if is_claim {
-                modified_incentives.insert(incentive.identifier.clone(), reward);
+                // compound the rewards for the incentive
+                let maybe_reward = modified_incentives
+                    .get(&incentive.identifier)
+                    .unwrap_or(&Uint128::zero())
+                    .to_owned();
+
+                modified_incentives.insert(
+                    incentive.identifier.clone(),
+                    reward.checked_add(maybe_reward)?,
+                );
             }
         }
     }
@@ -252,8 +276,9 @@ fn compute_incentive_emissions(
 ) -> Result<(HashMap<EpochId, Uint128>, EpochId), ContractError> {
     let mut incentive_emissions = HashMap::new();
 
-    let until_epoch = if incentive.preliminary_end_epoch < *current_epoch_id {
-        incentive.preliminary_end_epoch
+    let until_epoch = if incentive.preliminary_end_epoch <= *current_epoch_id {
+        // the preliminary_end_eopch is not inclusive, so we subtract 1
+        incentive.preliminary_end_epoch - 1u64
     } else {
         *current_epoch_id
     };
