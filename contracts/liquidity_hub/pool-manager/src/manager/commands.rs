@@ -25,8 +25,8 @@ pub const LP_SYMBOL: &str = "uLP";
 /// # Example
 ///
 /// ```rust
-/// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_binary};
-/// # use white_whale_std::pool_network::{asset::{AssetInfo, PairType}, pair::PoolFee};
+/// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_json_binary};
+/// # use white_whale_std::pool_network::{asset::{PairType}, pair::PoolFee};
 /// # use white_whale_std::fee::Fee;
 /// # use pool_manager::error::ContractError;
 /// # use pool_manager::manager::commands::MAX_ASSETS_PER_POOL;
@@ -35,8 +35,8 @@ pub const LP_SYMBOL: &str = "uLP";
 /// #
 /// # fn example(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
 /// let asset_infos = vec![
-///     AssetInfo::NativeToken { denom: "uatom".into() },
-///     AssetInfo::NativeToken { denom: "uscrt".into() },
+///     "uatom".into(),
+///     "uscrt".into(),
 /// ];
 /// #[cfg(not(feature = "osmosis"))]
 /// let pool_fees = PoolFee {
@@ -69,7 +69,7 @@ pub const LP_SYMBOL: &str = "uLP";
 /// let pair_type = PairType::ConstantProduct;
 /// let token_factory_lp = false;
 ///
-/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, token_factory_lp, None)?;
+/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, None)?;
 /// # Ok(response)
 /// # }
 /// ```
@@ -117,14 +117,15 @@ pub fn create_pair(
             //todo pass the asset_decimals in the create_pair msg. Let the user creating the pool
             // defining the decimals, they are incentivized to do it right as they are paying a fee
 
-            // query_native_decimals(
-            //     &deps.querier,
-            //     env.contract.address.clone(),
-            //     asset.to_string(),
-            // )
+            let _ = query_native_decimals(
+                &deps.querier,
+                env.contract.address.clone(),
+                asset.to_string(),
+            );
+
             0u8
         })
-        .collect::<Result<Vec<u8>, _>>()?;
+        .collect::<Vec<u8>>();
 
     // Check if the asset infos are the same
     if asset_denoms
@@ -175,13 +176,12 @@ pub fn create_pair(
         deps.storage,
         &identifier,
         &PairInfo {
-            asset_denoms: asset_denoms.clone(),
+            asset_denoms,
             pair_type: pair_type.clone(),
             lp_denom: lp_asset.clone(),
             asset_decimals: asset_decimals_vec,
             pool_fees,
             assets,
-            balances: vec![Uint128::zero(); asset_denoms.len()],
         },
     )?;
 
