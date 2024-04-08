@@ -176,8 +176,8 @@ pub fn create_pair(
         deps.storage,
         &identifier,
         &PairInfo {
-            asset_denoms: asset_denoms.clone(),
-            pair_type: pair_type.clone(),
+            asset_denoms,
+            pair_type,
             lp_denom: lp_asset.clone(),
             asset_decimals: asset_decimals_vec,
             pool_fees,
