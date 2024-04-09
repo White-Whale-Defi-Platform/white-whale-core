@@ -17,7 +17,7 @@ use white_whale_testing::integration::contracts::{
 };
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
-pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         crate::contract::execute,
         crate::contract::instantiate,
@@ -31,7 +31,7 @@ pub struct TestingRobot {
     app: App,
     pub sender: Addr,
     pub another_sender: Addr,
-    whale_lair_addr: Addr,
+    bonding_manager_addr: Addr,
     owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
     env: cosmwasm_std::Env,
 }
@@ -67,7 +67,7 @@ impl TestingRobot {
             ]),
             sender,
             another_sender,
-            whale_lair_addr: Addr::unchecked(""),
+            bonding_manager_addr: Addr::unchecked(""),
             owned_deps: mock_dependencies(),
             env: mock_env(),
         }
@@ -143,10 +143,10 @@ impl TestingRobot {
             .unwrap();
         println!("fee_collector_address: {}", fee_collector_address);
 
-        let whale_lair_addr =
+        let bonding_manager_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
-        println!("whale_lair_addr: {}", whale_lair_addr);
+        println!("bonding_manager_addr: {}", bonding_manager_addr);
 
         let fee_distributor_address = self
             .app
@@ -154,7 +154,7 @@ impl TestingRobot {
                 fee_distributor_id,
                 self.sender.clone(),
                 &white_whale_std::fee_distributor::InstantiateMsg {
-                    bonding_contract_addr: whale_lair_addr.clone().to_string(),
+                    bonding_contract_addr: bonding_manager_addr.clone().to_string(),
                     fee_collector_addr: fee_collector_address.clone().to_string(),
                     grace_period: Uint64::new(1),
                     epoch_config: EpochConfig {
@@ -178,9 +178,9 @@ impl TestingRobot {
             growth_rate: None,
         };
         self.app
-            .execute_contract(self.sender.clone(), whale_lair_addr.clone(), &msg, &[])
+            .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
             .unwrap();
-        self.whale_lair_addr = whale_lair_addr;
+        self.bonding_manager_addr = bonding_manager_addr;
         println!("fee_distributor_address: {}", fee_distributor_address);
         self
     }
@@ -212,7 +212,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, funds),
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, funds),
         );
 
         self
@@ -228,7 +228,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -244,7 +244,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -266,7 +266,7 @@ impl TestingRobot {
 
         response(
             self.app
-                .execute_contract(sender, self.whale_lair_addr.clone(), &msg, &[]),
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -311,9 +311,9 @@ fn instantiate_contract(
         bonding_assets,
     };
 
-    let whale_lair_id = robot.app.store_code(whale_lair_contract());
+    let bonding_manager_id = robot.app.store_code(bonding_manager_contract());
     robot.app.instantiate_contract(
-        whale_lair_id,
+        bonding_manager_id,
         robot.sender.clone(),
         &msg,
         funds,
@@ -331,7 +331,7 @@ impl TestingRobot {
         let config: Config = self
             .app
             .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Config {})
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Config {})
             .unwrap();
 
         response(Ok((self, config)));
@@ -349,7 +349,7 @@ impl TestingRobot {
             .app
             .wrap()
             .query_wasm_smart(
-                &self.whale_lair_addr,
+                &self.bonding_manager_addr,
                 &QueryMsg::Weight {
                     address,
                     timestamp: Some(self.app.block_info().time),
@@ -401,7 +401,7 @@ impl TestingRobot {
         let bonded_response: BondedResponse = self
             .app
             .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::Bonded { address })
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Bonded { address })
             .unwrap();
 
         response(Ok((self, bonded_response)));
@@ -421,7 +421,7 @@ impl TestingRobot {
             .app
             .wrap()
             .query_wasm_smart(
-                &self.whale_lair_addr,
+                &self.bonding_manager_addr,
                 &QueryMsg::Unbonding {
                     address,
                     denom,
@@ -446,7 +446,7 @@ impl TestingRobot {
             .app
             .wrap()
             .query_wasm_smart(
-                &self.whale_lair_addr,
+                &self.bonding_manager_addr,
                 &QueryMsg::Withdrawable { address, denom },
             )
             .unwrap();
@@ -464,7 +464,7 @@ impl TestingRobot {
         let bonded_response: BondedResponse = self
             .app
             .wrap()
-            .query_wasm_smart(&self.whale_lair_addr, &QueryMsg::TotalBonded {})
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::TotalBonded {})
             .unwrap();
 
         response(Ok((self, bonded_response)));
