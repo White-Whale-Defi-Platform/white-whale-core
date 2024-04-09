@@ -1,6 +1,5 @@
 use crate::queries::query_bonded;
 use crate::ContractError;
-use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Addr, Coin, Decimal, Deps, DepsMut, Order, StdError, StdResult, Timestamp, Uint128, Uint64,
 };
@@ -8,7 +7,6 @@ use cw_storage_plus::{Item, Map};
 use white_whale_std::bonding_manager::{
     Bond, BondedResponse, ClaimableEpochsResponse, Config, Epoch, EpochResponse, GlobalIndex,
 };
-use white_whale_std::pool_network::asset::AssetInfo;
 
 type Denom = str;
 

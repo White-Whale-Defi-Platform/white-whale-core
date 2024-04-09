@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint64};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
 use crate::contract::query;
@@ -10,10 +10,10 @@ use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, EpochV2};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 use white_whale_testing::integration::contracts::{
-    store_fee_collector_code, store_fee_distributor_code,
+    store_epoch_manager_code, store_fee_collector_code, store_fee_distributor_code,
 };
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
@@ -107,6 +107,29 @@ impl TestingRobot {
         let fee_collector_id = store_fee_collector_code(&mut self.app);
         let fee_distributor_id = store_fee_distributor_code(&mut self.app);
 
+        let epoch_manager_id = store_epoch_manager_code(&mut self.app);
+
+        let epoch_manager_addr = self
+            .app
+            .instantiate_contract(
+                epoch_manager_id,
+                self.sender.clone(),
+                &white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
+                    start_epoch: EpochV2 {
+                        id: 123,
+                        start_time: Timestamp::from_nanos(1678802400_000000000u64),
+                    },
+                    epoch_config: EpochConfig {
+                        duration: Uint64::new(86_400_000_000_000u64), // a day
+                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                    },
+                },
+                &[],
+                "epoch_manager",
+                None,
+            )
+            .unwrap();
+
         let fee_collector_address = self
             .app
             .instantiate_contract(
@@ -150,7 +173,6 @@ impl TestingRobot {
         // Now set the fee distributor on the config of the whale lair
         // So that we can check claims before letting them bond/unbond
         let msg = ExecuteMsg::UpdateConfig {
-            fee_distributor_addr: Some(fee_distributor_address.clone().to_string()),
             owner: None,
             unbonding_period: None,
             growth_rate: None,
@@ -240,7 +262,6 @@ impl TestingRobot {
             owner,
             unbonding_period,
             growth_rate,
-            fee_distributor_addr: None,
         };
 
         response(

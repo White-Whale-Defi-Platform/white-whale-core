@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use white_whale_std::epoch_manager::epoch_manager::{ConfigResponse, EpochConfig};
 
 use cosmwasm_std::{
     to_json_binary, Addr, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp,
@@ -7,7 +8,7 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch, EpochResponse};
-use white_whale_std::fee_distributor::QueryMsg;
+use white_whale_std::epoch_manager::epoch_manager::QueryMsg;
 use white_whale_std::{
     bonding_manager::{
         Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
@@ -62,15 +63,18 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
         total_bonded = total_bonded.checked_add(bond.asset.amount)?;
         bonded_assets.push(bond.asset);
     }
-
-    let fee_distributor_addr = CONFIG.load(deps.storage)?.fee_distributor_addr;
-    let config: white_whale_std::fee_distributor::Config =
+    let config = CONFIG.load(deps.storage)?;
+    // TODO: This is hardcoded, either we add to config the address of epoch manager and query
+    // or we store the genesis epoch itself in the bonding manager
+    // Query epoch manager for EpochConfig
+    let epoch_config: ConfigResponse =
         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: fee_distributor_addr.to_string(),
+            contract_addr: "contract0".to_string(),
             msg: to_json_binary(&QueryMsg::Config {})?,
         }))?;
-    let epoch_config = config.epoch_config;
-    let first_bonded_epoch_id = helpers::calculate_epoch(epoch_config, first_bond_timestamp)?;
+
+    let first_bonded_epoch_id =
+        helpers::calculate_epoch(epoch_config.epoch_config, first_bond_timestamp)?;
 
     Ok(BondedResponse {
         total_bonded,

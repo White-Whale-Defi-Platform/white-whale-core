@@ -26,3 +26,4 @@ white-whale-std.workspace = true
 whale-lair.workspace = true
 fee_collector.workspace = true
 fee_distributor.workspace = true
+epoch-manager.workspace = true

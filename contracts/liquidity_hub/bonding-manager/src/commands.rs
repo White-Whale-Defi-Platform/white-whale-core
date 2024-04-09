@@ -24,8 +24,7 @@ pub(crate) fn bond(
 ) -> Result<Response, ContractError> {
     let denom = asset.denom.clone();
     helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
-    // TODO: Validate claimed caused issues with tests, review this and see if we still need a validate_claimed, if so we gotta rework it a bit
-    // helpers::validate_claimed(&deps, &info)?;
+    helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     let mut bond = BOND
         .key((&info.sender, &denom))
@@ -77,8 +76,7 @@ pub(crate) fn unbond(
         return Err(ContractError::InvalidUnbondingAmount {});
     }
     let denom = asset.denom.clone();
-    // TODO: Validate claimed caused issues with tests, review this and see if we still need a validate_claimed, if so we gotta rework it a bit
-    // helpers::validate_claimed(&deps, &info)?;
+    helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
@@ -185,7 +183,6 @@ pub(crate) fn update_config(
     owner: Option<String>,
     unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
-    fee_distributor_addr: Option<String>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
     let mut config = CONFIG.load(deps.storage)?;
@@ -204,10 +201,6 @@ pub(crate) fn update_config(
     if let Some(growth_rate) = growth_rate {
         validate_growth_rate(growth_rate)?;
         config.growth_rate = growth_rate;
-    }
-
-    if let Some(fee_distributor_addr) = fee_distributor_addr {
-        config.fee_distributor_addr = deps.api.addr_validate(&fee_distributor_addr)?;
     }
 
     CONFIG.save(deps.storage, &config)?;

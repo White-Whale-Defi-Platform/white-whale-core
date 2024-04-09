@@ -1,9 +1,10 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
+use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
-use white_whale_std::fee_distributor::{ClaimableEpochsResponse, EpochResponse};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
+use crate::queries::{get_claimable_epochs, get_current_epoch};
 use crate::state::CONFIG;
 
 /// Validates that the growth rate is between 0 and 1.
@@ -46,15 +47,9 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
     // Query fee distributor
     // if user has unclaimed rewards, fail with an exception prompting them to claim
     let config = CONFIG.load(deps.storage)?;
-    let fee_distributor = config.fee_distributor_addr;
 
     // Do a smart query for Claimable
-    let claimable_rewards: ClaimableEpochsResponse = deps.querier.query_wasm_smart(
-        fee_distributor,
-        &white_whale_std::fee_distributor::QueryMsg::Claimable {
-            address: info.sender.to_string(),
-        },
-    )?;
+    let claimable_rewards: ClaimableEpochsResponse = get_claimable_epochs(deps.as_ref()).unwrap();
 
     // If epochs is greater than none
     if !claimable_rewards.epochs.is_empty() {
@@ -69,12 +64,8 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
 pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
     // Query current epoch on fee distributor
     let config = CONFIG.load(deps.storage)?;
-    let fee_distributor = config.fee_distributor_addr;
 
-    let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
-        fee_distributor,
-        &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
-    )?;
+    let epoch_response: EpochResponse = get_current_epoch(deps.as_ref()).unwrap();
 
     let current_epoch = epoch_response.epoch;
     let current_time = env.block.time.seconds();

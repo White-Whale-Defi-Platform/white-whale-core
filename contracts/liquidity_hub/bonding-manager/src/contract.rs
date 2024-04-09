@@ -49,7 +49,6 @@ pub fn instantiate(
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
         bonding_assets: msg.bonding_assets,
-        fee_distributor_addr: Addr::unchecked(""),
         grace_period: Uint64::new(21),
     };
 
@@ -88,15 +87,7 @@ pub fn execute(
             owner,
             unbonding_period,
             growth_rate,
-            fee_distributor_addr,
-        } => commands::update_config(
-            deps,
-            info,
-            owner,
-            unbonding_period,
-            growth_rate,
-            fee_distributor_addr,
-        ),
+        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
         ExecuteMsg::FillRewards { .. } => {
             // Use aggregate_coins to get the total amount of new coins
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))

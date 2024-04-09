@@ -12,6 +12,20 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
+/// Stores the epoch manager contract to the app
+pub fn store_epoch_manager_code(app: &mut App) -> u64 {
+    let contract = Box::new(
+        ContractWrapper::new_with_empty(
+            epoch_manager::contract::execute,
+            epoch_manager::contract::instantiate,
+            epoch_manager::contract::query,
+        )
+        .with_migrate(epoch_manager::contract::migrate),
+    );
+
+    app.store_code(contract)
+}
+
 /// Stores the fee distributor contract to the app
 pub fn store_fee_distributor_code(app: &mut App) -> u64 {
     let contract = Box::new(

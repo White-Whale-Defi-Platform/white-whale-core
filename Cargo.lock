@@ -1827,6 +1827,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
+ "epoch-manager",
  "fee_collector",
  "fee_distributor",
  "schemars",
