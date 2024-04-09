@@ -1,7 +1,5 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-#[cfg(feature = "token_factory")]
-use white_whale_std::lp_common::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
@@ -11,6 +9,8 @@ use cosmwasm_std::{
 };
 use cw20::Cw20ExecuteMsg;
 use white_whale_std::fee::Fee;
+#[cfg(feature = "token_factory")]
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::MsgMint;
