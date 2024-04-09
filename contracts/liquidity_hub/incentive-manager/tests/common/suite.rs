@@ -7,6 +7,7 @@ use cw_multi_test::{
 };
 
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
+use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale_std::incentive_manager::{
     Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, LpWeightResponse,
     PositionAction, PositionsResponse, RewardsResponse,
@@ -59,6 +60,13 @@ impl TestingSuite {
     pub(crate) fn add_one_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
+        self.app.set_block(block_info);
+
+        self
+    }
+    pub(crate) fn add_half_a_day(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_hours(12);
         self.app.set_block(block_info);
 
         self
@@ -385,6 +393,31 @@ impl TestingSuite {
 
         self
     }
+
+    #[track_caller]
+    pub(crate) fn on_epoch_changed(
+        &mut self,
+        sender: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg =
+            white_whale_std::incentive_manager::ExecuteMsg::EpochChangedHook(EpochChangedHookMsg {
+                current_epoch: Epoch {
+                    id: 0,
+                    start_time: Default::default(),
+                },
+            });
+
+        result(self.app.execute_contract(
+            sender,
+            self.incentive_manager_addr.clone(),
+            &msg,
+            &funds,
+        ));
+
+        self
+    }
 }
 
 /// queries
@@ -536,26 +569,6 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
-            contract_addr: contract_addr.to_string(),
-        };
-
-        result(
-            self.app
-                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &funds),
-        );
-
-        self
-    }
-
-    #[track_caller]
-    pub(crate) fn remove_hook(
-        &mut self,
-        sender: Addr,
-        contract_addr: Addr,
-        funds: Vec<Coin>,
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::RemoveHook {
             contract_addr: contract_addr.to_string(),
         };
 

@@ -68,9 +68,9 @@ pub(crate) fn fill_position(
 
         POSITIONS.save(
             deps.storage,
-            &identifier.to_string(),
+            &identifier,
             &Position {
-                identifier: identifier.to_string(),
+                identifier: identifier.clone(),
                 lp_asset: lp_asset.clone(),
                 unlocking_duration,
                 open: true,
@@ -132,6 +132,12 @@ pub(crate) fn close_position(
         ("identifier", identifier.to_string()),
     ];
 
+    let expires_at = env
+        .block
+        .time
+        .plus_seconds(position.unlocking_duration)
+        .seconds();
+
     // check if it's going to be closed in full or partially
     if let Some(lp_asset) = lp_asset {
         // close position partially
@@ -146,12 +152,6 @@ pub(crate) fn close_position(
         position.lp_asset.amount = position.lp_asset.amount.saturating_sub(lp_asset.amount);
 
         // add the partial closing position to the storage
-        let expires_at = env
-            .block
-            .time
-            .plus_seconds(position.unlocking_duration)
-            .seconds();
-
         let identifier = POSITION_ID_COUNTER
             .may_load(deps.storage)?
             .unwrap_or_default()
@@ -166,10 +166,12 @@ pub(crate) fn close_position(
             expiring_at: Some(expires_at),
             receiver: position.receiver.clone(),
         };
+
         POSITIONS.save(deps.storage, &identifier.to_string(), &partial_position)?;
     } else {
         // close position in full
         position.open = false;
+        position.expiring_at = Some(expires_at);
     }
     let close_in_full = !position.open;
     attributes.push(("close_in_full", close_in_full.to_string()));
@@ -243,7 +245,7 @@ pub(crate) fn withdraw_position(
             return Err(ContractError::Unauthorized);
         }
 
-        if position.expiring_at.unwrap() < env.block.time.seconds() {
+        if position.expiring_at.unwrap() > env.block.time.seconds() {
             return Err(ContractError::PositionNotExpired);
         }
     }

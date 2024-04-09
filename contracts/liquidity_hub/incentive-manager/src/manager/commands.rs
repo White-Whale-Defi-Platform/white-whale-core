@@ -147,20 +147,22 @@ fn create_incentive(
 
     INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
 
-    Ok(Response::default().add_attributes(vec![
-        ("action", "create_incentive".to_string()),
-        ("incentive_creator", incentive.owner.to_string()),
-        ("incentive_identifier", incentive.identifier),
-        ("start_epoch", incentive.start_epoch.to_string()),
-        (
-            "preliminary_end_epoch",
-            incentive.preliminary_end_epoch.to_string(),
-        ),
-        ("emission_rate", emission_rate.to_string()),
-        ("curve", incentive.curve.to_string()),
-        ("incentive_asset", incentive.incentive_asset.to_string()),
-        ("lp_denom", incentive.lp_denom),
-    ]))
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_attributes(vec![
+            ("action", "create_incentive".to_string()),
+            ("incentive_creator", incentive.owner.to_string()),
+            ("incentive_identifier", incentive.identifier),
+            ("start_epoch", incentive.start_epoch.to_string()),
+            (
+                "preliminary_end_epoch",
+                incentive.preliminary_end_epoch.to_string(),
+            ),
+            ("emission_rate", emission_rate.to_string()),
+            ("curve", incentive.curve.to_string()),
+            ("incentive_asset", incentive.incentive_asset.to_string()),
+            ("lp_denom", incentive.lp_denom),
+        ]))
 }
 
 /// Closes an incentive. If the incentive has expired, anyone can close it. Otherwise, only the

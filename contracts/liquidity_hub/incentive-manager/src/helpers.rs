@@ -53,6 +53,7 @@ pub(crate) fn process_incentive_creation_fee(
                 );
             } else {
                 let refund_amount = paid_fee_amount.saturating_sub(incentive_creation_fee.amount);
+
                 if refund_amount > Uint128::zero() {
                     messages.push(
                         BankMsg::Send {
