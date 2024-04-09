@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 
 #[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::CosmosMsg;
 use white_whale_std::fee::Fee;

@@ -1,7 +1,7 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
 #[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::{coin, BankMsg};
