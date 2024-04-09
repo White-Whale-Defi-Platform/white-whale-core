@@ -6,12 +6,17 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
+use crate::contract::INSTANTIATE_REPLY_ID;
+use crate::error::ContractError;
+use crate::stableswap_math::curve::StableSwap;
+use crate::state::TRIO_INFO;
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",
     feature = "injective"
 ))]
 use cosmwasm_std::CosmosMsg;
+use white_whale_std::lp_common::LP_SYMBOL;
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",
@@ -28,11 +33,6 @@ use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::querier::query_token_info;
 use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
 use white_whale_std::pool_network::trio::{InstantiateMsg, PoolFee};
-
-use crate::contract::INSTANTIATE_REPLY_ID;
-use crate::error::ContractError;
-use crate::stableswap_math::curve::StableSwap;
-use crate::state::{LP_SYMBOL, TRIO_INFO};
 
 pub fn compute_swap(
     offer_pool: Uint128,

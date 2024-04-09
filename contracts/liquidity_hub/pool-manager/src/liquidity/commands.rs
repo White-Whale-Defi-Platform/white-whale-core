@@ -17,7 +17,6 @@ use white_whale_std::pool_network::{
     U256,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-pub const LP_SYMBOL: &str = "uLP";
 
 /// Gets the protocol fee amount for the given asset_id
 pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: String) -> Uint128 {

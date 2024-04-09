@@ -6,7 +6,7 @@ use white_whale_std::pool_network::asset::{Asset, AssetInfoRaw};
 use white_whale_std::pool_network::pair::FeatureToggle;
 
 use crate::ContractError;
-pub const LP_SYMBOL: &str = "uLP";
+
 pub const PAIRS: IndexedMap<&str, PairInfo, PairIndexes> = IndexedMap::new(
     "pairs",
     PairIndexes {

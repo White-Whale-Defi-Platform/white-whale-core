@@ -12,11 +12,11 @@ use crate::{
     ContractError,
 };
 
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_manager::PairInfo;
 use white_whale_std::pool_network::querier::query_balance;
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-pub const LP_SYMBOL: &str = "uLP";
 
 /// Creates a liquidity pool pair with 2, 3, or N assets. The function dynamically handles different numbers of assets,
 /// allowing for the creation of pairs with varying configurations. The maximum number of assets per pool is defined by
