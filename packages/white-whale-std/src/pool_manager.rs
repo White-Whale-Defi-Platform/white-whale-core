@@ -1,12 +1,12 @@
 use std::fmt;
 
-use crate::pool_network::{
+use crate::{fee::Fee, pool_network::{
     asset::PairType,
     factory::NativeTokenDecimalsResponse,
-    pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
-};
+    pair::{ReverseSimulationResponse, SimulationResponse},
+}};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Decimal, Uint128};
+use cosmwasm_std::{Coin, Decimal, StdError, StdResult, Uint128, Uint256};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 #[cw_serde]
@@ -78,12 +78,124 @@ impl fmt::Display for SwapRoute {
 
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
-pub enum Fee {
+pub enum FeeTypes {
     Protocol,
     LiquidityProvider,
     FlashLoanFees,
     Custom(String),
 }
+
+/// Represents the fee structure for transactions within a pool.
+/// 
+/// 
+/// # Fields
+/// - `protocol_fee`: The fee percentage charged by the protocol on each transaction to support
+///   operational and developmental needs.
+/// - `swap_fee`: The fee percentage allocated to liquidity providers as a reward for supplying
+///   liquidity to the pool, incentivizing participation and ensuring pool health.
+/// - `burn_fee`: A fee percentage that is burned on each transaction, helping manage the token
+///   economy by reducing supply over time, potentially increasing token value.
+/// - `osmosis_fee` (optional): Specific to the Osmosis feature, this fee is charged on each
+///   transaction when the Osmosis feature is enabled, supporting specific ecosystem requirements.
+/// - `extra_fees`: A vector of custom fees allowing for extensible and adaptable fee structures
+///   to meet diverse and evolving needs. Validation ensures that the total of all fees does not
+///   exceed 100%, maintaining fairness and avoiding overcharging.
+///
+/// # Features
+/// - `osmosis`: Enables the `osmosis_fee` field, integrating specific fee requirements for the
+///   Osmosis protocol within the pool's fee structure.
+#[cw_serde]
+pub struct PoolFee {
+    /// Fee percentage charged on each transaction for the protocol's benefit.
+    pub protocol_fee: Fee,
+    
+    /// Fee percentage allocated to liquidity providers on each swap. 
+    pub swap_fee: Fee,
+    
+    /// Fee percentage that is burned on each transaction. Burning a portion of the transaction fee
+    /// helps in reducing the overall token supply.
+    pub burn_fee: Fee,
+    
+    /// Fee percentage charged on each transaction specifically for Osmosis integrations. This fee
+    /// is only applicable when the `osmosis` feature is enabled
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee: Fee,
+    
+    /// A list of custom, additional fees that can be defined for specific use cases or additional
+    /// functionalities. This vector enables the flexibility to introduce new fees without altering
+    /// the core fee structure. Total of all fees, including custom ones, is validated to not exceed
+    /// 100%, ensuring a balanced and fair fee distribution.
+    pub extra_fees: Vec<Fee>,
+}
+impl PoolFee {
+    /// Validates the PoolFee structure to ensure no individual fee is zero or negative
+    /// and the sum of all fees does not exceed 20%.
+    pub fn is_valid(&self) -> StdResult<()> {
+        let mut total_share = Decimal::zero();
+
+        // Validate predefined fees and accumulate their shares
+        let predefined_fees = [
+            &self.protocol_fee,
+            &self.swap_fee,
+            &self.burn_fee,
+            #[cfg(feature = "osmosis")]
+            &self.osmosis_fee,
+        ];
+
+        for fee in predefined_fees.iter().filter_map(|f| Some(*f)) {
+            fee.is_valid()?; // Validates the fee is not >= 100%
+            total_share = total_share + fee.share;
+        }
+
+        // Validate extra fees and accumulate their shares
+        for fee in &self.extra_fees {
+            fee.is_valid()?; // Validates the fee is not >= 100%
+            total_share = total_share + fee.share;
+        }
+
+        // Check if the total share exceeds 20%
+        if total_share > Decimal::percent(20) {
+            return Err(StdError::generic_err("Total fees cannot exceed 20%"));
+        }
+
+        Ok(())
+    }
+
+    /// Computes and applies all defined fees to a given amount.
+    /// Returns the total amount of fees deducted.
+    pub fn compute_and_apply_fees(&self, amount: Uint256) -> StdResult<Uint128> {
+        let mut total_fee_amount = Uint256::zero();
+
+        // Compute protocol fee
+        let protocol_fee_amount = self.protocol_fee.compute(amount);
+        total_fee_amount += protocol_fee_amount;
+
+        // Compute swap fee
+        let swap_fee_amount = self.swap_fee.compute(amount);
+        total_fee_amount += swap_fee_amount;
+
+        // Compute burn fee
+        let burn_fee_amount = self.burn_fee.compute(amount);
+        total_fee_amount += burn_fee_amount;
+
+        // Compute osmosis fee if applicable
+        #[cfg(feature = "osmosis")]{
+        let osmosis_fee_amount = self.osmosis_fee.compute(amount);
+
+        total_fee_amount += osmosis_fee_amount;
+        }
+
+        // Compute extra fees
+        for extra_fee in &self.extra_fees {
+            let extra_fee_amount = extra_fee.compute(amount);
+            total_fee_amount += extra_fee_amount;
+        }
+
+        // Convert the total fee amount to Uint128 (or handle potential conversion failure)
+        Uint128::try_from(total_fee_amount).map_err(|_| StdError::generic_err("Fee conversion error"))
+    }
+}
+
 #[cw_serde]
 
 pub struct StableSwapParams {

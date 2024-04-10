@@ -1,9 +1,9 @@
-use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint256};
 use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
     helpers::{self},
-    state::{get_pair_by_identifier, COLLECTABLE_PROTOCOL_FEES},
+    state::get_pair_by_identifier,
 };
 use crate::{
     state::{MANAGER_CONFIG, PAIRS},
@@ -72,18 +72,6 @@ pub fn provide_liquidity(
     // After totting up the pool assets we need to check if any of them are zero
     if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
         return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    // TODO: remove
-    let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
-        .load(deps.storage, &pair.lp_denom)
-        .unwrap_or_default();
-
-    // todo remove this, as collected_protocol_fees is not a thing
-    for pool in pool_assets.iter_mut() {
-        let protocol_fee =
-            get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().denom);
-        pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
     }
 
     let liquidity_token = pair.lp_denom.clone();

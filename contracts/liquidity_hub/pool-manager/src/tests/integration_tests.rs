@@ -1,8 +1,8 @@
 use crate::ContractError;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use white_whale_std::fee::Fee;
+use white_whale_std::pool_manager::PoolFee;
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
-use white_whale_std::pool_network::pair::PoolFee;
 
 use super::suite::TestingSuite;
 
@@ -105,6 +105,7 @@ fn deposit_and_withdraw_sanity_check() {
         burn_fee: Fee {
             share: Decimal::zero(),
         },
+        extra_fees: vec![],
     };
 
     #[cfg(feature = "osmosis")]
@@ -121,6 +122,7 @@ fn deposit_and_withdraw_sanity_check() {
         osmosis_fee: Fee {
             share: Decimal::zero(),
         },
+        extra_fees: vec![],
     };
 
     // Create a pair
@@ -259,6 +261,7 @@ mod pair_creation_failures {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -275,6 +278,7 @@ mod pair_creation_failures {
             osmosis_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
         // Create a pair
         suite
@@ -324,6 +328,7 @@ mod pair_creation_failures {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -340,6 +345,7 @@ mod pair_creation_failures {
             osmosis_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -405,6 +411,7 @@ mod router {
             burn_fee: Fee {
                 share: Decimal::bps(50), // 0.5%
             },
+            extra_fees: vec![],
         };
         #[cfg(feature = "osmosis")]
         let pool_fees = PoolFee {
@@ -420,6 +427,7 @@ mod router {
             osmosis_fee: Fee {
                 share: Decimal::bps(50),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -591,6 +599,7 @@ mod router {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -607,6 +616,7 @@ mod router {
             osmosis_fee: Fee {
                 share: Decimal::from_ratio(1u128, 100_000u128),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -727,6 +737,7 @@ mod router {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -743,6 +754,7 @@ mod router {
             osmosis_fee: Fee {
                 share: Decimal::from_ratio(1u128, 100_000u128),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -791,6 +803,7 @@ mod router {
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
+                println!("{:?}", result);
                 assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
             },
         );
@@ -879,6 +892,7 @@ mod router {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -895,6 +909,7 @@ mod router {
             osmosis_fee: Fee {
                 share: Decimal::from_ratio(1u128, 100_000u128),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -1102,6 +1117,7 @@ mod router {
             burn_fee: Fee {
                 share: Decimal::bps(50), // 0.5%
             },
+            extra_fees: vec![],
         };
         #[cfg(feature = "osmosis")]
         let pool_fees = PoolFee {
@@ -1117,6 +1133,7 @@ mod router {
             osmosis_fee: Fee {
                 share: Decimal::bps(50),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -1271,6 +1288,7 @@ mod swapping {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -1287,6 +1305,7 @@ mod swapping {
             osmosis_fee: Fee {
                 share: Decimal::from_ratio(1u128, 100_000u128),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -1483,6 +1502,7 @@ mod swapping {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -1499,6 +1519,7 @@ mod swapping {
             osmosis_fee: Fee {
                 share: Decimal::from_ratio(1u128, 1000u128),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair
@@ -1686,6 +1707,7 @@ mod swapping {
             burn_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         #[cfg(feature = "osmosis")]
@@ -1702,6 +1724,7 @@ mod swapping {
             osmosis_fee: Fee {
                 share: Decimal::zero(),
             },
+            extra_fees: vec![],
         };
 
         // Create a pair

@@ -9,9 +9,10 @@ use white_whale_std::pool_network::{
     // router::SimulateSwapOperationsResponse,
 };
 
+use crate::state::NATIVE_TOKEN_DECIMALS;
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
-    state::{get_decimals, get_pair_by_identifier, ALLOW_NATIVE_TOKENS},
+    state::{get_decimals, get_pair_by_identifier},
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
@@ -21,7 +22,7 @@ pub fn query_native_token_decimal(
     deps: Deps,
     denom: String,
 ) -> Result<NativeTokenDecimalsResponse, ContractError> {
-    let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;
+    let decimals = NATIVE_TOKEN_DECIMALS.load(deps.storage, denom.as_bytes())?;
 
     Ok(NativeTokenDecimalsResponse { decimals })
 }

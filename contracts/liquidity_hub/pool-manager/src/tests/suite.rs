@@ -7,11 +7,9 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, DistributionKeeper,
     Executor, FailingModule, GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
+use white_whale_std::pool_manager::PoolFee;
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
-use white_whale_std::pool_network::{
-    asset::{AssetInfo, PairType},
-    pair::PoolFee,
-};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};

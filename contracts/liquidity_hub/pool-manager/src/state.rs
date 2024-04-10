@@ -35,6 +35,8 @@ pub fn get_pair_by_identifier(
         .may_load(deps.storage, pair_identifier)?
         .ok_or(ContractError::UnExistingPair {})
 }
+// Remove after adding decimals to pair info
+pub const NATIVE_TOKEN_DECIMALS: Map<&[u8], u8> = Map::new("allow_native_token");
 
 pub fn get_decimals(pair_info: &PairInfo) -> Vec<u8> {
     pair_info.asset_decimals.clone()
@@ -42,18 +44,6 @@ pub fn get_decimals(pair_info: &PairInfo) -> Vec<u8> {
 
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
-
-//todo remove
-// Dyanmic Maps for Fee and Pair info
-pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Coin>> = Map::new("collected_protocol_fees");
-
-
-//todo remove
-pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
-    Map::new("total_collected_protocol_fees");
-
-//todo remove
-pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burned_fees");
 
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 pub const PAIR_COUNTER: Item<u64> = Item::new("vault_count");
