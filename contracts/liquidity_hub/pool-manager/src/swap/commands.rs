@@ -1,9 +1,7 @@
+use crate::{state::MANAGER_CONFIG, ContractError};
 use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 
-use crate::{state::MANAGER_CONFIG, ContractError};
-
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-pub const LP_SYMBOL: &str = "uLP";
 
 use cosmwasm_std::Decimal;
 

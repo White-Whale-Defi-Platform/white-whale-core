@@ -12,8 +12,6 @@ use crate::math::Decimal256Helper;
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
-pub const LP_SYMBOL: &str = "uLP";
-
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
 

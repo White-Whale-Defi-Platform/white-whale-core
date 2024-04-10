@@ -15,8 +15,8 @@ use white_whale_std::pool_network::{
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use white_whale_std::lp_common::LP_SYMBOL;
 
-use crate::liquidity::commands::LP_SYMBOL;
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new_with_empty(
         crate::contract::execute,

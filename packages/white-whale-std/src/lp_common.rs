@@ -1,3 +1,5 @@
+pub const LP_SYMBOL: &str = "uLP";
+
 #[cfg(any(
     feature = "token_factory",
     feature = "osmosis_token_factory",

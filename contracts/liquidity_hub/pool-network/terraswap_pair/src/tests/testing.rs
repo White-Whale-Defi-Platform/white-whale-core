@@ -22,7 +22,7 @@ use crate::error::ContractError;
 use crate::helpers::assert_slippage_tolerance;
 use crate::queries::query_pair_info;
 #[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 
 #[cfg(not(feature = "osmosis"))]
 #[test]
