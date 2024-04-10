@@ -6,7 +6,7 @@ use white_whale_std::{
     whale_lair::fill_rewards_msg,
 };
 
-use crate::state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER};
+use crate::state::{get_pair_by_identifier, PAIR_COUNTER};
 use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
@@ -229,8 +229,6 @@ pub fn add_native_token_decimals(
     if balance.is_zero() {
         return Err(ContractError::InvalidVerificationBalance {});
     }
-
-    add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
 
     Ok(Response::new().add_attributes(vec![
         ("action", "add_allow_native_token"),

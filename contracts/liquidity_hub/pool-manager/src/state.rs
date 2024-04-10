@@ -36,17 +36,6 @@ pub fn get_pair_by_identifier(
         .ok_or(ContractError::UnExistingPair {})
 }
 
-//todo not used, remove
-// Used for PAIRS
-pub fn pair_key(asset_infos: &[AssetInfoRaw]) -> Vec<u8> {
-    let mut asset_infos = asset_infos.to_vec();
-    asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-
-    asset_infos
-        .iter()
-        .flat_map(|info| info.as_bytes().to_vec())
-        .collect()
-}
 pub fn get_decimals(pair_info: &PairInfo) -> Vec<u8> {
     pair_info.asset_decimals.clone()
 }
@@ -58,6 +47,7 @@ pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_ro
 // Dyanmic Maps for Fee and Pair info
 pub const COLLECTABLE_PROTOCOL_FEES: Map<&str, Vec<Coin>> = Map::new("collected_protocol_fees");
 
+
 //todo remove
 pub const TOTAL_COLLECTED_PROTOCOL_FEES: Map<&str, Vec<Asset>> =
     Map::new("total_collected_protocol_fees");
@@ -68,59 +58,9 @@ pub const ALL_TIME_BURNED_FEES: Map<&str, Vec<Asset>> = Map::new("all_time_burne
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 pub const PAIR_COUNTER: Item<u64> = Item::new("vault_count");
 
-//todo remove
-// key : asset info / value: decimals
-pub const ALLOW_NATIVE_TOKENS: Map<&[u8], u8> = Map::new("allow_native_token");
-//todo remove
-pub fn add_allow_native_token(
-    storage: &mut dyn Storage,
-    denom: String,
-    decimals: u8,
-) -> StdResult<()> {
-    ALLOW_NATIVE_TOKENS.save(storage, denom.as_bytes(), &decimals)
-}
-
 // settings for pagination
 const MAX_LIMIT: u32 = 1000;
 const DEFAULT_LIMIT: u32 = 10;
-
-//todo this is not even used, remove?
-// start_after AssetInfoRaw??? There shouldn't be any AssetInfoRaw around
-pub fn read_pairs(
-    storage: &dyn Storage,
-    _api: &dyn Api,
-    start_after: Option<[AssetInfoRaw; 2]>,
-    limit: Option<u32>,
-) -> StdResult<Vec<PairInfo>> {
-    // Note PairInfo may need to be refactored to handle the 2or3 design
-    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
-
-    PAIRS
-        .range(storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            let (_, v) = item?;
-            Ok(v)
-        })
-        .collect::<StdResult<Vec<PairInfo>>>()
-}
-
-// todo look at the cw_utils, there's calc_range_start, this could maybe be removed
-// this will set the first key after the provided key, by appending a 1 byte
-fn calc_range_start(start_after: Option<[AssetInfoRaw; 2]>) -> Option<Vec<u8>> {
-    start_after.map(|asset_infos| {
-        let mut asset_infos = asset_infos.to_vec();
-        asset_infos.sort_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
-
-        let mut v = [asset_infos[0].as_bytes(), asset_infos[1].as_bytes()]
-            .concat()
-            .as_slice()
-            .to_vec();
-        v.push(1);
-        v
-    })
-}
 
 #[cw_serde]
 pub struct Config {
