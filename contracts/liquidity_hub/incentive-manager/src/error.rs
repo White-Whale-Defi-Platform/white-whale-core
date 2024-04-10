@@ -47,22 +47,8 @@ pub enum ContractError {
     #[error("max_concurrent_flows cannot be set to zero")]
     UnspecifiedConcurrentIncentives,
 
-    #[error("Invalid unbonding range, specified min as {min} and max as {max}")]
-    InvalidUnbondingRange {
-        /// The minimum unbonding time
-        min: u64,
-        /// The maximum unbonding time
-        max: u64,
-    },
-
     #[error("Incentive doesn't exist")]
     NonExistentIncentive {},
-
-    #[error("Attempt to create a new incentive, which exceeds the maximum of {max} incentives allowed per LP at a time")]
-    TooManyIncentives {
-        /// The maximum amount of incentives that can exist
-        max: u32,
-    },
 
     #[error("Attempt to create a new incentive with a small incentive_asset amount, which is less than the minimum of {min}")]
     InvalidIncentiveAmount {
@@ -73,11 +59,11 @@ pub enum ContractError {
     #[error("Incentive creation fee was not included")]
     IncentiveFeeMissing,
 
+    #[error("Incentive end timestamp was set to a time in the past")]
+    IncentiveEndsInPast,
+
     #[error("The incentive you are intending to create doesn't meet the minimum required of {min} after taking the fee")]
     EmptyIncentiveAfterFee { min: u128 },
-
-    #[error("The asset sent doesn't match the asset expected")]
-    AssetMismatch,
 
     #[error(
         "Incentive creation fee was not fulfilled, only {paid_amount} / {required_amount} present"
@@ -88,12 +74,6 @@ pub enum ContractError {
         /// The amount that needed to be paid
         required_amount: Uint128,
     },
-
-    #[error("The end epoch for this incentive is invalid")]
-    InvalidEndEpoch,
-
-    #[error("Incentive end timestamp was set to a time in the past")]
-    IncentiveEndsInPast,
 
     #[error("Incentive start timestamp is after the end timestamp")]
     IncentiveStartTimeAfterEndTime,
@@ -107,11 +87,17 @@ pub enum ContractError {
     #[error("The incentive doesn't have enough funds to pay out the reward")]
     IncentiveExhausted,
 
-    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
-    MigrateInvalidVersion {
-        new_version: Version,
-        current_version: Version,
+    #[error("The asset sent doesn't match the asset expected")]
+    AssetMismatch,
+
+    #[error("Attempt to create a new incentive, which exceeds the maximum of {max} incentives allowed per LP at a time")]
+    TooManyIncentives {
+        /// The maximum amount of incentives that can exist
+        max: u32,
     },
+
+    #[error("The end epoch for this incentive is invalid")]
+    InvalidEndEpoch,
 
     #[error("The sender doesn't have open positions")]
     NoOpenPositions,
@@ -122,32 +108,27 @@ pub enum ContractError {
     #[error("The position has not expired yet")]
     PositionNotExpired,
 
+    #[error("The position with the identifier {identifier} is already closed")]
+    PositionAlreadyClosed { identifier: String },
+
     #[error(
         "Invalid unlocking duration of {specified} specified, must be between {min} and {max}"
     )]
     InvalidUnlockingDuration {
-        /// The minimum amount of seconds that a user must bond for.
+        /// The minimum amount of seconds that a user must lock for.
         min: u64,
-        /// The maximum amount of seconds that a user can bond for.
+        /// The maximum amount of seconds that a user can lock for.
         max: u64,
-        /// The amount of seconds the user attempted to bond for.
+        /// The amount of seconds the user attempted to lock for.
         specified: u64,
     },
 
-    #[error("Attempt to create a position with {deposited_amount}, but only {allowance_amount} was set in allowance")]
-    MissingPositionDeposit {
-        /// The actual amount that the contract has an allowance for.
-        allowance_amount: Uint128,
-        /// The amount the account attempted to open a position with
-        deposited_amount: Uint128,
-    },
-
-    #[error("Attempt to create a position with {desired_amount}, but {paid_amount} was sent")]
-    MissingPositionDepositNative {
-        /// The amount the user intended to deposit.
-        desired_amount: Uint128,
-        /// The amount that was actually deposited.
-        paid_amount: Uint128,
+    #[error("Invalid unlocking range, specified min as {min} and max as {max}")]
+    InvalidUnlockingRange {
+        /// The minimum unlocking time
+        min: u64,
+        /// The maximum unlocking time
+        max: u64,
     },
 
     #[error("Attempt to compute the weight of a duration of {unlocking_duration} which is outside the allowed bounds")]
@@ -167,6 +148,12 @@ pub enum ContractError {
 
     #[error("There's no snapshot of the LP weight in the contract for the epoch {epoch_id}")]
     LpWeightNotFound { epoch_id: EpochId },
+
+    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
+    MigrateInvalidVersion {
+        new_version: Version,
+        current_version: Version,
+    },
 }
 
 impl From<semver::Error> for ContractError {

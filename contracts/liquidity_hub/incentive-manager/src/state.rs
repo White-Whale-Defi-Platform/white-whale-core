@@ -46,7 +46,7 @@ pub const LP_WEIGHTS_HISTORY: Map<(&str, EpochId), Uint128> = Map::new("lp_weigh
 
 //todo add the lp denom here as well, otherwise there's no way to distinguish
 /// The address lp weight history, i.e. how much lp weight an address had at a given epoch
-pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
+pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> =
     Map::new("address_lp_weight_history");
 
 /// An monotonically increasing counter to generate unique incentive identifiers.
@@ -212,9 +212,10 @@ pub fn get_positions_by_receiver(
 pub fn get_earliest_address_lp_weight(
     storage: &dyn Storage,
     address: &Addr,
+    lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
     let earliest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
-        .prefix(address)
+        .prefix((address, lp_denom))
         .range(storage, None, None, Order::Ascending)
         .next()
         .transpose();
@@ -231,9 +232,10 @@ pub fn get_earliest_address_lp_weight(
 pub fn get_latest_address_lp_weight(
     storage: &dyn Storage,
     address: &Addr,
+    lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
     let latest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
-        .prefix(address)
+        .prefix((address, lp_denom))
         .range(storage, None, None, Order::Descending)
         .next()
         .transpose();

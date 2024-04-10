@@ -12,15 +12,12 @@ use white_whale_std::incentive_manager::{
     Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, LpWeightResponse,
     PositionAction, PositionsResponse, RewardsResponse,
 };
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale_std::pool_network::pair::ExecuteMsg::ProvideLiquidity;
-use white_whale_std::pool_network::pair::{PoolFee, SimulationResponse};
+use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
     epoch_manager_contract, incentive_manager_contract, whale_lair_contract,
 };
-use crate::common::MOCK_CONTRACT_ADDR;
 
 type OsmosisTokenFactoryApp = App<
     BankKeeper,
@@ -60,13 +57,6 @@ impl TestingSuite {
     pub(crate) fn add_one_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
-        self.app.set_block(block_info);
-
-        self
-    }
-    pub(crate) fn add_half_a_day(&mut self) -> &mut Self {
-        let mut block_info = self.app.block_info();
-        block_info.time = block_info.time.plus_hours(12);
         self.app.set_block(block_info);
 
         self

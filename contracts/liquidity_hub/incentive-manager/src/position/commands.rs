@@ -126,6 +126,11 @@ pub(crate) fn close_position(
         ContractError::Unauthorized
     );
 
+    ensure!(
+        position.open,
+        ContractError::PositionAlreadyClosed { identifier }
+    );
+
     let mut attributes = vec![
         ("action", "close_position".to_string()),
         ("receiver", info.sender.to_string()),
@@ -191,7 +196,7 @@ pub(crate) fn close_position(
 
 /// Withdraws the given position. The position needs to have expired.
 pub(crate) fn withdraw_position(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     identifier: String,
@@ -209,6 +214,15 @@ pub(crate) fn withdraw_position(
         position.receiver == info.sender,
         ContractError::Unauthorized
     );
+
+    // check if the user has pending rewards. Can't withdraw a position without claiming pending rewards first
+    let rewards_response = query_rewards(deps.as_ref(), info.sender.clone().into_string())?;
+    match rewards_response {
+        RewardsResponse::RewardsResponse { rewards } => {
+            ensure!(rewards.is_empty(), ContractError::PendingRewards)
+        }
+        _ => return Err(ContractError::Unauthorized),
+    }
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -236,6 +250,18 @@ pub(crate) fn withdraw_position(
             whale_lair_addr.into_string(),
             vec![penalty],
         )?);
+
+        // if the position is open, update the weights when doing the emergency withdrawal
+        // otherwise not, as the weights have already being updated when the position was closed
+        if position.open {
+            update_weights(
+                deps.branch(),
+                &info,
+                &position.lp_asset,
+                position.unlocking_duration,
+                false,
+            )?;
+        }
 
         // subtract the penalty from the original position
         position.lp_asset.amount = position.lp_asset.amount.saturating_sub(penalty_fee);
@@ -306,7 +332,8 @@ fn update_weights(
     )?;
 
     // update the user's weight for this LP
-    let (_, mut address_lp_weight) = get_latest_address_weight(deps.storage, &receiver.sender)?;
+    let (_, mut address_lp_weight) =
+        get_latest_address_weight(deps.storage, &receiver.sender, &lp_asset.denom)?;
 
     if fill {
         // filling position
@@ -319,7 +346,7 @@ fn update_weights(
     //todo if the address weight is zero, remove it from the storage?
     ADDRESS_LP_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&receiver.sender, current_epoch.id + 1u64),
+        (&receiver.sender, &lp_asset.denom, current_epoch.id + 1u64),
         |_| Ok(address_lp_weight),
     )?;
 

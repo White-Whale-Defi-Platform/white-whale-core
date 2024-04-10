@@ -60,9 +60,10 @@ pub fn calculate_weight(
 pub fn get_latest_address_weight(
     storage: &dyn Storage,
     address: &Addr,
+    lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
     let result = ADDRESS_LP_WEIGHT_HISTORY
-        .prefix(address)
+        .prefix((address, lp_denom))
         .range(storage, None, None, Order::Descending)
         .take(1usize)
         // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.

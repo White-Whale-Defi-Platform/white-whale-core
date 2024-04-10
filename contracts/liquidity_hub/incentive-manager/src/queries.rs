@@ -80,7 +80,7 @@ pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsRespon
 
     let mut total_rewards = vec![];
 
-    for position in open_positions {
+    for position in &open_positions {
         // calculate the rewards for the position
         let rewards_response = calculate_rewards(deps, position, current_epoch.id, false)?;
         match rewards_response {

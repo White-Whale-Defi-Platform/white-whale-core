@@ -118,24 +118,24 @@ pub(crate) fn validate_incentive_epochs(
     max_incentive_epoch_buffer: u64,
 ) -> Result<(u64, u64), ContractError> {
     // assert epoch params are correctly set
+    let start_epoch = params.start_epoch.unwrap_or(current_epoch);
+
     let preliminary_end_epoch = params.preliminary_end_epoch.unwrap_or(
-        current_epoch
+        start_epoch
             .checked_add(DEFAULT_INCENTIVE_DURATION)
             .ok_or(ContractError::InvalidEndEpoch)?,
+    );
+
+    // ensure that start date is before end date
+    ensure!(
+        start_epoch < preliminary_end_epoch,
+        ContractError::IncentiveStartTimeAfterEndTime
     );
 
     // ensure the incentive is set to end in a future epoch
     ensure!(
         preliminary_end_epoch > current_epoch,
         ContractError::IncentiveEndsInPast
-    );
-
-    let start_epoch = params.start_epoch.unwrap_or(current_epoch);
-
-    // ensure that start date is before end date
-    ensure!(
-        start_epoch < preliminary_end_epoch,
-        ContractError::IncentiveStartTimeAfterEndTime
     );
 
     // ensure that start date is set within buffer

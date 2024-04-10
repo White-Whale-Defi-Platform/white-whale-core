@@ -385,7 +385,7 @@ pub(crate) fn update_config(
 
     if let Some(max_unlocking_duration) = max_unlocking_duration {
         if max_unlocking_duration < config.min_unlocking_duration {
-            return Err(ContractError::InvalidUnbondingRange {
+            return Err(ContractError::InvalidUnlockingRange {
                 min: config.min_unlocking_duration,
                 max: max_unlocking_duration,
             });
@@ -396,7 +396,7 @@ pub(crate) fn update_config(
 
     if let Some(min_unlocking_duration) = min_unlocking_duration {
         if config.max_unlocking_duration < min_unlocking_duration {
-            return Err(ContractError::InvalidUnbondingRange {
+            return Err(ContractError::InvalidUnlockingRange {
                 min: min_unlocking_duration,
                 max: config.max_unlocking_duration,
             });

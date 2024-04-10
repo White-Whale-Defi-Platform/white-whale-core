@@ -35,7 +35,7 @@ pub fn instantiate(
     // ensure the unlocking duration range is valid
     ensure!(
         msg.max_unlocking_duration > msg.min_unlocking_duration,
-        ContractError::InvalidUnbondingRange {
+        ContractError::InvalidUnlockingRange {
             min: msg.min_unlocking_duration,
             max: msg.max_unlocking_duration,
         }

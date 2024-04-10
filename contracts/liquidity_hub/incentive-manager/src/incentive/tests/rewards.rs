@@ -1,12 +1,11 @@
-use crate::incentive::commands::{compute_start_from_epoch_for_incentive, compute_user_weights};
+use crate::incentive::commands::{compute_start_from_epoch_for_user, compute_user_weights};
 use crate::state::ADDRESS_LP_WEIGHT_HISTORY;
-use cosmwasm_std::{Addr, Coin, Storage, Uint128};
-use white_whale_std::incentive_manager::{Curve, EpochId, Incentive};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use cosmwasm_std::{Addr, Coin, Uint128};
+use white_whale_std::incentive_manager::{Curve, Incentive, Position};
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
 
 #[test]
-fn compute_start_from_epoch_for_incentive_successfully() {
+fn compute_start_from_epoch_for_user_successfully() {
     let mut deps = mock_dependencies(&[]);
     let user = Addr::unchecked("user");
 
@@ -26,39 +25,37 @@ fn compute_start_from_epoch_for_incentive_successfully() {
         last_epoch_claimed: 9,
     };
 
-    let current_epoch_id = 12u64;
-
     // Mimics the scenario where the user has never claimed before, but opened a position before the incentive
     // went live
     let first_user_weight_epoch_id = 8;
     ADDRESS_LP_WEIGHT_HISTORY
         .save(
             &mut deps.storage,
-            (&user, first_user_weight_epoch_id),
+            (&user, "lp", first_user_weight_epoch_id),
             &Uint128::one(),
         )
         .unwrap();
 
     let start_from_epoch =
-        compute_start_from_epoch_for_incentive(&deps.storage, &incentive, None, &user).unwrap();
+        compute_start_from_epoch_for_user(&deps.storage, &incentive.lp_denom, None, &user).unwrap();
 
     // the function should return the start epoch of the incentive
-    assert_eq!(start_from_epoch, 10);
+    assert_eq!(start_from_epoch, first_user_weight_epoch_id);
 
     // Mimics the scenario where the user has never claimed before, but opened a position after the incentive
     // went live
     incentive.start_epoch = 5u64;
     let start_from_epoch =
-        compute_start_from_epoch_for_incentive(&deps.storage, &incentive, None, &user).unwrap();
+        compute_start_from_epoch_for_user(&deps.storage, &incentive.lp_denom, None, &user).unwrap();
 
     // the function should return the first epoch the user has a weight
-    assert_eq!(start_from_epoch, 8);
+    assert_eq!(start_from_epoch, first_user_weight_epoch_id);
 
     // Mimics the scenario where the user has claimed already, after the incentive went live, i.e. the user
     // has already partially claimed this incentive
     incentive.start_epoch = 10u64;
     let start_from_epoch =
-        compute_start_from_epoch_for_incentive(&deps.storage, &incentive, Some(12u64), &user)
+        compute_start_from_epoch_for_user(&deps.storage, &incentive.lp_denom, Some(12u64), &user)
             .unwrap();
 
     // the function should return the next epoch after the last claimed one
@@ -68,16 +65,16 @@ fn compute_start_from_epoch_for_incentive_successfully() {
     // has not claimed this incentive at all
     incentive.start_epoch = 15u64;
     let start_from_epoch =
-        compute_start_from_epoch_for_incentive(&deps.storage, &incentive, Some(12u64), &user)
+        compute_start_from_epoch_for_user(&deps.storage, &incentive.lp_denom, Some(12u64), &user)
             .unwrap();
 
     // the function should return the start epoch of the incentive
-    assert_eq!(start_from_epoch, 15);
+    assert_eq!(start_from_epoch, 13);
 
     // Mimics the scenario where the user has claimed the epoch the incentives went live
     incentive.start_epoch = 15u64;
     let start_from_epoch =
-        compute_start_from_epoch_for_incentive(&deps.storage, &incentive, Some(15u64), &user)
+        compute_start_from_epoch_for_user(&deps.storage, &incentive.lp_denom, Some(15u64), &user)
             .unwrap();
 
     // the function should return the next epoch after the last claimed one
@@ -91,19 +88,36 @@ fn compute_user_weights_successfully() {
     let user = Addr::unchecked("user");
 
     let mut start_from_epoch = 1u64;
-    let mut current_epoch_id = 10u64;
+    let current_epoch_id = 10u64;
 
     // fill the lp_weight_history for the address with
     // [(1,2), (2,4), (3,6), (4,8), (5,10), (6,12), (7,14), (8,16), (9,18), (10,20)]
     for epoch in 1u64..=10u64 {
         let weight = Uint128::new(epoch as u128 * 2u128);
         ADDRESS_LP_WEIGHT_HISTORY
-            .save(&mut deps.storage, (&user, epoch), &weight)
+            .save(&mut deps.storage, (&user, "lp", epoch), &weight)
             .unwrap();
     }
 
-    let weights =
-        compute_user_weights(&deps.storage, &user, &start_from_epoch, &current_epoch_id).unwrap();
+    let position = Position {
+        identifier: "1".to_string(),
+        lp_asset: Coin {
+            denom: "lp".to_string(),
+            amount: Default::default(),
+        },
+        unlocking_duration: 86_400,
+        open: true,
+        expiring_at: None,
+        receiver: user.clone(),
+    };
+
+    let weights = compute_user_weights(
+        &deps.storage,
+        &position,
+        &start_from_epoch,
+        &current_epoch_id,
+    )
+    .unwrap();
     assert_eq!(weights.len(), 11);
 
     for epoch in 1u64..=10u64 {
@@ -113,7 +127,8 @@ fn compute_user_weights_successfully() {
         );
 
         // reset the weight for epochs
-        ADDRESS_LP_WEIGHT_HISTORY.remove(&mut deps.storage, (&user, epoch));
+        ADDRESS_LP_WEIGHT_HISTORY
+            .remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
     }
 
     // fill the lp_weight_history for the address with
@@ -125,7 +140,11 @@ fn compute_user_weights_successfully() {
 
         let weight = Uint128::new(epoch as u128 * 2u128);
         ADDRESS_LP_WEIGHT_HISTORY
-            .save(&mut deps.storage, (&user, epoch), &weight)
+            .save(
+                &mut deps.storage,
+                (&user, &position.lp_asset.denom, epoch),
+                &weight,
+            )
             .unwrap();
     }
 
@@ -133,8 +152,13 @@ fn compute_user_weights_successfully() {
     // value as the previous, most recent value, i.e. epoch 2 3 4 having the value of 1 (latest weight seen in epoch 1)
     // then 5..7 having the value of 10 (latest weight seen in epoch 5)
     // then 8..=10 having the value of 14 (latest weight seen in epoch 7)
-    let weights =
-        compute_user_weights(&deps.storage, &user, &start_from_epoch, &current_epoch_id).unwrap();
+    let weights = compute_user_weights(
+        &deps.storage,
+        &position,
+        &start_from_epoch,
+        &current_epoch_id,
+    )
+    .unwrap();
     assert_eq!(weights.len(), 11);
 
     assert_eq!(weights.get(&1).unwrap(), &Uint128::new(2));
@@ -145,8 +169,13 @@ fn compute_user_weights_successfully() {
     assert_eq!(weights.get(&10).unwrap(), &Uint128::new(14));
 
     start_from_epoch = 6u64;
-    let weights =
-        compute_user_weights(&deps.storage, &user, &start_from_epoch, &current_epoch_id).unwrap();
+    let weights = compute_user_weights(
+        &deps.storage,
+        &position,
+        &start_from_epoch,
+        &current_epoch_id,
+    )
+    .unwrap();
     assert_eq!(weights.len(), 6);
 
     assert_eq!(weights.get(&5).unwrap(), &Uint128::new(10));
@@ -156,6 +185,7 @@ fn compute_user_weights_successfully() {
 
     for epoch in 1u64..=10u64 {
         // reset the weight for epochs
-        ADDRESS_LP_WEIGHT_HISTORY.remove(&mut deps.storage, (&user, epoch));
+        ADDRESS_LP_WEIGHT_HISTORY
+            .remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
     }
 }
