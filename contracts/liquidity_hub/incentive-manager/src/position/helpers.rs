@@ -75,10 +75,10 @@ pub fn get_latest_address_weight(
 /// Gets the latest available weight snapshot recorded for the given lp.
 pub fn get_latest_lp_weight(
     storage: &dyn Storage,
-    lp_asset: &str,
+    lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
     let result = LP_WEIGHTS_HISTORY
-        .prefix(lp_asset)
+        .prefix(lp_denom)
         .range(storage, None, None, Order::Descending)
         .take(1usize)
         // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.

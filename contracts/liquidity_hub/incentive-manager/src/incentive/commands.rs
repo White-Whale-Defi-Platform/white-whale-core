@@ -132,11 +132,12 @@ pub(crate) fn calculate_rewards(
     let mut modified_incentives: HashMap<String, Uint128> = HashMap::new();
 
     for incentive in incentives {
+        println!("*********");
         // skip expired incentives
         if incentive.is_expired(current_epoch_id) {
             continue;
         }
-
+        println!("Incentive: {:?}", incentive);
         // compute where the user can start claiming rewards for the incentive
         let start_from_epoch = compute_start_from_epoch_for_incentive(
             deps.storage,
@@ -160,7 +161,7 @@ pub(crate) fn calculate_rewards(
         for epoch_id in start_from_epoch..=until_epoch {
             let user_weight = user_weights[&epoch_id];
             let total_lp_weight = LP_WEIGHTS_HISTORY
-                .may_load(deps.storage, (&position.lp_asset.denom, epoch_id))?
+                .may_load(deps.storage, (&incentive.lp_denom, epoch_id))?
                 .ok_or(ContractError::LpWeightNotFound { epoch_id })?;
 
             let user_share = (user_weight, total_lp_weight);
@@ -183,7 +184,11 @@ pub(crate) fn calculate_rewards(
                     amount: reward,
                 });
             }
-
+            println!("----");
+            println!("epoch_id: {:?}", epoch_id);
+            println!("total_lp_weight: {:?}", total_lp_weight);
+            println!("user_share: {:?}", user_share);
+            println!("Reward: {:?}", reward);
             if is_claim {
                 // compound the rewards for the incentive
                 let maybe_reward = modified_incentives

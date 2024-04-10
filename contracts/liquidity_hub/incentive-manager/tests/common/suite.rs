@@ -71,6 +71,16 @@ impl TestingSuite {
 
         self
     }
+
+    pub(crate) fn add_one_epoch(&mut self) -> &mut Self {
+        let creator = self.creator();
+
+        self.add_one_day().create_epoch(creator, |res| {
+            res.unwrap();
+        });
+
+        self
+    }
 }
 
 /// Instantiate

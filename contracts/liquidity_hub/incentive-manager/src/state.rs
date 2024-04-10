@@ -44,6 +44,7 @@ pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch
 /// The history of total weight (sum of all individual weights) of an LP asset at a given epoch
 pub const LP_WEIGHTS_HISTORY: Map<(&str, EpochId), Uint128> = Map::new("lp_weights_history");
 
+//todo add the lp denom here as well, otherwise there's no way to distinguish
 /// The address lp weight history, i.e. how much lp weight an address had at a given epoch
 pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, EpochId), Uint128> =
     Map::new("address_lp_weight_history");

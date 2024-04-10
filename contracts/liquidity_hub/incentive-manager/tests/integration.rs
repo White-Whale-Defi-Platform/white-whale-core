@@ -2391,3 +2391,263 @@ fn test_incentive_helper() {
         },
     );
 }
+
+/// Complex test case with 4 incentives for 2 different LPs somewhat overlapping in time
+/// Incentive 1 -> runs from epoch 12 to 16
+/// Incentive 2 -> run from epoch 14 to 25
+/// Incentive 3 -> runs from epoch 20 to 23
+/// Incentive 4 -> runs from epoch 23 to 37
+///
+/// There are 3 users, creator, other and another
+///
+/// Locking tokens:
+/// creator locks 35% of the LP tokens before incentive 1 starts
+/// other locks 40% of the LP tokens before after incentive 1 starts and before incentive 2 starts
+/// another locks 25% of the LP tokens after incentive 3 starts, before incentive 3 ends
+///
+/// Unlocking tokens:
+/// creator never unlocks
+/// other emergency unlocks mid-way through incentive 2
+/// another partially unlocks mid-way through incentive 4
+///
+/// Verify users got rewards pro rata to their locked tokens
+#[test]
+fn test_multiple_incentives_and_positions() {
+    let lp_denom_1 = "factory/pool1/uLP".to_string();
+    let lp_denom_2 = "factory/pool2/uLP".to_string();
+
+    let mut suite = TestingSuite::default_with_balances(vec![
+        coin(1_000_000_000u128, "uwhale".to_string()),
+        coin(1_000_000_000u128, "ulab".to_string()),
+        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, lp_denom_1.clone()),
+        coin(1_000_000_000u128, lp_denom_2.clone()),
+    ]);
+
+    let creator = suite.creator();
+    let other = suite.senders[1].clone();
+    let another = suite.senders[2].clone();
+
+    suite.instantiate_default();
+
+    let incentive_manager_addr = suite.incentive_manager_addr.clone();
+    let whale_lair_addr = suite.whale_lair_addr.clone();
+
+    // create 4 incentives with 2 different LPs
+    suite
+        .add_hook(creator.clone(), incentive_manager_addr, vec![], |result| {
+            result.unwrap();
+        })
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 10);
+        })
+        .manage_incentive(
+            creator.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom_1.clone(),
+                    start_epoch: Some(12),
+                    preliminary_end_epoch: Some(16),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(80_000u128),
+                    },
+                    incentive_identifier: Some("incentive_1".to_string()),
+                },
+            },
+            vec![coin(80_000u128, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_incentive(
+            creator.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom_1.clone(),
+                    start_epoch: Some(14),
+                    preliminary_end_epoch: Some(25),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "uosmo".to_string(),
+                        amount: Uint128::new(10_000u128),
+                    },
+                    incentive_identifier: Some("incentive_2".to_string()),
+                },
+            },
+            vec![coin(10_000u128, "uosmo"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom_2.clone(),
+                    start_epoch: Some(20),
+                    preliminary_end_epoch: Some(23),
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::new(30_000u128),
+                    },
+                    incentive_identifier: Some("incentive_3".to_string()),
+                },
+            },
+            vec![coin(31_000u128, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_incentive(
+            other.clone(),
+            IncentiveAction::Fill {
+                params: IncentiveParams {
+                    lp_denom: lp_denom_2.clone(),
+                    start_epoch: Some(23),
+                    preliminary_end_epoch: None,
+                    curve: None,
+                    incentive_asset: Coin {
+                        denom: "ulab".to_string(),
+                        amount: Uint128::new(70_000u128),
+                    },
+                    incentive_identifier: Some("incentive_4".to_string()),
+                },
+            },
+            vec![coin(70_000u128, "ulab"), coin(1_000, "uwhale")],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+    // creator fills a position
+    suite
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: None,
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(35_000, lp_denom_1.clone())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_position(
+            creator.clone(),
+            PositionAction::Fill {
+                identifier: None,
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(35_000, lp_denom_2.clone())],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+    suite
+        .add_one_epoch()
+        .add_one_epoch()
+        .add_one_epoch()
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 13);
+        });
+
+    // other fills a position
+    suite
+        .manage_position(
+            other.clone(),
+            PositionAction::Fill {
+                identifier: None,
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(40_000, lp_denom_1.clone())],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .manage_position(
+            other.clone(),
+            PositionAction::Fill {
+                identifier: None,
+                unlocking_duration: 86_400,
+                receiver: None,
+            },
+            vec![coin(40_000, lp_denom_2.clone())],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+    suite
+        .add_one_epoch()
+        .add_one_epoch()
+        .query_current_epoch(|result| {
+            let epoch_response = result.unwrap();
+            assert_eq!(epoch_response.epoch.id, 15);
+        });
+
+    suite
+        .query_incentives(
+            Some(IncentivesBy::Identifier("incentive_1".to_string())),
+            None,
+            None,
+            |result| {
+                let incentives_response = result.unwrap();
+                assert_eq!(
+                    incentives_response.incentives[0],
+                    Incentive {
+                        identifier: "incentive_1".to_string(),
+                        owner: creator.clone(),
+                        lp_denom: lp_denom_1.clone(),
+                        incentive_asset: Coin {
+                            denom: "ulab".to_string(),
+                            amount: Uint128::new(80_000u128),
+                        },
+                        claimed_amount: Uint128::zero(),
+                        emission_rate: Uint128::new(20_000),
+                        curve: Curve::Linear,
+                        start_epoch: 12u64,
+                        preliminary_end_epoch: 16u64,
+                        last_epoch_claimed: 11u64,
+                    }
+                );
+            },
+        )
+        .claim(creator.clone(), vec![], |result| {
+            result.unwrap();
+        })
+        .query_incentives(
+            Some(IncentivesBy::Identifier("incentive_1".to_string())),
+            None,
+            None,
+            |result| {
+                let incentives_response = result.unwrap();
+                assert_eq!(
+                    incentives_response.incentives[0],
+                    Incentive {
+                        identifier: "incentive_1".to_string(),
+                        owner: creator.clone(),
+                        lp_denom: lp_denom_1.clone(),
+                        incentive_asset: Coin {
+                            denom: "ulab".to_string(),
+                            amount: Uint128::new(80_000u128),
+                        },
+                        claimed_amount: Uint128::new(58_666),
+                        emission_rate: Uint128::new(20_000),
+                        curve: Curve::Linear,
+                        start_epoch: 12u64,
+                        preliminary_end_epoch: 16u64,
+                        last_epoch_claimed: 15u64,
+                    }
+                );
+            },
+        );
+}

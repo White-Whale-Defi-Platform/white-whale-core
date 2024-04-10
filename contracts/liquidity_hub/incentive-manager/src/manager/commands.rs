@@ -142,7 +142,7 @@ fn create_incentive(
         owner: info.sender,
         claimed_amount: Uint128::zero(),
         emission_rate,
-        last_epoch_claimed: current_epoch.id - 1,
+        last_epoch_claimed: start_epoch - 1,
     };
 
     INCENTIVES.save(deps.storage, &incentive.identifier, &incentive)?;
