@@ -63,8 +63,8 @@ impl VaultFee {
 }
 
 /// Represents the fee structure for transactions within a pool.
-/// 
-/// 
+///
+///
 /// # Fields
 /// - `protocol_fee`: The fee percentage charged by the protocol on each transaction to support
 ///   operational and developmental needs.
@@ -85,19 +85,19 @@ impl VaultFee {
 pub struct PoolFee {
     /// Fee percentage charged on each transaction for the protocol's benefit.
     pub protocol_fee: Fee,
-    
-    /// Fee percentage allocated to liquidity providers on each swap. 
+
+    /// Fee percentage allocated to liquidity providers on each swap.
     pub swap_fee: Fee,
-    
+
     /// Fee percentage that is burned on each transaction. Burning a portion of the transaction fee
     /// helps in reducing the overall token supply.
     pub burn_fee: Fee,
-    
+
     /// Fee percentage charged on each transaction specifically for Osmosis integrations. This fee
     /// is only applicable when the `osmosis` feature is enabled
     #[cfg(feature = "osmosis")]
     pub osmosis_fee: Fee,
-    
+
     /// A list of custom, additional fees that can be defined for specific use cases or additional
     /// functionalities. This vector enables the flexibility to introduce new fees without altering
     /// the core fee structure. Total of all fees, including custom ones, is validated to not exceed
@@ -156,10 +156,11 @@ impl PoolFee {
         total_fee_amount += burn_fee_amount;
 
         // Compute osmosis fee if applicable
-        #[cfg(feature = "osmosis")]{
-        let osmosis_fee_amount = self.osmosis_fee.compute(amount);
+        #[cfg(feature = "osmosis")]
+        {
+            let osmosis_fee_amount = self.osmosis_fee.compute(amount);
 
-        total_fee_amount += osmosis_fee_amount;
+            total_fee_amount += osmosis_fee_amount;
         }
 
         // Compute extra fees
@@ -169,11 +170,10 @@ impl PoolFee {
         }
 
         // Convert the total fee amount to Uint128 (or handle potential conversion failure)
-        Uint128::try_from(total_fee_amount).map_err(|_| StdError::generic_err("Fee conversion error"))
+        Uint128::try_from(total_fee_amount)
+            .map_err(|_| StdError::generic_err("Fee conversion error"))
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -330,9 +330,15 @@ mod tests {
         amount: Uint256,
         expected_fee_deducted: Uint128,
     ) {
-        let protocol_fee = Fee { share: protocol_fee_share };
-        let swap_fee = Fee { share: swap_fee_share };
-        let burn_fee = Fee { share: burn_fee_share };
+        let protocol_fee = Fee {
+            share: protocol_fee_share,
+        };
+        let swap_fee = Fee {
+            share: swap_fee_share,
+        };
+        let burn_fee = Fee {
+            share: burn_fee_share,
+        };
         let extra_fees = vec![]; // Assuming no extra fees for simplicity
 
         let pool_fee = PoolFee {
@@ -340,30 +346,48 @@ mod tests {
             swap_fee,
             burn_fee,
             #[cfg(feature = "osmosis")]
-            osmosis_fee: Fee { share: Decimal::zero() },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
             extra_fees,
         };
 
         let total_fee_deducted = pool_fee.compute_and_apply_fees(amount).unwrap();
-        assert_eq!(total_fee_deducted, expected_fee_deducted, "The total deducted fees did not match the expected value.");
+        assert_eq!(
+            total_fee_deducted, expected_fee_deducted,
+            "The total deducted fees did not match the expected value."
+        );
     }
 
     #[test]
     fn pool_fee_exceeds_limit() {
-        let protocol_fee = Fee { share: Decimal::percent(10) };
-        let swap_fee = Fee { share: Decimal::percent(5) };
-        let burn_fee = Fee { share: Decimal::percent(5) };
-        let extra_fees = vec![Fee { share: Decimal::percent(1) }]; // Sum is 21%
+        let protocol_fee = Fee {
+            share: Decimal::percent(10),
+        };
+        let swap_fee = Fee {
+            share: Decimal::percent(5),
+        };
+        let burn_fee = Fee {
+            share: Decimal::percent(5),
+        };
+        let extra_fees = vec![Fee {
+            share: Decimal::percent(1),
+        }]; // Sum is 21%
 
         let pool_fee = PoolFee {
             protocol_fee,
             swap_fee,
             burn_fee,
             #[cfg(feature = "osmosis")]
-            osmosis_fee: Fee { share: Decimal::zero() },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
             extra_fees,
         };
 
-        assert_eq!(pool_fee.is_valid(), Err(StdError::generic_err("Total fees cannot exceed 20%")));
+        assert_eq!(
+            pool_fee.is_valid(),
+            Err(StdError::generic_err("Total fees cannot exceed 20%"))
+        );
     }
 }

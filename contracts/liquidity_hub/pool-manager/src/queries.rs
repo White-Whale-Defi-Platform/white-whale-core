@@ -12,7 +12,7 @@ use white_whale_std::pool_network::{
 use crate::state::NATIVE_TOKEN_DECIMALS;
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
-    state::{get_decimals, get_pair_by_identifier},
+    state::get_pair_by_identifier,
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
@@ -42,7 +42,7 @@ pub fn query_simulation(
     let ask_pool: Coin;
     let offer_decimal: u8;
     let ask_decimal: u8;
-    let decimals = get_decimals(&pair_info);
+    let decimals = pair_info.asset_decimals.clone();
     // We now have the pools and pair info; we can now calculate the swap
     // Verify the pool
     if offer_asset.denom == pools[0].denom {
@@ -108,7 +108,7 @@ pub fn query_reverse_simulation(
     let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
 
-    let decimals = get_decimals(&pair_info);
+    let decimals = pair_info.asset_decimals.clone();
     let offer_pool: Coin = pools[0].clone();
     let offer_decimal = decimals[0];
     let ask_pool: Coin = pools[1].clone();

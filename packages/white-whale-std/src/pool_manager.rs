@@ -1,10 +1,13 @@
 use std::fmt;
 
-use crate::{fee::PoolFee, pool_network::{
-    asset::PairType,
-    factory::NativeTokenDecimalsResponse,
-    pair::{ReverseSimulationResponse, SimulationResponse},
-}};
+use crate::{
+    fee::PoolFee,
+    pool_network::{
+        asset::PairType,
+        factory::NativeTokenDecimalsResponse,
+        pair::{ReverseSimulationResponse, SimulationResponse},
+    },
+};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -84,7 +87,6 @@ pub enum FeeTypes {
     FlashLoanFees,
     Custom(String),
 }
-
 
 #[cw_serde]
 
