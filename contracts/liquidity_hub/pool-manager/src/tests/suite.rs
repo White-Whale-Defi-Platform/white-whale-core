@@ -7,7 +7,7 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, DistributionKeeper,
     Executor, FailingModule, GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
-use white_whale_std::pool_manager::PoolFee;
+use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
@@ -412,9 +412,7 @@ impl TestingSuite {
     ) -> &Self {
         let pair_info_response: StdResult<PairInfo> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::Pair {
-                pair_identifier: pair_identifier,
-            },
+            &white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier },
         );
 
         result(pair_info_response);

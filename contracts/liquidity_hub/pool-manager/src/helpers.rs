@@ -4,7 +4,7 @@ use std::ops::Mul;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
-use white_whale_std::pool_manager::PoolFee;
+use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::error::ContractError;

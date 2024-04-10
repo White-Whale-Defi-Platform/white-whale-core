@@ -2,7 +2,7 @@ use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 use white_whale_std::{
-    pool_manager::PoolFee,
+    fee::PoolFee,
     pool_network::{asset::PairType, querier::query_native_decimals},
     whale_lair::fill_rewards_msg,
 };
@@ -28,7 +28,7 @@ pub const LP_SYMBOL: &str = "uLP";
 /// ```rust
 /// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_json_binary};
 /// # use white_whale_std::pool_network::{asset::{PairType}};
-/// # use white_whale_std::pool_manager::PoolFee;
+/// # use white_whale_std::fee::PoolFee;
 /// # use white_whale_std::fee::Fee;
 /// # use pool_manager::error::ContractError;
 /// # use pool_manager::manager::commands::MAX_ASSETS_PER_POOL;

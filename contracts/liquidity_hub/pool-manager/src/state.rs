@@ -1,8 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, Coin, Deps, Order, StdResult, Storage};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
+use cosmwasm_std::{Addr, Coin, Deps};
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale_std::pool_manager::{PairInfo, SwapOperation};
-use white_whale_std::pool_network::asset::{Asset, AssetInfoRaw};
 use white_whale_std::pool_network::pair::FeatureToggle;
 
 use crate::ContractError;
@@ -47,10 +46,6 @@ pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_ro
 
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");
 pub const PAIR_COUNTER: Item<u64> = Item::new("vault_count");
-
-// settings for pagination
-const MAX_LIMIT: u32 = 1000;
-const DEFAULT_LIMIT: u32 = 10;
 
 #[cw_serde]
 pub struct Config {

@@ -1750,6 +1750,7 @@ dependencies = [
  "protobuf",
  "schemars",
  "serde",
+ "test-case",
  "thiserror",
  "uint",
 ]

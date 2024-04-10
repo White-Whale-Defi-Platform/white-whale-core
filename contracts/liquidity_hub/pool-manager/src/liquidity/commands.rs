@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint256};
+use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
@@ -18,21 +18,6 @@ use white_whale_std::pool_network::{
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 pub const LP_SYMBOL: &str = "uLP";
-
-/// Gets the protocol fee amount for the given asset_id
-pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: String) -> Uint128 {
-    let protocol_fee_asset = collected_protocol_fees
-        .iter()
-        .find(|&protocol_fee_asset| protocol_fee_asset.clone().denom == asset_id.clone())
-        .cloned();
-
-    // get the protocol fee for the given pool_asset
-    if let Some(protocol_fee_asset) = protocol_fee_asset {
-        protocol_fee_asset.amount
-    } else {
-        Uint128::zero()
-    }
-}
 
 // todo allow providing liquidity with a single asset
 

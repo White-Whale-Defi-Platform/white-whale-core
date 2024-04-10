@@ -1,7 +1,7 @@
 use crate::ContractError;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 use white_whale_std::fee::Fee;
-use white_whale_std::pool_manager::PoolFee;
+use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
 use super::suite::TestingSuite;
@@ -221,11 +221,11 @@ fn deposit_and_withdraw_sanity_check() {
         .query_all_balances(creator.to_string(), |result| {
             let balances = result.unwrap();
             assert!(balances.iter().any(|coin| {
-                coin.denom == "uwhale".to_string()
+                coin.denom == *"uwhale"
                     && coin.amount == Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
             }));
             assert!(balances.iter().any(|coin| {
-                coin.denom == "uluna".to_string()
+                coin.denom == *"uluna"
                     && coin.amount == Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT
             }));
         });
