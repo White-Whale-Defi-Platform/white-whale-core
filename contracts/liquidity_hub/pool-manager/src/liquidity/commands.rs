@@ -3,7 +3,7 @@ use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
     helpers::{self},
-    state::{get_pair_by_identifier, COLLECTABLE_PROTOCOL_FEES},
+    state::get_pair_by_identifier,
 };
 use crate::{
     state::{MANAGER_CONFIG, PAIRS},
@@ -17,21 +17,6 @@ use white_whale_std::pool_network::{
     U256,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-
-/// Gets the protocol fee amount for the given asset_id
-pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: String) -> Uint128 {
-    let protocol_fee_asset = collected_protocol_fees
-        .iter()
-        .find(|&protocol_fee_asset| protocol_fee_asset.clone().denom == asset_id.clone())
-        .cloned();
-
-    // get the protocol fee for the given pool_asset
-    if let Some(protocol_fee_asset) = protocol_fee_asset {
-        protocol_fee_asset.amount
-    } else {
-        Uint128::zero()
-    }
-}
 
 // todo allow providing liquidity with a single asset
 
@@ -71,18 +56,6 @@ pub fn provide_liquidity(
     // After totting up the pool assets we need to check if any of them are zero
     if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
         return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    // TODO: remove
-    let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
-        .load(deps.storage, &pair.lp_denom)
-        .unwrap_or_default();
-
-    // todo remove this, as collected_protocol_fees is not a thing
-    for pool in pool_assets.iter_mut() {
-        let protocol_fee =
-            get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().denom);
-        pool.amount = pool.amount.checked_sub(protocol_fee).unwrap();
     }
 
     let liquidity_token = pair.lp_denom.clone();

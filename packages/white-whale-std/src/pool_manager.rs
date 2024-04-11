@@ -1,9 +1,12 @@
 use std::fmt;
 
-use crate::pool_network::{
-    asset::PairType,
-    factory::NativeTokenDecimalsResponse,
-    pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
+use crate::{
+    fee::PoolFee,
+    pool_network::{
+        asset::PairType,
+        factory::NativeTokenDecimalsResponse,
+        pair::{ReverseSimulationResponse, SimulationResponse},
+    },
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Decimal, Uint128};
@@ -78,12 +81,13 @@ impl fmt::Display for SwapRoute {
 
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
-pub enum Fee {
+pub enum FeeTypes {
     Protocol,
     LiquidityProvider,
     FlashLoanFees,
     Custom(String),
 }
+
 #[cw_serde]
 
 pub struct StableSwapParams {
@@ -124,7 +128,6 @@ pub struct MigrateMsg {}
 pub enum ExecuteMsg {
     CreatePair {
         asset_denoms: Vec<String>,
-        // TODO: Remap to NPoolFee maybe
         pool_fees: PoolFee,
         pair_type: PairType,
         pair_identifier: Option<String>,

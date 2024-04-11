@@ -2,11 +2,12 @@ use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 use white_whale_std::{
-    pool_network::{asset::PairType, pair::PoolFee, querier::query_native_decimals},
+    fee::PoolFee,
+    pool_network::{asset::PairType, querier::query_native_decimals},
     whale_lair::fill_rewards_msg,
 };
 
-use crate::state::{add_allow_native_token, get_pair_by_identifier, PAIR_COUNTER};
+use crate::state::{get_pair_by_identifier, NATIVE_TOKEN_DECIMALS, PAIR_COUNTER};
 use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
@@ -26,7 +27,8 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 ///
 /// ```rust
 /// # use cosmwasm_std::{DepsMut, Decimal, Env, MessageInfo, Response, CosmosMsg, WasmMsg, to_json_binary};
-/// # use white_whale_std::pool_network::{asset::{PairType}, pair::PoolFee};
+/// # use white_whale_std::pool_network::{asset::{PairType}};
+/// # use white_whale_std::fee::PoolFee;
 /// # use white_whale_std::fee::Fee;
 /// # use pool_manager::error::ContractError;
 /// # use pool_manager::manager::commands::MAX_ASSETS_PER_POOL;
@@ -49,6 +51,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 ///     burn_fee: Fee {
 ///         share: Decimal::zero(),
 ///     },
+///    extra_fees: vec![],
 /// };
 ///
 /// #[cfg(feature = "osmosis")]
@@ -65,6 +68,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 ///     osmosis_fee: Fee {
 ///         share: Decimal::zero(),
 ///     },
+///     extra_fees: vec![],
 /// };
 /// let pair_type = PairType::ConstantProduct;
 /// let token_factory_lp = false;
@@ -229,9 +233,7 @@ pub fn add_native_token_decimals(
     if balance.is_zero() {
         return Err(ContractError::InvalidVerificationBalance {});
     }
-
-    add_allow_native_token(deps.storage, denom.to_string(), decimals)?;
-
+    NATIVE_TOKEN_DECIMALS.save(deps.storage, denom.as_bytes(), &decimals)?;
     Ok(Response::new().add_attributes(vec![
         ("action", "add_allow_native_token"),
         ("denom", &denom),
