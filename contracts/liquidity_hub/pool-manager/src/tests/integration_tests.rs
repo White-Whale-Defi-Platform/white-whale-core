@@ -173,6 +173,7 @@ fn deposit_and_withdraw_sanity_check() {
         // creator should have 999_000 LP shares (1M - MINIMUM_LIQUIDITY_AMOUNT)
         .query_all_balances(creator.to_string(), |result| {
             let balances = result.unwrap();
+            println!("{:?}", balances);
             assert!(balances.iter().any(|coin| {
                 coin.denom == lp_denom && coin.amount == Uint128::from(999_000u128)
             }));

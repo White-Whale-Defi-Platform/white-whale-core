@@ -64,8 +64,8 @@ pub enum ContractError {
     #[error("{asset} is invalid")]
     InvalidAsset { asset: String },
 
-    #[error("Pair already exist")]
-    ExistingPair {},
+    #[error("Pair does not exist")]
+    UnExistingPair {},
 
     #[error("Operation disabled, {0}")]
     OperationDisabled(String),

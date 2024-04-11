@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::MockStorage;
 use white_whale_std::pool_manager::SwapOperation;
-use white_whale_std::pool_manager::{InstantiateMsg, NPairInfo};
+use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
 use cw_multi_test::{
@@ -15,8 +15,8 @@ use white_whale_std::pool_network::{
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use white_whale_std::lp_common::LP_SYMBOL;
 
-use crate::liquidity::commands::LP_SYMBOL;
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new_with_empty(
         crate::contract::execute,
@@ -77,7 +77,7 @@ impl TestingSuite {
     pub(crate) fn get_lp_denom(&self, pair_id: String) -> String {
         // TODO: this should have
         format!(
-            "factory/{}/u{}.vault.{}.{}",
+            "factory/{}/u{}.pool.{}.{}",
             self.pool_manager_addr, pair_id, pair_id, LP_SYMBOL
         )
     }
@@ -410,9 +410,9 @@ impl TestingSuite {
     pub(crate) fn _query_pair_info(
         &self,
         pair_identifier: String,
-        result: impl Fn(StdResult<NPairInfo>),
+        result: impl Fn(StdResult<PairInfo>),
     ) -> &Self {
-        let pair_info_response: StdResult<NPairInfo> = self.app.wrap().query_wasm_smart(
+        let pair_info_response: StdResult<PairInfo> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Pair {
                 pair_identifier: pair_identifier,
@@ -480,7 +480,7 @@ impl TestingSuite {
         result: impl Fn(StdResult<Uint128>),
     ) -> &mut Self {
         // Get the LP token from Config
-        let lp_token_response: NPairInfo = self
+        let lp_token_response: PairInfo = self
             .app
             .wrap()
             .query_wasm_smart(
@@ -506,7 +506,7 @@ impl TestingSuite {
 
     pub(crate) fn _query_lp_token(&mut self, identifier: String, _sender: String) -> String {
         // Get the LP token from Config
-        let lp_token_response: NPairInfo = self
+        let lp_token_response: PairInfo = self
             .app
             .wrap()
             .query_wasm_smart(

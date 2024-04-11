@@ -17,7 +17,6 @@ use white_whale_std::pool_network::{
     U256,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-pub const LP_SYMBOL: &str = "uLP";
 
 /// Gets the protocol fee amount for the given asset_id
 pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: String) -> Uint128 {
@@ -33,6 +32,11 @@ pub fn get_protocol_fee_for_asset(collected_protocol_fees: Vec<Coin>, asset_id: 
         Uint128::zero()
     }
 }
+
+// todo allow providing liquidity with a single asset
+
+//todo allow passing an optional locking period for the LP once the liquidity is provided, so tokens
+// are locked in the incentive manager
 
 pub fn provide_liquidity(
     deps: DepsMut,
@@ -69,11 +73,12 @@ pub fn provide_liquidity(
         return Err(ContractError::InvalidZeroAmount {});
     }
 
-    // // deduct protocol fee from pools
-    // TODO: Replace with fill rewards msg
+    // TODO: remove
     let collected_protocol_fees = COLLECTABLE_PROTOCOL_FEES
         .load(deps.storage, &pair.lp_denom)
         .unwrap_or_default();
+
+    // todo remove this, as collected_protocol_fees is not a thing
     for pool in pool_assets.iter_mut() {
         let protocol_fee =
             get_protocol_fee_for_asset(collected_protocol_fees.clone(), pool.clone().denom);
@@ -83,7 +88,6 @@ pub fn provide_liquidity(
     let liquidity_token = pair.lp_denom.clone();
 
     // Compute share and other logic based on the number of assets
-    let _share = Uint128::zero();
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
     let share = match &pair.pair_type {

@@ -1,9 +1,7 @@
+use crate::{state::MANAGER_CONFIG, ContractError};
 use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 
-use crate::{state::MANAGER_CONFIG, ContractError};
-
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-pub const LP_SYMBOL: &str = "uLP";
 
 use cosmwasm_std::Decimal;
 
@@ -16,7 +14,7 @@ pub fn swap(
     info: MessageInfo,
     sender: Addr,
     offer_asset: Coin,
-    _ask_asset: String,
+    _ask_asset_denom: String,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
@@ -31,6 +29,8 @@ pub fn swap(
     if cw_utils::one_coin(&info)? != offer_asset {
         return Err(ContractError::AssetMismatch {});
     }
+
+    //todo get the pool by pair_identifier and verify the ask_asset_denom matches the one in the pool
 
     // perform the swap
     let swap_result = perform_swap(
@@ -59,16 +59,18 @@ pub fn swap(
         }));
     }
 
+    //todo this should be not a BankMsg but a fill_rewards msg
     if !swap_result.protocol_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.fee_collector_addr.to_string(),
+            to_address: config.whale_lair_addr.to_string(),
             amount: vec![swap_result.protocol_fee_asset.clone()],
         }));
     }
 
+    // todo remove, this stays within the pool
     if !swap_result.swap_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.fee_collector_addr.to_string(),
+            to_address: config.whale_lair_addr.to_string(),
             amount: vec![swap_result.swap_fee_asset.clone()],
         }));
     }

@@ -4,8 +4,6 @@ use cw_storage_plus::Item;
 use white_whale_std::pool_network::asset::{Asset, PairInfoRaw};
 use white_whale_std::pool_network::pair::Config;
 
-pub const LP_SYMBOL: &str = "uLP";
-
 pub const PAIR_INFO: Item<PairInfoRaw> = Item::new("pair_info");
 pub const CONFIG: Item<Config> = Item::new("config");
 

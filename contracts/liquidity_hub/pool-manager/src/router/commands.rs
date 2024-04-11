@@ -113,16 +113,18 @@ pub fn execute_swap_operations(
                     }));
                 }
 
+                // todo this should be not a BankMsg but a fill_rewards msg
                 if !swap_result.protocol_fee_asset.amount.is_zero() {
                     fee_messages.push(CosmosMsg::Bank(BankMsg::Send {
-                        to_address: config.fee_collector_addr.to_string(),
+                        to_address: config.whale_lair_addr.to_string(),
                         amount: vec![swap_result.protocol_fee_asset],
                     }));
                 }
 
+                // todo remove, the swap_fee_asset stays in the pool
                 if !swap_result.swap_fee_asset.amount.is_zero() {
                     fee_messages.push(CosmosMsg::Bank(BankMsg::Send {
-                        to_address: config.fee_collector_addr.to_string(),
+                        to_address: config.whale_lair_addr.to_string(),
                         amount: vec![swap_result.swap_fee_asset],
                     }));
                 }
