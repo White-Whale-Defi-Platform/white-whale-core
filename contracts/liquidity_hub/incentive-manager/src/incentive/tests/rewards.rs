@@ -1,5 +1,5 @@
 use crate::incentive::commands::{compute_start_from_epoch_for_user, compute_user_weights};
-use crate::state::ADDRESS_LP_WEIGHT_HISTORY;
+use crate::state::LP_WEIGHT_HISTORY;
 use cosmwasm_std::{Addr, Coin, Uint128};
 use white_whale_std::incentive_manager::{Curve, Incentive, Position};
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
@@ -28,7 +28,7 @@ fn compute_start_from_epoch_for_user_successfully() {
     // Mimics the scenario where the user has never claimed before, but opened a position before the incentive
     // went live
     let first_user_weight_epoch_id = 8;
-    ADDRESS_LP_WEIGHT_HISTORY
+    LP_WEIGHT_HISTORY
         .save(
             &mut deps.storage,
             (&user, "lp", first_user_weight_epoch_id),
@@ -94,7 +94,7 @@ fn compute_user_weights_successfully() {
     // [(1,2), (2,4), (3,6), (4,8), (5,10), (6,12), (7,14), (8,16), (9,18), (10,20)]
     for epoch in 1u64..=10u64 {
         let weight = Uint128::new(epoch as u128 * 2u128);
-        ADDRESS_LP_WEIGHT_HISTORY
+        LP_WEIGHT_HISTORY
             .save(&mut deps.storage, (&user, "lp", epoch), &weight)
             .unwrap();
     }
@@ -127,8 +127,7 @@ fn compute_user_weights_successfully() {
         );
 
         // reset the weight for epochs
-        ADDRESS_LP_WEIGHT_HISTORY
-            .remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
+        LP_WEIGHT_HISTORY.remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
     }
 
     // fill the lp_weight_history for the address with
@@ -139,7 +138,7 @@ fn compute_user_weights_successfully() {
         }
 
         let weight = Uint128::new(epoch as u128 * 2u128);
-        ADDRESS_LP_WEIGHT_HISTORY
+        LP_WEIGHT_HISTORY
             .save(
                 &mut deps.storage,
                 (&user, &position.lp_asset.denom, epoch),
@@ -185,7 +184,6 @@ fn compute_user_weights_successfully() {
 
     for epoch in 1u64..=10u64 {
         // reset the weight for epochs
-        ADDRESS_LP_WEIGHT_HISTORY
-            .remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
+        LP_WEIGHT_HISTORY.remove(&mut deps.storage, (&user, &position.lp_asset.denom, epoch));
     }
 }

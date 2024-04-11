@@ -108,7 +108,7 @@ pub fn execute(
         ExecuteMsg::EpochChangedHook(msg) => {
             manager::commands::on_epoch_changed(deps, env, info, msg)
         }
-        ExecuteMsg::Claim => incentive::commands::claim(deps, info),
+        ExecuteMsg::Claim => incentive::commands::claim(deps, env, info),
         ExecuteMsg::ManagePosition { action } => match action {
             PositionAction::Fill {
                 identifier,
@@ -116,6 +116,7 @@ pub fn execute(
                 receiver,
             } => position::commands::fill_position(
                 deps,
+                &env,
                 info,
                 identifier,
                 unlocking_duration,
@@ -160,7 +161,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config => Ok(to_json_binary(&queries::query_manager_config(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
@@ -180,11 +181,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         } => Ok(to_json_binary(&queries::query_positions(
             deps, address, open_state,
         )?)?),
-        QueryMsg::Rewards { address } => {
-            Ok(to_json_binary(&queries::query_rewards(deps, address)?)?)
-        }
-        QueryMsg::LPWeight { denom, epoch_id } => Ok(to_json_binary(&queries::query_lp_weight(
-            deps, denom, epoch_id,
+        QueryMsg::Rewards { address } => Ok(to_json_binary(&queries::query_rewards(
+            deps, &env, address,
+        )?)?),
+        QueryMsg::LPWeight {
+            address,
+            denom,
+            epoch_id,
+        } => Ok(to_json_binary(&queries::query_lp_weight(
+            deps, address, denom, epoch_id,
         )?)?),
     }
 }

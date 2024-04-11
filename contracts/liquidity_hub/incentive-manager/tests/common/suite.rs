@@ -518,6 +518,7 @@ impl TestingSuite {
         let rewards_response: StdResult<LpWeightResponse> = self.app.wrap().query_wasm_smart(
             &self.incentive_manager_addr,
             &white_whale_std::incentive_manager::QueryMsg::LPWeight {
+                address: self.incentive_manager_addr.to_string(),
                 denom: denom.to_string(),
                 epoch_id,
             },

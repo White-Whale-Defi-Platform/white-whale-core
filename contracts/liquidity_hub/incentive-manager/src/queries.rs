@@ -1,4 +1,4 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Deps, Env};
 
 use white_whale_std::coin::aggregate_coins;
 use white_whale_std::incentive_manager::{
@@ -9,7 +9,7 @@ use white_whale_std::incentive_manager::{
 use crate::incentive::commands::calculate_rewards;
 use crate::state::{
     get_incentive_by_identifier, get_incentives, get_incentives_by_incentive_asset,
-    get_incentives_by_lp_denom, get_positions_by_receiver, CONFIG, LP_WEIGHTS_HISTORY,
+    get_incentives_by_lp_denom, get_positions_by_receiver, CONFIG, LP_WEIGHT_HISTORY,
 };
 use crate::ContractError;
 
@@ -61,7 +61,11 @@ pub(crate) fn query_positions(
 }
 
 /// Queries the rewards for a given address.
-pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsResponse, ContractError> {
+pub(crate) fn query_rewards(
+    deps: Deps,
+    env: &Env,
+    address: String,
+) -> Result<RewardsResponse, ContractError> {
     let receiver = deps.api.addr_validate(&address)?;
     // check if the user has any open LP positions
     let open_positions =
@@ -82,7 +86,7 @@ pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsRespon
 
     for position in &open_positions {
         // calculate the rewards for the position
-        let rewards_response = calculate_rewards(deps, position, current_epoch.id, false)?;
+        let rewards_response = calculate_rewards(deps, env, position, current_epoch.id, false)?;
         match rewards_response {
             RewardsResponse::RewardsResponse { rewards } => {
                 total_rewards.append(&mut rewards.clone())
@@ -99,11 +103,15 @@ pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsRespon
 /// Queries the total lp weight for the given denom on the given epoch, i.e. the lp weight snapshot.
 pub(crate) fn query_lp_weight(
     deps: Deps,
+    address: String,
     denom: String,
     epoch_id: EpochId,
 ) -> Result<LpWeightResponse, ContractError> {
-    let lp_weight = LP_WEIGHTS_HISTORY
-        .may_load(deps.storage, (denom.as_str(), epoch_id))?
+    let lp_weight = LP_WEIGHT_HISTORY
+        .may_load(
+            deps.storage,
+            (&deps.api.addr_validate(&address)?, denom.as_str(), epoch_id),
+        )?
         .ok_or(ContractError::LpWeightNotFound { epoch_id })?;
 
     Ok(LpWeightResponse {

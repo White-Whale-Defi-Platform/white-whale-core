@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    ensure, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, MessageInfo, Response, Storage, Uint128,
+    ensure, Addr, BankMsg, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, Storage,
+    Uint128,
 };
 
 use white_whale_std::coin::aggregate_coins;
@@ -9,13 +10,12 @@ use white_whale_std::incentive_manager::{EpochId, Incentive, Position, RewardsRe
 
 use crate::state::{
     get_earliest_address_lp_weight, get_incentives_by_lp_denom, get_latest_address_lp_weight,
-    get_positions_by_receiver, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, INCENTIVES, LAST_CLAIMED_EPOCH,
-    LP_WEIGHTS_HISTORY,
+    get_positions_by_receiver, CONFIG, INCENTIVES, LAST_CLAIMED_EPOCH, LP_WEIGHT_HISTORY,
 };
 use crate::ContractError;
 
 /// Claims pending rewards for incentives where the user has LP
-pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub(crate) fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
     // check if the user has any open LP positions
@@ -33,7 +33,8 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
 
     for position in &open_positions {
         // calculate the rewards for the position
-        let rewards_response = calculate_rewards(deps.as_ref(), position, current_epoch.id, true)?;
+        let rewards_response =
+            calculate_rewards(deps.as_ref(), &env, position, current_epoch.id, true)?;
 
         match rewards_response {
             RewardsResponse::ClaimRewards {
@@ -102,6 +103,7 @@ pub(crate) fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, Contra
 /// the rewards.
 pub(crate) fn calculate_rewards(
     deps: Deps,
+    env: &Env,
     position: &Position,
     current_epoch_id: EpochId,
     is_claim: bool,
@@ -165,8 +167,11 @@ pub(crate) fn calculate_rewards(
             }
 
             let user_weight = user_weights[&epoch_id];
-            let total_lp_weight = LP_WEIGHTS_HISTORY
-                .may_load(deps.storage, (&incentive.lp_denom, epoch_id))?
+            let total_lp_weight = LP_WEIGHT_HISTORY
+                .may_load(
+                    deps.storage,
+                    (&env.contract.address, &incentive.lp_denom, epoch_id),
+                )?
                 .ok_or(ContractError::LpWeightNotFound { epoch_id })?;
 
             let user_share = (user_weight, total_lp_weight);
@@ -253,7 +258,7 @@ pub(crate) fn compute_user_weights(
     // last_claimed_epoch + 1 in that case, which is correct, and if the user has not modified its
     // position, the weight will be the same for start_from_epoch as it is for last_claimed_epoch.
     for epoch_id in *start_from_epoch - 1..=*current_epoch_id {
-        let weight = ADDRESS_LP_WEIGHT_HISTORY.may_load(
+        let weight = LP_WEIGHT_HISTORY.may_load(
             storage,
             (&position.receiver, &position.lp_asset.denom, epoch_id),
         )?;
@@ -304,15 +309,15 @@ fn sync_address_lp_weight_history(
 ) -> Result<(), ContractError> {
     let (earliest_epoch_id, _) = get_earliest_address_lp_weight(storage, address, lp_denom)?;
     let (latest_epoch_id, latest_address_lp_weight) =
-        get_latest_address_lp_weight(storage, address, lp_denom)?;
+        get_latest_address_lp_weight(storage, address, lp_denom, current_epoch_id)?;
 
     // remove previous entries
     for epoch_id in earliest_epoch_id..=latest_epoch_id {
-        ADDRESS_LP_WEIGHT_HISTORY.remove(storage, (address, lp_denom, epoch_id));
+        LP_WEIGHT_HISTORY.remove(storage, (address, lp_denom, epoch_id));
     }
 
     // save the latest weight for the current epoch
-    ADDRESS_LP_WEIGHT_HISTORY.save(
+    LP_WEIGHT_HISTORY.save(
         storage,
         (address, lp_denom, *current_epoch_id),
         &latest_address_lp_weight,

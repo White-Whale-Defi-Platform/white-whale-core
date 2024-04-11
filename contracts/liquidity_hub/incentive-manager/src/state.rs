@@ -41,12 +41,10 @@ impl<'a> IndexList<Position> for PositionIndexes<'a> {
 /// The last epoch an address claimed rewards
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch");
 
-/// The history of total weight (sum of all individual weights) of an LP asset at a given epoch
-pub const LP_WEIGHTS_HISTORY: Map<(&str, EpochId), Uint128> = Map::new("lp_weights_history");
-
-//todo add the lp denom here as well, otherwise there's no way to distinguish
-/// The address lp weight history, i.e. how much lp weight an address had at a given epoch
-pub const ADDRESS_LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> =
+/// The lp weight history for addresses, including the contract. i.e. how much lp weight an address
+/// or contract has at a given epoch.
+/// Key is a tuple of (address, lp_denom, epoch_id), value is the lp weight.
+pub const LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> =
     Map::new("address_lp_weight_history");
 
 /// An monotonically increasing counter to generate unique incentive identifiers.
@@ -214,7 +212,7 @@ pub fn get_earliest_address_lp_weight(
     address: &Addr,
     lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    let earliest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
+    let earliest_weight_history_result = LP_WEIGHT_HISTORY
         .prefix((address, lp_denom))
         .range(storage, None, None, Order::Ascending)
         .next()
@@ -228,13 +226,14 @@ pub fn get_earliest_address_lp_weight(
 }
 
 /// Gets the latest entry of an address in the address lp weight history.
-/// If the address has no open positions, it returns an error.
+/// If the address has no open positions, returns 0 for the weight.
 pub fn get_latest_address_lp_weight(
     storage: &dyn Storage,
     address: &Addr,
     lp_denom: &str,
+    epoch_id: &EpochId,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    let latest_weight_history_result = ADDRESS_LP_WEIGHT_HISTORY
+    let latest_weight_history_result = LP_WEIGHT_HISTORY
         .prefix((address, lp_denom))
         .range(storage, None, None, Order::Descending)
         .next()
@@ -242,29 +241,7 @@ pub fn get_latest_address_lp_weight(
 
     match latest_weight_history_result {
         Ok(Some(item)) => Ok(item),
-        Ok(None) => Err(ContractError::NoOpenPositions),
-        Err(std_err) => Err(std_err.into()),
-    }
-}
-
-/// Gets the latest entry of the LP_WEIGHT_HISTORY for the given lp denom.
-/// If there's no LP weight history for the given lp denom, i.e. nobody opened a position ever before,
-/// it returns 0 for the weight.
-pub fn get_latest_lp_weight_record(
-    storage: &dyn Storage,
-    lp_denom: &str,
-    epoch_id: EpochId,
-) -> Result<(EpochId, Uint128), ContractError> {
-    let latest_weight_history_result = LP_WEIGHTS_HISTORY
-        .prefix(lp_denom)
-        .range(storage, None, None, Order::Descending)
-        .next()
-        .transpose();
-
-    match latest_weight_history_result {
-        Ok(Some(item)) => Ok(item),
-        // if the lp weight was not found in the map, it returns 0 for the weight.
-        Ok(None) => Ok((epoch_id, Uint128::zero())),
+        Ok(None) => Ok((epoch_id.to_owned(), Uint128::zero())),
         Err(std_err) => Err(std_err.into()),
     }
 }

@@ -5,17 +5,15 @@ use cosmwasm_std::{
 use white_whale_std::incentive_manager::{Position, RewardsResponse};
 
 use crate::position::helpers::validate_unlocking_duration;
-use crate::position::helpers::{calculate_weight, get_latest_address_weight, get_latest_lp_weight};
+use crate::position::helpers::{calculate_weight, get_latest_address_weight};
 use crate::queries::query_rewards;
-use crate::state::{
-    get_position, ADDRESS_LP_WEIGHT_HISTORY, CONFIG, LP_WEIGHTS_HISTORY, POSITIONS,
-    POSITION_ID_COUNTER,
-};
+use crate::state::{get_position, CONFIG, LP_WEIGHT_HISTORY, POSITIONS, POSITION_ID_COUNTER};
 use crate::ContractError;
 
 /// Fills a position. If the position already exists, it will be expanded. Otherwise, a new position is created.
 pub(crate) fn fill_position(
     deps: DepsMut,
+    env: &Env,
     info: MessageInfo,
     identifier: Option<String>,
     unlocking_duration: u64,
@@ -81,7 +79,7 @@ pub(crate) fn fill_position(
     }
 
     // Update weights for the LP and the user
-    update_weights(deps, &receiver, &lp_asset, unlocking_duration, true)?;
+    update_weights(deps, env, &receiver, &lp_asset, unlocking_duration, true)?;
 
     let action = match position {
         Some(_) => "expand_position",
@@ -107,7 +105,7 @@ pub(crate) fn close_position(
     cw_utils::nonpayable(&info)?;
 
     // check if the user has pending rewards. Can't close a position without claiming pending rewards first
-    let rewards_response = query_rewards(deps.as_ref(), info.sender.clone().into_string())?;
+    let rewards_response = query_rewards(deps.as_ref(), &env, info.sender.clone().into_string())?;
     match rewards_response {
         RewardsResponse::RewardsResponse { rewards } => {
             ensure!(rewards.is_empty(), ContractError::PendingRewards)
@@ -183,6 +181,7 @@ pub(crate) fn close_position(
 
     update_weights(
         deps.branch(),
+        &env,
         &info,
         &position.lp_asset,
         position.unlocking_duration,
@@ -216,7 +215,7 @@ pub(crate) fn withdraw_position(
     );
 
     // check if the user has pending rewards. Can't withdraw a position without claiming pending rewards first
-    let rewards_response = query_rewards(deps.as_ref(), info.sender.clone().into_string())?;
+    let rewards_response = query_rewards(deps.as_ref(), &env, info.sender.clone().into_string())?;
     match rewards_response {
         RewardsResponse::RewardsResponse { rewards } => {
             ensure!(rewards.is_empty(), ContractError::PendingRewards)
@@ -256,6 +255,7 @@ pub(crate) fn withdraw_position(
         if position.open {
             update_weights(
                 deps.branch(),
+                &env,
                 &info,
                 &position.lp_asset,
                 position.unlocking_duration,
@@ -302,6 +302,7 @@ pub(crate) fn withdraw_position(
 /// Updates the weights when managing a position. Computes what the weight is gonna be in the next epoch.
 fn update_weights(
     deps: DepsMut,
+    env: &Env,
     receiver: &MessageInfo,
     lp_asset: &Coin,
     unlocking_duration: u64,
@@ -315,7 +316,8 @@ fn update_weights(
 
     let weight = calculate_weight(lp_asset, unlocking_duration)?;
 
-    let (_, mut lp_weight) = get_latest_lp_weight(deps.storage, &lp_asset.denom)?;
+    let (_, mut lp_weight) =
+        get_latest_address_weight(deps.storage, &env.contract.address, &lp_asset.denom)?;
 
     if fill {
         // filling position
@@ -325,9 +327,14 @@ fn update_weights(
         lp_weight = lp_weight.saturating_sub(weight);
     }
 
-    LP_WEIGHTS_HISTORY.update::<_, StdError>(
+    // update the LP weight for the contract
+    LP_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
-        (&lp_asset.denom, current_epoch.id + 1u64),
+        (
+            &env.contract.address,
+            &lp_asset.denom,
+            current_epoch.id + 1u64,
+        ),
         |_| Ok(lp_weight),
     )?;
 
@@ -344,7 +351,7 @@ fn update_weights(
     }
 
     //todo if the address weight is zero, remove it from the storage?
-    ADDRESS_LP_WEIGHT_HISTORY.update::<_, StdError>(
+    LP_WEIGHT_HISTORY.update::<_, StdError>(
         deps.storage,
         (&receiver.sender, &lp_asset.denom, current_epoch.id + 1u64),
         |_| Ok(address_lp_weight),

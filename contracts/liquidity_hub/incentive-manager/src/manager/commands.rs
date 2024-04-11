@@ -13,8 +13,8 @@ use crate::helpers::{
     validate_incentive_epochs,
 };
 use crate::state::{
-    get_incentive_by_identifier, get_incentives_by_lp_denom, get_latest_lp_weight_record, CONFIG,
-    INCENTIVES, INCENTIVE_COUNTER, LP_WEIGHTS_HISTORY,
+    get_incentive_by_identifier, get_incentives_by_lp_denom, get_latest_address_lp_weight, CONFIG,
+    INCENTIVES, INCENTIVE_COUNTER, LP_WEIGHT_HISTORY,
 };
 use crate::ContractError;
 
@@ -300,7 +300,7 @@ pub(crate) fn on_epoch_changed(
     // get all LP tokens and update the LP_WEIGHTS_HISTORY
     let lp_denoms = deps
         .querier
-        .query_all_balances(env.contract.address)?
+        .query_all_balances(env.contract.address.clone())?
         .into_iter()
         .filter(|asset| {
             if is_factory_token(asset.denom.as_str()) {
@@ -314,8 +314,10 @@ pub(crate) fn on_epoch_changed(
         .collect::<Vec<String>>();
 
     for lp_denom in &lp_denoms {
-        let lp_weight_option =
-            LP_WEIGHTS_HISTORY.may_load(deps.storage, (lp_denom, msg.current_epoch.id))?;
+        let lp_weight_option = LP_WEIGHT_HISTORY.may_load(
+            deps.storage,
+            (&env.contract.address, lp_denom, msg.current_epoch.id),
+        )?;
 
         // if the weight for this LP token at this epoch has already been recorded, i.e. someone
         // opened or closed positions in the previous epoch, skip it
@@ -324,12 +326,16 @@ pub(crate) fn on_epoch_changed(
         } else {
             // if the weight for this LP token at this epoch has not been recorded, i.e. no one
             // opened or closed positions in the previous epoch, get the last recorded weight
-            let (_, latest_lp_weight_record) =
-                get_latest_lp_weight_record(deps.storage, lp_denom, msg.current_epoch.id)?;
-
-            LP_WEIGHTS_HISTORY.save(
+            let (_, latest_lp_weight_record) = get_latest_address_lp_weight(
                 deps.storage,
-                (lp_denom, msg.current_epoch.id),
+                &env.contract.address,
+                lp_denom,
+                &msg.current_epoch.id,
+            )?;
+
+            LP_WEIGHT_HISTORY.save(
+                deps.storage,
+                (&env.contract.address, lp_denom, msg.current_epoch.id),
                 &latest_lp_weight_record,
             )?;
         }

@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Coin, Decimal256, Order, StdError, Storage, Uint128};
 
 use white_whale_std::incentive_manager::{Config, EpochId};
 
-use crate::state::{ADDRESS_LP_WEIGHT_HISTORY, LP_WEIGHTS_HISTORY};
+use crate::state::LP_WEIGHT_HISTORY;
 use crate::ContractError;
 
 const SECONDS_IN_DAY: u64 = 86400;
@@ -62,24 +62,8 @@ pub fn get_latest_address_weight(
     address: &Addr,
     lp_denom: &str,
 ) -> Result<(EpochId, Uint128), ContractError> {
-    let result = ADDRESS_LP_WEIGHT_HISTORY
+    let result = LP_WEIGHT_HISTORY
         .prefix((address, lp_denom))
-        .range(storage, None, None, Order::Descending)
-        .take(1usize)
-        // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
-        .next()
-        .transpose();
-
-    return_latest_weight(result)
-}
-
-/// Gets the latest available weight snapshot recorded for the given lp.
-pub fn get_latest_lp_weight(
-    storage: &dyn Storage,
-    lp_denom: &str,
-) -> Result<(EpochId, Uint128), ContractError> {
-    let result = LP_WEIGHTS_HISTORY
-        .prefix(lp_denom)
         .range(storage, None, None, Order::Descending)
         .take(1usize)
         // take only one item, the last item. Since it's being sorted in descending order, it's the latest one.
