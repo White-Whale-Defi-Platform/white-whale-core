@@ -2,8 +2,8 @@
 name = "pool-manager"
 version = "0.1.0"
 authors = [
-  "0xFable <0xfable@protonmail.com>",
-  "kaimen-sano <kaimen_sano@protonmail.com>",
+	"0xFable <0xfable@protonmail.com>",
+	"kaimen-sano <kaimen_sano@protonmail.com>",
 ]
 edition.workspace = true
 description = "The Pool Manager is a contract that allows to manage multiple pools in a single contract."
@@ -14,9 +14,9 @@ documentation.workspace = true
 publish.workspace = true
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+	# Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+	"contract.wasm",
+	"hash.txt",
 ]
 
 [lib]

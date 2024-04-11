@@ -17,7 +17,6 @@ jobs:
   test_and_check-token_factory_feature:
     name: Test and check Token factory feature
     runs-on: ubuntu-latest
-
     steps:
       # Cancel any existing runs to save on CI time
       # - name: Cancel Previous Runs
@@ -70,15 +69,9 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: Generate Schemas and Exit on uncommitted changes
-        run: |
-          chmod +x ./scripts/build_schemas.sh
-          ./scripts/build_schemas.sh -f token_factory -d true
-        shell: bash
-
   test_and_check-token_injective_feature:
     name: Test and check Injective feature
-    runs-on: ubuntu-latestq
+    runs-on: ubuntu-latest
 
     steps:
       # Cancel any existing runs to save on CI time

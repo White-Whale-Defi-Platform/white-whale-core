@@ -1,0 +1,4 @@
+# define x-task aliases
+# see https://github.com/matklad/cargo-xtask
+[alias]
+xtask = "run --package xtask --"

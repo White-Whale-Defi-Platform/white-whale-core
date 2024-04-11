@@ -3,10 +3,10 @@ name = "white-whale-std"
 version = "1.1.3"
 edition.workspace = true
 authors = [
-  "Kerber0x <kerber0x@protonmail.com>",
-  "0xFable <0xfabledev@gmail.com>",
-  "kaimen-sano <kaimen_sano@protonmail.com>",
-  "White Whale <info@whitewhale.money>",
+	"Kerber0x <kerber0x@protonmail.com>",
+	"0xFable <0xfabledev@gmail.com>",
+	"kaimen-sano <kaimen_sano@protonmail.com>",
+	"White Whale <info@whitewhale.money>",
 ]
 description = "Common White Whale types and utils"
 license.workspace = true
@@ -20,7 +20,7 @@ injective = ["token_factory"]
 osmosis = ["osmosis_token_factory"]
 token_factory = []
 osmosis_token_factory = [
-  "token_factory",
+	"token_factory",
 ] # this is for the osmosis token factory proto definitions, which defer from the standard token factory :)
 backtraces = ["cosmwasm-std/backtraces"]
 
@@ -42,6 +42,7 @@ anybuf.workspace = true
 cw-controllers.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
+cw20-base.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

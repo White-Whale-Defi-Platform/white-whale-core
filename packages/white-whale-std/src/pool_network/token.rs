@@ -36,6 +36,10 @@ impl InstantiateMsg {
     }
 }
 
+pub type ExecuteMsg = cw20_base::msg::ExecuteMsg;
+pub type QueryMsg = cw20_base::msg::QueryMsg;
+pub type MigrateMsg = cw20_base::msg::MigrateMsg;
+
 fn is_valid_name(name: &str) -> bool {
     let bytes = name.as_bytes();
     if bytes.len() < 3 || bytes.len() > 50 {
