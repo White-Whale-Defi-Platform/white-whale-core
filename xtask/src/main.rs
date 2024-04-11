@@ -63,6 +63,7 @@ pub mod tasks {
             generate_schema!("fee_collector", fee_collector),
             generate_schema!("fee_distributor", fee_distributor),
             generate_schema!("pool-manager", pool_manager),
+            generate_schema!("incentive-manager", incentive_manager),
             generate_schema!("frontend-helper", frontend_helper),
             generate_schema!("incentive", incentive),
             generate_schema!("incentive-factory", incentive_factory),
