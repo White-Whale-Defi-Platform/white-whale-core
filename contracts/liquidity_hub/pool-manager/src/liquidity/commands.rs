@@ -208,7 +208,6 @@ pub fn withdraw_liquidity(
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
-    let amount = info.funds[0].amount;
     // check if the withdraw feature is enabled
     if !config.feature_toggle.withdrawals_enabled {
         return Err(ContractError::OperationDisabled(
@@ -220,9 +219,8 @@ pub fn withdraw_liquidity(
     let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
     let liquidity_token = pair.lp_denom.clone();
     // Verify that the LP token was sent
-    if info.funds.is_empty() || info.funds[0].denom != liquidity_token {
-        return Err(ContractError::Unauthorized {});
-    }
+    let amount = cw_utils::must_pay(&info, &liquidity_token)?;
+
     // Get the total share of the pool
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
