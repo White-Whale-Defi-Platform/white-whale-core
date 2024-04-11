@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
 use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
@@ -203,8 +203,7 @@ pub fn provide_liquidity(
 pub fn withdraw_liquidity(
     deps: DepsMut,
     env: Env,
-    sender: Addr,
-    amount: Uint128,
+    info: MessageInfo,
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
@@ -218,6 +217,8 @@ pub fn withdraw_liquidity(
     // Get the pair by the pair_identifier
     let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
     let liquidity_token = pair.lp_denom.clone();
+    // Verify that the LP token was sent
+    let amount = cw_utils::must_pay(&info, &liquidity_token)?;
 
     // Get the total share of the pool
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
@@ -242,7 +243,7 @@ pub fn withdraw_liquidity(
 
     // Transfer the refund assets to the sender
     messages.push(CosmosMsg::Bank(BankMsg::Send {
-        to_address: sender.to_string(),
+        to_address: info.sender.to_string(),
         amount: refund_assets.clone(),
     }));
 
@@ -263,7 +264,7 @@ pub fn withdraw_liquidity(
     // update pool info
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "withdraw_liquidity"),
-        ("sender", sender.as_str()),
+        ("sender", info.sender.as_str()),
         ("withdrawn_share", &amount.to_string()),
     ]))
 }

@@ -104,14 +104,7 @@ pub fn execute(
             )
         }
         ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
-            liquidity::commands::withdraw_liquidity(
-                deps,
-                env,
-                // TODO: why not sending info instead? there's no check that funds are sent
-                info.sender,
-                info.funds[0].amount,
-                pair_identifier,
-            )
+            liquidity::commands::withdraw_liquidity(deps, env, info, pair_identifier)
         }
         ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
             manager::commands::add_native_token_decimals(deps, env, denom, decimals)
