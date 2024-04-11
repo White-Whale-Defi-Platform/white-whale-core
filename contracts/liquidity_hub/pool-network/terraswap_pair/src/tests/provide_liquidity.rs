@@ -19,7 +19,7 @@ use white_whale_std::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
 #[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 
 #[cfg(feature = "injective")]
 use crate::tests::mock_app::mock_app_with_balance;

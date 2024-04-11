@@ -14,6 +14,11 @@ use cosmwasm_std::{
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
 
+use crate::contract::INSTANTIATE_REPLY_ID;
+use crate::error::ContractError;
+use crate::math::Decimal256Helper;
+use crate::state::PAIR_INFO;
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, AssetInfoRaw, PairType};
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::MsgCreateDenom;
@@ -23,11 +28,6 @@ use white_whale_std::pool_network::denom_injective::MsgCreateDenom;
 use white_whale_std::pool_network::denom_osmosis::MsgCreateDenom;
 use white_whale_std::pool_network::pair::{InstantiateMsg, PoolFee};
 use white_whale_std::pool_network::token::InstantiateMsg as TokenInstantiateMsg;
-
-use crate::contract::INSTANTIATE_REPLY_ID;
-use crate::error::ContractError;
-use crate::math::Decimal256Helper;
-use crate::state::{LP_SYMBOL, PAIR_INFO};
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;

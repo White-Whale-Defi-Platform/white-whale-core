@@ -11,16 +11,15 @@
         "create_pair": {
           "type": "object",
           "required": [
-            "asset_infos",
+            "asset_denoms",
             "pair_type",
-            "pool_fees",
-            "token_factory_lp"
+            "pool_fees"
           ],
           "properties": {
-            "asset_infos": {
+            "asset_denoms": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/AssetInfo"
+                "type": "string"
               }
             },
             "pair_identifier": {
@@ -34,9 +33,6 @@
             },
             "pool_fees": {
               "$ref": "#/definitions/PoolFee"
-            },
-            "token_factory_lp": {
-              "type": "boolean"
             }
           },
           "additionalProperties": false
@@ -54,16 +50,9 @@
         "provide_liquidity": {
           "type": "object",
           "required": [
-            "assets",
             "pair_identifier"
           ],
           "properties": {
-            "assets": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Asset"
-              }
-            },
             "pair_identifier": {
               "type": "string"
             },
@@ -99,13 +88,13 @@
         "swap": {
           "type": "object",
           "required": [
-            "ask_asset",
+            "ask_asset_denom",
             "offer_asset",
             "pair_identifier"
           ],
           "properties": {
-            "ask_asset": {
-              "$ref": "#/definitions/AssetInfo"
+            "ask_asset_denom": {
+              "type": "string"
             },
             "belief_price": {
               "anyOf": [
@@ -128,7 +117,7 @@
               ]
             },
             "offer_asset": {
-              "$ref": "#/definitions/Asset"
+              "$ref": "#/definitions/Coin"
             },
             "pair_identifier": {
               "type": "string"
@@ -154,16 +143,9 @@
         "withdraw_liquidity": {
           "type": "object",
           "required": [
-            "assets",
             "pair_identifier"
           ],
           "properties": {
-            "assets": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Asset"
-              }
-            },
             "pair_identifier": {
               "type": "string"
             }
@@ -282,18 +264,6 @@
       "additionalProperties": false
     },
     {
-      "type": "object",
-      "required": [
-        "receive"
-      ],
-      "properties": {
-        "receive": {
-          "$ref": "#/definitions/Cw20ReceiveMsg"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
       "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
       "type": "object",
       "required": [
@@ -359,93 +329,20 @@
         }
       ]
     },
-    "Asset": {
+    "Coin": {
       "type": "object",
       "required": [
         "amount",
-        "info"
+        "denom"
       ],
       "properties": {
         "amount": {
           "$ref": "#/definitions/Uint128"
         },
-        "info": {
-          "$ref": "#/definitions/AssetInfo"
-        }
-      },
-      "additionalProperties": false
-    },
-    "AssetInfo": {
-      "description": "AssetInfo contract_addr is usually passed from the cw20 hook so we can trust the contract_addr is properly validated.",
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "token"
-          ],
-          "properties": {
-            "token": {
-              "type": "object",
-              "required": [
-                "contract_addr"
-              ],
-              "properties": {
-                "contract_addr": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "native_token"
-          ],
-          "properties": {
-            "native_token": {
-              "type": "object",
-              "required": [
-                "denom"
-              ],
-              "properties": {
-                "denom": {
-                  "type": "string"
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "Binary": {
-      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>. See also <https://github.com/CosmWasm/cosmwasm/blob/main/docs/MESSAGE_TYPES.md>.",
-      "type": "string"
-    },
-    "Cw20ReceiveMsg": {
-      "description": "Cw20ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg",
-      "type": "object",
-      "required": [
-        "amount",
-        "msg",
-        "sender"
-      ],
-      "properties": {
-        "amount": {
-          "$ref": "#/definitions/Uint128"
-        },
-        "msg": {
-          "$ref": "#/definitions/Binary"
-        },
-        "sender": {
+        "denom": {
           "type": "string"
         }
-      },
-      "additionalProperties": false
+      }
     },
     "Decimal": {
       "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
@@ -577,18 +474,18 @@
               "type": "object",
               "required": [
                 "pool_identifier",
-                "token_in_info",
-                "token_out_info"
+                "token_in_denom",
+                "token_out_denom"
               ],
               "properties": {
                 "pool_identifier": {
                   "type": "string"
                 },
-                "token_in_info": {
-                  "$ref": "#/definitions/AssetInfo"
+                "token_in_denom": {
+                  "type": "string"
                 },
-                "token_out_info": {
-                  "$ref": "#/definitions/AssetInfo"
+                "token_out_denom": {
+                  "type": "string"
                 }
               },
               "additionalProperties": false
@@ -601,16 +498,16 @@
     "SwapRoute": {
       "type": "object",
       "required": [
-        "ask_asset_info",
-        "offer_asset_info",
+        "ask_asset_denom",
+        "offer_asset_denom",
         "swap_operations"
       ],
       "properties": {
-        "ask_asset_info": {
-          "$ref": "#/definitions/AssetInfo"
+        "ask_asset_denom": {
+          "type": "string"
         },
-        "offer_asset_info": {
-          "$ref": "#/definitions/AssetInfo"
+        "offer_asset_denom": {
+          "type": "string"
         },
         "swap_operations": {
           "type": "array",

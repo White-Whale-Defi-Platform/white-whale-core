@@ -1,7 +1,5 @@
 use crate::contract::{execute, instantiate, reply};
 use crate::error::ContractError;
-#[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
 use crate::state::{get_fees_for_asset, store_fee, COLLECTED_PROTOCOL_FEES};
 #[cfg(feature = "token_factory")]
 use cosmwasm_std::coin;
@@ -12,6 +10,8 @@ use cosmwasm_std::{
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use white_whale_std::fee::Fee;
+#[cfg(feature = "token_factory")]
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset::AssetInfo;
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::MsgBurn;

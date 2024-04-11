@@ -2,7 +2,7 @@ use cosmwasm_std::{
     attr, coins, ensure, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 
-use white_whale_std::constants::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::tokenfactory;
 use white_whale_std::vault_manager::{Vault, VaultFee};
 use white_whale_std::whale_lair::fill_rewards_msg_coin;
