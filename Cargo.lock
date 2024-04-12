@@ -512,6 +512,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-controllers",
  "cw-storage-plus",
+ "cw-utils",
  "cw2",
  "schemars",
  "semver",
@@ -727,6 +728,30 @@ dependencies = [
  "serde",
  "thiserror",
  "white-whale-std",
+]
+
+[[package]]
+name = "incentive-manager"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-ownable",
+ "cw-storage-plus",
+ "cw-utils",
+ "cw2",
+ "cw20",
+ "cw20-base",
+ "epoch-manager",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
+ "whale-lair",
+ "white-whale-std",
+ "white-whale-testing",
 ]
 
 [[package]]

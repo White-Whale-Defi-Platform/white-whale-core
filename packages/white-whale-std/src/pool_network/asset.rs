@@ -132,6 +132,26 @@ impl Asset {
             AssetInfo::NativeToken { denom } => denom,
         }
     }
+
+    /// Builds a native asset
+    pub fn native_asset<S: Into<String>>(denom: S, amount: Uint128) -> Asset {
+        Asset {
+            info: AssetInfo::NativeToken {
+                denom: denom.into(),
+            },
+            amount,
+        }
+    }
+
+    /// Builds a cw20 token asset
+    pub fn token_asset<S: Into<String>>(contract_addr: S, amount: Uint128) -> Asset {
+        Asset {
+            info: AssetInfo::Token {
+                contract_addr: contract_addr.into(),
+            },
+            amount,
+        }
+    }
 }
 
 /// AssetInfo contract_addr is usually passed from the cw20 hook
@@ -161,6 +181,13 @@ impl AssetInfo {
             AssetInfo::Token { contract_addr } => Ok(AssetInfoRaw::Token {
                 contract_addr: api.addr_canonicalize(contract_addr.as_str())?,
             }),
+        }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            AssetInfo::NativeToken { denom } => denom.as_bytes(),
+            AssetInfo::Token { contract_addr } => contract_addr.as_bytes(),
         }
     }
 

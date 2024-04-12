@@ -6,10 +6,10 @@ use cosmwasm_std::{
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 
 #[cfg(feature = "token_factory")]
-use white_whale_std::lp_common::LP_SYMBOL;
-#[cfg(feature = "token_factory")]
 use cosmwasm_std::coin;
 use white_whale_std::fee::Fee;
+#[cfg(feature = "token_factory")]
+use white_whale_std::lp_common::LP_SYMBOL;
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};

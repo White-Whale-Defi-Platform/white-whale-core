@@ -1,4 +1,6 @@
-use cosmwasm_std::{StdError, StdResult};
+use std::collections::HashMap;
+
+use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -99,6 +101,20 @@ pub fn is_factory_token(denom: &str) -> bool {
     true
 }
 
+/// Gets the subdenom of a factory token. To be called after [is_factory_token] has been successful.
+pub fn get_factory_token_subdenom(denom: &str) -> StdResult<&str> {
+    let subdenom = denom.splitn(3, '/').nth(2);
+
+    subdenom.map_or_else(
+        || {
+            Err(StdError::generic_err(
+                "Splitting factory token subdenom failed",
+            ))
+        },
+        Ok,
+    )
+}
+
 /// Builds the label for a factory token denom in such way that it returns a label like "factory/mig...xyz/123...456".
 /// Call after [crate::pool_network::asset::is_factory_token] has been successful
 fn get_factory_token_label(denom: &str) -> StdResult<String> {
@@ -124,3 +140,25 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
+
+/// Aggregates coins from two vectors, summing up the amounts of coins that are the same.
+pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
+    let mut aggregation_map: HashMap<String, Uint128> = HashMap::new();
+
+    // aggregate coins by denom
+    for coin in coins {
+        if let Some(existing_amount) = aggregation_map.get_mut(&coin.denom) {
+            *existing_amount = existing_amount.checked_add(coin.amount)?;
+        } else {
+            aggregation_map.insert(coin.denom.clone(), coin.amount);
+        }
+    }
+
+    // create a new vector from the aggregation map
+    let mut aggregated_coins: Vec<Coin> = Vec::new();
+    for (denom, amount) in aggregation_map {
+        aggregated_coins.push(Coin { denom, amount });
+    }
+
+    Ok(aggregated_coins)
+}

@@ -113,6 +113,7 @@ pub fn update_config(
     deposit_enabled: Option<bool>,
     withdraw_enabled: Option<bool>,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let new_config = CONFIG.update::<_, ContractError>(deps.storage, |mut config| {

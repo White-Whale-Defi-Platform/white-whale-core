@@ -176,6 +176,7 @@ pub fn create_pair(
     let lp_symbol = format!("{pair_label}.pool.{identifier}.{LP_SYMBOL}");
     let lp_asset = format!("{}/{}/{}", "factory", env.contract.address, lp_symbol);
 
+    #[allow(clippy::redundant_clone)]
     PAIRS.save(
         deps.storage,
         &identifier,

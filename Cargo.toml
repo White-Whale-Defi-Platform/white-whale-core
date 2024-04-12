@@ -2,16 +2,17 @@
 resolver = "2"
 
 members = [
-	"packages/*",
-	"contracts/liquidity_hub/pool-network/*",
-	"contracts/liquidity_hub/fee_collector",
-	"contracts/liquidity_hub/fee_distributor",
-	"contracts/liquidity_hub/whale_lair",
-	"contracts/liquidity_hub/vault-network/*",
-	"contracts/liquidity_hub/pool-manager",
-	"contracts/liquidity_hub/epoch-manager",
-	"contracts/liquidity_hub/vault-manager",
-	"xtask",
+  "packages/*",
+  "contracts/liquidity_hub/pool-network/*",
+  "contracts/liquidity_hub/fee_collector",
+  "contracts/liquidity_hub/fee_distributor",
+  "contracts/liquidity_hub/whale_lair",
+  "contracts/liquidity_hub/vault-network/*",
+  "contracts/liquidity_hub/pool-manager",
+  "contracts/liquidity_hub/epoch-manager",
+  "contracts/liquidity_hub/vault-manager",
+  "contracts/liquidity_hub/incentive-manager",
+  "xtask",
 ]
 
 [workspace.package]
@@ -26,9 +27,9 @@ authors = ["White Whale Defi"]
 [workspace.dependencies]
 cosmwasm-schema = { version = "1.5.3" }
 cosmwasm-std = { version = "1.1.4", features = [
-	"iterator",
-	"cosmwasm_1_2",
-	"stargate",
+  "iterator",
+  "cosmwasm_1_2",
+  "stargate",
 ] }
 cw2 = { version = "1.0.1" }
 cw20 = { version = "1.0.1" }
@@ -54,7 +55,7 @@ sha2 = { version = "=0.10.8" }
 sha256 = { version = "1.4.0" }
 protobuf = { version = "=3.2.0", features = ["with-bytes"] }
 prost = { version = "0.11.9", default-features = false, features = [
-	"prost-derive",
+  "prost-derive",
 ] }
 test-case = { version = "3.3.1" }
 
@@ -66,6 +67,7 @@ fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock"
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
+epoch-manager = { path = "./contracts/liquidity_hub/epoch-manager" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

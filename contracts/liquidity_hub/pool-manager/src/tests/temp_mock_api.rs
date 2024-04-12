@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult, VerificationError,
 };
-// Reworked mock api to work with instantiate2 in mock_querier, can eventually be removed 
+// Reworked mock api to work with instantiate2 in mock_querier, can eventually be removed
 #[derive(Copy, Clone, Default)]
 pub struct MockSimpleApi {}
 

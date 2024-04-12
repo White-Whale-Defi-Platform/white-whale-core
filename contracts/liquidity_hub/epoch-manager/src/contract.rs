@@ -13,7 +13,7 @@ use crate::state::{ADMIN, CONFIG, EPOCHS};
 use crate::{commands, queries};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "white_whale-epoch-manager";
+const CONTRACT_NAME: &str = "white-whale_epoch-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -69,7 +69,7 @@ pub fn execute(
         ExecuteMsg::RemoveHook { contract_addr } => {
             commands::remove_hook(deps, info, api, &contract_addr)
         }
-        ExecuteMsg::CreateEpoch {} => commands::create_epoch(deps, env),
+        ExecuteMsg::CreateEpoch {} => commands::create_epoch(deps, env, info),
         ExecuteMsg::UpdateConfig {
             owner,
             epoch_config,

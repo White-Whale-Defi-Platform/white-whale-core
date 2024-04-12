@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{to_json_binary, Binary, CosmosMsg, StdResult, WasmMsg};
 
-use crate::epoch_manager::epoch_manager::EpochV2;
+use crate::epoch_manager::epoch_manager::Epoch;
 
 #[cw_serde]
 pub struct EpochChangedHookMsg {
-    pub current_epoch: EpochV2,
+    pub current_epoch: Epoch,
 }
 
 impl EpochChangedHookMsg {
