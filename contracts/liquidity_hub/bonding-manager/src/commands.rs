@@ -1,10 +1,10 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, QueryRequest,
-    Response, StdError, StdResult, Timestamp, Uint128, Uint64, WasmQuery,
+    ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
+    StdError, StdResult, Timestamp, Uint128, Uint64,
 };
 use white_whale_std::pool_network::asset;
 
-use white_whale_std::bonding_manager::{Bond, BondingWeightResponse, Epoch};
+use white_whale_std::bonding_manager::Bond;
 
 use crate::helpers::validate_growth_rate;
 use crate::queries::{query_claimable, query_weight, MAX_PAGE_LIMIT};
@@ -72,18 +72,22 @@ pub(crate) fn unbond(
     env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    if asset.amount.is_zero() {
-        return Err(ContractError::InvalidUnbondingAmount {});
-    }
+    ensure!(
+        asset.amount > Uint128::zero(),
+        ContractError::InvalidUnbondingAmount {}
+    );
+
     let denom = asset.denom.clone();
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
         // check if the address has enough bond
-        if unbond.asset.amount < asset.amount {
-            return Err(ContractError::InsufficientBond {});
-        }
+        ensure!(
+            unbond.asset.amount >= asset.amount,
+            ContractError::InsufficientBond {}
+        );
+
         // update local values, decrease the bond
         unbond = update_local_weight(&mut deps, info.sender.clone(), timestamp, unbond.clone())?;
         let weight_slash = unbond.weight * Decimal::from_ratio(asset.amount, unbond.asset.amount);
@@ -143,9 +147,7 @@ pub(crate) fn withdraw(
 
     let mut refund_amount = Uint128::zero();
 
-    if unbondings.is_empty() {
-        return Err(ContractError::NothingToWithdraw {});
-    }
+    ensure!(!unbondings.is_empty(), ContractError::NothingToWithdraw {});
 
     for unbonding in unbondings {
         let (ts, bond) = unbonding;
@@ -215,14 +217,11 @@ pub(crate) fn update_config(
 
 /// Claims pending rewards for the sender.
 pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
-    // Query the fee share of the sender based on the ratio of his weight and the global weight at the current moment
-    let config = CONFIG.load(deps.storage)?;
-    let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-
     let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
-    if claimable_epochs.is_empty() {
-        return Err(ContractError::NothingToClaim {});
-    }
+    ensure!(
+        !claimable_epochs.is_empty(),
+        ContractError::NothingToClaim {}
+    );
 
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {

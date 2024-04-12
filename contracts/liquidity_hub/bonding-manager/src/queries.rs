@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use white_whale_std::epoch_manager::epoch_manager::{ConfigResponse, EpochConfig};
+use white_whale_std::epoch_manager::epoch_manager::ConfigResponse;
 
 use cosmwasm_std::{
     to_json_binary, Addr, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp,
@@ -7,15 +7,12 @@ use cosmwasm_std::{
 };
 use cw_storage_plus::Bound;
 
+use white_whale_std::bonding_manager::{
+    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
+    WithdrawableResponse,
+};
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch, EpochResponse};
 use white_whale_std::epoch_manager::epoch_manager::QueryMsg;
-use white_whale_std::{
-    bonding_manager::{
-        Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
-        WithdrawableResponse,
-    },
-    pool_network::asset::AssetInfo,
-};
 
 use crate::helpers;
 use crate::state::{
@@ -63,7 +60,6 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
         total_bonded = total_bonded.checked_add(bond.asset.amount)?;
         bonded_assets.push(bond.asset);
     }
-    let config = CONFIG.load(deps.storage)?;
     // TODO: This is hardcoded, either we add to config the address of epoch manager and query
     // or we store the genesis epoch itself in the bonding manager
     // Query epoch manager for EpochConfig

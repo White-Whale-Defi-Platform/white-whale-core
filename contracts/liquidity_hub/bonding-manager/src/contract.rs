@@ -1,8 +1,6 @@
-use cosmwasm_std::{entry_point, Addr, Uint64};
+use cosmwasm_std::{ensure, entry_point, Order, Uint64};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
-use cw_storage_plus::Endian;
-use semver::Version;
 use white_whale_std::pool_network::asset::{self, AssetInfo};
 
 use white_whale_std::bonding_manager::{
@@ -11,8 +9,9 @@ use white_whale_std::bonding_manager::{
 
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
-use crate::{commands, migrations, queries};
+use crate::queries::get_expiring_epoch;
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, REWARDS_BUCKET};
+use crate::{commands, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-whale_lair";
@@ -90,6 +89,22 @@ pub fn execute(
         } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
         ExecuteMsg::FillRewards { .. } => {
             // Use aggregate_coins to get the total amount of new coins
+            // Finding the most recent EpochID
+            let most_recent_epoch_id = EPOCHS
+                .keys(deps.storage, None, None, Order::Descending)
+                .next()
+                .unwrap()?;
+            // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
+
+            EPOCHS.update(
+                deps.storage,
+                &most_recent_epoch_id,
+                |bucket| -> StdResult<_> {
+                    let mut bucket = bucket.unwrap_or_default();
+                    bucket.available = asset::aggregate_coins(bucket.available, vec![])?;
+                    Ok(bucket)
+                },
+            )?;
             Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
         }
         ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),
@@ -98,15 +113,20 @@ pub fn execute(
             // and forward the expiring epoch
 
             let new_epoch_id = msg.current_epoch.id;
-            let expiring_epoch_id = new_epoch_id.checked_sub(1u64.into()).unwrap();
-            let next_epoch_id = new_epoch_id.checked_add(1u64.into()).unwrap();
-
+            let expiring_epoch_id = new_epoch_id.checked_sub(1u64).unwrap();
+            let next_epoch_id = new_epoch_id.checked_add(1u64).unwrap();
+            // Verify that it is indeed the expiring epoch that is being forwarded
+            let _ = match get_expiring_epoch(deps.as_ref())? {
+                Some(epoch) if epoch.id.u64() == expiring_epoch_id => Ok(()),
+                Some(_) => Err(ContractError::Unauthorized {}),
+                None => Err(ContractError::Unauthorized {}), // Handle the case where there is no expiring epoch
+            };
             // Add a new rewards bucket for the new epoch
             // Add a new rewards bucket for the next epoch
             // Remove the rewards bucket for the expiring epoch
             // Save the next_epoch_id to the contract state
 
-            /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+            // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
             // Add a new rewards bucket for the new epoch
             EPOCHS.save(
                 deps.storage,
@@ -194,7 +214,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 #[cfg(not(tarpaulin_include))]
 #[entry_point]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    use semver::Version;
     use white_whale_std::migrate_guards::check_contract_name;
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
