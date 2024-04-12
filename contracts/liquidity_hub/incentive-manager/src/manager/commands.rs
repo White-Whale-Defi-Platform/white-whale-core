@@ -3,10 +3,11 @@ use cosmwasm_std::{
     Storage, Uint128, Uint64,
 };
 
-use white_whale_std::coin::{get_subdenom, is_factory_token};
+use white_whale_std::coin::{get_factory_token_subdenom, is_factory_token};
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale_std::incentive_manager::MIN_INCENTIVE_AMOUNT;
 use white_whale_std::incentive_manager::{Curve, Incentive, IncentiveParams};
+use white_whale_std::lp_common::LP_SYMBOL;
 
 use crate::helpers::{
     assert_incentive_asset, process_incentive_creation_fee, validate_emergency_unlock_penalty,
@@ -43,7 +44,7 @@ pub(crate) fn fill_incentive(
 fn create_incentive(
     deps: DepsMut,
     info: MessageInfo,
-    mut params: IncentiveParams,
+    params: IncentiveParams,
 ) -> Result<Response, ContractError> {
     // check if there are any expired incentives for this LP asset
     let config = CONFIG.load(deps.storage)?;
@@ -86,7 +87,7 @@ fn create_incentive(
         }
     );
 
-    let incentive_creation_fee = config.create_incentive_fee.clone();
+    let incentive_creation_fee = config.clone().create_incentive_fee;
 
     if incentive_creation_fee.amount != Uint128::zero() {
         // verify the fee to create an incentive is being paid
@@ -94,7 +95,7 @@ fn create_incentive(
             &config,
             &info,
             &incentive_creation_fee,
-            &mut params,
+            &params,
         )?);
     }
 
@@ -304,8 +305,10 @@ pub(crate) fn on_epoch_changed(
         .into_iter()
         .filter(|asset| {
             if is_factory_token(asset.denom.as_str()) {
-                //todo remove this hardcoded uLP and point to the pool manager const, to be moved to the white-whale-std package
-                get_subdenom(asset.denom.as_str()) == "uLP"
+                match get_factory_token_subdenom(asset.denom.as_str()) {
+                    Ok(subdenom) => subdenom == LP_SYMBOL,
+                    Err(_) => false,
+                }
             } else {
                 false
             }

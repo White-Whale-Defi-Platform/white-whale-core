@@ -102,11 +102,17 @@ pub fn is_factory_token(denom: &str) -> bool {
 }
 
 /// Gets the subdenom of a factory token. To be called after [is_factory_token] has been successful.
-pub fn get_subdenom(denom: &str) -> &str {
-    denom
-        .splitn(3, '/')
-        .nth(2)
-        .expect("Expected at least three elements")
+pub fn get_factory_token_subdenom(denom: &str) -> StdResult<&str> {
+    let subdenom = denom.splitn(3, '/').nth(2);
+
+    subdenom.map_or_else(
+        || {
+            Err(StdError::generic_err(
+                "Splitting factory token subdenom failed",
+            ))
+        },
+        Ok,
+    )
 }
 
 /// Builds the label for a factory token denom in such way that it returns a label like "factory/mig...xyz/123...456".

@@ -14,7 +14,7 @@ pub(crate) fn process_incentive_creation_fee(
     config: &Config,
     info: &MessageInfo,
     incentive_creation_fee: &Coin,
-    params: &mut IncentiveParams,
+    params: &IncentiveParams,
 ) -> Result<Vec<CosmosMsg>, ContractError> {
     let mut messages: Vec<CosmosMsg> = vec![];
 
@@ -80,7 +80,6 @@ pub(crate) fn process_incentive_creation_fee(
 }
 
 /// Asserts the incentive asset was sent correctly, considering the incentive creation fee if applicable.
-/// Returns a vector of messages to be sent (applies only when the incentive asset is a CW20 token)
 pub(crate) fn assert_incentive_asset(
     info: &MessageInfo,
     incentive_creation_fee: &Coin,
