@@ -16,68 +16,6 @@ fn instantiate_normal() {
     suite.instantiate(suite.senders[0].to_string());
 }
 
-#[test]
-fn verify_ownership() {
-    let mut suite = TestingSuite::default_with_balances(vec![]);
-    let creator = suite.creator();
-    let other = suite.senders[1].clone();
-    let unauthorized = suite.senders[2].clone();
-
-    suite
-        .instantiate_default()
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), creator);
-        })
-        .update_ownership(
-            unauthorized,
-            cw_ownable::Action::TransferOwnership {
-                new_owner: other.to_string(),
-                expiry: None,
-            },
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::OwnershipError { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::OwnershipError"),
-                }
-            },
-        )
-        .update_ownership(
-            creator,
-            cw_ownable::Action::TransferOwnership {
-                new_owner: other.to_string(),
-                expiry: None,
-            },
-            |result| {
-                result.unwrap();
-            },
-        )
-        .update_ownership(
-            other.clone(),
-            cw_ownable::Action::AcceptOwnership,
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert_eq!(Addr::unchecked(ownership.owner.unwrap()), other);
-        })
-        .update_ownership(
-            other.clone(),
-            cw_ownable::Action::RenounceOwnership,
-            |result| {
-                result.unwrap();
-            },
-        )
-        .query_ownership(|result| {
-            let ownership = result.unwrap();
-            assert!(ownership.owner.is_none());
-        });
-}
-
 // add features `token_factory` so tests are compiled using the correct flag
 #[test]
 fn deposit_and_withdraw_sanity_check() {
@@ -1830,5 +1768,134 @@ mod swapping {
                 assert_eq!(result.unwrap().amount, Uint128::from(297u128));
             },
         );
+    }
+}
+
+mod ownership {
+    use white_whale_std::pool_network::pair::FeatureToggle;
+
+    use super::*;
+
+    #[test]
+    fn verify_ownership() {
+        let mut suite = TestingSuite::default_with_balances(vec![]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+
+        suite
+            .instantiate_default()
+            .query_ownership(|result| {
+                let ownership = result.unwrap();
+                assert_eq!(Addr::unchecked(ownership.owner.unwrap()), creator);
+            })
+            .update_ownership(
+                unauthorized,
+                cw_ownable::Action::TransferOwnership {
+                    new_owner: other.to_string(),
+                    expiry: None,
+                },
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                    match err {
+                        ContractError::OwnershipError { .. } => {}
+                        _ => {
+                            panic!("Wrong error type, should return ContractError::OwnershipError")
+                        }
+                    }
+                },
+            )
+            .update_ownership(
+                creator,
+                cw_ownable::Action::TransferOwnership {
+                    new_owner: other.to_string(),
+                    expiry: None,
+                },
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .update_ownership(
+                other.clone(),
+                cw_ownable::Action::AcceptOwnership,
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_ownership(|result| {
+                let ownership = result.unwrap();
+                assert_eq!(Addr::unchecked(ownership.owner.unwrap()), other);
+            })
+            .update_ownership(
+                other.clone(),
+                cw_ownable::Action::RenounceOwnership,
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_ownership(|result| {
+                let ownership = result.unwrap();
+                assert!(ownership.owner.is_none());
+            });
+    }
+
+    #[test]
+    fn checks_ownership_when_updating_config() {
+        let mut suite = TestingSuite::default_with_balances(vec![]);
+        let unauthorized = suite.senders[2].clone();
+
+        suite.instantiate_default().update_config(
+            unauthorized.clone(),
+            None,
+            None,
+            None,
+            None,
+            |res| {
+                assert_eq!(
+                    res.unwrap_err().downcast_ref::<ContractError>(),
+                    Some(&ContractError::Unauthorized {})
+                )
+            },
+        );
+    }
+
+    #[test]
+    fn updates_config_fields() {
+        let mut suite = TestingSuite::default_with_balances(vec![]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+
+        suite.instantiate_default();
+        let current_pool_creation_fee = suite.query_config().pool_creation_fee;
+        let initial_config = suite.query_config();
+
+        suite.update_config(
+            creator,
+            Some(other.clone()),
+            Some(other),
+            Some(coin(
+                current_pool_creation_fee
+                    .amount
+                    .checked_add(Uint128::from(1u32))
+                    .unwrap()
+                    .u128(),
+                current_pool_creation_fee.denom,
+            )),
+            Some(FeatureToggle {
+                deposits_enabled: false,
+                swaps_enabled: false,
+                withdrawals_enabled: false,
+            }),
+            |res| {
+                res.unwrap();
+            },
+        );
+
+        let config = suite.query_config();
+        assert_ne!(config.owner, initial_config.owner);
+        assert_ne!(config.whale_lair_addr, initial_config.whale_lair_addr);
+        assert_ne!(config.pool_creation_fee, initial_config.pool_creation_fee);
+        assert_ne!(config.feature_toggle, initial_config.feature_toggle);
     }
 }

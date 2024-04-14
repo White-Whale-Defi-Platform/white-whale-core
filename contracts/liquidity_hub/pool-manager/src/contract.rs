@@ -84,11 +84,7 @@ pub fn execute(
             to,
             pair_identifier,
         } => {
-            let to_addr = if let Some(to_addr) = to {
-                Some(deps.api.addr_validate(&to_addr)?)
-            } else {
-                None
-            };
+            let to_addr = to.map(|addr| deps.api.addr_validate(&addr)).transpose()?;
 
             swap::commands::swap(
                 deps,
@@ -152,6 +148,19 @@ pub fn execute(
         //     )
         // }
         ExecuteMsg::AddSwapRoutes { swap_routes: _ } => Ok(Response::new()),
+        ExecuteMsg::UpdateConfig {
+            whale_lair_addr,
+            owner_addr,
+            pool_creation_fee,
+            feature_toggle,
+        } => manager::update_config(
+            deps,
+            info,
+            owner_addr,
+            whale_lair_addr,
+            pool_creation_fee,
+            feature_toggle,
+        ),
     }
 }
 
@@ -174,6 +183,7 @@ fn optional_addr_validate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::NativeTokenDecimals { denom } => Ok(to_json_binary(
             &queries::query_native_token_decimal(deps, denom)?,
         )?),

@@ -5,11 +5,11 @@ use crate::{
     pool_network::{
         asset::PairType,
         factory::NativeTokenDecimalsResponse,
-        pair::{ReverseSimulationResponse, SimulationResponse},
+        pair::{FeatureToggle, ReverseSimulationResponse, SimulationResponse},
     },
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Decimal, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 #[cw_serde]
@@ -113,6 +113,16 @@ pub struct PairInfo {
 impl PairInfo {}
 
 #[cw_serde]
+pub struct Config {
+    pub whale_lair_addr: Addr,
+    pub owner: Addr,
+    // We must set a creation fee on instantiation to prevent spamming of pools
+    pub pool_creation_fee: Coin,
+    //  Whether or not swaps, deposits, and withdrawals are enabled
+    pub feature_toggle: FeatureToggle,
+}
+
+#[cw_serde]
 pub struct InstantiateMsg {
     pub fee_collector_addr: String,
     pub owner: String,
@@ -194,12 +204,29 @@ pub enum ExecuteMsg {
     AddSwapRoutes {
         swap_routes: Vec<SwapRoute>,
     },
+    /// Updates the configuration of the contract.
+    /// If a field is not specified (i.e., set to `None`), it will not be modified.
+    UpdateConfig {
+        /// The new whale-lair contract address.
+        whale_lair_addr: Option<String>,
+        /// The new owner address of the contract, which is allowed to update
+        /// configuration.
+        owner_addr: Option<String>,
+        /// The new fee that must be paid when a pool is created.
+        pool_creation_fee: Option<Coin>,
+        /// The new feature toggles of the contract, allowing fine-tuned
+        /// control over which operations are allowed.
+        feature_toggle: Option<FeatureToggle>,
+    },
 }
 
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(Config)]
+    Config {},
+
     /// Retrieves the decimals for the given native or ibc denom.
     #[returns(NativeTokenDecimalsResponse)]
     NativeTokenDecimals { denom: String },

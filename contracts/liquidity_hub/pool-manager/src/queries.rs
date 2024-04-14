@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
-use white_whale_std::pool_manager::{SwapOperation, SwapRouteResponse};
+use white_whale_std::pool_manager::{Config, SwapOperation, SwapRouteResponse};
 use white_whale_std::pool_network::{
     asset::PairType,
     factory::NativeTokenDecimalsResponse,
@@ -9,13 +9,18 @@ use white_whale_std::pool_network::{
     // router::SimulateSwapOperationsResponse,
 };
 
-use crate::state::NATIVE_TOKEN_DECIMALS;
+use crate::state::{MANAGER_CONFIG, NATIVE_TOKEN_DECIMALS};
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
     state::get_pair_by_identifier,
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
+
+/// Query the config of the contract.
+pub fn query_config(deps: Deps) -> Result<Config, ContractError> {
+    Ok(MANAGER_CONFIG.load(deps.storage)?)
+}
 
 /// Query the native token decimals
 pub fn query_native_token_decimal(
