@@ -3,6 +3,19 @@
   "title": "QueryMsg",
   "oneOf": [
     {
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Retrieves the decimals for the given native or ibc denom.",
       "type": "object",
       "required": [
