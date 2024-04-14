@@ -261,6 +261,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn swap(
         &mut self,
         sender: Addr,
@@ -291,6 +292,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn execute_swap_operations(
         &mut self,
         sender: Addr,
@@ -317,6 +319,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_pair(
         &mut self,
         sender: Addr,

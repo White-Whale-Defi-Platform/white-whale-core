@@ -1685,7 +1685,7 @@ fn remove_swap_route() {
         ask_asset_info: swap_route_1.ask_asset_info.clone(),
     };
     let res: Vec<SwapOperation> =
-        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
     assert_eq!(res, swap_route_1.swap_operations);
 
     // remove swap route
@@ -1716,7 +1716,7 @@ fn remove_swap_route() {
         ask_asset_info: swap_route_2.ask_asset_info.clone(),
     };
     let res: Vec<SwapOperation> =
-        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
     assert_eq!(res, swap_route_2.swap_operations);
 
     // remove swap route 1 again should fail
@@ -1889,7 +1889,7 @@ fn remove_swap_routes() {
         ask_asset_info: swap_route_1.ask_asset_info.clone(),
     };
     let res: Vec<SwapOperation> =
-        from_json(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+        from_json(query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
     assert_eq!(res, swap_route_1.swap_operations);
 
     // remove swap routes
