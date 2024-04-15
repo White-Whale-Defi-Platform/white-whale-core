@@ -122,7 +122,6 @@ impl TestingSuite {
     pub(crate) fn instantiate(&mut self, whale_lair_addr: String) -> &mut Self {
         let msg = InstantiateMsg {
             fee_collector_addr: whale_lair_addr,
-            owner: self.creator().to_string(),
             pool_creation_fee: coin(1_000, "uusd"),
         };
 
@@ -370,7 +369,6 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         new_whale_lair_addr: Option<Addr>,
-        new_owner_addr: Option<Addr>,
         new_pool_creation_fee: Option<Coin>,
         new_feature_toggle: Option<FeatureToggle>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -380,7 +378,6 @@ impl TestingSuite {
             self.pool_manager_addr.clone(),
             &white_whale_std::pool_manager::ExecuteMsg::UpdateConfig {
                 whale_lair_addr: new_whale_lair_addr.map(|addr| addr.to_string()),
-                owner_addr: new_owner_addr.map(|addr| addr.to_string()),
                 pool_creation_fee: new_pool_creation_fee,
                 feature_toggle: new_feature_toggle,
             },

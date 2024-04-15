@@ -284,13 +284,6 @@
                 }
               ]
             },
-            "owner_addr": {
-              "description": "The new owner address of the contract, which is allowed to update configuration.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "pool_creation_fee": {
               "description": "The new fee that must be paid when a pool is created.",
               "anyOf": [

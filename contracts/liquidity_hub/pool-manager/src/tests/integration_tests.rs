@@ -1850,12 +1850,15 @@ mod ownership {
             None,
             None,
             None,
-            None,
-            |res| {
-                assert_eq!(
-                    res.unwrap_err().downcast_ref::<ContractError>(),
-                    Some(&ContractError::Unauthorized {})
-                )
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => {
+                        panic!("Wrong error type, should return ContractError::OwnershipError")
+                    }
+                }
             },
         );
     }
@@ -1872,7 +1875,6 @@ mod ownership {
 
         suite.update_config(
             creator,
-            Some(other.clone()),
             Some(other),
             Some(coin(
                 current_pool_creation_fee
@@ -1893,7 +1895,6 @@ mod ownership {
         );
 
         let config = suite.query_config();
-        assert_ne!(config.owner, initial_config.owner);
         assert_ne!(config.whale_lair_addr, initial_config.whale_lair_addr);
         assert_ne!(config.pool_creation_fee, initial_config.pool_creation_fee);
         assert_ne!(config.feature_toggle, initial_config.feature_toggle);

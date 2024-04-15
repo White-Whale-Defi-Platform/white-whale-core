@@ -115,7 +115,6 @@ impl PairInfo {}
 #[cw_serde]
 pub struct Config {
     pub whale_lair_addr: Addr,
-    pub owner: Addr,
     // We must set a creation fee on instantiation to prevent spamming of pools
     pub pool_creation_fee: Coin,
     //  Whether or not swaps, deposits, and withdrawals are enabled
@@ -125,7 +124,6 @@ pub struct Config {
 #[cw_serde]
 pub struct InstantiateMsg {
     pub fee_collector_addr: String,
-    pub owner: String,
     pub pool_creation_fee: Coin,
 }
 
@@ -209,9 +207,6 @@ pub enum ExecuteMsg {
     UpdateConfig {
         /// The new whale-lair contract address.
         whale_lair_addr: Option<String>,
-        /// The new owner address of the contract, which is allowed to update
-        /// configuration.
-        owner_addr: Option<String>,
         /// The new fee that must be paid when a pool is created.
         pool_creation_fee: Option<Coin>,
         /// The new feature toggles of the contract, allowing fine-tuned

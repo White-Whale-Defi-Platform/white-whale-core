@@ -8,14 +8,10 @@
     "type": "object",
     "required": [
       "fee_collector_addr",
-      "owner",
       "pool_creation_fee"
     ],
     "properties": {
       "fee_collector_addr": {
-        "type": "string"
-      },
-      "owner": {
         "type": "string"
       },
       "pool_creation_fee": {
@@ -329,13 +325,6 @@
                   {
                     "type": "null"
                   }
-                ]
-              },
-              "owner_addr": {
-                "description": "The new owner address of the contract, which is allowed to update configuration.",
-                "type": [
-                  "string",
-                  "null"
                 ]
               },
               "pool_creation_fee": {
@@ -891,16 +880,12 @@
       "type": "object",
       "required": [
         "feature_toggle",
-        "owner",
         "pool_creation_fee",
         "whale_lair_addr"
       ],
       "properties": {
         "feature_toggle": {
           "$ref": "#/definitions/FeatureToggle"
-        },
-        "owner": {
-          "$ref": "#/definitions/Addr"
         },
         "pool_creation_fee": {
           "$ref": "#/definitions/Coin"

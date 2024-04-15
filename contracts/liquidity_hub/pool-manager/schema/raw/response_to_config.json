@@ -4,16 +4,12 @@
   "type": "object",
   "required": [
     "feature_toggle",
-    "owner",
     "pool_creation_fee",
     "whale_lair_addr"
   ],
   "properties": {
     "feature_toggle": {
       "$ref": "#/definitions/FeatureToggle"
-    },
-    "owner": {
-      "$ref": "#/definitions/Addr"
     },
     "pool_creation_fee": {
       "$ref": "#/definitions/Coin"
