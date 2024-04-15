@@ -3,13 +3,13 @@
   "title": "QueryMsg",
   "oneOf": [
     {
-      "description": "Retrieves the decimals for the given native or ibc denom.",
+      "description": "Retrieves the decimals for the given native asset.",
       "type": "object",
       "required": [
-        "native_token_decimals"
+        "asset_decimals"
       ],
       "properties": {
-        "native_token_decimals": {
+        "asset_decimals": {
           "type": "object",
           "required": [
             "denom",

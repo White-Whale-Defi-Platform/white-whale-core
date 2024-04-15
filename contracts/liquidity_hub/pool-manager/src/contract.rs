@@ -173,10 +173,10 @@ fn optional_addr_validate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::NativeTokenDecimals {
+        QueryMsg::AssetDecimals {
             pair_identifier,
             denom,
-        } => Ok(to_json_binary(&queries::query_native_token_decimal(
+        } => Ok(to_json_binary(&queries::query_asset_decimals(
             deps,
             pair_identifier,
             denom,

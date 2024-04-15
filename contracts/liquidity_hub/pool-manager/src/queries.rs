@@ -2,9 +2,7 @@ use std::cmp::Ordering;
 
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
-use white_whale_std::pool_manager::{
-    NativeTokenDecimalsResponse, SwapOperation, SwapRouteResponse,
-};
+use white_whale_std::pool_manager::{AssetDecimalsResponse, SwapOperation, SwapRouteResponse};
 use white_whale_std::pool_network::{
     asset::PairType,
     pair::{ReverseSimulationResponse, SimulationResponse},
@@ -18,12 +16,12 @@ use crate::{
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
 
-/// Query the native token decimals
-pub fn query_native_token_decimal(
+/// Query the native asset decimals
+pub fn query_asset_decimals(
     deps: Deps,
     pair_identifier: String,
     denom: String,
-) -> Result<NativeTokenDecimalsResponse, ContractError> {
+) -> Result<AssetDecimalsResponse, ContractError> {
     let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let decimal_index = pair_info
         .asset_denoms
@@ -31,7 +29,7 @@ pub fn query_native_token_decimal(
         .position(|d| d.clone() == denom)
         .ok_or(ContractError::AssetMismatch {})?;
 
-    Ok(NativeTokenDecimalsResponse {
+    Ok(AssetDecimalsResponse {
         pair_identifier,
         denom,
         decimals: pair_info.asset_decimals[decimal_index],

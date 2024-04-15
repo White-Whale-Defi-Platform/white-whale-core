@@ -190,9 +190,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the decimals for the given native or ibc denom.
-    #[returns(NativeTokenDecimalsResponse)]
-    NativeTokenDecimals {
+    /// Retrieves the decimals for the given native asset.
+    #[returns(AssetDecimalsResponse)]
+    AssetDecimals {
         pair_identifier: String,
         denom: String,
     },
@@ -240,12 +240,12 @@ pub enum QueryMsg {
     Pair { pair_identifier: String },
 }
 
-/// The response for the `NativeTokenDecimals` query.
+/// The response for the `AssetDecimals` query.
 #[cw_serde]
-pub struct NativeTokenDecimalsResponse {
+pub struct AssetDecimalsResponse {
     /// The pair identifier to do the query for.
     pub pair_identifier: String,
-    /// The denom to get the decimals in the given pair_identifier for.
+    /// The queried denom in the given pair_identifier.
     pub denom: String,
     /// The decimals for the requested denom.
     pub decimals: u8,
