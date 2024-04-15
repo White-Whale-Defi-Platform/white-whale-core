@@ -576,23 +576,6 @@ pub fn deduct_assets(assets: Vec<Asset>, to_deduct: Vec<Asset>) -> StdResult<Vec
     Ok(updated_assets)
 }
 
-pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
-    let mut updated_coins = coins.to_vec();
-
-    for coin in to_deduct {
-        if let Some(existing_coin) = updated_coins.iter_mut().find(|c| c.denom == coin.denom) {
-            existing_coin.amount = existing_coin.amount.checked_sub(coin.amount)?;
-        } else {
-            return Err(StdError::generic_err(format!(
-                "Error: Cannot deduct {} {}. Coin not found.",
-                coin.amount, coin.denom
-            )));
-        }
-    }
-
-    Ok(updated_coins)
-}
-
 #[cw_serde]
 pub struct TrioInfo {
     pub asset_infos: [AssetInfo; 3],

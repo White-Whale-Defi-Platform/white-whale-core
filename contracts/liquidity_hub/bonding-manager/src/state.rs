@@ -17,7 +17,6 @@ pub const UNBOND: Map<(&Addr, &Denom, u64), Bond> = Map::new("unbond");
 pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
 pub type EpochID = [u8];
 
-// Add Deserialize<'de> and Deserialize
 pub const REWARDS_BUCKET: Map<&EpochID, &Epoch> = Map::new("rewards_bucket");
 
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch");

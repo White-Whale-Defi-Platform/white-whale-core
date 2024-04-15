@@ -18,7 +18,7 @@ pub struct Config {
     /// to zero, time will have no impact on the weight.
     pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
-    pub bonding_assets: Vec<AssetInfo>,
+    pub bonding_assets: Vec<String>,
     /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
     pub grace_period: Uint64,
 
@@ -83,8 +83,10 @@ pub struct InstantiateMsg {
     pub unbonding_period: Uint64,
     /// Weight grow rate. Needs to be between 0 and 1.
     pub growth_rate: Decimal,
-    /// [AssetInfo] of the assets that can be bonded.
-    pub bonding_assets: Vec<AssetInfo>,
+    /// [String] denoms of the assets that can be bonded.
+    pub bonding_assets: Vec<String>,
+    /// Grace period the maximum age of a bucket before fees are forwarded from it 
+    pub grace_period: Uint64,
 }
 
 #[cw_serde]
@@ -96,7 +98,6 @@ pub struct EpochChangedHookMsg {
 pub enum ExecuteMsg {
     /// Bonds the specified [Asset].
     Bond {
-        asset: Coin,
     },
     /// Unbonds the specified [Asset].
     Unbond {

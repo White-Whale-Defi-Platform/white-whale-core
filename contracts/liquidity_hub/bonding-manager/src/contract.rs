@@ -1,6 +1,8 @@
-use cosmwasm_std::{ensure, entry_point, Order, Uint64};
+use cosmwasm_std::{ensure, entry_point, Coin, Order, Uint64};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
+use cw_utils::PaymentError;
+use white_whale_std::pool_manager;
 use white_whale_std::pool_network::asset::{self, AssetInfo};
 
 use white_whale_std::bonding_manager::{
@@ -14,7 +16,7 @@ use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, REWARDS_BUCKET};
 use crate::{commands, queries};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "white_whale-whale_lair";
+const CONTRACT_NAME: &str = "white_whale-bonding_manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[entry_point]
@@ -33,39 +35,25 @@ pub fn instantiate(
 
     validate_growth_rate(msg.growth_rate)?;
 
-    //todo since this should only accept native tokens, we could omit the asset type and pass the denom directly
-    for asset in &msg.bonding_assets {
-        match asset {
-            AssetInfo::Token { .. } => return Err(ContractError::InvalidBondingAsset {}),
-            AssetInfo::NativeToken { .. } => {}
-        };
-    }
-
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
-        bonding_assets: msg.bonding_assets,
-        grace_period: Uint64::new(21),
+        bonding_assets: msg.bonding_assets.clone(),
+        grace_period: msg.grace_period,
     };
 
     CONFIG.save(deps.storage, &config)?;
-
-    let bonding_assets = config
-        .bonding_assets
-        .iter()
-        .map(|a| a.to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", config.owner.to_string()),
         ("unbonding_period", config.unbonding_period.to_string()),
         ("growth_rate", config.growth_rate.to_string()),
-        ("bonding_assets", bonding_assets),
+        ("bonding_assets", msg.bonding_assets.join(", ")),
+        ("grace_period", config.grace_period.to_string()),
     ]))
 }
 
@@ -77,9 +65,44 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Bond { asset } => commands::bond(deps, env.block.time, info, env, asset),
-        ExecuteMsg::Unbond { asset } => commands::unbond(deps, env.block.time, info, env, asset),
+        ExecuteMsg::Bond {} => {
+            let config = CONFIG.load(deps.storage)?;
+            // Ensure that the user has sent some funds
+            ensure!(!info.funds.is_empty(), PaymentError::NoFunds {});
+            let asset_to_bond = {
+                // Filter the funds to include only those with accepted denominations
+                let valid_funds: Vec<&Coin> = info
+                    .funds
+                    .iter()
+                    .filter(|coin| config.bonding_assets.contains(&coin.denom))
+                    .collect();
+
+                // Check if there are no valid funds after filtering
+                if valid_funds.is_empty() {
+                    Err(PaymentError::MissingDenom("test".to_string()))
+                } else if valid_funds.len() == 1 {
+                    // If exactly one valid fund is found, return the amount
+                    Ok(valid_funds[0])
+                } else {
+                    // If multiple valid denominations are found (which shouldn't happen), return an error
+                    Err(PaymentError::MultipleDenoms {})
+                }
+            }?;
+
+            commands::bond(
+                deps,
+                env.block.time,
+                info.clone(),
+                env,
+                asset_to_bond.to_owned(),
+            )
+        }
+        ExecuteMsg::Unbond { asset } => {
+            cw_utils::nonpayable(&info)?;
+            commands::unbond(deps, env.block.time, info, env, asset)
+        }
         ExecuteMsg::Withdraw { denom } => {
+            cw_utils::nonpayable(&info)?;
             commands::withdraw(deps, env.block.time, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
@@ -94,8 +117,13 @@ pub fn execute(
                 .keys(deps.storage, None, None, Order::Descending)
                 .next()
                 .unwrap()?;
-            // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
+            // Verify coins are coming
+            // swap non-whale to whale
+            // if LP Tokens ,verify and withdraw then swap to whale
 
+
+            // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
+            // Note: After swap,
             EPOCHS.update(
                 deps.storage,
                 &most_recent_epoch_id,
@@ -111,6 +139,7 @@ pub fn execute(
         ExecuteMsg::EpochChangedHook { msg } => {
             // Epoch has been updated, update rewards bucket
             // and forward the expiring epoch
+            // Store epoch manager and verify the sender is him
 
             let new_epoch_id = msg.current_epoch.id;
             let expiring_epoch_id = new_epoch_id.checked_sub(1u64).unwrap();
@@ -121,10 +150,6 @@ pub fn execute(
                 Some(_) => Err(ContractError::Unauthorized {}),
                 None => Err(ContractError::Unauthorized {}), // Handle the case where there is no expiring epoch
             };
-            // Add a new rewards bucket for the new epoch
-            // Add a new rewards bucket for the next epoch
-            // Remove the rewards bucket for the expiring epoch
-            // Save the next_epoch_id to the contract state
 
             // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
             // Add a new rewards bucket for the new epoch
@@ -148,6 +173,7 @@ pub fn execute(
                     let mut epoch = epoch.unwrap_or_default();
                     epoch.available =
                         asset::aggregate_coins(epoch.available, amount_to_be_forwarded)?;
+                    epoch.total = epoch.available.clone();
                     Ok(epoch)
                 },
             )?;

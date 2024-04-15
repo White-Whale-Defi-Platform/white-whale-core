@@ -1,4 +1,4 @@
-use cosmwasm_std::{StdError, StdResult};
+use cosmwasm_std::{Coin, StdError, StdResult};
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -99,6 +99,26 @@ pub fn is_factory_token(denom: &str) -> bool {
     true
 }
 
+/// Verifies if the given denom is a factory token or not.
+/// A factory token has the following structure: factory/{creating contract address}/{Subdenom}
+/// Subdenom can be of length at most 44 characters, in [0-9a-zA-Z./].
+pub fn is_native_lp_token(denom: &str) -> bool {
+    let split: Vec<&str> = denom.splitn(3, '/').collect();
+
+    if split.len() < 3 && split[0] != FACTORY_PREFIX {
+        return false;
+    }
+
+    if split.len() > 3 {
+        let merged = split[3..].join("/");
+        if merged.len() > FACTORY_SUBDENOM_SIZE {
+            return false;
+        }
+    }
+
+    true
+}
+
 /// Builds the label for a factory token denom in such way that it returns a label like "factory/mig...xyz/123...456".
 /// Call after [crate::pool_network::asset::is_factory_token] has been successful
 fn get_factory_token_label(denom: &str) -> StdResult<String> {
@@ -124,3 +144,21 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
+
+// move to ww package 
+pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
+    let mut updated_coins = coins.to_vec();
+
+    for coin in to_deduct {
+        if let Some(existing_coin) = updated_coins.iter_mut().find(|c| c.denom == coin.denom) {
+            existing_coin.amount = existing_coin.amount.checked_sub(coin.amount)?;
+        } else {
+            return Err(StdError::generic_err(format!(
+                "Error: Cannot deduct {} {}. Coin not found.",
+                coin.amount, coin.denom
+            )));
+        }
+    }
+
+    Ok(updated_coins)
+}

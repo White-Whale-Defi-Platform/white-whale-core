@@ -1,3 +1,4 @@
+use anyhow::Error;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
@@ -85,14 +86,7 @@ impl TestingRobot {
         self.instantiate(
             Uint64::new(1_000_000_000_000u64),
             Decimal::one(),
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
         )
     }
@@ -101,7 +95,7 @@ impl TestingRobot {
         &mut self,
         unbonding_period: Uint64,
         growth_rate: Decimal,
-        bonding_assets: Vec<AssetInfo>,
+        bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let fee_collector_id = store_fee_collector_code(&mut self.app);
@@ -189,7 +183,7 @@ impl TestingRobot {
         &mut self,
         unbonding_period: Uint64,
         growth_rate: Decimal,
-        bonding_assets: Vec<AssetInfo>,
+        bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
         error: impl Fn(anyhow::Error),
     ) -> &mut Self {
@@ -208,7 +202,7 @@ impl TestingRobot {
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = ExecuteMsg::Bond { asset };
+        let msg = ExecuteMsg::Bond {};
 
         response(
             self.app
@@ -302,13 +296,14 @@ fn instantiate_contract(
     robot: &mut TestingRobot,
     unbonding_period: Uint64,
     growth_rate: Decimal,
-    bonding_assets: Vec<AssetInfo>,
+    bonding_assets: Vec<String>,
     funds: &Vec<Coin>,
-) -> anyhow::Result<Addr> {
+) -> anyhow::Result<Addr, Error> {
     let msg = InstantiateMsg {
         unbonding_period,
         growth_rate,
         bonding_assets,
+        grace_period: Uint64::new(21),
     };
 
     let bonding_manager_id = robot.app.store_code(bonding_manager_contract());

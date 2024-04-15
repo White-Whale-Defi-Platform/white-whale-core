@@ -1,4 +1,5 @@
 use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
+use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
@@ -9,6 +10,9 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),

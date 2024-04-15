@@ -28,13 +28,7 @@ pub fn validate_funds(
         || info.funds[0].amount.is_zero()
         || info.funds[0].amount != asset.amount
         || info.funds[0].denom != denom
-        || !bonding_assets.iter().any(|asset_info| {
-            let d = match asset_info {
-                AssetInfo::NativeToken { denom } => denom.clone(),
-                AssetInfo::Token { .. } => String::new(),
-            };
-            d == denom
-        })
+        || !bonding_assets.iter().any(|asset_info| asset_info == &denom)
     {
         return Err(ContractError::AssetMismatch {});
     }

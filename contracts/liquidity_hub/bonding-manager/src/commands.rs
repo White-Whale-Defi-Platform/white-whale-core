@@ -47,7 +47,7 @@ pub(crate) fn bond(
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     // global_index = update_global_weight(&mut deps, timestamp, global_index)?;
-
+    // move into one common func TODO:
     // include time term in the weight
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
@@ -109,13 +109,13 @@ pub(crate) fn unbond(
                 timestamp,
             },
         )?;
-
+        // move this to a function to be reused
         // update global values
         let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
         global_index = update_global_weight(&mut deps, timestamp, global_index)?;
         global_index.bonded_amount = global_index.bonded_amount.checked_sub(asset.amount)?;
         global_index.bonded_assets =
-            asset::deduct_coins(global_index.bonded_assets, vec![asset.clone()])?;
+            white_whale_std::coin::deduct_coins(global_index.bonded_assets, vec![asset.clone()])?;
         global_index.weight = global_index.weight.checked_sub(weight_slash)?;
 
         GLOBAL.save(deps.storage, &global_index)?;

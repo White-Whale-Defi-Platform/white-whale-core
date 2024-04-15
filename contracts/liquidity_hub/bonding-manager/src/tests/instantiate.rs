@@ -12,14 +12,7 @@ fn test_instantiate_successfully() {
         .instantiate(
             Uint64::new(1_000u64),
             Decimal::one(),
-            vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
         )
         .assert_config(Config {
@@ -27,14 +20,7 @@ fn test_instantiate_successfully() {
             unbonding_period: Uint64::new(1_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }
 
@@ -47,15 +33,9 @@ fn test_instantiate_unsuccessfully() {
         Uint64::new(1_000u64),
         Decimal::one(),
         vec![
-            AssetInfo::NativeToken {
-                denom: "ampWHALE".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "bWHALE".to_string(),
-            },
-            AssetInfo::NativeToken {
-                denom: "uwhale".to_string(),
-            },
+            "ampWHALE".to_string(),
+            "bWHALE".to_string(),
+            "uwhale".to_string(),
         ],
         &vec![],
         |error| {
@@ -68,22 +48,5 @@ fn test_instantiate_unsuccessfully() {
         },
     );
 
-    // invalid tokens
-    robot.instantiate_err(
-        Uint64::new(1_000u64),
-        Decimal::one(),
-        vec![AssetInfo::Token {
-            contract_addr: "contract123".to_string(),
-        }],
-        &vec![],
-        |error| {
-            println!("1 --{error:?}");
-            println!("2 --{:?}", error.root_cause());
-            //println!("3 --{:?}", error.root_cause().downcast_ref::<ContractError>());
-
-            // assert_eq!(
-            //    error.root_cause().downcast_mut::<ContractError>().unwrap(),
-            //    ContractError::InvalidBondingAsset {});
-        },
-    );
+    
 }

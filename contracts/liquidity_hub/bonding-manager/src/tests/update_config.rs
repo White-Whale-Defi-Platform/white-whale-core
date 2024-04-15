@@ -17,14 +17,7 @@ fn test_update_config_successfully() {
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             owner.clone(),
@@ -41,14 +34,7 @@ fn test_update_config_successfully() {
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             owner,
@@ -62,14 +48,7 @@ fn test_update_config_successfully() {
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }
 
@@ -84,14 +63,7 @@ fn test_update_config_unsuccessfully() {
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             Addr::unchecked("unauthorized"),
@@ -114,14 +86,7 @@ fn test_update_config_unsuccessfully() {
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             Addr::unchecked("owner"),
@@ -144,13 +109,6 @@ fn test_update_config_unsuccessfully() {
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }
