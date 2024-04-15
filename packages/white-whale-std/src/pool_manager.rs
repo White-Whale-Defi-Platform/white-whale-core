@@ -1,12 +1,6 @@
 use std::fmt;
 
-use crate::{
-    fee::PoolFee,
-    pool_network::{
-        asset::PairType,
-        pair::{ReverseSimulationResponse, SimulationResponse},
-    },
-};
+use crate::{fee::PoolFee, pool_network::asset::PairType};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -249,4 +243,28 @@ pub struct AssetDecimalsResponse {
     pub denom: String,
     /// The decimals for the requested denom.
     pub decimals: u8,
+}
+
+/// SimulationResponse returns swap simulation response
+#[cw_serde]
+pub struct SimulationResponse {
+    pub return_amount: Uint128,
+    pub spread_amount: Uint128,
+    pub swap_fee_amount: Uint128,
+    pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
+}
+
+/// ReverseSimulationResponse returns reverse swap simulation response
+#[cw_serde]
+pub struct ReverseSimulationResponse {
+    pub offer_amount: Uint128,
+    pub spread_amount: Uint128,
+    pub swap_fee_amount: Uint128,
+    pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
 }
