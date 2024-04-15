@@ -22,12 +22,11 @@ pub(crate) fn bond(
     env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    let denom = asset.denom.clone();
-    helpers::validate_funds(&deps, &info, &asset, denom.clone())?;
+    helpers::validate_funds(&deps, &info, &asset, asset.denom.clone())?;
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     let mut bond = BOND
-        .key((&info.sender, &denom))
+        .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
         .unwrap_or(Bond {
             asset: Coin {
@@ -42,7 +41,7 @@ pub(crate) fn bond(
     // let new_bond_weight = get_weight(timestamp, bond.weight, asset.amount, config.growth_rate, bond.timestamp)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
     bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
-    BOND.save(deps.storage, (&info.sender, &denom), &bond)?;
+    BOND.save(deps.storage, (&info.sender, &asset.denom), &bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
@@ -77,11 +76,13 @@ pub(crate) fn unbond(
         ContractError::InvalidUnbondingAmount {}
     );
 
-    let denom = asset.denom.clone();
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
-    if let Some(mut unbond) = BOND.key((&info.sender, &denom)).may_load(deps.storage)? {
+    if let Some(mut unbond) = BOND
+        .key((&info.sender, &asset.denom))
+        .may_load(deps.storage)?
+    {
         // check if the address has enough bond
         ensure!(
             unbond.asset.amount >= asset.amount,
@@ -95,14 +96,14 @@ pub(crate) fn unbond(
         unbond.asset.amount = unbond.asset.amount.checked_sub(asset.amount)?;
 
         if unbond.asset.amount.is_zero() {
-            BOND.remove(deps.storage, (&info.sender, &denom));
+            BOND.remove(deps.storage, (&info.sender, &asset.denom));
         } else {
-            BOND.save(deps.storage, (&info.sender, &denom), &unbond)?;
+            BOND.save(deps.storage, (&info.sender, &asset.denom), &unbond)?;
         }
         // record the unbonding
         UNBOND.save(
             deps.storage,
-            (&info.sender, &denom, timestamp.nanos()),
+            (&info.sender, &asset.denom, timestamp.nanos()),
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),

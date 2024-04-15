@@ -4,7 +4,7 @@ use cosmwasm_std::{
 use white_whale_std::{
     fee::PoolFee,
     pool_network::{asset::PairType, querier::query_native_decimals},
-    whale_lair::{fill_rewards_msg, fill_rewards_msg_coin},
+    whale_lair::fill_rewards_msg_coin,
 };
 
 use crate::state::{get_pair_by_identifier, NATIVE_TOKEN_DECIMALS, PAIR_COUNTER};
