@@ -229,6 +229,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate(
         &mut self,
         fee_collector_addr: String,
@@ -261,6 +262,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate_err(
         &mut self,
         fee_collector_addr: String,
@@ -355,6 +357,7 @@ impl TestingSuite {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn open_incentive_flow(
         &mut self,
         sender: Addr,
@@ -364,7 +367,7 @@ impl TestingSuite {
         curve: Option<Curve>,
         flow_asset: Asset,
         flow_label: Option<String>,
-        funds: &Vec<Coin>,
+        funds: &[Coin],
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_network::incentive::ExecuteMsg::OpenFlow {
@@ -398,6 +401,7 @@ impl TestingSuite {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn open_incentive_position(
         &mut self,
         sender: Addr,
@@ -438,6 +442,7 @@ impl TestingSuite {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn expand_incentive_position(
         &mut self,
         sender: Addr,
@@ -553,6 +558,7 @@ impl TestingSuite {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn expand_flow(
         &mut self,
         sender: Addr,

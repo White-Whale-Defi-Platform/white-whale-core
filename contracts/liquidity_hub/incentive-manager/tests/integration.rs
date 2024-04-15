@@ -1,13 +1,11 @@
 extern crate core;
 
-use std::cell::RefCell;
-
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
 
 use incentive_manager::ContractError;
 use white_whale_std::incentive_manager::{
-    Config, Curve, EpochId, Incentive, IncentiveAction, IncentiveParams, IncentivesBy,
-    LpWeightResponse, Position, PositionAction, RewardsResponse,
+    Config, Curve, Incentive, IncentiveAction, IncentiveParams, IncentivesBy, LpWeightResponse,
+    Position, PositionAction, RewardsResponse,
 };
 
 use crate::common::suite::TestingSuite;
@@ -707,6 +705,7 @@ fn expand_incentives() {
 }
 
 #[test]
+#[allow(clippy::inconsistent_digit_grouping)]
 fn close_incentives() {
     let lp_denom = "factory/pool/uLP".to_string();
 
@@ -790,7 +789,7 @@ fn close_incentives() {
             },
         )
         .query_balance("ulab".to_string(), other.clone(), |balance| {
-            assert_eq!(balance, Uint128::new(99_999_6000));
+            assert_eq!(balance, Uint128::new(999_996_000));
         })
         .manage_incentive(
             other.clone(),
@@ -803,7 +802,7 @@ fn close_incentives() {
             },
         )
         .query_balance("ulab".to_string(), other.clone(), |balance| {
-            assert_eq!(balance, Uint128::new(100_000_0000));
+            assert_eq!(balance, Uint128::new(1000_000_000));
         });
 
     suite
@@ -829,7 +828,7 @@ fn close_incentives() {
             },
         )
         .query_balance("ulab".to_string(), other.clone(), |balance| {
-            assert_eq!(balance, Uint128::new(99_999_6000));
+            assert_eq!(balance, Uint128::new(999_996_000));
         })
         // the owner of the contract can also close incentives
         .manage_incentive(
@@ -843,7 +842,7 @@ fn close_incentives() {
             },
         )
         .query_balance("ulab".to_string(), other.clone(), |balance| {
-            assert_eq!(balance, Uint128::new(100_000_0000));
+            assert_eq!(balance, Uint128::new(1000_000_000));
         });
 }
 
@@ -1115,15 +1114,16 @@ pub fn update_config() {
 }
 
 #[test]
+#[allow(clippy::inconsistent_digit_grouping)]
 pub fn test_manage_position() {
     let lp_denom = "factory/pool/uLP".to_string();
 
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_000u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "ulab".to_string()),
-        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, "uwhale"),
+        coin(1_000_000_000u128, "ulab"),
+        coin(1_000_000_000u128, "uosmo"),
         coin(1_000_000_000u128, lp_denom.clone()),
-        coin(1_000_000_000u128, "invalid_lp".clone()),
+        coin(1_000_000_000u128, "invalid_lp"),
     ]);
 
     let creator = suite.creator();
@@ -1990,11 +1990,11 @@ fn claim_expired_incentive_returns_nothing() {
     let lp_denom = "factory/pool/uLP".to_string();
 
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_000u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "ulab".to_string()),
-        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, "uwhale"),
+        coin(1_000_000_000u128, "ulab"),
+        coin(1_000_000_000u128, "uosmo"),
         coin(1_000_000_000u128, lp_denom.clone()),
-        coin(1_000_000_000u128, "invalid_lp".clone()),
+        coin(1_000_000_000u128, "invalid_lp"),
     ]);
 
     let creator = suite.creator();
@@ -2136,11 +2136,11 @@ fn test_close_expired_incentives() {
     let lp_denom = "factory/pool/uLP".to_string();
 
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_000u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "ulab".to_string()),
-        coin(1_000_000_000u128, "uosmo".to_string()),
+        coin(1_000_000_000u128, "uwhale"),
+        coin(1_000_000_000u128, "ulab"),
+        coin(1_000_000_000u128, "uosmo"),
         coin(1_000_000_000u128, lp_denom.clone()),
-        coin(1_000_000_000u128, "invalid_lp".clone()),
+        coin(1_000_000_000u128, "invalid_lp"),
     ]);
 
     let creator = suite.creator();
@@ -2182,18 +2182,18 @@ fn test_close_expired_incentives() {
         });
     }
 
-    let current_id: RefCell<EpochId> = RefCell::new(0u64);
+    let mut current_id = 0;
 
     // try opening another incentive for the same lp denom, the expired incentive should get closed
     suite
         .query_current_epoch(|result| {
             let epoch_response = result.unwrap();
-            *current_id.borrow_mut() = epoch_response.epoch.id;
+            current_id = epoch_response.epoch.id;
         })
         .query_incentives(None, None, None, |result| {
             let incentives_response = result.unwrap();
             assert_eq!(incentives_response.incentives.len(), 1);
-            assert!(incentives_response.incentives[0].is_expired(current_id.borrow().clone()));
+            assert!(incentives_response.incentives[0].is_expired(current_id));
         })
         .manage_incentive(
             other.clone(),

@@ -8,6 +8,7 @@ use white_whale_std::epoch_manager::epoch_manager::{
 };
 
 /// Mocks contract instantiation.
+#[allow(dead_code)]
 pub(crate) fn mock_instantiation(
     deps: DepsMut,
     info: MessageInfo,
@@ -28,6 +29,7 @@ pub(crate) fn mock_instantiation(
 }
 
 /// Mocks hook addition.
+#[allow(dead_code)]
 pub(crate) fn mock_add_hook(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let msg = ExecuteMsg::AddHook {
         contract_addr: "hook_contract_1".to_string(),
