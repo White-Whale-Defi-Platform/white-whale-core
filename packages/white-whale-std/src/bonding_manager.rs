@@ -1,5 +1,5 @@
 use crate::{
-    epoch_manager::epoch_manager::EpochV2,
+    epoch_manager::epoch_manager::Epoch as EpochV2,
     pool_network::asset::{Asset, AssetInfo, ToCoins},
 };
 

@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-use cosmwasm_std::{Coin, StdError, StdResult};
-=======
+
 use std::collections::HashMap;
 
 use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
->>>>>>> release/v2_contracts
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -104,8 +101,6 @@ pub fn is_factory_token(denom: &str) -> bool {
 
     true
 }
-
-<<<<<<< HEAD
 /// Verifies if the given denom is a factory token or not.
 /// A factory token has the following structure: factory/{creating contract address}/{Subdenom}
 /// Subdenom can be of length at most 44 characters, in [0-9a-zA-Z./].
@@ -124,7 +119,8 @@ pub fn is_native_lp_token(denom: &str) -> bool {
     }
 
     true
-=======
+}
+
 /// Gets the subdenom of a factory token. To be called after [is_factory_token] has been successful.
 pub fn get_factory_token_subdenom(denom: &str) -> StdResult<&str> {
     let subdenom = denom.splitn(3, '/').nth(2);
@@ -137,7 +133,6 @@ pub fn get_factory_token_subdenom(denom: &str) -> StdResult<&str> {
         },
         Ok,
     )
->>>>>>> release/v2_contracts
 }
 
 /// Builds the label for a factory token denom in such way that it returns a label like "factory/mig...xyz/123...456".
@@ -165,8 +160,6 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
-
-<<<<<<< HEAD
 // move to ww package 
 pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut updated_coins = coins.to_vec();
@@ -184,7 +177,6 @@ pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coi
 
     Ok(updated_coins)
 }
-=======
 /// Aggregates coins from two vectors, summing up the amounts of coins that are the same.
 pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut aggregation_map: HashMap<String, Uint128> = HashMap::new();
@@ -206,4 +198,3 @@ pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
 
     Ok(aggregated_coins)
 }
->>>>>>> release/v2_contracts

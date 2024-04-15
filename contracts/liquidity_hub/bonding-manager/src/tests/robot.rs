@@ -11,7 +11,7 @@ use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, EpochV2};
+use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, Epoch as EpochV2};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 use white_whale_testing::integration::contracts::{
     store_epoch_manager_code, store_fee_collector_code, store_fee_distributor_code,

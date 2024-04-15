@@ -11,12 +11,9 @@ members = [
   "contracts/liquidity_hub/pool-manager",
   "contracts/liquidity_hub/epoch-manager",
   "contracts/liquidity_hub/vault-manager",
-<<<<<<< HEAD
   "contracts/liquidity_hub/bonding-manager",
-=======
   "contracts/liquidity_hub/incentive-manager",
   "xtask",
->>>>>>> release/v2_contracts
 ]
 
 [workspace.package]
@@ -72,7 +69,6 @@ fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock"
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
-epoch-manager = { path = "./contracts/liquidity_hub/epoch-manager" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]
