@@ -126,21 +126,18 @@ fn deposit_and_withdraw_sanity_check() {
     };
 
     // Create a pair
-    suite
-        .instantiate_default()
-        .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-        .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-        .create_pair(
-            creator.clone(),
-            asset_denoms,
-            pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
-                result.unwrap();
-            },
-        );
+    suite.instantiate_default().create_pair(
+        creator.clone(),
+        asset_denoms,
+        vec![6u8, 6u8],
+        pool_fees,
+        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        Some("whale-uluna".to_string()),
+        vec![coin(1000, "uusd")],
+        |result| {
+            result.unwrap();
+        },
+    );
 
     let contract_addr = suite.pool_manager_addr.clone();
     let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
@@ -281,25 +278,23 @@ mod pair_creation_failures {
             extra_fees: vec![],
         };
         // Create a pair
-        suite
-            .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .create_pair(
-                creator.clone(),
-                asset_infos,
-                pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                None,
-                vec![coin(90, "uusd")],
-                |result| {
-                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_infos,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            None,
+            vec![coin(90, "uusd")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                    match err {
-                        ContractError::InvalidPairCreationFee { .. } => {}
-                        _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
-                    }
-                },
-            );
+                match err {
+                    ContractError::InvalidPairCreationFee { .. } => {}
+                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                }
+            },
+        );
     }
 
     #[test]
@@ -351,10 +346,10 @@ mod pair_creation_failures {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 asset_infos.clone(),
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("mycoolpair".to_string()),
@@ -366,6 +361,7 @@ mod pair_creation_failures {
             .create_pair(
                 creator.clone(),
                 asset_infos,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("mycoolpair".to_string()),
@@ -433,12 +429,10 @@ mod router {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 first_pair,
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("whale-uluna".to_string()),
@@ -450,6 +444,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
@@ -622,12 +617,10 @@ mod router {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 first_pair,
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("whale-uluna".to_string()),
@@ -639,6 +632,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
@@ -760,12 +754,10 @@ mod router {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 first_pair,
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("whale-uluna".to_string()),
@@ -777,6 +769,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
@@ -915,12 +908,10 @@ mod router {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 first_pair,
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("whale-uluna".to_string()),
@@ -932,6 +923,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
@@ -1139,12 +1131,10 @@ mod router {
         // Create a pair
         suite
             .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uusd".to_string(), 6)
             .create_pair(
                 creator.clone(),
                 first_pair,
+                vec![6u8, 6u8],
                 pool_fees.clone(),
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("whale-uluna".to_string()),
@@ -1156,6 +1146,7 @@ mod router {
             .create_pair(
                 creator.clone(),
                 second_pair,
+                vec![6u8, 6u8],
                 pool_fees,
                 white_whale_std::pool_network::asset::PairType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
@@ -1309,21 +1300,18 @@ mod swapping {
         };
 
         // Create a pair
-        suite
-            .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .create_pair(
-                creator.clone(),
-                asset_infos,
-                pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                Some("whale-uluna".to_string()),
-                vec![coin(1000, "uusd")],
-                |result| {
-                    result.unwrap();
-                },
-            );
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_infos,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
 
         // Lets try to add liquidity
         suite.provide_liquidity(
@@ -1523,21 +1511,18 @@ mod swapping {
         };
 
         // Create a pair
-        suite
-            .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .create_pair(
-                creator.clone(),
-                asset_infos,
-                pool_fees,
-                white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
-                Some("whale-uluna".to_string()),
-                vec![coin(1000, "uusd")],
-                |result| {
-                    result.unwrap();
-                },
-            );
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_infos,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
 
         // Lets try to add liquidity
         suite.provide_liquidity(
@@ -1728,21 +1713,18 @@ mod swapping {
         };
 
         // Create a pair
-        suite
-            .instantiate_default()
-            .add_native_token_decimals(creator.clone(), "uwhale".to_string(), 6)
-            .add_native_token_decimals(creator.clone(), "uluna".to_string(), 6)
-            .create_pair(
-                creator.clone(),
-                asset_infos,
-                pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                Some("whale-uluna".to_string()),
-                vec![coin(1000, "uusd")],
-                |result| {
-                    result.unwrap();
-                },
-            );
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_infos,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
 
         // Lets try to add liquidity, 1000 of each token.
         suite.provide_liquidity(

@@ -11,11 +11,20 @@
         "create_pair": {
           "type": "object",
           "required": [
+            "asset_decimals",
             "asset_denoms",
             "pair_type",
             "pool_fees"
           ],
           "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
             "asset_denoms": {
               "type": "array",
               "items": {
@@ -135,6 +144,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Withdraws liquidity from the pool.",
       "type": "object",
       "required": [
         "withdraw_liquidity"
@@ -147,34 +157,6 @@
           ],
           "properties": {
             "pair_identifier": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
-      "type": "object",
-      "required": [
-        "add_native_token_decimals"
-      ],
-      "properties": {
-        "add_native_token_decimals": {
-          "type": "object",
-          "required": [
-            "decimals",
-            "denom"
-          ],
-          "properties": {
-            "decimals": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            },
-            "denom": {
               "type": "string"
             }
           },
@@ -442,22 +424,45 @@
       ]
     },
     "PoolFee": {
-      "description": "Fees used by the pools on the pool network",
+      "description": "Represents the fee structure for transactions within a pool.\n\n# Fields - `protocol_fee`: The fee percentage charged by the protocol on each transaction to support operational and developmental needs. - `swap_fee`: The fee percentage allocated to liquidity providers as a reward for supplying liquidity to the pool, incentivizing participation and ensuring pool health. - `burn_fee`: A fee percentage that is burned on each transaction, helping manage the token economy by reducing supply over time, potentially increasing token value. - `osmosis_fee` (optional): Specific to the Osmosis feature, this fee is charged on each transaction when the Osmosis feature is enabled, supporting specific ecosystem requirements. - `extra_fees`: A vector of custom fees allowing for extensible and adaptable fee structures to meet diverse and evolving needs. Validation ensures that the total of all fees does not exceed 100%, maintaining fairness and avoiding overcharging.\n\n# Features - `osmosis`: Enables the `osmosis_fee` field, integrating specific fee requirements for the Osmosis protocol within the pool's fee structure.",
       "type": "object",
       "required": [
         "burn_fee",
+        "extra_fees",
         "protocol_fee",
         "swap_fee"
       ],
       "properties": {
         "burn_fee": {
-          "$ref": "#/definitions/Fee"
+          "description": "Fee percentage that is burned on each transaction. Burning a portion of the transaction fee helps in reducing the overall token supply.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Fee"
+            }
+          ]
+        },
+        "extra_fees": {
+          "description": "A list of custom, additional fees that can be defined for specific use cases or additional functionalities. This vector enables the flexibility to introduce new fees without altering the core fee structure. Total of all fees, including custom ones, is validated to not exceed 100%, ensuring a balanced and fair fee distribution.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Fee"
+          }
         },
         "protocol_fee": {
-          "$ref": "#/definitions/Fee"
+          "description": "Fee percentage charged on each transaction for the protocol's benefit.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Fee"
+            }
+          ]
         },
         "swap_fee": {
-          "$ref": "#/definitions/Fee"
+          "description": "Fee percentage allocated to liquidity providers on each swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Fee"
+            }
+          ]
         }
       },
       "additionalProperties": false

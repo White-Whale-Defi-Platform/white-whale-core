@@ -12,10 +12,14 @@
         "native_token_decimals": {
           "type": "object",
           "required": [
-            "denom"
+            "denom",
+            "pair_identifier"
           ],
           "properties": {
             "denom": {
+              "type": "string"
+            },
+            "pair_identifier": {
               "type": "string"
             }
           },

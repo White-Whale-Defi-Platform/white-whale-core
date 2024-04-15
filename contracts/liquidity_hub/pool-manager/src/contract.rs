@@ -52,6 +52,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::CreatePair {
             asset_denoms,
+            asset_decimals,
             pool_fees,
             pair_type,
             pair_identifier,
@@ -60,6 +61,7 @@ pub fn execute(
             env,
             info,
             asset_denoms,
+            asset_decimals,
             pool_fees,
             pair_type,
             pair_identifier,
@@ -105,9 +107,6 @@ pub fn execute(
         }
         ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
             liquidity::commands::withdraw_liquidity(deps, env, info, pair_identifier)
-        }
-        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            manager::commands::add_native_token_decimals(deps, env, denom, decimals)
         }
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
@@ -174,9 +173,14 @@ fn optional_addr_validate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::NativeTokenDecimals { denom } => Ok(to_json_binary(
-            &queries::query_native_token_decimal(deps, denom)?,
-        )?),
+        QueryMsg::NativeTokenDecimals {
+            pair_identifier,
+            denom,
+        } => Ok(to_json_binary(&queries::query_native_token_decimal(
+            deps,
+            pair_identifier,
+            denom,
+        )?)?),
         QueryMsg::Simulation {
             offer_asset,
             ask_asset,

@@ -4,7 +4,6 @@ use crate::{
     fee::PoolFee,
     pool_network::{
         asset::PairType,
-        factory::NativeTokenDecimalsResponse,
         pair::{ReverseSimulationResponse, SimulationResponse},
     },
 };
@@ -128,6 +127,7 @@ pub struct MigrateMsg {}
 pub enum ExecuteMsg {
     CreatePair {
         asset_denoms: Vec<String>,
+        asset_decimals: Vec<u8>,
         pool_fees: PoolFee,
         pair_type: PairType,
         pair_identifier: Option<String>,
@@ -147,16 +147,8 @@ pub enum ExecuteMsg {
         to: Option<String>,
         pair_identifier: String,
     },
-    // /// Withdraws liquidity from the pool.
-    WithdrawLiquidity {
-        pair_identifier: String,
-    },
-    /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals {
-        denom: String,
-        decimals: u8,
-    },
-
+    /// Withdraws liquidity from the pool.
+    WithdrawLiquidity { pair_identifier: String },
     /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
     ExecuteSwapOperations {
         /// The operations that should be performed in sequence.
@@ -191,9 +183,7 @@ pub enum ExecuteMsg {
     //     receiver: String,
     // },
     /// Adds swap routes to the router.
-    AddSwapRoutes {
-        swap_routes: Vec<SwapRoute>,
-    },
+    AddSwapRoutes { swap_routes: Vec<SwapRoute> },
 }
 
 #[cw_ownable_query]
@@ -202,7 +192,10 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Retrieves the decimals for the given native or ibc denom.
     #[returns(NativeTokenDecimalsResponse)]
-    NativeTokenDecimals { denom: String },
+    NativeTokenDecimals {
+        pair_identifier: String,
+        denom: String,
+    },
 
     /// Simulates a swap.
     #[returns(SimulationResponse)]
@@ -245,4 +238,15 @@ pub enum QueryMsg {
     // },
     #[returns(PairInfo)]
     Pair { pair_identifier: String },
+}
+
+/// The response for the `NativeTokenDecimals` query.
+#[cw_serde]
+pub struct NativeTokenDecimalsResponse {
+    /// The pair identifier to do the query for.
+    pub pair_identifier: String,
+    /// The denom to get the decimals in the given pair_identifier for.
+    pub denom: String,
+    /// The decimals for the requested denom.
+    pub decimals: u8,
 }
