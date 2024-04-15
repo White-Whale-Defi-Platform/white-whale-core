@@ -8,7 +8,9 @@ use cosmwasm_std::{
 
 use white_whale_std::fee::Fee;
 use white_whale_std::pool_network;
-use white_whale_std::pool_network::asset::{AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType};
+use white_whale_std::pool_network::asset::{
+    AssetInfo, AssetInfoRaw, PairInfo, PairInfoRaw, PairType,
+};
 use white_whale_std::pool_network::factory::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, NativeTokenDecimalsResponse, QueryMsg,
 };
@@ -24,27 +26,27 @@ use white_whale_std::pool_network::trio::{
 
 use crate::contract::{execute, instantiate, query};
 use crate::error::ContractError;
-use white_whale_std::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
 use crate::state::{pair_key, PAIRS};
 use test_case::test_case;
+use white_whale_std::pool_manager::InstantiateMsg as SingleSwapInstantiateMsg;
 #[cfg(test)]
 mod pair_creation_tests {
     use super::*;
+    use crate::tests::mock_querier::mock_dependencies;
     use cosmwasm_std::testing::{mock_env, mock_info};
     use cosmwasm_std::{coin, coins, Binary, Decimal, DepsMut, Uint128};
     use cw20::MinterResponse;
     use white_whale_std::pool_network::asset::Asset;
-    use crate::tests::mock_querier::mock_dependencies;
 
     // use crate::msg::{AssetInfo, ExecuteMsg, Fee, PairType, PoolFee};
-    use white_whale_std::pool_manager::ExecuteMsg;
-    use white_whale_std::pool_network::pair;
-    use crate::state::{add_allow_native_token};
+    use crate::state::add_allow_native_token;
     use crate::token::InstantiateMsg as TokenInstantiateMsg;
     use cosmwasm_std::attr;
     use cosmwasm_std::SubMsg;
     use cosmwasm_std::WasmMsg;
     use test_case::test_case;
+    use white_whale_std::pool_manager::ExecuteMsg;
+    use white_whale_std::pool_network::pair;
 
     // Constants for testing
     const MOCK_CONTRACT_ADDR: &str = "contract_addr";
@@ -83,7 +85,6 @@ mod pair_creation_tests {
                 contract_addr: "asset0001".to_string(),
             },
         ];
-
 
         let msg = ExecuteMsg::CreatePair {
             asset_infos: asset_infos.to_vec(),
@@ -215,10 +216,13 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::new(1000000u128),
-        }]);
+        let info = mock_info(
+            "addr0000",
+            &[Coin {
+                denom: "uusd".to_string(),
+                amount: Uint128::new(1000000u128),
+            }],
+        );
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         let seed = format!(
             "{}{}{}",
@@ -351,10 +355,13 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::new(1000000u128),
-        }]);
+        let info = mock_info(
+            "addr0000",
+            &[Coin {
+                denom: "uusd".to_string(),
+                amount: Uint128::new(1000000u128),
+            }],
+        );
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
         assert_eq!(
             res.attributes,
@@ -417,10 +424,8 @@ mod pair_creation_tests {
             amount: Uint128::new(1000000u128),
             info: AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
-            }
+            },
         };
-
-        
 
         // Instantiate contract
         let msg = SingleSwapInstantiateMsg {
@@ -480,7 +485,7 @@ mod pair_creation_tests {
             token_factory_lp: false,
             pair_identifier: None,
         };
-        
+
         let env = mock_env();
         let info = mock_info("addr0000", &[coin(1000000u128, "uusd".to_string())]);
         let res = execute(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
@@ -593,10 +598,13 @@ mod pair_creation_tests {
         };
 
         let env = mock_env();
-        let info = mock_info("addr0000", &[Coin {
-            denom: "uusd".to_string(),
-            amount: Uint128::new(1000000u128),
-        }]);
+        let info = mock_info(
+            "addr0000",
+            &[Coin {
+                denom: "uusd".to_string(),
+                amount: Uint128::new(1000000u128),
+            }],
+        );
 
         if let ContractError::ExistingPair { .. } = expected_error {
             // Create the pair so when we try again below we get ExistingPair provided the error checking is behaving properly

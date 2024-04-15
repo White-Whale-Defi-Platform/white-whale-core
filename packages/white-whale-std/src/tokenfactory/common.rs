@@ -1,3 +1,4 @@
+#[cfg(feature = "token_factory")]
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{CosmosMsg, StdResult};
 
@@ -8,6 +9,7 @@ enum Protocol {
     Osmosis,
 }
 
+#[cfg(feature = "token_factory")]
 impl Protocol {
     #![allow(dead_code)]
     #[allow(unreachable_code)]
@@ -54,7 +56,7 @@ impl MsgTypes {
     }
 }
 
-pub(crate) trait EncodeMessage {
+pub trait EncodeMessage {
     /// Encodes the data as a proto doc
     fn encode(data: Self) -> Vec<u8>;
 

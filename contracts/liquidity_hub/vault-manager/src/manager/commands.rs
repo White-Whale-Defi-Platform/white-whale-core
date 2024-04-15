@@ -2,7 +2,7 @@ use cosmwasm_std::{
     attr, coins, ensure, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 
-use white_whale_std::constants::LP_SYMBOL;
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::tokenfactory;
 use white_whale_std::vault_manager::{Vault, VaultFee};
 use white_whale_std::whale_lair::fill_rewards_msg_coin;
@@ -113,6 +113,7 @@ pub fn update_config(
     deposit_enabled: Option<bool>,
     withdraw_enabled: Option<bool>,
 ) -> Result<Response, ContractError> {
+    cw_utils::nonpayable(&info)?;
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let new_config = CONFIG.update::<_, ContractError>(deps.storage, |mut config| {

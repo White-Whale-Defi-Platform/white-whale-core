@@ -1,17 +1,18 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
+use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 use white_whale_std::pool_manager::{SwapOperation, SwapRouteResponse};
 use white_whale_std::pool_network::{
-    asset::{Asset, AssetInfo, PairType},
+    asset::PairType,
     factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
     // router::SimulateSwapOperationsResponse,
 };
 
+use crate::state::NATIVE_TOKEN_DECIMALS;
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
-    state::{get_decimals, get_pair_by_identifier, ALLOW_NATIVE_TOKENS},
+    state::get_pair_by_identifier,
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
@@ -21,7 +22,7 @@ pub fn query_native_token_decimal(
     deps: Deps,
     denom: String,
 ) -> Result<NativeTokenDecimalsResponse, ContractError> {
-    let decimals = ALLOW_NATIVE_TOKENS.load(deps.storage, denom.as_bytes())?;
+    let decimals = NATIVE_TOKEN_DECIMALS.load(deps.storage, denom.as_bytes())?;
 
     Ok(NativeTokenDecimalsResponse { decimals })
 }
@@ -30,26 +31,26 @@ pub fn query_native_token_decimal(
 pub fn query_simulation(
     deps: Deps,
     _env: Env,
-    offer_asset: Asset,
-    _ask_asset: Asset,
+    offer_asset: Coin,
+    _ask_asset: Coin,
     pair_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, pair_identifier)?;
+    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
     // determine what's the offer and ask pool based on the offer_asset
-    let offer_pool: Asset;
-    let ask_pool: Asset;
+    let offer_pool: Coin;
+    let ask_pool: Coin;
     let offer_decimal: u8;
     let ask_decimal: u8;
-    let decimals = get_decimals(&pair_info);
+    let decimals = pair_info.asset_decimals.clone();
     // We now have the pools and pair info; we can now calculate the swap
     // Verify the pool
-    if offer_asset.info.equal(&pools[0].info) {
+    if offer_asset.denom == pools[0].denom {
         offer_pool = pools[0].clone();
         ask_pool = pools[1].clone();
         offer_decimal = decimals[0];
         ask_decimal = decimals[1];
-    } else if offer_asset.info.equal(&pools[1].info) {
+    } else if offer_asset.denom == pools[1].denom {
         offer_pool = pools[1].clone();
         ask_pool = pools[0].clone();
 
@@ -100,17 +101,17 @@ pub fn query_simulation(
 pub fn query_reverse_simulation(
     deps: Deps,
     _env: Env,
-    ask_asset: Asset,
-    _offer_asset: Asset,
+    ask_asset: Coin,
+    _offer_asset: Coin,
     pair_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, pair_identifier)?;
+    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
 
-    let decimals = get_decimals(&pair_info);
-    let offer_pool: Asset = pools[0].clone();
+    let decimals = pair_info.asset_decimals.clone();
+    let offer_pool: Coin = pools[0].clone();
     let offer_decimal = decimals[0];
-    let ask_pool: Asset = pools[1].clone();
+    let ask_pool: Coin = pools[1].clone();
     let ask_decimal = decimals[1];
     let pool_fees = pair_info.pool_fees;
 
@@ -233,13 +234,13 @@ pub fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractErr
         .map(|item| {
             let swap_info = item?;
             // Destructure key into (offer_asset, ask_asset)
-            let (offer_asset, ask_asset) = swap_info.0;
+            let (offer_asset_denom, ask_asset_denom) = swap_info.0;
             // Destructure value into vec of SwapOperation
             let swap_route = swap_info.1;
 
             Ok(SwapRouteResponse {
-                offer_asset,
-                ask_asset,
+                offer_asset_denom,
+                ask_asset_denom,
                 swap_route,
             })
         })
@@ -250,19 +251,16 @@ pub fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractErr
 
 pub fn get_swap_route(
     deps: Deps,
-    offer_asset_info: AssetInfo,
-    ask_asset_info: AssetInfo,
+    offer_asset_denom: String,
+    ask_asset_denom: String,
 ) -> Result<Vec<SwapOperation>, ContractError> {
-    let swap_route_key = SWAP_ROUTES.key((
-        offer_asset_info.clone().get_label(&deps)?.as_str(),
-        ask_asset_info.clone().get_label(&deps)?.as_str(),
-    ));
+    let swap_route_key = SWAP_ROUTES.key((&offer_asset_denom, &ask_asset_denom));
 
     swap_route_key
         .load(deps.storage)
         .map_err(|_| ContractError::NoSwapRouteForAssets {
-            offer_asset: offer_asset_info.to_string(),
-            ask_asset: ask_asset_info.to_string(),
+            offer_asset: offer_asset_denom,
+            ask_asset: ask_asset_denom,
         })
 }
 

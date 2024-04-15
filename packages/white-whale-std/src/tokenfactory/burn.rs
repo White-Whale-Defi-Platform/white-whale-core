@@ -1,12 +1,25 @@
 use std::str::FromStr;
 
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use crate::tokenfactory::common::{create_msg, MsgTypes};
+#[allow(unused_imports)]
+#[cfg(any(
+    feature = "token_factory",
+    feature = "osmosis_token_factory",
+    feature = "injective"
+))]
+use crate::tokenfactory::mint::MsgMint;
 use anybuf::{Anybuf, Bufany};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Coin, CosmosMsg, StdResult, Uint128};
-
-use crate::tokenfactory::common::EncodeMessage;
 #[allow(unused_imports)]
-use crate::tokenfactory::common::{create_msg, MsgTypes};
+use cosmwasm_std::{Addr, Coin, CosmosMsg};
+use cosmwasm_std::{StdResult, Uint128};
+
+use super::common::EncodeMessage;
 
 /// Returns the MsgBurn Stargate message
 pub fn burn(sender: Addr, coin: Coin, burn_from_address: String) -> CosmosMsg {

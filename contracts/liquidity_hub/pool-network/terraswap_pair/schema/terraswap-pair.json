@@ -1,6 +1,6 @@
 {
   "contract_name": "terraswap-pair",
-  "contract_version": "1.0.1",
+  "contract_version": "1.3.5",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",

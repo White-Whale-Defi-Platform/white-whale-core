@@ -3,11 +3,10 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use cw2::set_contract_version;
 use cw20_base::contract::{create_accounts, execute as cw20_execute, query as cw20_query};
-use cw20_base::msg::{ExecuteMsg, QueryMsg};
 use cw20_base::state::{MinterData, TokenInfo, TOKEN_INFO};
 use cw20_base::ContractError;
 
-use white_whale_std::pool_network::token::InstantiateMsg;
+use white_whale_std::pool_network::token::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-cw20_token";

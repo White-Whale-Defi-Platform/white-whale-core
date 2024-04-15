@@ -282,7 +282,6 @@ pub fn migrate_to_v13x(deps: DepsMut) -> Result<(), StdError> {
 
     Ok(())
 }
-
 /// This migration adds the `cosmwasm_pool_interface` to the config, so we can see if the swap is coming from
 /// the osmosis pool manager or not in order to pay the osmosis taker fee.
 #[cfg(feature = "osmosis")]

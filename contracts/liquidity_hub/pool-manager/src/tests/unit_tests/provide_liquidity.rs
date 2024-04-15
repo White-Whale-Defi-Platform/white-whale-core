@@ -1,5 +1,3 @@
-#[cfg(feature = "token_factory")]
-use crate::state::LP_SYMBOL;
 use cosmwasm_std::testing::{mock_env, mock_info, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     attr, to_binary, Coin, CosmosMsg, Decimal, Reply, Response, StdError, SubMsg, SubMsgResponse,
@@ -9,13 +7,15 @@ use cosmwasm_std::{
 use cosmwasm_std::{coin, BankMsg};
 use cw20::Cw20ExecuteMsg;
 use white_whale_std::fee::Fee;
+#[cfg(feature = "token_factory")]
+use white_whale_std::lp_common::LP_SYMBOL;
 
+use crate::tests::mock_querier::mock_dependencies;
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType, MINIMUM_LIQUIDITY_AMOUNT};
 #[cfg(feature = "token_factory")]
 use white_whale_std::pool_network::denom::MsgMint;
-use crate::tests::mock_querier::mock_dependencies;
 use white_whale_std::pool_network::pair::PoolFee;
 // use white_whale_std::pool_network::pair::{ExecuteMsg, InstantiateMsg, PoolFee};
 use crate::contract::{execute, instantiate};
@@ -695,7 +695,8 @@ fn provide_liquidity_zero_amount() {
         Ok(_) => panic!("should return ContractError::InvalidZeroAmount"),
         Err(ContractError::InvalidZeroAmount {}) => {}
         _ => {
-            panic!("should return ContractError::InvalidZeroAmount")},
+            panic!("should return ContractError::InvalidZeroAmount")
+        }
     }
 }
 

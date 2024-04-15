@@ -1,5 +1,6 @@
 use cosmwasm_std::StdError;
 use cw_controllers::{AdminError, HookError};
+use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
 
@@ -16,6 +17,9 @@ pub enum ContractError {
 
     #[error("The epoch id has overflowed.")]
     EpochOverflow,
+
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),

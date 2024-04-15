@@ -2,17 +2,15 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
+use cosmwasm_std::{Coin, Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
 
+use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale_std::pool_network::pair::PoolFee;
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
-
-pub const LP_SYMBOL: &str = "uLP";
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
@@ -426,8 +424,8 @@ pub struct OfferAmountComputation {
 pub fn assert_max_spread(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
-    offer_asset: Asset,
-    return_asset: Asset,
+    offer_asset: Coin,
+    return_asset: Coin,
     spread_amount: Uint128,
     offer_decimal: u8,
     return_decimal: u8,
@@ -492,7 +490,7 @@ pub fn assert_max_spread(
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
-    pools: &[Asset; 2],
+    pools: &[Coin; 2],
     pair_type: PairType,
     amount: Uint128,
     pool_token_supply: Uint128,

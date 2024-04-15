@@ -42,6 +42,8 @@ anybuf.workspace = true
 cw-controllers.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
+cw20-base.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
+test-case.workspace = true

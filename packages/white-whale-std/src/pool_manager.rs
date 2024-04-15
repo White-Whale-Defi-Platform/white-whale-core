@@ -1,42 +1,39 @@
 use std::fmt;
 
-use crate::pool_network::{
-    asset::{Asset, AssetInfo, PairType},
-    factory::NativeTokenDecimalsResponse,
-    pair::{PoolFee, ReverseSimulationResponse, SimulationResponse},
+use crate::{
+    fee::PoolFee,
+    pool_network::{
+        asset::PairType,
+        factory::NativeTokenDecimalsResponse,
+        pair::{ReverseSimulationResponse, SimulationResponse},
+    },
 };
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Decimal, Uint128};
-use cw20::Cw20ReceiveMsg;
+use cosmwasm_std::{Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
-
-#[cw_serde]
-pub enum Cw20HookMsg {
-    /// Sell a given amount of asset
-    Swap {
-        ask_asset: AssetInfo,
-        belief_price: Option<Decimal>,
-        max_spread: Option<Decimal>,
-        to: Option<String>,
-        pair_identifier: String,
-    },
-    /// Withdraws liquidity
-    WithdrawLiquidity { pair_identifier: String },
-}
 
 #[cw_serde]
 pub enum SwapOperation {
     WhaleSwap {
-        token_in_info: AssetInfo,
-        token_out_info: AssetInfo,
+        token_in_denom: String,
+        token_out_denom: String,
         pool_identifier: String,
     },
 }
 
 impl SwapOperation {
-    pub fn get_target_asset_info(&self) -> AssetInfo {
+    /// Retrieves the `token_in_denom` used for this swap operation.
+    pub fn get_input_asset_info(&self) -> &String {
         match self {
-            SwapOperation::WhaleSwap { token_out_info, .. } => token_out_info.clone(),
+            SwapOperation::WhaleSwap { token_in_denom, .. } => token_in_denom,
+        }
+    }
+
+    pub fn get_target_asset_info(&self) -> String {
+        match self {
+            SwapOperation::WhaleSwap {
+                token_out_denom, ..
+            } => token_out_denom.clone(),
         }
     }
 }
@@ -45,12 +42,12 @@ impl fmt::Display for SwapOperation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SwapOperation::WhaleSwap {
-                token_in_info,
-                token_out_info,
+                token_in_denom,
+                token_out_denom,
                 pool_identifier,
             } => write!(
                 f,
-                "WhaleSwap {{ token_in_info: {token_in_info}, token_out_info: {token_out_info}, pool_identifier: {pool_identifier} }}"
+                "WhaleSwap {{ token_in_info: {token_in_denom}, token_out_info: {token_out_denom}, pool_identifier: {pool_identifier} }}"
             ),
 
         }
@@ -59,16 +56,16 @@ impl fmt::Display for SwapOperation {
 
 #[cw_serde]
 pub struct SwapRoute {
-    pub offer_asset_info: AssetInfo,
-    pub ask_asset_info: AssetInfo,
+    pub offer_asset_denom: String,
+    pub ask_asset_denom: String,
     pub swap_operations: Vec<SwapOperation>,
 }
 
 // Used for all swap routes
 #[cw_serde]
 pub struct SwapRouteResponse {
-    pub offer_asset: String,
-    pub ask_asset: String,
+    pub offer_asset_denom: String,
+    pub ask_asset_denom: String,
     pub swap_route: Vec<SwapOperation>,
 }
 
@@ -77,19 +74,20 @@ impl fmt::Display for SwapRoute {
         write!(
             f,
             "SwapRoute {{ offer_asset_info: {}, ask_asset_info: {}, swap_operations: {:?} }}",
-            self.offer_asset_info, self.ask_asset_info, self.swap_operations
+            self.offer_asset_denom, self.ask_asset_denom, self.swap_operations
         )
     }
 }
 
 // Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
 #[cw_serde]
-pub enum Fee {
+pub enum FeeTypes {
     Protocol,
     LiquidityProvider,
     FlashLoanFees,
     Custom(String),
 }
+
 #[cw_serde]
 
 pub struct StableSwapParams {
@@ -102,26 +100,23 @@ pub struct StableSwapParams {
 // Store PairInfo to N
 // We define a custom struct for which allows for dynamic but defined pairs
 #[cw_serde]
-pub struct NPairInfo {
-    pub asset_infos: Vec<AssetInfo>,
-    pub liquidity_token: AssetInfo,
+pub struct PairInfo {
+    pub asset_denoms: Vec<String>,
+    pub lp_denom: String,
     pub asset_decimals: Vec<u8>,
-    pub balances: Vec<Uint128>,
-    pub assets: Vec<Asset>,
+    pub assets: Vec<Coin>,
     pub pair_type: PairType,
     pub pool_fees: PoolFee,
     // TODO: Add stable swap params
     // pub stable_swap_params: Option<StableSwapParams>
 }
-impl NPairInfo {}
+impl PairInfo {}
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub fee_collector_addr: String,
-    pub token_code_id: u64,
-    pub pair_code_id: u64,
     pub owner: String,
-    pub pool_creation_fee: Asset,
+    pub pool_creation_fee: Coin,
 }
 
 /// The migrate message
@@ -132,32 +127,28 @@ pub struct MigrateMsg {}
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
-        asset_infos: Vec<AssetInfo>,
-        // TODO: Remap to NPoolFee maybe
+        asset_denoms: Vec<String>,
         pool_fees: PoolFee,
         pair_type: PairType,
-        token_factory_lp: bool,
         pair_identifier: Option<String>,
     },
     /// Provides liquidity to the pool
     ProvideLiquidity {
-        assets: Vec<Asset>,
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
         pair_identifier: String,
     },
     /// Swap an offer asset to the other
     Swap {
-        offer_asset: Asset,
-        ask_asset: AssetInfo,
+        offer_asset: Coin,
+        ask_asset_denom: String,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         to: Option<String>,
         pair_identifier: String,
     },
-    // /// Withdraws liquidity from the pool. Used only when the LP is a token factory token.
+    // /// Withdraws liquidity from the pool.
     WithdrawLiquidity {
-        assets: Vec<Asset>,
         pair_identifier: String,
     },
     /// Adds native token info to the contract so it can instantiate pair contracts that include it
@@ -166,13 +157,25 @@ pub enum ExecuteMsg {
         decimals: u8,
     },
 
-    // /// Execute multiple [SwapOperation]s, i.e. multi-hop swaps.
-    // ExecuteSwapOperations {
-    //     operations: Vec<SwapOperation>,
-    //     minimum_receive: Option<Uint128>,
-    //     to: Option<String>,
-    //     max_spread: Option<Decimal>,
-    // },
+    /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
+    ExecuteSwapOperations {
+        /// The operations that should be performed in sequence.
+        ///
+        /// The amount in each swap will be the output from the previous swap.
+        ///
+        /// The first swap will use whatever funds are sent in the [`MessageInfo`].
+        operations: Vec<SwapOperation>,
+        /// The minimum amount of the output (i.e., final swap operation token) required for the message to succeed.
+        minimum_receive: Option<Uint128>,
+        /// The (optional) recipient of the output tokens.
+        ///
+        /// If left unspecified, tokens will be sent to the sender of the message.
+        to: Option<String>,
+        /// The (optional) maximum spread to incur when performing any swap.
+        ///
+        /// If left unspecified, there is no limit to what spread the transaction can incur.
+        max_spread: Option<Decimal>,
+    },
     // /// Swap the offer to ask token. This message can only be called internally by the router contract.
     // ExecuteSwapOperation {
     //     operation: SwapOperation,
@@ -191,8 +194,6 @@ pub enum ExecuteMsg {
     AddSwapRoutes {
         swap_routes: Vec<SwapRoute>,
     },
-    // CW20 Methods
-    Receive(Cw20ReceiveMsg),
 }
 
 #[cw_ownable_query]
@@ -206,24 +207,24 @@ pub enum QueryMsg {
     /// Simulates a swap.
     #[returns(SimulationResponse)]
     Simulation {
-        offer_asset: Asset,
-        ask_asset: Asset,
+        offer_asset: Coin,
+        ask_asset: Coin,
         pair_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
     /// perform the swap.
     #[returns(ReverseSimulationResponse)]
     ReverseSimulation {
-        ask_asset: Asset,
-        offer_asset: Asset,
+        ask_asset: Coin,
+        offer_asset: Coin,
         pair_identifier: String,
     },
 
     /// Gets the swap route for the given offer and ask assets.
     #[returns(Vec<SwapOperation>)]
     SwapRoute {
-        offer_asset_info: AssetInfo,
-        ask_asset_info: AssetInfo,
+        offer_asset_denom: String,
+        ask_asset_denom: String,
     },
     /// Gets all swap routes registered
     #[returns(Vec<SwapRouteResponse>)]
@@ -242,6 +243,6 @@ pub enum QueryMsg {
     //     ask_amount: Uint128,
     //     operations: Vec<SwapOperation>,
     // },
-    #[returns(NPairInfo)]
+    #[returns(PairInfo)]
     Pair { pair_identifier: String },
 }

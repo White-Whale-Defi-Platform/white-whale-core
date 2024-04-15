@@ -14,9 +14,17 @@ documentation = "https://whitewhale.money"
 [features]
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
+default = ["osmosis_token_factory"]
 backtraces = ["cosmwasm-std/backtraces"]
 
+injective = ["token_factory"]
+token_factory = []
+
+osmosis = ["osmosis_token_factory"]
+osmosis_token_factory = ["token_factory"]
+
 [dependencies]
+anyhow.workspace = true
 cosmwasm-std.workspace = true
 schemars.workspace = true
 serde.workspace = true
