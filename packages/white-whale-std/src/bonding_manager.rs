@@ -21,7 +21,6 @@ pub struct Config {
     pub bonding_assets: Vec<String>,
     /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
     pub grace_period: Uint64,
-
 }
 
 #[cw_serde]
@@ -85,7 +84,7 @@ pub struct InstantiateMsg {
     pub growth_rate: Decimal,
     /// [String] denoms of the assets that can be bonded.
     pub bonding_assets: Vec<String>,
-    /// Grace period the maximum age of a bucket before fees are forwarded from it 
+    /// Grace period the maximum age of a bucket before fees are forwarded from it
     pub grace_period: Uint64,
 }
 
@@ -97,8 +96,7 @@ pub struct EpochChangedHookMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Bonds the specified [Asset].
-    Bond {
-    },
+    Bond {},
     /// Unbonds the specified [Asset].
     Unbond {
         asset: Coin,

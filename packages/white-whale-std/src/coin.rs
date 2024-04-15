@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
@@ -160,7 +159,7 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
-// move to ww package 
+// move to ww package
 pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut updated_coins = coins.to_vec();
 

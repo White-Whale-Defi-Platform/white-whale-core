@@ -4,7 +4,7 @@ use cosmwasm_std::{
 use white_whale_std::{
     fee::PoolFee,
     pool_network::{asset::PairType, querier::query_native_decimals},
-    whale_lair::fill_rewards_msg,
+    whale_lair::{fill_rewards_msg, fill_rewards_msg_coin},
 };
 
 use crate::state::{get_pair_by_identifier, NATIVE_TOKEN_DECIMALS, PAIR_COUNTER};
@@ -110,7 +110,7 @@ pub fn create_pair(
     let creation_fee = vec![config.pool_creation_fee];
 
     // send pair creation fee to whale lair i.e the new fee_collector
-    messages.push(fill_rewards_msg(
+    messages.push(fill_rewards_msg_coin(
         config.whale_lair_addr.into_string(),
         creation_fee,
     )?);

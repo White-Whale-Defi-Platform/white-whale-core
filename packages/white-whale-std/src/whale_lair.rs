@@ -1,7 +1,7 @@
 use crate::pool_network::asset::{Asset, AssetInfo, ToCoins};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg
+    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
 };
 
 #[cw_serde]
@@ -88,7 +88,6 @@ pub enum ExecuteMsg {
     /// Fills the whale lair with new rewards.
     FillRewards { assets: Vec<Asset> },
     /// Fills the whale lair with new rewards.
-    
     FillRewardsCoin,
 }
 

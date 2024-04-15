@@ -71,7 +71,7 @@ pub(crate) fn process_incentive_creation_fee(
     }
 
     // send incentive creation fee to whale lair for distribution
-    messages.push(white_whale_std::whale_lair::fill_rewards_msg(
+    messages.push(white_whale_std::whale_lair::fill_rewards_msg_coin(
         config.whale_lair_addr.clone().into_string(),
         vec![incentive_creation_fee.to_owned()],
     )?);
