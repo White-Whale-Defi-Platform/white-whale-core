@@ -2,8 +2,8 @@ use cosmwasm_std::{Coin, Timestamp, Uint128, Uint64};
 
 use white_whale_std::bonding_manager::Epoch;
 use white_whale_std::bonding_manager::GlobalIndex;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
+// TODO: might remove currently unused
 pub(crate) fn get_epochs() -> Vec<Epoch> {
     vec![
         Epoch {

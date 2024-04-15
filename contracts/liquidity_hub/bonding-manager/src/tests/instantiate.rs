@@ -2,7 +2,6 @@ use cosmwasm_std::{Addr, Decimal, Uint64};
 
 use crate::tests::robot::TestingRobot;
 use white_whale_std::bonding_manager::Config;
-use white_whale_std::pool_network::asset::AssetInfo;
 
 #[test]
 fn test_instantiate_successfully() {
@@ -47,6 +46,4 @@ fn test_instantiate_unsuccessfully() {
             //     &ContractError::InvalidBondingAssetsLimit(BONDING_ASSETS_LIMIT, 3));
         },
     );
-
-    
 }

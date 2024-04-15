@@ -1,7 +1,7 @@
 use crate::pool_network::asset::{Asset, AssetInfo, ToCoins};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_json_binary, Addr, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg
 };
 
 #[cw_serde]
@@ -177,5 +177,13 @@ pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Asset>) -> StdResult<
             assets: assets.clone(),
         })?,
         funds: assets.to_coins()?,
+    }))
+}
+
+pub fn fill_rewards_msg_coin(contract_addr: String, rewards: Vec<Coin>) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr,
+        msg: to_json_binary(&ExecuteMsg::FillRewardsCoin)?,
+        funds: rewards,
     }))
 }

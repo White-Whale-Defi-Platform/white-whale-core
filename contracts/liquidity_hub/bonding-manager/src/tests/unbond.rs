@@ -4,8 +4,6 @@ use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
 };
 
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
-
 use crate::tests::robot::TestingRobot;
 
 #[test]

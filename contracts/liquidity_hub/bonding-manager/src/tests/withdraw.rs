@@ -1,7 +1,6 @@
 use cosmwasm_std::{coins, Coin, Event, Uint128};
 
 use white_whale_std::bonding_manager::WithdrawableResponse;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::tests::robot::TestingRobot;
 

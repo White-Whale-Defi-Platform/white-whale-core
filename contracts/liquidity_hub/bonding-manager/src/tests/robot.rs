@@ -3,7 +3,6 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, M
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint64};
 use cw_multi_test::{App, AppResponse, Executor};
 
-use crate::contract::query;
 use crate::state::{EPOCHS, LAST_CLAIMED_EPOCH};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::Epoch;
@@ -11,8 +10,8 @@ use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, Epoch as EpochV2};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
+use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_testing::integration::contracts::{
     store_epoch_manager_code, store_fee_collector_code, store_fee_distributor_code,
 };
@@ -103,7 +102,7 @@ impl TestingRobot {
 
         let epoch_manager_id = store_epoch_manager_code(&mut self.app);
 
-        let epoch_manager_addr = self
+        let _epoch_manager_addr = self
             .app
             .instantiate_contract(
                 epoch_manager_id,
@@ -198,7 +197,7 @@ impl TestingRobot {
     pub(crate) fn bond(
         &mut self,
         sender: Addr,
-        asset: Coin,
+        _asset: Coin,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {

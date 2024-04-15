@@ -249,18 +249,6 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
     Ok(EpochResponse { epoch })
 }
 
-/// Returns the [Epoch] with the given id.
-pub fn get_epoch(deps: Deps, id: Uint64) -> StdResult<EpochResponse> {
-    let option = EPOCHS.may_load(deps.storage, &id.to_be_bytes())?;
-
-    let epoch = match option {
-        Some(epoch) => epoch,
-        None => Epoch::default(),
-    };
-
-    Ok(EpochResponse { epoch })
-}
-
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
 /// a new epoch is created.
 pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {

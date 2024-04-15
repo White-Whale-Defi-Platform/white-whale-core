@@ -1,6 +1,6 @@
 use crate::{
     epoch_manager::epoch_manager::Epoch as EpochV2,
-    pool_network::asset::{Asset, AssetInfo, ToCoins},
+    pool_network::asset::{Asset, ToCoins},
 };
 
 use cosmwasm_schema::{cw_serde, QueryResponses};

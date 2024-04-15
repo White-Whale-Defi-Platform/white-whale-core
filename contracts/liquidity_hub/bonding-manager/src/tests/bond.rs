@@ -1,16 +1,17 @@
-use cosmwasm_std::{coin, coins, Coin, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128};
 
 use white_whale_std::bonding_manager::{BondedResponse, BondingWeightResponse};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::tests::robot::TestingRobot;
+
+use super::test_helpers::get_epochs;
 
 #[test]
 fn test_bond_successfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
-
+    get_epochs();
     robot
         .instantiate_default()
         .bond(

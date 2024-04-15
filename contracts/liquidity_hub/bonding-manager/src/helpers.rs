@@ -1,7 +1,6 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp, Uint64};
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
-use white_whale_std::pool_network::asset::AssetInfo;
 
 use crate::error::ContractError;
 use crate::queries::{get_claimable_epochs, get_current_epoch};

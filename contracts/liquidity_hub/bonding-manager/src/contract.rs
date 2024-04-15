@@ -1,9 +1,9 @@
-use cosmwasm_std::{ensure, entry_point, Coin, Order, Uint64};
+use cosmwasm_std::{ensure, entry_point, Coin, CosmosMsg, Order};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::PaymentError;
-use white_whale_std::pool_manager;
-use white_whale_std::pool_network::asset::{self, AssetInfo};
+use white_whale_std::lp_common::LP_SYMBOL;
+use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::{
     Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
@@ -12,7 +12,7 @@ use white_whale_std::bonding_manager::{
 use crate::error::ContractError;
 use crate::helpers::validate_growth_rate;
 use crate::queries::get_expiring_epoch;
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, REWARDS_BUCKET};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -117,10 +117,28 @@ pub fn execute(
                 .keys(deps.storage, None, None, Order::Descending)
                 .next()
                 .unwrap()?;
+
+            let _messages: Vec<CosmosMsg> = vec![];
             // Verify coins are coming
             // swap non-whale to whale
-            // if LP Tokens ,verify and withdraw then swap to whale
+            // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
+            let lp_tokens = info
+                .funds
+                .iter()
+                .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL));
+            // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
+            let _pair_identifier = lp_tokens
+                .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
+                .next()
+                .unwrap();
 
+            // // if LP Tokens ,verify and withdraw then swap to whale
+            // let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier: pair_identifier.to_string() };
+            // messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            //     contract_addr: ,
+            //     msg: to_json_binary(&lp_withdrawal_msg)?,
+            //     funds: vec![],
+            // }));
 
             // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
             // Note: After swap,
