@@ -8,8 +8,9 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use semver::Version;
-use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale_std::pool_network::pair::FeatureToggle;
+use white_whale_std::pool_manager::{
+    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
@@ -19,13 +20,12 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config: Config = Config {
         whale_lair_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
-        owner: deps.api.addr_validate(&msg.owner)?,
         // We must set a creation fee on instantiation to prevent spamming of pools
         pool_creation_fee: msg.pool_creation_fee,
         feature_toggle: FeatureToggle {
@@ -37,7 +37,7 @@ pub fn instantiate(
     MANAGER_CONFIG.save(deps.storage, &config)?;
     // initialize vault counter
     PAIR_COUNTER.save(deps.storage, &0u64)?;
-    cw_ownable::initialize_owner(deps.storage, deps.api, Some(msg.owner.as_str()))?;
+    cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
     Ok(Response::default())
 }
@@ -86,11 +86,7 @@ pub fn execute(
             to,
             pair_identifier,
         } => {
-            let to_addr = if let Some(to_addr) = to {
-                Some(deps.api.addr_validate(&to_addr)?)
-            } else {
-                None
-            };
+            let to_addr = to.map(|addr| deps.api.addr_validate(&addr)).transpose()?;
 
             swap::commands::swap(
                 deps,
@@ -151,6 +147,17 @@ pub fn execute(
         //     )
         // }
         ExecuteMsg::AddSwapRoutes { swap_routes: _ } => Ok(Response::new()),
+        ExecuteMsg::UpdateConfig {
+            whale_lair_addr,
+            pool_creation_fee,
+            feature_toggle,
+        } => manager::update_config(
+            deps,
+            info,
+            whale_lair_addr,
+            pool_creation_fee,
+            feature_toggle,
+        ),
     }
 }
 
@@ -173,6 +180,7 @@ fn optional_addr_validate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
+        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::AssetDecimals {
             pair_identifier,
             denom,

@@ -1,15 +1,17 @@
 use cosmwasm_std::testing::MockStorage;
-use white_whale_std::pool_manager::SwapOperation;
+use white_whale_std::pool_manager::{Config, SwapOperation};
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
-use cosmwasm_std::{Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, DistributionKeeper,
     Executor, FailingModule, GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
 use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
+use white_whale_std::pool_network::pair::{
+    FeatureToggle, ReverseSimulationResponse, SimulationResponse,
+};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -120,11 +122,7 @@ impl TestingSuite {
     pub(crate) fn instantiate(&mut self, whale_lair_addr: String) -> &mut Self {
         let msg = InstantiateMsg {
             fee_collector_addr: whale_lair_addr,
-            owner: self.creator().to_string(),
-            pool_creation_fee: Coin {
-                amount: Uint128::from(1_000u128),
-                denom: "uusd".to_string(),
-            },
+            pool_creation_fee: coin(1_000, "uusd"),
         };
 
         let pool_manager_id = self.app.store_code(contract_pool_manager());
@@ -337,6 +335,33 @@ impl TestingSuite {
 
         self
     }
+
+    /// Updates the configuration of the contract.
+    ///
+    /// Any parameters which are set to `None` when passed will not update
+    /// the current configuration.
+    #[track_caller]
+    pub(crate) fn update_config(
+        &mut self,
+        sender: Addr,
+        new_whale_lair_addr: Option<Addr>,
+        new_pool_creation_fee: Option<Coin>,
+        new_feature_toggle: Option<FeatureToggle>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::UpdateConfig {
+                whale_lair_addr: new_whale_lair_addr.map(|addr| addr.to_string()),
+                pool_creation_fee: new_pool_creation_fee,
+                feature_toggle: new_feature_toggle,
+            },
+            &[],
+        ));
+
+        self
+    }
 }
 
 /// queries
@@ -491,5 +516,16 @@ impl TestingSuite {
 
         // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
         lp_token_response.lp_denom
+    }
+
+    /// Retrieves the current configuration of the pool manager contract.
+    pub(crate) fn query_config(&mut self) -> Config {
+        self.app
+            .wrap()
+            .query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::Config {},
+            )
+            .unwrap()
     }
 }
