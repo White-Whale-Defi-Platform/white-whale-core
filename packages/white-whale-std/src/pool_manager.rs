@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{fee::PoolFee, pool_network::asset::PairType};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Decimal, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
 #[cw_serde]
@@ -106,9 +106,17 @@ pub struct PairInfo {
 impl PairInfo {}
 
 #[cw_serde]
+pub struct Config {
+    pub whale_lair_addr: Addr,
+    // We must set a creation fee on instantiation to prevent spamming of pools
+    pub pool_creation_fee: Coin,
+    //  Whether or not swaps, deposits, and withdrawals are enabled
+    pub feature_toggle: FeatureToggle,
+}
+
+#[cw_serde]
 pub struct InstantiateMsg {
     pub fee_collector_addr: String,
-    pub owner: String,
     pub pool_creation_fee: Coin,
 }
 
@@ -178,12 +186,27 @@ pub enum ExecuteMsg {
     // },
     /// Adds swap routes to the router.
     AddSwapRoutes { swap_routes: Vec<SwapRoute> },
+    /// Updates the configuration of the contract.
+    /// If a field is not specified (i.e., set to `None`), it will not be modified.
+    UpdateConfig {
+        /// The new whale-lair contract address.
+        whale_lair_addr: Option<String>,
+        /// The new fee that must be paid when a pool is created.
+        pool_creation_fee: Option<Coin>,
+        /// The new feature toggles of the contract, allowing fine-tuned
+        /// control over which operations are allowed.
+        feature_toggle: Option<FeatureToggle>,
+    },
 }
 
 #[cw_ownable_query]
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    /// Retrieves the contract's config.
+    #[returns(Config)]
+    Config {},
+
     /// Retrieves the decimals for the given asset.
     #[returns(AssetDecimalsResponse)]
     AssetDecimals {
@@ -267,4 +290,12 @@ pub struct ReverseSimulationResponse {
     pub burn_fee_amount: Uint128,
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
+}
+
+/// Pool feature toggle
+#[cw_serde]
+pub struct FeatureToggle {
+    pub withdrawals_enabled: bool,
+    pub deposits_enabled: bool,
+    pub swaps_enabled: bool,
 }

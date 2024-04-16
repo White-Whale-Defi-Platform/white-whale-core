@@ -2,19 +2,27 @@ use std::cmp::Ordering;
 
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
-use white_whale_std::pool_manager::{AssetDecimalsResponse, SwapOperation, SwapRouteResponse};
+use white_whale_std::pool_manager::{
+    AssetDecimalsResponse, Config, SwapOperation, SwapRouteResponse,
+};
 use white_whale_std::pool_network::{
     asset::PairType,
     pair::{ReverseSimulationResponse, SimulationResponse},
     // router::SimulateSwapOperationsResponse,
 };
 
+use crate::state::MANAGER_CONFIG;
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
     state::get_pair_by_identifier,
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
+
+/// Query the config of the contract.
+pub fn query_config(deps: Deps) -> Result<Config, ContractError> {
+    Ok(MANAGER_CONFIG.load(deps.storage)?)
+}
 
 /// Query the native asset decimals
 pub fn query_asset_decimals(

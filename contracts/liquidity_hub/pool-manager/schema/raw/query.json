@@ -3,6 +3,20 @@
   "title": "QueryMsg",
   "oneOf": [
     {
+      "description": "Retrieves the contract's config.",
+      "type": "object",
+      "required": [
+        "config"
+      ],
+      "properties": {
+        "config": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Retrieves the decimals for the given asset.",
       "type": "object",
       "required": [
