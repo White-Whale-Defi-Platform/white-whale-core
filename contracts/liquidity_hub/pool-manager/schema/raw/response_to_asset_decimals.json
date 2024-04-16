@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "NativeTokenDecimalsResponse",
-  "description": "The response for the `NativeTokenDecimals` query.",
+  "title": "AssetDecimalsResponse",
+  "description": "The response for the `AssetDecimals` query.",
   "type": "object",
   "required": [
     "decimals",
@@ -16,7 +16,7 @@
       "minimum": 0.0
     },
     "denom": {
-      "description": "The denom to get the decimals in the given pair_identifier for.",
+      "description": "The queried denom in the given pair_identifier.",
       "type": "string"
     },
     "pair_identifier": {

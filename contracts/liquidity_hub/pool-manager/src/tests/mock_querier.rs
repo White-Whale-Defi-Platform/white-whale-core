@@ -137,20 +137,6 @@ impl WasmMockQuerier {
                         }),
                     }
                 }
-                Ok(white_whale_std::pool_manager::QueryMsg::NativeTokenDecimals { denom }) => {
-                    match self.pool_factory_querier.native_token_decimals.get(&denom) {
-                        Some(decimals) => SystemResult::Ok(ContractResult::Ok(
-                            to_binary(&NativeTokenDecimalsResponse {
-                                decimals: *decimals,
-                            })
-                            .unwrap(),
-                        )),
-                        None => SystemResult::Err(SystemError::InvalidRequest {
-                            error: "No decimal info exist".to_string(),
-                            request: msg.as_slice().into(),
-                        }),
-                    }
-                }
                 _ => match from_binary(msg) {
                     Ok(white_whale_std::pool_manager::QueryMsg::Simulation {
                         offer_asset,
@@ -176,73 +162,6 @@ impl WasmMockQuerier {
                             burn_fee_amount: Uint128::zero(),
                         },
                     ))),
-                    _ => {
-                        match from_binary(msg).unwrap() {
-                            Cw20QueryMsg::TokenInfo {} => {
-                                let balances: &HashMap<String, Uint128> =
-                                match self.token_querier.balances.get(contract_addr) {
-                                    Some(balances) => balances,
-                                    None => {
-                                        return SystemResult::Err(SystemError::InvalidRequest {
-                                            error: format!(
-                                                "No balance info exists for the contract {contract_addr}"
-                                            ),
-                                            request: msg.as_slice().into(),
-                                        })
-                                    }
-                                };
-                                println!("balances: {:?}", self.token_querier.balances);
-
-                                let mut total_supply = Uint128::zero();
-
-                                for balance in balances {
-                                    total_supply += *balance.1;
-                                }
-
-                                SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&TokenInfoResponse {
-                                        name: "mAAPL".to_string(),
-                                        symbol: "mAAPL".to_string(),
-                                        decimals: 8,
-                                        total_supply,
-                                    })
-                                    .unwrap(),
-                                ))
-                            }
-                            Cw20QueryMsg::Balance { address } => {
-                                let balances: &HashMap<String, Uint128> =
-                                match self.token_querier.balances.get(contract_addr) {
-                                    Some(balances) => balances,
-                                    None => {
-                                        return SystemResult::Err(SystemError::InvalidRequest {
-                                            error: format!(
-                                                "No balance info exists for the contract {contract_addr}"
-                                            ),
-                                            request: msg.as_slice().into(),
-                                        })
-                                    }
-                                };
-
-                                let balance = match balances.get(&address) {
-                                    Some(v) => *v,
-                                    None => {
-                                        return SystemResult::Ok(ContractResult::Ok(
-                                            to_binary(&Cw20BalanceResponse {
-                                                balance: Uint128::zero(),
-                                            })
-                                            .unwrap(),
-                                        ));
-                                    }
-                                };
-
-                                SystemResult::Ok(ContractResult::Ok(
-                                    to_binary(&Cw20BalanceResponse { balance }).unwrap(),
-                                ))
-                            }
-
-                            _ => panic!("DO NOT ENTER HERE"),
-                        }
-                    }
                 },
             },
             QueryRequest::Wasm(WasmQuery::ContractInfo { .. }) => {

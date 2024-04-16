@@ -1,13 +1,6 @@
 use std::fmt;
 
-use crate::{
-    fee::PoolFee,
-    pool_network::{
-        asset::PairType,
-        factory::NativeTokenDecimalsResponse,
-        pair::{FeatureToggle, ReverseSimulationResponse, SimulationResponse},
-    },
-};
+use crate::{fee::PoolFee, pool_network::asset::PairType};
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -136,6 +129,7 @@ pub struct MigrateMsg {}
 pub enum ExecuteMsg {
     CreatePair {
         asset_denoms: Vec<String>,
+        asset_decimals: Vec<u8>,
         pool_fees: PoolFee,
         pair_type: PairType,
         pair_identifier: Option<String>,
@@ -155,16 +149,8 @@ pub enum ExecuteMsg {
         to: Option<String>,
         pair_identifier: String,
     },
-    // /// Withdraws liquidity from the pool.
-    WithdrawLiquidity {
-        pair_identifier: String,
-    },
-    /// Adds native token info to the contract so it can instantiate pair contracts that include it
-    AddNativeTokenDecimals {
-        denom: String,
-        decimals: u8,
-    },
-
+    /// Withdraws liquidity from the pool.
+    WithdrawLiquidity { pair_identifier: String },
     /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
     ExecuteSwapOperations {
         /// The operations that should be performed in sequence.
@@ -199,9 +185,7 @@ pub enum ExecuteMsg {
     //     receiver: String,
     // },
     /// Adds swap routes to the router.
-    AddSwapRoutes {
-        swap_routes: Vec<SwapRoute>,
-    },
+    AddSwapRoutes { swap_routes: Vec<SwapRoute> },
     /// Updates the configuration of the contract.
     /// If a field is not specified (i.e., set to `None`), it will not be modified.
     UpdateConfig {
@@ -219,12 +203,16 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    /// Retrieves the contract's config.
     #[returns(Config)]
     Config {},
 
-    /// Retrieves the decimals for the given native or ibc denom.
-    #[returns(NativeTokenDecimalsResponse)]
-    NativeTokenDecimals { denom: String },
+    /// Retrieves the decimals for the given asset.
+    #[returns(AssetDecimalsResponse)]
+    AssetDecimals {
+        pair_identifier: String,
+        denom: String,
+    },
 
     /// Simulates a swap.
     #[returns(SimulationResponse)]
@@ -267,4 +255,47 @@ pub enum QueryMsg {
     // },
     #[returns(PairInfo)]
     Pair { pair_identifier: String },
+}
+
+/// The response for the `AssetDecimals` query.
+#[cw_serde]
+pub struct AssetDecimalsResponse {
+    /// The pair identifier to do the query for.
+    pub pair_identifier: String,
+    /// The queried denom in the given pair_identifier.
+    pub denom: String,
+    /// The decimals for the requested denom.
+    pub decimals: u8,
+}
+
+/// SimulationResponse returns swap simulation response
+#[cw_serde]
+pub struct SimulationResponse {
+    pub return_amount: Uint128,
+    pub spread_amount: Uint128,
+    pub swap_fee_amount: Uint128,
+    pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
+}
+
+/// ReverseSimulationResponse returns reverse swap simulation response
+#[cw_serde]
+pub struct ReverseSimulationResponse {
+    pub offer_amount: Uint128,
+    pub spread_amount: Uint128,
+    pub swap_fee_amount: Uint128,
+    pub protocol_fee_amount: Uint128,
+    pub burn_fee_amount: Uint128,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint128,
+}
+
+/// Pool feature toggle
+#[cw_serde]
+pub struct FeatureToggle {
+    pub withdrawals_enabled: bool,
+    pub deposits_enabled: bool,
+    pub swaps_enabled: bool,
 }

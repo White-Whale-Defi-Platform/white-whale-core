@@ -773,14 +773,6 @@ mod tests {
             swap_token_c_amount in 0..MAX_TOKENS_IN.u128(),
             pool_token_supply in 0..MAX_TOKENS_IN.u128(),
         ) {
-            let deposit_amount_a = deposit_amount_a;
-            let deposit_amount_b = deposit_amount_b;
-            let deposit_amount_c = deposit_amount_c;
-            let swap_token_a_amount = swap_token_a_amount;
-            let swap_token_b_amount = swap_token_b_amount;
-            let swap_token_c_amount = swap_token_c_amount;
-            let pool_token_supply = pool_token_supply;
-
             let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
             let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
             let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);

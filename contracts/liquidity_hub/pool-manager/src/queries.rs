@@ -1,15 +1,17 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
-use white_whale_std::pool_manager::{Config, SwapOperation, SwapRouteResponse};
+
+use white_whale_std::pool_manager::{
+    AssetDecimalsResponse, Config, SwapOperation, SwapRouteResponse,
+};
 use white_whale_std::pool_network::{
     asset::PairType,
-    factory::NativeTokenDecimalsResponse,
     pair::{ReverseSimulationResponse, SimulationResponse},
     // router::SimulateSwapOperationsResponse,
 };
 
-use crate::state::{MANAGER_CONFIG, NATIVE_TOKEN_DECIMALS};
+use crate::state::MANAGER_CONFIG;
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
     state::get_pair_by_identifier,
@@ -22,14 +24,24 @@ pub fn query_config(deps: Deps) -> Result<Config, ContractError> {
     Ok(MANAGER_CONFIG.load(deps.storage)?)
 }
 
-/// Query the native token decimals
-pub fn query_native_token_decimal(
+/// Query the native asset decimals
+pub fn query_asset_decimals(
     deps: Deps,
+    pair_identifier: String,
     denom: String,
-) -> Result<NativeTokenDecimalsResponse, ContractError> {
-    let decimals = NATIVE_TOKEN_DECIMALS.load(deps.storage, denom.as_bytes())?;
+) -> Result<AssetDecimalsResponse, ContractError> {
+    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
+    let decimal_index = pair_info
+        .asset_denoms
+        .iter()
+        .position(|d| d.clone() == denom)
+        .ok_or(ContractError::AssetMismatch {})?;
 
-    Ok(NativeTokenDecimalsResponse { decimals })
+    Ok(AssetDecimalsResponse {
+        pair_identifier,
+        denom,
+        decimals: pair_info.asset_decimals[decimal_index],
+    })
 }
 
 // Simulate a swap with the provided asset to determine the amount of the other asset that would be received

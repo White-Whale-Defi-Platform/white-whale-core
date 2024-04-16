@@ -288,7 +288,7 @@ fn try_open_more_flows_than_allowed() {
                 amount: Uint128::new(i * 2_000u128),
             },
             None,
-            &vec![coin(i * 2_000u128, "uwhale".to_string())],
+            &[coin(i * 2_000u128, "uwhale".to_string())],
             |result| {
                 if i > 7 {
                     // this should fail as only 7 incentives can be opened as specified in `instantiate_default`
@@ -410,7 +410,7 @@ fn try_open_flows_with_wrong_epochs() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -435,7 +435,7 @@ fn try_open_flows_with_wrong_epochs() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -462,7 +462,7 @@ fn try_open_flows_with_wrong_epochs() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
@@ -485,7 +485,7 @@ fn try_open_flows_with_wrong_epochs() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -541,7 +541,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                 amount: Uint128::new(0u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -565,7 +565,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee + MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -588,7 +588,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(100u128, "uwhale".to_string())],
+            &[coin(100u128, "uwhale".to_string())],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee + MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -611,7 +611,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(500u128, "uwhale".to_string())],
+            &[coin(500u128, "uwhale".to_string())],
             |result| {
                 // this should fail as we didn't send enough funds to cover for the fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -634,7 +634,7 @@ fn open_flow_with_fee_native_token_and_flow_same_native_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -752,7 +752,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as MIN_FLOW_AMOUNT is not met
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -776,7 +776,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -799,7 +799,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(1_000u128, "uwhale".to_string()),
                 coin(500u128, "ampWHALE".to_string()),
             ],
@@ -825,7 +825,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(100u128, "uwhale".to_string()),
                 coin(1_00u128, "ampWHALE".to_string()),
             ],
@@ -851,7 +851,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(1_000u128, "uwhale".to_string()),
                 coin(1_000u128, "ampWHALE".to_string()),
             ],
@@ -963,7 +963,7 @@ fn open_flow_with_fee_native_token_and_flow_different_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(50_000u128, "uwhale".to_string()),
                 coin(1_000u128, "ampWHALE".to_string()),
             ],
@@ -1040,7 +1040,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as MIN_FLOW_AMOUNT is not met
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1062,7 +1062,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent, i.e. Allowance was not increased
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1090,7 +1090,7 @@ fn open_flow_with_fee_native_token_and_flow_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as the allowance was increased
                 result.unwrap();
@@ -1215,7 +1215,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1237,7 +1237,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1266,7 +1266,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(1_500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee and MIN_FLOW_AMOUNT
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1294,7 +1294,7 @@ fn open_flow_with_fee_cw20_token_and_flow_same_cw20_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should succeed as enough funds were sent to cover for fee and MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -1401,7 +1401,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1423,7 +1423,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the asset to pay for the fee was not transferred
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1452,7 +1452,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1481,7 +1481,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover the flow asset
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1510,7 +1510,7 @@ fn open_flow_with_fee_cw20_token_and_flow_different_cw20_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should succeed as both the fee was paid in full and the flow asset amount
                 // matches the one sent to the contract
@@ -1638,7 +1638,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(500u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1662,7 +1662,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the asset to pay for the fee was not transferred
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1693,7 +1693,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as not enough funds were sent to cover for fee
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1724,7 +1724,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![],
+            &[],
             |result| {
                 // this should fail as the flow asset was not sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1748,7 +1748,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(900u128, "usdc".to_string())],
+            &[coin(900u128, "usdc".to_string())],
             |result| {
                 // this should fail as the flow asset was not sent to the contract
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -1772,7 +1772,7 @@ fn open_flow_with_fee_cw20_token_and_flow_native_token() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "usdc".to_string())],
+            &[coin(1_000u128, "usdc".to_string())],
             |result| {
                 // this should succeed as the flow asset was sent to the contract
                 result.unwrap();
@@ -1905,7 +1905,7 @@ fn close_native_token_flows() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -1923,7 +1923,7 @@ fn close_native_token_flows() {
                 amount: Uint128::new(11_000u128),
             },
             None,
-            &vec![coin(11_000u128, "uwhale".to_string())],
+            &[coin(11_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2127,7 +2127,7 @@ fn close_native_token_flows() {
                 amount: Uint128::new(5_000u128),
             },
             None,
-            &vec![coin(5_000u128, "uwhale".to_string())],
+            &[coin(5_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2217,7 +2217,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2239,7 +2239,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(10_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2417,7 +2417,7 @@ fn close_cw20_token_flows() {
                 amount: Uint128::new(5_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 result.unwrap();
             },
@@ -2694,7 +2694,7 @@ fn open_flow_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3103,7 +3103,7 @@ fn open_flow_positions_claim_cw20_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale")],
+            &[coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -3325,7 +3325,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(1_000_000_000u128, "ampWHALE"),
                 coin(1_000u128, "uwhale"),
             ],
@@ -3344,7 +3344,7 @@ fn open_expand_close_flows_positions_and_claim_native_token_incentive() {
                 amount: Uint128::new(10_000_000_000u128),
             },
             None,
-            &vec![coin(10_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -4391,7 +4391,7 @@ fn open_expand_position_with_optional_receiver() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             None,
-            &vec![
+            &[
                 coin(1_000_000_000u128, "ampWHALE"),
                 coin(1_000u128, "uwhale"),
             ],
@@ -4534,7 +4534,7 @@ fn close_position_if_empty_rewards() {
                 amount: Uint128::new(1_000u128),
             },
             None,
-            &vec![coin(1_000u128, "ampWHALE"), coin(1_000u128, "uwhale")],
+            &[coin(1_000u128, "ampWHALE"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -4884,7 +4884,7 @@ fn open_expand_flow_with_native_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(2_000u128, "uwhale".to_string())],
+            &[coin(2_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5187,7 +5187,7 @@ fn open_expand_flow_with_cw20_token() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5455,7 +5455,7 @@ fn fail_expand_ended_flow() {
                 amount: Uint128::new(2_000u128),
             },
             None,
-            &vec![coin(1_000u128, "uwhale".to_string())],
+            &[coin(1_000u128, "uwhale".to_string())],
             |result| {
                 // this should succeed as we sent enough funds to cover for fee + MIN_FLOW_AMOUNT
                 result.unwrap();
@@ -5598,7 +5598,7 @@ fn open_expand_flow_with_default_values() {
                 amount: Uint128::new(1_000_000_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(1_000_000_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -5961,7 +5961,7 @@ fn open_expand_flow_verify_rewards() {
                 amount: Uint128::new(10_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -6466,7 +6466,7 @@ fn open_expand_flow_over_expand_limit() {
                 amount: Uint128::new(10_000u128),
             },
             Some("alias".to_string()),
-            &vec![coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
+            &[coin(10_000u128, "usdc"), coin(1_000u128, "uwhale")],
             |result| {
                 result.unwrap();
             },

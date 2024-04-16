@@ -8,8 +8,9 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use semver::Version;
-use white_whale_std::pool_manager::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale_std::pool_network::pair::FeatureToggle;
+use white_whale_std::pool_manager::{
+    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
@@ -51,6 +52,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::CreatePair {
             asset_denoms,
+            asset_decimals,
             pool_fees,
             pair_type,
             pair_identifier,
@@ -59,6 +61,7 @@ pub fn execute(
             env,
             info,
             asset_denoms,
+            asset_decimals,
             pool_fees,
             pair_type,
             pair_identifier,
@@ -100,9 +103,6 @@ pub fn execute(
         }
         ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
             liquidity::commands::withdraw_liquidity(deps, env, info, pair_identifier)
-        }
-        ExecuteMsg::AddNativeTokenDecimals { denom, decimals } => {
-            manager::commands::add_native_token_decimals(deps, env, denom, decimals)
         }
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
@@ -181,9 +181,14 @@ fn optional_addr_validate(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
-        QueryMsg::NativeTokenDecimals { denom } => Ok(to_json_binary(
-            &queries::query_native_token_decimal(deps, denom)?,
-        )?),
+        QueryMsg::AssetDecimals {
+            pair_identifier,
+            denom,
+        } => Ok(to_json_binary(&queries::query_asset_decimals(
+            deps,
+            pair_identifier,
+            denom,
+        )?)?),
         QueryMsg::Simulation {
             offer_asset,
             ask_asset,

@@ -32,8 +32,6 @@ pub fn get_pair_by_identifier(
         .may_load(deps.storage, pair_identifier)?
         .ok_or(ContractError::UnExistingPair {})
 }
-// Remove after adding decimals to pair info
-pub const NATIVE_TOKEN_DECIMALS: Map<&[u8], u8> = Map::new("allow_native_token");
 
 // Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
 pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");

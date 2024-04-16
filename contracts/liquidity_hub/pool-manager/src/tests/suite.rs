@@ -186,35 +186,6 @@ impl TestingSuite {
             )
             .unwrap();
     }
-
-    #[track_caller]
-    pub fn add_native_token_decimals(
-        &mut self,
-        sender: Addr,
-        native_token_denom: String,
-        decimals: u8,
-    ) -> &mut Self {
-        let msg = white_whale_std::pool_manager::ExecuteMsg::AddNativeTokenDecimals {
-            denom: native_token_denom.clone(),
-            decimals,
-        };
-
-        let _creator = self.creator().clone();
-
-        self.app
-            .execute_contract(
-                sender,
-                self.pool_manager_addr.clone(),
-                &msg,
-                &[Coin {
-                    denom: native_token_denom.to_string(),
-                    amount: Uint128::from(1u128),
-                }],
-            )
-            .unwrap();
-
-        self
-    }
 }
 
 /// execute messages
@@ -259,6 +230,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn swap(
         &mut self,
         sender: Addr,
@@ -289,6 +261,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn execute_swap_operations(
         &mut self,
         sender: Addr,
@@ -315,10 +288,12 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_pair(
         &mut self,
         sender: Addr,
         asset_denoms: Vec<String>,
+        asset_decimals: Vec<u8>,
         pool_fees: PoolFee,
         pair_type: PairType,
         pair_identifier: Option<String>,
@@ -327,6 +302,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
             asset_denoms,
+            asset_decimals,
             pool_fees,
             pair_type,
             pair_identifier,
