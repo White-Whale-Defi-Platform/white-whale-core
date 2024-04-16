@@ -3,7 +3,7 @@
   "title": "QueryMsg",
   "oneOf": [
     {
-      "description": "Retrieves the decimals for the given native asset.",
+      "description": "Retrieves the decimals for the given asset.",
       "type": "object",
       "required": [
         "asset_decimals"

@@ -190,7 +190,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Retrieves the decimals for the given native asset.
+    /// Retrieves the decimals for the given asset.
     #[returns(AssetDecimalsResponse)]
     AssetDecimals {
         pair_identifier: String,
