@@ -9,7 +9,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use semver::Version;
 use white_whale_std::pool_manager::{
-    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
+    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PairInfoResponse, QueryMsg,
 };
 
 // version info for migration info
@@ -236,9 +236,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-        QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(
-            &PAIRS.load(deps.storage, &pair_identifier)?,
-        )?),
+        QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(&PairInfoResponse {
+            pair_info: PAIRS.load(deps.storage, &pair_identifier)?,
+        })?),
     }
 }
 

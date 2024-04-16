@@ -1754,7 +1754,7 @@ mod swapping {
 }
 
 mod ownership {
-    use white_whale_std::pool_network::pair::FeatureToggle;
+    use white_whale_std::pool_manager::FeatureToggle;
 
     use super::*;
 
