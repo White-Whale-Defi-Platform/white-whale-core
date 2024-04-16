@@ -1,13 +1,9 @@
 use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
-use white_whale_std::{
-    fee::PoolFee,
-    pool_network::{asset::PairType, querier::query_native_decimals},
-    whale_lair::fill_rewards_msg_coin,
-};
+use white_whale_std::{fee::PoolFee, pool_network::asset::PairType, whale_lair::fill_rewards_msg_coin};
 
-use crate::state::{get_pair_by_identifier, NATIVE_TOKEN_DECIMALS, PAIR_COUNTER};
+use crate::state::{get_pair_by_identifier, PAIR_COUNTER};
 use crate::{
     state::{Config, MANAGER_CONFIG, PAIRS},
     ContractError,
@@ -15,7 +11,6 @@ use crate::{
 
 use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_manager::PairInfo;
-use white_whale_std::pool_network::querier::query_balance;
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
@@ -83,7 +78,8 @@ pub fn create_pair(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    asset_denoms: Vec<String>, //Review just a vec<asset>
+    asset_denoms: Vec<String>,
+    asset_decimals: Vec<u8>,
     pool_fees: PoolFee,
     pair_type: PairType,
     pair_identifier: Option<String>,
@@ -114,22 +110,6 @@ pub fn create_pair(
         config.whale_lair_addr.into_string(),
         creation_fee,
     )?);
-
-    let asset_decimals_vec = asset_denoms
-        .iter()
-        .map(|asset| {
-            //todo pass the asset_decimals in the create_pair msg. Let the user creating the pool
-            // defining the decimals, they are incentivized to do it right as they are paying a fee
-
-            let _ = query_native_decimals(
-                &deps.querier,
-                env.contract.address.clone(),
-                asset.to_string(),
-            );
-
-            0u8
-        })
-        .collect::<Vec<u8>>();
 
     // Check if the asset infos are the same
     if asset_denoms
@@ -184,7 +164,7 @@ pub fn create_pair(
             asset_denoms,
             pair_type: pair_type.clone(),
             lp_denom: lp_asset.clone(),
-            asset_decimals: asset_decimals_vec,
+            asset_decimals,
             pool_fees,
             assets,
         },
@@ -213,23 +193,4 @@ pub fn create_pair(
     Ok(Response::new()
         .add_attributes(attributes)
         .add_messages(messages))
-}
-
-/// Adds native/ibc token with decimals to the factory's whitelist so it can create pairs with that asset
-pub fn add_native_token_decimals(
-    deps: DepsMut,
-    env: Env,
-    denom: String,
-    decimals: u8,
-) -> Result<Response, ContractError> {
-    let balance = query_balance(&deps.querier, env.contract.address, denom.to_string())?;
-    if balance.is_zero() {
-        return Err(ContractError::InvalidVerificationBalance {});
-    }
-    NATIVE_TOKEN_DECIMALS.save(deps.storage, denom.as_bytes(), &decimals)?;
-    Ok(Response::new().add_attributes(vec![
-        ("action", "add_allow_native_token"),
-        ("denom", &denom),
-        ("decimals", &decimals.to_string()),
-    ]))
 }

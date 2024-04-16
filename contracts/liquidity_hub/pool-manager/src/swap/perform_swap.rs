@@ -129,7 +129,6 @@ pub fn perform_swap(
         swap_fee_asset,
         burn_fee_asset,
         protocol_fee_asset,
-
         pair_info,
         spread_amount: swap_computation.spread_amount,
     })

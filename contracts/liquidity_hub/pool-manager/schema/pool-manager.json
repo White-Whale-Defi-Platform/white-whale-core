@@ -58,11 +58,20 @@
           "create_pair": {
             "type": "object",
             "required": [
+              "asset_decimals",
               "asset_denoms",
               "pair_type",
               "pool_fees"
             ],
             "properties": {
+              "asset_decimals": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              },
               "asset_denoms": {
                 "type": "array",
                 "items": {
@@ -182,6 +191,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Withdraws liquidity from the pool.",
         "type": "object",
         "required": [
           "withdraw_liquidity"
@@ -194,34 +204,6 @@
             ],
             "properties": {
               "pair_identifier": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
-        "type": "object",
-        "required": [
-          "add_native_token_decimals"
-        ],
-        "properties": {
-          "add_native_token_decimals": {
-            "type": "object",
-            "required": [
-              "decimals",
-              "denom"
-            ],
-            "properties": {
-              "decimals": {
-                "type": "integer",
-                "format": "uint8",
-                "minimum": 0.0
-              },
-              "denom": {
                 "type": "string"
               }
             },
@@ -611,19 +593,23 @@
     "title": "QueryMsg",
     "oneOf": [
       {
-        "description": "Retrieves the decimals for the given native or ibc denom.",
+        "description": "Retrieves the decimals for the given asset.",
         "type": "object",
         "required": [
-          "native_token_decimals"
+          "asset_decimals"
         ],
         "properties": {
-          "native_token_decimals": {
+          "asset_decimals": {
             "type": "object",
             "required": [
-              "denom"
+              "denom",
+              "pair_identifier"
             ],
             "properties": {
               "denom": {
+                "type": "string"
+              },
+              "pair_identifier": {
                 "type": "string"
               }
             },
@@ -799,18 +785,30 @@
   },
   "sudo": null,
   "responses": {
-    "native_token_decimals": {
+    "asset_decimals": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "NativeTokenDecimalsResponse",
+      "title": "AssetDecimalsResponse",
+      "description": "The response for the `AssetDecimals` query.",
       "type": "object",
       "required": [
-        "decimals"
+        "decimals",
+        "denom",
+        "pair_identifier"
       ],
       "properties": {
         "decimals": {
+          "description": "The decimals for the requested denom.",
           "type": "integer",
           "format": "uint8",
           "minimum": 0.0
+        },
+        "denom": {
+          "description": "The queried denom in the given pair_identifier.",
+          "type": "string"
+        },
+        "pair_identifier": {
+          "description": "The pair identifier to do the query for.",
+          "type": "string"
         }
       },
       "additionalProperties": false

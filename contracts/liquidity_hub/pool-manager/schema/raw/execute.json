@@ -11,11 +11,20 @@
         "create_pair": {
           "type": "object",
           "required": [
+            "asset_decimals",
             "asset_denoms",
             "pair_type",
             "pool_fees"
           ],
           "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
             "asset_denoms": {
               "type": "array",
               "items": {
@@ -135,6 +144,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Withdraws liquidity from the pool.",
       "type": "object",
       "required": [
         "withdraw_liquidity"
@@ -147,34 +157,6 @@
           ],
           "properties": {
             "pair_identifier": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Adds native token info to the contract so it can instantiate pair contracts that include it",
-      "type": "object",
-      "required": [
-        "add_native_token_decimals"
-      ],
-      "properties": {
-        "add_native_token_decimals": {
-          "type": "object",
-          "required": [
-            "decimals",
-            "denom"
-          ],
-          "properties": {
-            "decimals": {
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0.0
-            },
-            "denom": {
               "type": "string"
             }
           },
