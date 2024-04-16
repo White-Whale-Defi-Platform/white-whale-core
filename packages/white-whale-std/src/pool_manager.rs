@@ -57,9 +57,7 @@ pub struct SwapRoute {
 // Used for all swap routes
 #[cw_serde]
 pub struct SwapRouteResponse {
-    pub offer_asset_denom: String,
-    pub ask_asset_denom: String,
-    pub swap_route: Vec<SwapOperation>,
+    pub swap_route: SwapRoute,
 }
 
 impl fmt::Display for SwapRoute {
@@ -204,7 +202,7 @@ pub enum ExecuteMsg {
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Retrieves the contract's config.
-    #[returns(Config)]
+    #[returns(ConfigResponse)]
     Config {},
 
     /// Retrieves the decimals for the given asset.
@@ -231,13 +229,13 @@ pub enum QueryMsg {
     },
 
     /// Gets the swap route for the given offer and ask assets.
-    #[returns(Vec<SwapOperation>)]
+    #[returns(SwapRouteResponse)]
     SwapRoute {
         offer_asset_denom: String,
         ask_asset_denom: String,
     },
     /// Gets all swap routes registered
-    #[returns(Vec<SwapRouteResponse>)]
+    #[returns(SwapRoutesResponse)]
     SwapRoutes {},
 
     // /// Simulates swap operations.
@@ -253,8 +251,23 @@ pub enum QueryMsg {
     //     ask_amount: Uint128,
     //     operations: Vec<SwapOperation>,
     // },
-    #[returns(PairInfo)]
+    #[returns(PairInfoResponse)]
     Pair { pair_identifier: String },
+}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub config: Config,
+}
+
+#[cw_serde]
+pub struct SwapRoutesResponse {
+    pub swap_routes: Vec<SwapRoute>,
+}
+
+#[cw_serde]
+pub struct PairInfoResponse {
+    pub pair_info: PairInfo,
 }
 
 /// The response for the `AssetDecimals` query.
