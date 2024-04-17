@@ -1,6 +1,7 @@
 mod bond;
 mod claim;
 mod instantiate;
+mod rewards;
 mod robot;
 mod test_helpers;
 mod unbond;

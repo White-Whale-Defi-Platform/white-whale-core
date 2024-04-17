@@ -117,6 +117,7 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "cw2",
+ "pool-manager",
  "schemars",
  "semver",
  "serde",

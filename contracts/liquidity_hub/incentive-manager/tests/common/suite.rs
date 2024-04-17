@@ -166,6 +166,7 @@ impl TestingSuite {
             .unwrap();
     }
 
+    #[allow(clippy::inconsistent_digit_grouping)]
     fn create_epoch_manager(&mut self) {
         let epoch_manager_contract = self.app.store_code(epoch_manager_contract());
 
@@ -197,6 +198,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate(
         &mut self,
         whale_lair_addr: String,
@@ -239,6 +241,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate_err(
         &mut self,
         whale_lair_addr: String,
@@ -300,6 +303,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
@@ -555,7 +559,7 @@ impl TestingSuite {
 
         result(
             self.app
-                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &vec![]),
+                .execute_contract(sender, self.epoch_manager_addr.clone(), &msg, &[]),
         );
 
         self
@@ -584,7 +588,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_current_epoch(
         &mut self,
-        result: impl Fn(StdResult<EpochResponse>),
+        mut result: impl FnMut(StdResult<EpochResponse>),
     ) -> &mut Self {
         let current_epoch_response: StdResult<EpochResponse> = self.app.wrap().query_wasm_smart(
             &self.epoch_manager_addr,

@@ -29,20 +29,21 @@ pub(crate) fn remove_hook(
 /// Creates a new epoch.
 pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
-
+    
     let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
+    println!("Creating new epoch");
 
-    if env
-        .block
-        .time
-        .minus_nanos(current_epoch.start_time.nanos())
-        .nanos()
-        < config.epoch_config.duration.u64()
-    {
-        return Err(ContractError::CurrentEpochNotExpired);
-    }
-
+    // if env
+    //     .block
+    //     .time
+    //     .minus_nanos(current_epoch.start_time.nanos())
+    //     .nanos()
+    //     < config.epoch_config.duration.u64()
+    // {
+    //     return Err(ContractError::CurrentEpochNotExpired);
+    // }
+    println!("Creating new epoch");
     current_epoch.id = current_epoch
         .id
         .checked_add(1u64)

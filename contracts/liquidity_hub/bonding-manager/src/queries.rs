@@ -37,6 +37,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
+    println!("bonds is empty : {:?}", bonds.is_empty());
 
     // if it doesn't have bonded, return empty response
     if bonds.is_empty() {
@@ -46,6 +47,7 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
             first_bonded_epoch_id: Uint64::zero(),
         });
     }
+    println!("bonds: {:?}", bonds);
 
     let mut total_bonded = Uint128::zero();
     let mut bonded_assets = vec![];

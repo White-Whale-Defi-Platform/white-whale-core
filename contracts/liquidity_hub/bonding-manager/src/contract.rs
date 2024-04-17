@@ -110,58 +110,36 @@ pub fn execute(
             unbonding_period,
             growth_rate,
         } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
-        ExecuteMsg::FillRewards { .. } => {
-            // Use aggregate_coins to get the total amount of new coins
-            // Finding the most recent EpochID
-            let most_recent_epoch_id = EPOCHS
-                .keys(deps.storage, None, None, Order::Descending)
-                .next()
-                .unwrap()?;
-
-            let _messages: Vec<CosmosMsg> = vec![];
-            // Verify coins are coming
-            // swap non-whale to whale
-            // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
-            let lp_tokens = info
-                .funds
-                .iter()
-                .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL));
-            // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-            let _pair_identifier = lp_tokens
-                .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
-                .next()
-                .unwrap();
-
-            // // if LP Tokens ,verify and withdraw then swap to whale
-            // let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier: pair_identifier.to_string() };
-            // messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            //     contract_addr: ,
-            //     msg: to_json_binary(&lp_withdrawal_msg)?,
-            //     funds: vec![],
-            // }));
-
-            // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
-            // Note: After swap,
-            EPOCHS.update(
-                deps.storage,
-                &most_recent_epoch_id,
-                |bucket| -> StdResult<_> {
-                    let mut bucket = bucket.unwrap_or_default();
-                    bucket.available = asset::aggregate_coins(bucket.available, vec![])?;
-                    Ok(bucket)
-                },
-            )?;
-            Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
-        }
+        ExecuteMsg::FillRewards { .. } => commands::fill_rewards(deps, env, info),
+        ExecuteMsg::FillRewardsCoin => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),
-        ExecuteMsg::EpochChangedHook { msg } => {
+        ExecuteMsg::EpochChangedHook { current_epoch } => {
             // Epoch has been updated, update rewards bucket
             // and forward the expiring epoch
             // Store epoch manager and verify the sender is him
+            println!("New epoch created: {:?}", current_epoch);
 
-            let new_epoch_id = msg.current_epoch.id;
-            let expiring_epoch_id = new_epoch_id.checked_sub(1u64).unwrap();
+            let new_epoch_id = current_epoch.id;
             let next_epoch_id = new_epoch_id.checked_add(1u64).unwrap();
+            // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+            // Add a new rewards bucket for the new epoch
+            EPOCHS.save(
+                deps.storage,
+                &next_epoch_id.to_be_bytes(),
+                &Epoch {
+                    id: next_epoch_id.into(),
+                    start_time: current_epoch.start_time,
+                    ..Epoch::default()
+                },
+            )?;
+            println!("New epoch created: {}", next_epoch_id);
+            // Return early if the epoch is the first one
+            if new_epoch_id == 1 {
+                return Ok(Response::default()
+                    .add_attributes(vec![("action", "epoch_changed_hook".to_string())]));
+            }
+
+            let expiring_epoch_id = new_epoch_id.checked_sub(1u64).unwrap();
             // Verify that it is indeed the expiring epoch that is being forwarded
             let _ = match get_expiring_epoch(deps.as_ref())? {
                 Some(epoch) if epoch.id.u64() == expiring_epoch_id => Ok(()),
@@ -176,10 +154,11 @@ pub fn execute(
                 &next_epoch_id.to_be_bytes(),
                 &Epoch {
                     id: next_epoch_id.into(),
-                    start_time: msg.current_epoch.start_time,
+                    start_time: current_epoch.start_time,
                     ..Epoch::default()
                 },
             )?;
+
             // Load all the available assets from the expiring epoch
             let amount_to_be_forwarded = EPOCHS
                 .load(deps.storage, &expiring_epoch_id.to_be_bytes())?
@@ -253,6 +232,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::TotalBonded {} => to_json_binary(&queries::query_total_bonded(deps)?),
         QueryMsg::GlobalIndex {} => to_json_binary(&queries::query_global_index(deps)?),
+        QueryMsg::Claimable { addr } => to_json_binary(&queries::query_claimable(
+            deps,
+            &deps.api.addr_validate(&addr)?,
+        )?),
+        QueryMsg::ClaimableEpochs {} => to_json_binary(&queries::get_claimable_epochs(deps)?),
     }
 }
 

@@ -2,6 +2,7 @@ use cosmwasm_std::{
     ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
     StdError, StdResult, Timestamp, Uint128, Uint64,
 };
+use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::Bond;
@@ -25,6 +26,7 @@ pub(crate) fn bond(
     helpers::validate_funds(&deps, &info, &asset, asset.denom.clone())?;
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    println!("Bonding asset: {:?}", asset);
     let mut bond = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -78,7 +80,6 @@ pub(crate) fn unbond(
 
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
-
     if let Some(mut unbond) = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -306,4 +307,54 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Con
     Ok(Response::new()
         .add_attributes(vec![("action", "claim")])
         .add_messages(messages))
+}
+
+pub(crate) fn fill_rewards(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    {
+        // Use aggregate_coins to get the total amount of new coins
+        // Finding the most recent EpochID
+        let most_recent_epoch_id = EPOCHS
+            .keys(deps.storage, None, None, Order::Descending)
+            .next()
+            .unwrap()?;
+
+        let _messages: Vec<CosmosMsg> = vec![];
+        // Verify coins are coming
+        // swap non-whale to whale
+        // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
+        let lp_tokens = info
+            .funds
+            .iter()
+            .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL));
+        // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
+        let _pair_identifier = lp_tokens
+            .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
+            .next()
+            .unwrap();
+
+        // // if LP Tokens ,verify and withdraw then swap to whale
+        // let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier: pair_identifier.to_string() };
+        // messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+        //     contract_addr: ,
+        //     msg: to_json_binary(&lp_withdrawal_msg)?,
+        //     funds: vec![],
+        // }));
+
+        // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
+        // Note: After swap,
+        EPOCHS.update(
+            deps.storage,
+            &most_recent_epoch_id,
+            |bucket| -> StdResult<_> {
+                let mut bucket = bucket.unwrap_or_default();
+                bucket.available = asset::aggregate_coins(bucket.available, vec![])?;
+                Ok(bucket)
+            },
+        )?;
+        Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+    }
 }

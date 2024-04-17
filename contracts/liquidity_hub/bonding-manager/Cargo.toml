@@ -40,8 +40,10 @@ serde.workspace = true
 thiserror.workspace = true
 white-whale-std.workspace = true
 cw-utils.workspace = true
+pool-manager.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true
 anyhow.workspace = true
 white-whale-testing.workspace = true
+pool-manager.workspace = true

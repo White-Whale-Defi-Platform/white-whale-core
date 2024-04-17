@@ -119,10 +119,12 @@ pub enum ExecuteMsg {
     FillRewards {
         assets: Vec<Coin>,
     },
+    /// Fills the whale lair with new rewards.
+    FillRewardsCoin,
 
     /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
     EpochChangedHook {
-        msg: EpochChangedHookMsg,
+        current_epoch: EpochV2,
     },
 }
 
@@ -167,6 +169,14 @@ pub enum QueryMsg {
     /// Returns the global index of the contract.
     #[returns(GlobalIndex)]
     GlobalIndex {},
+
+    /// Returns the [Epoch]s that can be claimed.
+    #[returns(ClaimableEpochsResponse)]
+    ClaimableEpochs {},
+
+    /// Returns the [Epoch]s that can be claimed by an address.
+    #[returns(ClaimableEpochsResponse)]
+    Claimable { addr: String },
 }
 
 #[cw_serde]

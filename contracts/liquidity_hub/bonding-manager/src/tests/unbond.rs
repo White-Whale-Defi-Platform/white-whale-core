@@ -1,4 +1,4 @@
-use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128, Uint64};
 
 use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
@@ -75,7 +75,7 @@ fn test_unbond_successfully() {
                     denom: "ampWHALE".to_string(),
                     amount: Uint128::new(700u128),
                 }],
-                first_bonded_epoch_id: Default::default(),
+                first_bonded_epoch_id: Uint64::one(),
             },
         )
         .assert_bonding_weight_response(
@@ -147,7 +147,7 @@ fn test_unbond_successfully() {
                             amount: Uint128::new(1_000u128),
                         },
                     ],
-                    first_bonded_epoch_id: Default::default(),
+                    first_bonded_epoch_id: Uint64::zero(),
                 }
             )
         });

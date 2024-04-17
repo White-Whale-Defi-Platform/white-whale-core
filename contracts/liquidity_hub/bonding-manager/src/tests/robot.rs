@@ -1,17 +1,21 @@
 use anyhow::Error;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint64};
+use cosmwasm_std::{
+    coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint128, Uint64,
+};
 use cw_multi_test::{App, AppResponse, Executor};
+use white_whale_std::fee::PoolFee;
 
+use crate::contract::query;
 use crate::state::{EPOCHS, LAST_CLAIMED_EPOCH};
 use cw_multi_test::{Contract, ContractWrapper};
-use white_whale_std::bonding_manager::Epoch;
 use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
+use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
-use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_testing::integration::contracts::{
     store_epoch_manager_code, store_fee_collector_code, store_fee_distributor_code,
 };
@@ -27,11 +31,22 @@ pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
 
     Box::new(contract)
 }
+
+fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new_with_empty(
+        pool_manager::contract::execute,
+        pool_manager::contract::instantiate,
+        pool_manager::contract::query,
+    );
+
+    Box::new(contract)
+}
 pub struct TestingRobot {
     app: App,
     pub sender: Addr,
     pub another_sender: Addr,
     bonding_manager_addr: Addr,
+    pool_manager_addr: Addr,
     owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
     env: cosmwasm_std::Env,
 }
@@ -68,6 +83,7 @@ impl TestingRobot {
             sender,
             another_sender,
             bonding_manager_addr: Addr::unchecked(""),
+            pool_manager_addr: Addr::unchecked(""),
             owned_deps: mock_dependencies(),
             env: mock_env(),
         }
@@ -101,7 +117,10 @@ impl TestingRobot {
         let fee_distributor_id = store_fee_distributor_code(&mut self.app);
 
         let epoch_manager_id = store_epoch_manager_code(&mut self.app);
-
+        println!(
+            "epoch_manager_id: {}",
+            self.app.block_info().time.minus_seconds(10).nanos()
+        );
         let _epoch_manager_addr = self
             .app
             .instantiate_contract(
@@ -109,12 +128,12 @@ impl TestingRobot {
                 self.sender.clone(),
                 &white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
                     start_epoch: EpochV2 {
-                        id: 123,
-                        start_time: Timestamp::from_nanos(1678802400_000000000u64),
+                        id: 0,
+                        start_time: self.app.block_info().time.plus_seconds(10),
                     },
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                        genesis_epoch: self.app.block_info().time.plus_seconds(10).nanos().into(), // March 14, 2023 2:00:00 PM
                     },
                 },
                 &[],
@@ -141,6 +160,53 @@ impl TestingRobot {
                 .unwrap();
         println!("bonding_manager_addr: {}", bonding_manager_addr);
 
+        let hook_registration_msg =
+            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
+                contract_addr: bonding_manager_addr.clone().to_string(),
+            };
+        let resp = self
+            .app
+            .execute_contract(
+                self.sender.clone(),
+                _epoch_manager_addr.clone(),
+                &hook_registration_msg,
+                &[],
+            )
+            .unwrap();
+
+        println!("hook_registration_msg: {:?}", resp);
+        // self.fast_forward(10);
+        let new_epoch_msg =
+            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
+        // self.app
+        //     .execute_contract(self.sender.clone(), _epoch_manager_addr.clone(), &new_epoch_msg, &[])
+        //     .unwrap();
+
+        let msg = white_whale_std::pool_manager::InstantiateMsg {
+            fee_collector_addr: bonding_manager_addr.clone().to_string(),
+            owner: self.sender.clone().to_string(),
+            pool_creation_fee: Coin {
+                amount: Uint128::from(1_000u128),
+                denom: "uusdc".to_string(),
+            },
+        };
+
+        let pool_manager_id = self.app.store_code(contract_pool_manager());
+
+        let creator = self.sender.clone();
+
+        let pool_manager_addr = self
+            .app
+            .instantiate_contract(
+                pool_manager_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "mock pool manager",
+                Some(creator.into_string()),
+            )
+            .unwrap();
+
         let fee_distributor_address = self
             .app
             .instantiate_contract(
@@ -149,7 +215,7 @@ impl TestingRobot {
                 &white_whale_std::fee_distributor::InstantiateMsg {
                     bonding_contract_addr: bonding_manager_addr.clone().to_string(),
                     fee_collector_addr: fee_collector_address.clone().to_string(),
-                    grace_period: Uint64::new(1),
+                    grace_period: Uint64::new(21),
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
                         genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
@@ -174,6 +240,7 @@ impl TestingRobot {
             .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
             .unwrap();
         self.bonding_manager_addr = bonding_manager_addr;
+        self.pool_manager_addr = pool_manager_addr;
         println!("fee_distributor_address: {}", fee_distributor_address);
         self
     }
@@ -357,35 +424,35 @@ impl TestingRobot {
         self
     }
 
-    // pub(crate) fn query_claimable_epochs(
-    //     &mut self,
-    //     address: Option<Addr>,
-    //     response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
-    // ) -> &mut Self {
-    //     let query_res = if let Some(address) = address {
-    //         query(
-    //             self.owned_deps.as_ref(),
-    //             self.env.clone(),
-    //             QueryMsg::Claimable {
-    //                 address: address.to_string(),
-    //             },
-    //         )
-    //         .unwrap()
-    //     } else {
-    //         query(
-    //             self.owned_deps.as_ref(),
-    //             self.env.clone(),
-    //             QueryMsg::ClaimableEpochs {},
-    //         )
-    //         .unwrap()
-    //     };
+    pub(crate) fn query_claimable_epochs(
+        &mut self,
+        address: Option<Addr>,
+        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
+    ) -> &mut Self {
+        let query_res = if let Some(address) = address {
+            query(
+                self.owned_deps.as_ref(),
+                self.env.clone(),
+                QueryMsg::Claimable {
+                    addr: address.to_string(),
+                },
+            )
+            .unwrap()
+        } else {
+            query(
+                self.owned_deps.as_ref(),
+                self.env.clone(),
+                QueryMsg::ClaimableEpochs {},
+            )
+            .unwrap()
+        };
 
-    //     let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
+        let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
 
-    //     response(Ok((self, res.epochs)));
+        response(Ok((self, res.epochs)));
 
-    //     self
-    // }
+        self
+    }
 
     pub(crate) fn query_bonded(
         &mut self,
@@ -462,6 +529,88 @@ impl TestingRobot {
             .unwrap();
 
         response(Ok((self, bonded_response)));
+
+        self
+    }
+
+    // Pool Manager methods
+
+    #[track_caller]
+    pub(crate) fn provide_liquidity(
+        &mut self,
+        sender: Addr,
+        pair_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
+            pair_identifier,
+            slippage_tolerance: None,
+            receiver: None,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn swap(
+        &mut self,
+        sender: Addr,
+        offer_asset: Coin,
+        ask_asset_denom: String,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        to: Option<String>,
+        pair_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
+            offer_asset,
+            ask_asset_denom,
+            belief_price,
+            max_spread,
+            to,
+            pair_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn create_pair(
+        &mut self,
+        sender: Addr,
+        asset_denoms: Vec<String>,
+        pool_fees: PoolFee,
+        pair_type: PairType,
+        pair_identifier: Option<String>,
+        pair_creation_fee_funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
+            asset_denoms,
+            pool_fees,
+            pair_type,
+            pair_identifier,
+        };
+
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &msg,
+            &pair_creation_fee_funds,
+        ));
 
         self
     }

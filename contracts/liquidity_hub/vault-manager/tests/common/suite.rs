@@ -360,6 +360,7 @@ impl TestingSuite {
         self
     }
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,

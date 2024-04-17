@@ -326,7 +326,7 @@ fn deposit_withdraw() {
             },
         ).query_vault(FilterVaultBy::Identifier("0".to_string()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
@@ -343,7 +343,7 @@ fn deposit_withdraw() {
             limit: None,
         }), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
@@ -357,7 +357,7 @@ fn deposit_withdraw() {
         })
         .query_vault(FilterVaultBy::LpAsset(vault_lp_denom.clone().into_inner()), |result| {
             let vault_response = result.unwrap();
-            let vault = vault_response.vaults.get(0).unwrap();
+            let vault = vault_response.vaults.first().unwrap();
             *vault_lp_denom.borrow_mut() = vault.lp_denom.clone();
 
             assert_eq!(
@@ -708,7 +708,7 @@ pub fn successful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &vec![
+            &[
                 coin(1_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -733,7 +733,7 @@ pub fn successful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &vec![
+            &[
                 coin(2_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -882,7 +882,6 @@ pub fn unsuccessful_flashloan() {
 
     suite.instantiate_default().create_cw20_token();
 
-    let cw20_token = suite.cw20_tokens.first().unwrap().clone();
     let vault_manager = suite.vault_manager_addr.clone();
     // create some vaults
 
@@ -1035,7 +1034,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             balanced_pool.clone(),
-            &vec![
+            &[
                 coin(1_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
@@ -1060,7 +1059,7 @@ pub fn unsuccessful_flashloan() {
                 },
             ],
             skewed_pool.clone(),
-            &vec![
+            &[
                 coin(2_000_000u128, "uluna".to_string()),
                 coin(1_000_000u128, "uwhale".to_string()),
             ],
