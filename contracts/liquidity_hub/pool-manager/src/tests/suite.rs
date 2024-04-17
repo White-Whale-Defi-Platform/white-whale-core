@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::MockStorage;
-use white_whale_std::pool_manager::{Config, SwapOperation};
+use white_whale_std::pool_manager::{Config, FeatureToggle, SwapOperation};
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
@@ -9,9 +9,7 @@ use cw_multi_test::{
 };
 use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-use white_whale_std::pool_network::pair::{
-    FeatureToggle, ReverseSimulationResponse, SimulationResponse,
-};
+use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
