@@ -1251,6 +1251,11 @@ mod swapping {
             },
         );
 
+        // Query pair info to ensure the query is working fine
+        suite.query_pair_info("whale-uluna".to_string(), |result| {
+            assert_eq!(result.unwrap().pair_info.asset_decimals, vec![6u8, 6u8]);
+        });
+
         // Lets try to add liquidity
         suite.provide_liquidity(
             creator.clone(),
@@ -1277,6 +1282,7 @@ mod swapping {
                 }));
             },
         );
+
         let simulated_return_amount = RefCell::new(Uint128::zero());
         suite.query_simulation(
             "whale-uluna".to_string(),
