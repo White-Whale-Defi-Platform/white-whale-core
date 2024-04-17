@@ -1,10 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Array_of_SwapRouteResponse",
-  "type": "array",
-  "items": {
-    "$ref": "#/definitions/SwapRouteResponse"
+  "title": "SwapRoutesResponse",
+  "type": "object",
+  "required": [
+    "swap_routes"
+  ],
+  "properties": {
+    "swap_routes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SwapRoute"
+      }
+    }
   },
+  "additionalProperties": false,
   "definitions": {
     "SwapOperation": {
       "oneOf": [
@@ -39,12 +48,12 @@
         }
       ]
     },
-    "SwapRouteResponse": {
+    "SwapRoute": {
       "type": "object",
       "required": [
         "ask_asset_denom",
         "offer_asset_denom",
-        "swap_route"
+        "swap_operations"
       ],
       "properties": {
         "ask_asset_denom": {
@@ -53,7 +62,7 @@
         "offer_asset_denom": {
           "type": "string"
         },
-        "swap_route": {
+        "swap_operations": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapOperation"
