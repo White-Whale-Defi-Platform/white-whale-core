@@ -35,6 +35,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 ///     "uatom".into(),
 ///     "uscrt".into(),
 /// ];
+/// let asset_decimals = vec![6, 6];
 /// #[cfg(not(feature = "osmosis"))]
 /// let pool_fees = PoolFee {
 ///     protocol_fee: Fee {
@@ -68,7 +69,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 /// let pair_type = PairType::ConstantProduct;
 /// let token_factory_lp = false;
 ///
-/// let response = create_pair(deps, env, info, asset_infos, pool_fees, pair_type, None)?;
+/// let response = create_pair(deps, env, info, asset_infos, asset_decimals, pool_fees, pair_type, None)?;
 /// # Ok(response)
 /// # }
 /// ```
