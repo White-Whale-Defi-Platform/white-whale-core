@@ -173,6 +173,14 @@ pub fn create_pair(
 
     attributes.push(attr("lp_asset", lp_asset));
 
+    // #[cfg(all(
+    //     not(feature = "token_factory"),
+    //     not(feature = "osmosis_token_factory"),
+    //     not(feature = "injective")
+    // ))]
+    // {
+    //     return Err(ContractError::TokenFactoryNotEnabled {});
+    // }
 
     messages.push(white_whale_std::tokenfactory::create_denom::create_denom(
         env.contract.address,

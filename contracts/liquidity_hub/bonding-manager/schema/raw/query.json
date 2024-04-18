@@ -175,6 +175,42 @@
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Returns the [Epoch]s that can be claimed.",
+      "type": "object",
+      "required": [
+        "claimable_epochs"
+      ],
+      "properties": {
+        "claimable_epochs": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Returns the [Epoch]s that can be claimed by an address.",
+      "type": "object",
+      "required": [
+        "claimable"
+      ],
+      "properties": {
+        "claimable": {
+          "type": "object",
+          "required": [
+            "addr"
+          ],
+          "properties": {
+            "addr": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {

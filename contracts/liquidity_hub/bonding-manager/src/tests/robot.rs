@@ -3,8 +3,13 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, M
 use cosmwasm_std::{
     coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint128, Uint64,
 };
-use cw_multi_test::{App, AppResponse, Executor};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use cw_multi_test::{
+    App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
+    GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
+};
 use white_whale_std::fee::PoolFee;
+use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::contract::query;
 use crate::state::{EPOCHS, LAST_CLAIMED_EPOCH};
@@ -16,9 +21,6 @@ use white_whale_std::bonding_manager::{
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-use white_whale_testing::integration::contracts::{
-    store_epoch_manager_code, store_fee_collector_code, store_fee_distributor_code,
-};
 use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
@@ -41,12 +43,37 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
 
     Box::new(contract)
 }
+
+/// Creates the epoch manager contract
+pub fn epoch_manager_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        epoch_manager::contract::execute,
+        epoch_manager::contract::instantiate,
+        epoch_manager::contract::query,
+    )
+    .with_migrate(epoch_manager::contract::migrate);
+
+    Box::new(contract)
+}
+
+type OsmosisTokenFactoryApp = App<
+    BankKeeper,
+    MockApi,
+    MockStorage,
+    FailingModule<Empty, Empty, Empty>,
+    WasmKeeper<Empty, Empty>,
+    StakeKeeper,
+    DistributionKeeper,
+    IbcFailingModule,
+    GovFailingModule,
+    StargateMock,
+>;
 pub struct TestingRobot {
-    app: App,
+    pub app: OsmosisTokenFactoryApp,
     pub sender: Addr,
     pub another_sender: Addr,
-    bonding_manager_addr: Addr,
-    pool_manager_addr: Addr,
+    pub bonding_manager_addr: Addr,
+    pub pool_manager_addr: Addr,
     owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
     env: cosmwasm_std::Env,
 }
@@ -55,31 +82,37 @@ pub struct TestingRobot {
 impl TestingRobot {
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("owner");
-        let another_sender = Addr::unchecked("random");
+        let another_sender = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
+        let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
+
+        let bank = BankKeeper::new();
+        let initial_balance = vec![
+            coin(1_000_000_000_000, "uwhale"),
+            coin(1_000_000_000_000, "uusdc"),
+            coin(1_000_000_000_000, "ampWHALE"),
+            coin(1_000_000_000_000, "bWHALE"),
+            coin(1_000_000_000_000, "non_whitelisted_asset"),
+        ];
+
+        let balances = vec![
+            (sender.clone(), initial_balance.clone()),
+            (another_sender.clone(), initial_balance.clone()),
+            (sender_3.clone(), initial_balance.clone()),
+        ];
+
+        let app = AppBuilder::new()
+            // .with_api(MockApiBech32::new("migaloo"))
+            .with_wasm(WasmKeeper::default())
+            .with_bank(bank)
+            .with_stargate(StargateMock {})
+            .build(|router, _api, storage| {
+                balances.into_iter().for_each(|(account, amount)| {
+                    router.bank.init_balance(storage, &account, amount).unwrap()
+                });
+            });
 
         Self {
-            app: mock_app_with_balance(vec![
-                (
-                    sender.clone(),
-                    vec![
-                        coin(1_000_000_000, "uwhale"),
-                        coin(1_000_000_000, "uusdc"),
-                        coin(1_000_000_000, "ampWHALE"),
-                        coin(1_000_000_000, "bWHALE"),
-                        coin(1_000_000_000, "non_whitelisted_asset"),
-                    ],
-                ),
-                (
-                    another_sender.clone(),
-                    vec![
-                        coin(1_000_000_000, "uwhale"),
-                        coin(1_000_000_000, "uusdc"),
-                        coin(1_000_000_000, "ampWHALE"),
-                        coin(1_000_000_000, "bWHALE"),
-                        coin(1_000_000_000, "non_whitelisted_asset"),
-                    ],
-                ),
-            ]),
+            app: app,
             sender,
             another_sender,
             bonding_manager_addr: Addr::unchecked(""),
@@ -106,6 +139,10 @@ impl TestingRobot {
         )
     }
 
+    pub(crate) fn get_bonding_manager_addr(&self) -> Addr {
+        self.bonding_manager_addr.clone()
+    }
+
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: Uint64,
@@ -113,10 +150,7 @@ impl TestingRobot {
         bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
-        let fee_collector_id = store_fee_collector_code(&mut self.app);
-        let fee_distributor_id = store_fee_distributor_code(&mut self.app);
-
-        let epoch_manager_id = store_epoch_manager_code(&mut self.app);
+        let epoch_manager_id = self.app.store_code(epoch_manager_contract());
         println!(
             "epoch_manager_id: {}",
             self.app.block_info().time.minus_seconds(10).nanos()
@@ -142,19 +176,6 @@ impl TestingRobot {
             )
             .unwrap();
 
-        let fee_collector_address = self
-            .app
-            .instantiate_contract(
-                fee_collector_id,
-                self.sender.clone(),
-                &white_whale_std::fee_collector::InstantiateMsg {},
-                &[],
-                "fee_collector",
-                None,
-            )
-            .unwrap();
-        println!("fee_collector_address: {}", fee_collector_address);
-
         let bonding_manager_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
@@ -178,13 +199,17 @@ impl TestingRobot {
         // self.fast_forward(10);
         let new_epoch_msg =
             white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
-        // self.app
-        //     .execute_contract(self.sender.clone(), _epoch_manager_addr.clone(), &new_epoch_msg, &[])
-        //     .unwrap();
+        self.app
+            .execute_contract(
+                self.sender.clone(),
+                _epoch_manager_addr.clone(),
+                &new_epoch_msg,
+                &[],
+            )
+            .unwrap();
 
         let msg = white_whale_std::pool_manager::InstantiateMsg {
             fee_collector_addr: bonding_manager_addr.clone().to_string(),
-            owner: self.sender.clone().to_string(),
             pool_creation_fee: Coin {
                 amount: Uint128::from(1_000u128),
                 denom: "uusdc".to_string(),
@@ -206,29 +231,6 @@ impl TestingRobot {
                 Some(creator.into_string()),
             )
             .unwrap();
-
-        let fee_distributor_address = self
-            .app
-            .instantiate_contract(
-                fee_distributor_id,
-                self.sender.clone(),
-                &white_whale_std::fee_distributor::InstantiateMsg {
-                    bonding_contract_addr: bonding_manager_addr.clone().to_string(),
-                    fee_collector_addr: fee_collector_address.clone().to_string(),
-                    grace_period: Uint64::new(21),
-                    epoch_config: EpochConfig {
-                        duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
-                    },
-                    distribution_asset: AssetInfo::NativeToken {
-                        denom: "uwhale".to_string(),
-                    },
-                },
-                &[],
-                "fee_distributor",
-                None,
-            )
-            .unwrap();
         // Now set the fee distributor on the config of the whale lair
         // So that we can check claims before letting them bond/unbond
         let msg = ExecuteMsg::UpdateConfig {
@@ -241,7 +243,6 @@ impl TestingRobot {
             .unwrap();
         self.bonding_manager_addr = bonding_manager_addr;
         self.pool_manager_addr = pool_manager_addr;
-        println!("fee_distributor_address: {}", fee_distributor_address);
         self
     }
 
@@ -306,6 +307,19 @@ impl TestingRobot {
             self.app
                 .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
         );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_balance(
+        &mut self,
+        denom: String,
+        address: Addr,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let balance_response = self.app.wrap().query_balance(address, denom.clone());
+        result(balance_response.unwrap_or(coin(0, denom)).amount);
 
         self
     }
@@ -603,6 +617,7 @@ impl TestingRobot {
             pool_fees,
             pair_type,
             pair_identifier,
+            asset_decimals: vec![6, 6],
         };
 
         result(self.app.execute_contract(

@@ -27,9 +27,13 @@ pub(crate) fn remove_hook(
 }
 
 /// Creates a new epoch.
-pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn create_epoch(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
-    
+
     let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
     println!("Creating new epoch");

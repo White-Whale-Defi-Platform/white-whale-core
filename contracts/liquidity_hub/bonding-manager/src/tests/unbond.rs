@@ -147,7 +147,7 @@ fn test_unbond_successfully() {
                             amount: Uint128::new(1_000u128),
                         },
                     ],
-                    first_bonded_epoch_id: Uint64::zero(),
+                    first_bonded_epoch_id: Default::default(),
                 }
             )
         });

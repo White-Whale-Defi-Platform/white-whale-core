@@ -1,8 +1,9 @@
 use cosmwasm_std::{
-    ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, Timestamp, Uint128, Uint64,
+    ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo,
+    Order, Response, StdError, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
 };
 use white_whale_std::constants::LP_SYMBOL;
+use white_whale_std::pool_manager::PairInfoResponse;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::Bond;
@@ -20,13 +21,14 @@ pub(crate) fn bond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
-    env: Env,
+    _env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
     helpers::validate_funds(&deps, &info, &asset, asset.denom.clone())?;
-    helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
-    println!("Bonding asset: {:?}", asset);
+
+    // helpers::validate_claimed(&deps, &info)?;
+
+    // helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     let mut bond = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -57,6 +59,7 @@ pub(crate) fn bond(
     global_index = update_global_weight(&mut deps, timestamp, global_index)?;
 
     GLOBAL.save(deps.storage, &global_index)?;
+    println!("Bonded asset: {:?}", global_index);
 
     Ok(Response::default().add_attributes(vec![
         ("action", "bond".to_string()),
@@ -70,7 +73,7 @@ pub(crate) fn unbond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
-    env: Env,
+    _env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
     ensure!(
@@ -78,8 +81,8 @@ pub(crate) fn unbond(
         ContractError::InvalidUnbondingAmount {}
     );
 
-    helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    // helpers::validate_claimed(&deps, &info)?;
+    // helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     if let Some(mut unbond) = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -311,7 +314,7 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Con
 
 pub(crate) fn fill_rewards(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     {
@@ -322,19 +325,19 @@ pub(crate) fn fill_rewards(
             .next()
             .unwrap()?;
 
-        let _messages: Vec<CosmosMsg> = vec![];
+        let mut messages: Vec<CosmosMsg> = vec![];
         // Verify coins are coming
         // swap non-whale to whale
         // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
-        let lp_tokens = info
+        let _lp_tokens = info
             .funds
             .iter()
             .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL));
         // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        let _pair_identifier = lp_tokens
-            .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
-            .next()
-            .unwrap();
+        // let _pair_identifier = lp_tokens
+        //     .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
+        //     .next()
+        //     .unwrap();
 
         // // if LP Tokens ,verify and withdraw then swap to whale
         // let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier: pair_identifier.to_string() };
@@ -343,6 +346,43 @@ pub(crate) fn fill_rewards(
         //     msg: to_json_binary(&lp_withdrawal_msg)?,
         //     funds: vec![],
         // }));
+
+        let pool_identifier = "whale-uusdc".to_string();
+        let pool_query = white_whale_std::pool_manager::QueryMsg::Pair {
+            pair_identifier: pool_identifier.clone(),
+        };
+        let resp: PairInfoResponse = deps
+            .querier
+            .query_wasm_smart("contract2".to_string(), &pool_query)?;
+        let mut skip_swap = false;
+        // Check pair 'assets' and if either one has 0 amount then don't do swaps
+        resp.pair_info.assets.iter().for_each(|asset| {
+            if asset.amount.is_zero() {
+                skip_swap = true;
+            }
+        });
+
+        println!("Response: {:?}", resp);
+        if !skip_swap {
+            let swap_operations = vec![white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                token_in_denom: info.funds[0].denom.to_string(),
+                token_out_denom: "uwhale".to_string(),
+                pool_identifier,
+            }];
+            let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
+                operations: swap_operations,
+                minimum_receive: None,
+                to: None,
+                max_spread: None,
+            };
+            let binary_msg = to_json_binary(&msg)?;
+            let wrapped_msg = WasmMsg::Execute {
+                contract_addr: "contract2".to_string(),
+                msg: binary_msg,
+                funds: info.funds.to_vec(),
+            };
+            messages.push(wrapped_msg.into());
+        }
 
         // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
         // Note: After swap,
@@ -355,6 +395,8 @@ pub(crate) fn fill_rewards(
                 Ok(bucket)
             },
         )?;
-        Ok(Response::default().add_attributes(vec![("action", "fill_rewards".to_string())]))
+        Ok(Response::default()
+            .add_messages(messages)
+            .add_attributes(vec![("action", "fill_rewards".to_string())]))
     }
 }

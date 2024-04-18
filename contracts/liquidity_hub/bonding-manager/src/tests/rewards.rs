@@ -26,10 +26,10 @@ fn test_fill_rewards_from_pool_manager() {
     #[cfg(not(feature = "osmosis"))]
     let pool_fees = PoolFee {
         protocol_fee: Fee {
-            share: Decimal::from_ratio(1u128, 100_000u128),
+            share: Decimal::from_ratio(1u128, 100u128),
         },
         swap_fee: Fee {
-            share: Decimal::from_ratio(1u128, 100_000u128),
+            share: Decimal::from_ratio(1u128, 100u128),
         },
         burn_fee: Fee {
             share: Decimal::zero(),
@@ -42,8 +42,8 @@ fn test_fill_rewards_from_pool_manager() {
         .add_epochs_to_state(epochs)
         .create_pair(
             creator.clone(),
-            asset_infos,
-            pool_fees,
+            asset_infos.clone(),
+            pool_fees.clone(),
             white_whale_std::pool_network::asset::PairType::ConstantProduct,
             Some("whale-uusdc".to_string()),
             vec![coin(1000, "uusdc")],
@@ -55,15 +55,15 @@ fn test_fill_rewards_from_pool_manager() {
     // Lets try to add liquidity
     robot.provide_liquidity(
         creator.clone(),
-        "whale-uluna".to_string(),
+        "whale-uusdc".to_string(),
         vec![
             Coin {
                 denom: "uwhale".to_string(),
-                amount: Uint128::from(1000000u128),
+                amount: Uint128::from(1000000000u128),
             },
             Coin {
-                denom: "uluna".to_string(),
-                amount: Uint128::from(1000000u128),
+                denom: "uusdc".to_string(),
+                amount: Uint128::from(1000000000u128),
             },
         ],
         |result| {
@@ -72,9 +72,79 @@ fn test_fill_rewards_from_pool_manager() {
                 event.attributes.iter().any(|attr| {
                     attr.key == "share"
                         && attr.value
-                            == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT).to_string()
+                            == (Uint128::from(1000000000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                .to_string()
                 })
             }));
+        },
+    );
+
+    robot.swap(
+        creator.clone(),
+        coin(1_000u128, "uusdc"),
+        "uwhale".to_string(),
+        None,
+        None,
+        None,
+        "whale-uusdc".to_string(),
+        vec![Coin {
+            denom: "uusdc".to_string(),
+            amount: Uint128::from(1_000u128),
+        }],
+        |result| {
+            result.unwrap();
+        },
+    );
+
+    // Get balance of the bonding manager it should have received fees from the swap
+    robot.query_balance(
+        "uwhale".to_string(),
+        robot.bonding_manager_addr.clone(),
+        |res| {
+            // 1_000u128 - 9u128 swap_fee - 9u128 protocol_fee where protocol_fee and swap_fee are 1% of the swap amount
+            assert_eq!(res, Uint128::from(18u128));
+        },
+    );
+
+    robot.create_pair(
+        creator.clone(),
+        asset_infos.clone(),
+        pool_fees.clone(),
+        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        Some("whale-uusdc-second".to_string()),
+        vec![coin(1000, "uusdc")],
+        |result| {
+            result.unwrap();
+        },
+    );
+
+    // Get balance of the bonding manager again it should have the pool creation fee
+    robot.query_balance(
+        "uwhale".to_string(),
+        robot.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::from(1017u128));
+        },
+    );
+
+    // create another pair to collect another fee
+    robot.create_pair(
+        creator.clone(),
+        asset_infos,
+        pool_fees,
+        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        Some("whale-uusdc-third".to_string()),
+        vec![coin(1000, "uusdc")],
+        |result| {
+            result.unwrap();
+        },
+    );
+    // Verify the fee has been collected
+    robot.query_balance(
+        "uwhale".to_string(),
+        robot.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::from(2016u128));
         },
     );
 }

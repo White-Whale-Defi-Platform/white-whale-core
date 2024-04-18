@@ -2,7 +2,7 @@ use cosmwasm_std::{coins, Coin, Event, Uint128};
 
 use white_whale_std::bonding_manager::WithdrawableResponse;
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::{bond, robot::TestingRobot};
 
 #[test]
 fn test_withdraw_successfully() {
@@ -10,8 +10,11 @@ fn test_withdraw_successfully() {
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
 
+    robot.instantiate_default();
+
+    let bonding_manager_addr = robot.bonding_manager_addr.clone();
+
     robot
-        .instantiate_default()
         .bond(
             sender.clone(),
             Coin {
@@ -44,19 +47,19 @@ fn test_withdraw_successfully() {
             WithdrawableResponse {
                 withdrawable_amount: Uint128::zero(),
             },
-        )
-        .withdraw(sender.clone(), "ampWHALE".to_string(), |res| {
-            let events = res.unwrap().events;
-            let transfer_event = events.last().unwrap().clone();
-            assert_eq!(
-                transfer_event,
-                Event::new("transfer").add_attributes(vec![
-                    ("recipient", sender.to_string()),
-                    ("sender", "contract2".to_string()),
-                    ("amount", "300ampWHALE".to_string()),
-                ])
-            );
-        });
+        );
+    robot.withdraw(sender.clone(), "ampWHALE".to_string(), |res| {
+        let events = res.unwrap().events;
+        let transfer_event = events.last().unwrap().clone();
+        assert_eq!(
+            transfer_event,
+            Event::new("transfer").add_attributes(vec![
+                ("recipient", sender.to_string()),
+                ("sender", bonding_manager_addr.to_string()),
+                ("amount", "300ampWHALE".to_string()),
+            ])
+        );
+    });
 }
 
 #[test]

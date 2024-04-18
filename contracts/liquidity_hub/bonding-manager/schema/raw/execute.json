@@ -141,6 +141,13 @@
       "additionalProperties": false
     },
     {
+      "description": "Fills the whale lair with new rewards.",
+      "type": "string",
+      "enum": [
+        "fill_rewards_coin"
+      ]
+    },
+    {
       "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
       "type": "object",
       "required": [
@@ -150,11 +157,11 @@
         "epoch_changed_hook": {
           "type": "object",
           "required": [
-            "msg"
+            "current_epoch"
           ],
           "properties": {
-            "msg": {
-              "$ref": "#/definitions/EpochChangedHookMsg"
+            "current_epoch": {
+              "$ref": "#/definitions/Epoch"
             }
           },
           "additionalProperties": false
@@ -197,18 +204,6 @@
         },
         "start_time": {
           "$ref": "#/definitions/Timestamp"
-        }
-      },
-      "additionalProperties": false
-    },
-    "EpochChangedHookMsg": {
-      "type": "object",
-      "required": [
-        "current_epoch"
-      ],
-      "properties": {
-        "current_epoch": {
-          "$ref": "#/definitions/Epoch"
         }
       },
       "additionalProperties": false

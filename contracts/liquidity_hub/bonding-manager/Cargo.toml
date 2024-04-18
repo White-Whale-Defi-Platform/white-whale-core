@@ -23,7 +23,6 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 injective = ["white-whale-std/injective"]
-osmosis = ["osmosis_token_factory"]
 token_factory = ["white-whale-std/token_factory"]
 osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
 # for more explicit tests, cargo test --features=backtraces
@@ -47,3 +46,4 @@ cw-multi-test.workspace = true
 anyhow.workspace = true
 white-whale-testing.workspace = true
 pool-manager.workspace = true
+epoch-manager.workspace = true

@@ -200,6 +200,13 @@
         "additionalProperties": false
       },
       {
+        "description": "Fills the whale lair with new rewards.",
+        "type": "string",
+        "enum": [
+          "fill_rewards_coin"
+        ]
+      },
+      {
         "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
         "type": "object",
         "required": [
@@ -209,11 +216,11 @@
           "epoch_changed_hook": {
             "type": "object",
             "required": [
-              "msg"
+              "current_epoch"
             ],
             "properties": {
-              "msg": {
-                "$ref": "#/definitions/EpochChangedHookMsg"
+              "current_epoch": {
+                "$ref": "#/definitions/Epoch"
               }
             },
             "additionalProperties": false
@@ -256,18 +263,6 @@
           },
           "start_time": {
             "$ref": "#/definitions/Timestamp"
-          }
-        },
-        "additionalProperties": false
-      },
-      "EpochChangedHookMsg": {
-        "type": "object",
-        "required": [
-          "current_epoch"
-        ],
-        "properties": {
-          "current_epoch": {
-            "$ref": "#/definitions/Epoch"
           }
         },
         "additionalProperties": false
@@ -467,6 +462,42 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Returns the [Epoch]s that can be claimed.",
+        "type": "object",
+        "required": [
+          "claimable_epochs"
+        ],
+        "properties": {
+          "claimable_epochs": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Returns the [Epoch]s that can be claimed by an address.",
+        "type": "object",
+        "required": [
+          "claimable"
+        ],
+        "properties": {
+          "claimable": {
+            "type": "object",
+            "required": [
+              "addr"
+            ],
+            "properties": {
+              "addr": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
@@ -594,6 +625,274 @@
               "type": "string"
             }
           }
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "claimable": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClaimableEpochsResponse",
+      "type": "object",
+      "required": [
+        "epochs"
+      ],
+      "properties": {
+        "epochs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Epoch"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Coin": {
+          "type": "object",
+          "required": [
+            "amount",
+            "denom"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "denom": {
+              "type": "string"
+            }
+          }
+        },
+        "Epoch": {
+          "type": "object",
+          "required": [
+            "available",
+            "claimed",
+            "global_index",
+            "id",
+            "start_time",
+            "total"
+          ],
+          "properties": {
+            "available": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "claimed": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "global_index": {
+              "$ref": "#/definitions/GlobalIndex"
+            },
+            "id": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "start_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "total": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "GlobalIndex": {
+          "type": "object",
+          "required": [
+            "bonded_amount",
+            "bonded_assets",
+            "timestamp",
+            "weight"
+          ],
+          "properties": {
+            "bonded_amount": {
+              "description": "The total amount of tokens bonded in the contract.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                }
+              ]
+            },
+            "bonded_assets": {
+              "description": "Assets that are bonded in the contract.",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "timestamp": {
+              "description": "The timestamp at which the total bond was registered.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              ]
+            },
+            "weight": {
+              "description": "The total weight of the bond at the given block height.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        },
+        "Uint64": {
+          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "claimable_epochs": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClaimableEpochsResponse",
+      "type": "object",
+      "required": [
+        "epochs"
+      ],
+      "properties": {
+        "epochs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Epoch"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Coin": {
+          "type": "object",
+          "required": [
+            "amount",
+            "denom"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "denom": {
+              "type": "string"
+            }
+          }
+        },
+        "Epoch": {
+          "type": "object",
+          "required": [
+            "available",
+            "claimed",
+            "global_index",
+            "id",
+            "start_time",
+            "total"
+          ],
+          "properties": {
+            "available": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "claimed": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "global_index": {
+              "$ref": "#/definitions/GlobalIndex"
+            },
+            "id": {
+              "$ref": "#/definitions/Uint64"
+            },
+            "start_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "total": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "GlobalIndex": {
+          "type": "object",
+          "required": [
+            "bonded_amount",
+            "bonded_assets",
+            "timestamp",
+            "weight"
+          ],
+          "properties": {
+            "bonded_amount": {
+              "description": "The total amount of tokens bonded in the contract.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                }
+              ]
+            },
+            "bonded_assets": {
+              "description": "Assets that are bonded in the contract.",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "timestamp": {
+              "description": "The timestamp at which the total bond was registered.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              ]
+            },
+            "weight": {
+              "description": "The total weight of the bond at the given block height.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Uint128"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "Timestamp": {
+          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint64"
+            }
+          ]
         },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",

@@ -1,8 +1,7 @@
-use cosmwasm_std::{ensure, entry_point, Coin, CosmosMsg, Order};
+use cosmwasm_std::{ensure, entry_point, Coin};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::PaymentError;
-use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::{
@@ -46,7 +45,17 @@ pub fn instantiate(
     };
 
     CONFIG.save(deps.storage, &config)?;
-
+    // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+    // Add a new rewards bucket for the new epoch
+    EPOCHS.save(
+        deps.storage,
+        &0u64.to_be_bytes(),
+        &Epoch {
+            id: 0u64.into(),
+            start_time: _env.block.time,
+            ..Epoch::default()
+        },
+    )?;
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", config.owner.to_string()),
@@ -128,7 +137,7 @@ pub fn execute(
                 &next_epoch_id.to_be_bytes(),
                 &Epoch {
                     id: next_epoch_id.into(),
-                    start_time: current_epoch.start_time,
+                    start_time: current_epoch.start_time.plus_days(1),
                     ..Epoch::default()
                 },
             )?;

@@ -25,7 +25,6 @@ pub fn swap(
     if !config.feature_toggle.swaps_enabled {
         return Err(ContractError::OperationDisabled("swap".to_string()));
     }
-
     if cw_utils::one_coin(&info)? != offer_asset {
         return Err(ContractError::AssetMismatch {});
     }
