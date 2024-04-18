@@ -477,7 +477,7 @@ impl TestingSuite {
         result: impl Fn(StdResult<Uint128>),
     ) -> &mut Self {
         // Get the LP token from Config
-        let lp_token_response: PairInfo = self
+        let lp_token_response: PairInfoResponse = self
             .app
             .wrap()
             .query_wasm_smart(
@@ -493,7 +493,7 @@ impl TestingSuite {
         let balance: Uint128 = self
             .app
             .wrap()
-            .query_balance(sender, lp_token_response.lp_denom)
+            .query_balance(sender, lp_token_response.pair_info.lp_denom)
             .unwrap()
             .amount;
 
