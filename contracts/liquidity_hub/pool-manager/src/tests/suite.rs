@@ -1,5 +1,7 @@
 use cosmwasm_std::testing::MockStorage;
-use white_whale_std::pool_manager::{Config, FeatureToggle, SwapOperation};
+use white_whale_std::pool_manager::{
+    Config, FeatureToggle, PairInfoResponse, SwapOperation, SwapRouteResponse, SwapRoutesResponse,
+};
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
@@ -404,12 +406,12 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn _query_pair_info(
+    pub(crate) fn query_pair_info(
         &self,
         pair_identifier: String,
-        result: impl Fn(StdResult<PairInfo>),
+        result: impl Fn(StdResult<PairInfoResponse>),
     ) -> &Self {
-        let pair_info_response: StdResult<PairInfo> = self.app.wrap().query_wasm_smart(
+        let pair_info_response: StdResult<PairInfoResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier },
         );
@@ -475,7 +477,7 @@ impl TestingSuite {
         result: impl Fn(StdResult<Uint128>),
     ) -> &mut Self {
         // Get the LP token from Config
-        let lp_token_response: PairInfo = self
+        let lp_token_response: PairInfoResponse = self
             .app
             .wrap()
             .query_wasm_smart(
@@ -491,7 +493,7 @@ impl TestingSuite {
         let balance: Uint128 = self
             .app
             .wrap()
-            .query_balance(sender, lp_token_response.lp_denom)
+            .query_balance(sender, lp_token_response.pair_info.lp_denom)
             .unwrap()
             .amount;
 
@@ -525,5 +527,40 @@ impl TestingSuite {
                 &white_whale_std::pool_manager::QueryMsg::Config {},
             )
             .unwrap()
+    }
+
+    /// Retrieves a swap route for a given pair of assets.
+    pub(crate) fn _query_swap_route(
+        &mut self,
+        offer_asset_denom: String,
+        ask_asset_denom: String,
+        result: impl Fn(StdResult<SwapRouteResponse>),
+    ) -> &mut Self {
+        let swap_route_response: StdResult<SwapRouteResponse> = self.app.wrap().query_wasm_smart(
+            &self.pool_manager_addr,
+            &white_whale_std::pool_manager::QueryMsg::SwapRoute {
+                offer_asset_denom,
+                ask_asset_denom,
+            },
+        );
+
+        result(swap_route_response);
+
+        self
+    }
+
+    /// Retrieves the swap routes for a given pair of assets.
+    pub(crate) fn _query_swap_routes(
+        &mut self,
+        result: impl Fn(StdResult<SwapRoutesResponse>),
+    ) -> &mut Self {
+        let swap_routes_response: StdResult<SwapRoutesResponse> = self.app.wrap().query_wasm_smart(
+            &self.pool_manager_addr,
+            &white_whale_std::pool_manager::QueryMsg::SwapRoutes {},
+        );
+
+        result(swap_routes_response);
+
+        self
     }
 }

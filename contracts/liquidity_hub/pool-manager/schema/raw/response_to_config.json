@@ -1,21 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Config",
+  "title": "ConfigResponse",
   "type": "object",
   "required": [
-    "feature_toggle",
-    "pool_creation_fee",
-    "whale_lair_addr"
+    "config"
   ],
   "properties": {
-    "feature_toggle": {
-      "$ref": "#/definitions/FeatureToggle"
-    },
-    "pool_creation_fee": {
-      "$ref": "#/definitions/Coin"
-    },
-    "whale_lair_addr": {
-      "$ref": "#/definitions/Addr"
+    "config": {
+      "$ref": "#/definitions/Config"
     }
   },
   "additionalProperties": false,
@@ -38,6 +30,26 @@
           "type": "string"
         }
       }
+    },
+    "Config": {
+      "type": "object",
+      "required": [
+        "feature_toggle",
+        "pool_creation_fee",
+        "whale_lair_addr"
+      ],
+      "properties": {
+        "feature_toggle": {
+          "$ref": "#/definitions/FeatureToggle"
+        },
+        "pool_creation_fee": {
+          "$ref": "#/definitions/Coin"
+        },
+        "whale_lair_addr": {
+          "$ref": "#/definitions/Addr"
+        }
+      },
+      "additionalProperties": false
     },
     "FeatureToggle": {
       "description": "Pool feature toggle",

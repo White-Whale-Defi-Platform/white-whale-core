@@ -891,22 +891,14 @@
     },
     "config": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Config",
+      "title": "ConfigResponse",
       "type": "object",
       "required": [
-        "feature_toggle",
-        "pool_creation_fee",
-        "whale_lair_addr"
+        "config"
       ],
       "properties": {
-        "feature_toggle": {
-          "$ref": "#/definitions/FeatureToggle"
-        },
-        "pool_creation_fee": {
-          "$ref": "#/definitions/Coin"
-        },
-        "whale_lair_addr": {
-          "$ref": "#/definitions/Addr"
+        "config": {
+          "$ref": "#/definitions/Config"
         }
       },
       "additionalProperties": false,
@@ -929,6 +921,26 @@
               "type": "string"
             }
           }
+        },
+        "Config": {
+          "type": "object",
+          "required": [
+            "feature_toggle",
+            "pool_creation_fee",
+            "whale_lair_addr"
+          ],
+          "properties": {
+            "feature_toggle": {
+              "$ref": "#/definitions/FeatureToggle"
+            },
+            "pool_creation_fee": {
+              "$ref": "#/definitions/Coin"
+            },
+            "whale_lair_addr": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
         },
         "FeatureToggle": {
           "description": "Pool feature toggle",
@@ -1054,45 +1066,14 @@
     },
     "pair": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PairInfo",
+      "title": "PairInfoResponse",
       "type": "object",
       "required": [
-        "asset_decimals",
-        "asset_denoms",
-        "assets",
-        "lp_denom",
-        "pair_type",
-        "pool_fees"
+        "pair_info"
       ],
       "properties": {
-        "asset_decimals": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "format": "uint8",
-            "minimum": 0.0
-          }
-        },
-        "asset_denoms": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "assets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Coin"
-          }
-        },
-        "lp_denom": {
-          "type": "string"
-        },
-        "pair_type": {
-          "$ref": "#/definitions/PairType"
-        },
-        "pool_fees": {
-          "$ref": "#/definitions/PoolFee"
+        "pair_info": {
+          "$ref": "#/definitions/PairInfo"
         }
       },
       "additionalProperties": false,
@@ -1124,6 +1105,49 @@
           "properties": {
             "share": {
               "$ref": "#/definitions/Decimal"
+            }
+          },
+          "additionalProperties": false
+        },
+        "PairInfo": {
+          "type": "object",
+          "required": [
+            "asset_decimals",
+            "asset_denoms",
+            "assets",
+            "lp_denom",
+            "pair_type",
+            "pool_fees"
+          ],
+          "properties": {
+            "asset_decimals": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
+            "asset_denoms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assets": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "lp_denom": {
+              "type": "string"
+            },
+            "pair_type": {
+              "$ref": "#/definitions/PairType"
+            },
+            "pool_fees": {
+              "$ref": "#/definitions/PoolFee"
             }
           },
           "additionalProperties": false
@@ -1288,54 +1312,17 @@
     },
     "swap_route": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_SwapOperation",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/SwapOperation"
-      },
-      "definitions": {
-        "SwapOperation": {
-          "oneOf": [
-            {
-              "type": "object",
-              "required": [
-                "whale_swap"
-              ],
-              "properties": {
-                "whale_swap": {
-                  "type": "object",
-                  "required": [
-                    "pool_identifier",
-                    "token_in_denom",
-                    "token_out_denom"
-                  ],
-                  "properties": {
-                    "pool_identifier": {
-                      "type": "string"
-                    },
-                    "token_in_denom": {
-                      "type": "string"
-                    },
-                    "token_out_denom": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "additionalProperties": false
-            }
-          ]
+      "title": "SwapRouteResponse",
+      "type": "object",
+      "required": [
+        "swap_route"
+      ],
+      "properties": {
+        "swap_route": {
+          "$ref": "#/definitions/SwapRoute"
         }
-      }
-    },
-    "swap_routes": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Array_of_SwapRouteResponse",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/SwapRouteResponse"
       },
+      "additionalProperties": false,
       "definitions": {
         "SwapOperation": {
           "oneOf": [
@@ -1370,12 +1357,12 @@
             }
           ]
         },
-        "SwapRouteResponse": {
+        "SwapRoute": {
           "type": "object",
           "required": [
             "ask_asset_denom",
             "offer_asset_denom",
-            "swap_route"
+            "swap_operations"
           ],
           "properties": {
             "ask_asset_denom": {
@@ -1384,7 +1371,82 @@
             "offer_asset_denom": {
               "type": "string"
             },
-            "swap_route": {
+            "swap_operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SwapOperation"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "swap_routes": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SwapRoutesResponse",
+      "type": "object",
+      "required": [
+        "swap_routes"
+      ],
+      "properties": {
+        "swap_routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwapRoute"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "SwapOperation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "whale_swap"
+              ],
+              "properties": {
+                "whale_swap": {
+                  "type": "object",
+                  "required": [
+                    "pool_identifier",
+                    "token_in_denom",
+                    "token_out_denom"
+                  ],
+                  "properties": {
+                    "pool_identifier": {
+                      "type": "string"
+                    },
+                    "token_in_denom": {
+                      "type": "string"
+                    },
+                    "token_out_denom": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "SwapRoute": {
+          "type": "object",
+          "required": [
+            "ask_asset_denom",
+            "offer_asset_denom",
+            "swap_operations"
+          ],
+          "properties": {
+            "ask_asset_denom": {
+              "type": "string"
+            },
+            "offer_asset_denom": {
+              "type": "string"
+            },
+            "swap_operations": {
               "type": "array",
               "items": {
                 "$ref": "#/definitions/SwapOperation"
