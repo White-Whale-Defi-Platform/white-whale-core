@@ -1,44 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "PairInfo",
+  "title": "PairInfoResponse",
   "type": "object",
   "required": [
-    "asset_decimals",
-    "asset_denoms",
-    "assets",
-    "lp_denom",
-    "pair_type",
-    "pool_fees"
+    "pair_info"
   ],
   "properties": {
-    "asset_decimals": {
-      "type": "array",
-      "items": {
-        "type": "integer",
-        "format": "uint8",
-        "minimum": 0.0
-      }
-    },
-    "asset_denoms": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "assets": {
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/Coin"
-      }
-    },
-    "lp_denom": {
-      "type": "string"
-    },
-    "pair_type": {
-      "$ref": "#/definitions/PairType"
-    },
-    "pool_fees": {
-      "$ref": "#/definitions/PoolFee"
+    "pair_info": {
+      "$ref": "#/definitions/PairInfo"
     }
   },
   "additionalProperties": false,
@@ -70,6 +39,49 @@
       "properties": {
         "share": {
           "$ref": "#/definitions/Decimal"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PairInfo": {
+      "type": "object",
+      "required": [
+        "asset_decimals",
+        "asset_denoms",
+        "assets",
+        "lp_denom",
+        "pair_type",
+        "pool_fees"
+      ],
+      "properties": {
+        "asset_decimals": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "asset_denoms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Coin"
+          }
+        },
+        "lp_denom": {
+          "type": "string"
+        },
+        "pair_type": {
+          "$ref": "#/definitions/PairType"
+        },
+        "pool_fees": {
+          "$ref": "#/definitions/PoolFee"
         }
       },
       "additionalProperties": false

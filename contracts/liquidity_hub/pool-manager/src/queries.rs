@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
-    AssetDecimalsResponse, Config, SwapOperation, SwapRouteResponse,
+    AssetDecimalsResponse, Config, SwapRoute, SwapRouteResponse, SwapRoutesResponse,
 };
 use white_whale_std::pool_network::{
     asset::PairType,
@@ -245,40 +245,48 @@ pub fn query_reverse_simulation(
 // Router related queries, swap routes and SwapOperations
 // get_swap_routes which only takes deps: Deps as input
 // the function will read from SWAP_ROUTES and return all swpa routes in a vec
-pub fn get_swap_routes(deps: Deps) -> Result<Vec<SwapRouteResponse>, ContractError> {
-    let swap_routes: Vec<SwapRouteResponse> = SWAP_ROUTES
+pub fn get_swap_routes(deps: Deps) -> Result<SwapRoutesResponse, ContractError> {
+    let swap_routes: Vec<SwapRoute> = SWAP_ROUTES
         .range(deps.storage, None, None, Order::Ascending)
         .map(|item| {
             let swap_info = item?;
             // Destructure key into (offer_asset, ask_asset)
             let (offer_asset_denom, ask_asset_denom) = swap_info.0;
             // Destructure value into vec of SwapOperation
-            let swap_route = swap_info.1;
+            let swap_operations = swap_info.1;
 
-            Ok(SwapRouteResponse {
+            Ok(SwapRoute {
                 offer_asset_denom,
                 ask_asset_denom,
-                swap_route,
+                swap_operations,
             })
         })
-        .collect::<StdResult<Vec<SwapRouteResponse>>>()?;
+        .collect::<StdResult<Vec<SwapRoute>>>()?;
 
-    Ok(swap_routes)
+    Ok(SwapRoutesResponse { swap_routes })
 }
 
 pub fn get_swap_route(
     deps: Deps,
     offer_asset_denom: String,
     ask_asset_denom: String,
-) -> Result<Vec<SwapOperation>, ContractError> {
+) -> Result<SwapRouteResponse, ContractError> {
     let swap_route_key = SWAP_ROUTES.key((&offer_asset_denom, &ask_asset_denom));
 
-    swap_route_key
-        .load(deps.storage)
-        .map_err(|_| ContractError::NoSwapRouteForAssets {
-            offer_asset: offer_asset_denom,
-            ask_asset: ask_asset_denom,
-        })
+    let swap_operations =
+        swap_route_key
+            .load(deps.storage)
+            .map_err(|_| ContractError::NoSwapRouteForAssets {
+                offer_asset: offer_asset_denom.clone(),
+                ask_asset: ask_asset_denom.clone(),
+            })?;
+    Ok(SwapRouteResponse {
+        swap_route: SwapRoute {
+            offer_asset_denom,
+            ask_asset_denom,
+            swap_operations,
+        },
+    })
 }
 
 // TODO: May need to remove this for a new implementation, router swap operation queries
