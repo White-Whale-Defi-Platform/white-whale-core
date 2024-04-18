@@ -20,8 +20,8 @@ fn instantiate_normal() {
 #[test]
 fn deposit_and_withdraw_sanity_check() {
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_001u128, "uwhale".to_string()),
-        coin(1_000_001u128, "uluna".to_string()),
+        coin(1_000_000u128, "uwhale".to_string()),
+        coin(1_000_000u128, "uluna".to_string()),
         coin(1_000u128, "uusd".to_string()),
     ]);
     let creator = suite.creator();
@@ -322,9 +322,9 @@ mod router {
     #[test]
     fn basic_swap_operations_test() {
         let mut suite = TestingSuite::default_with_balances(vec![
-            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
-            coin(1_000_000_001u128, "uusd".to_string()),
+            coin(1_000_000_000u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
         let _other = suite.senders[1].clone();
@@ -450,10 +450,9 @@ mod router {
             },
         ];
 
-        // before swap uusd balance = 1_000_000_001
+        // before swap uusd balance = 1_000_000_000
         // - 2*1_000 pair creation fee
         // - 1_000_000 liquidity provision
-        // - 1 for native token creation (for decimal precisions)
         // = 998_998_000
         let pre_swap_amount = 998_998_000;
         suite.query_balance(creator.to_string(), "uusd".to_string(), |amt| {
@@ -798,9 +797,9 @@ mod router {
     #[test]
     fn sends_to_correct_receiver() {
         let mut suite = TestingSuite::default_with_balances(vec![
-            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
-            coin(1_000_000_001u128, "uusd".to_string()),
+            coin(1_000_000_000u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
         let other = suite.senders[1].clone();
@@ -930,10 +929,10 @@ mod router {
             },
         ];
 
-        // before swap uusd balance = 1_000_000_001
-        // before swap uwhale balance = 1_000_000_001
-        // before swap uluna balance = 1_000_000_001
-        let pre_swap_amount = 1_000_000_001;
+        // before swap uusd balance = 1_000_000_000
+        // before swap uwhale balance = 1_000_000_000
+        // before swap uluna balance = 1_000_000_000
+        let pre_swap_amount = 1_000_000_000;
         suite.query_balance(other.to_string(), "uusd".to_string(), |amt| {
             assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
         });
@@ -941,7 +940,7 @@ mod router {
             assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
         });
         suite.query_balance(other.to_string(), "uluna".to_string(), |amt| {
-            assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount - 1);
+            assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
         });
         // also check the same for unauthorized receiver
         suite.query_balance(other.to_string(), "uusd".to_string(), |amt| {
@@ -951,30 +950,28 @@ mod router {
             assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
         });
         suite.query_balance(other.to_string(), "uluna".to_string(), |amt| {
-            assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount - 1);
+            assert_eq!(amt.unwrap().amount.u128(), pre_swap_amount);
         });
         // also check for contract
-        // when we add tokens to the contract, we must send a fee of 1_u128 so the contract
-        // can register the native token
         suite.query_balance(
             suite.pool_manager_addr.to_string(),
             "uusd".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount + 1);
+                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount);
             },
         );
         suite.query_balance(
             suite.pool_manager_addr.to_string(),
             "uwhale".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount + 1);
+                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount);
             },
         );
         suite.query_balance(
             suite.pool_manager_addr.to_string(),
             "uluna".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), 2 * liquidity_amount + 1);
+                assert_eq!(amt.unwrap().amount.u128(), 2 * liquidity_amount);
             },
         );
 
@@ -1002,21 +999,21 @@ mod router {
             suite.pool_manager_addr.to_string(),
             "uusd".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount - 998 + 1);
+                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount - 998);
             },
         );
         suite.query_balance(
             suite.pool_manager_addr.to_string(),
             "uwhale".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount + 1000 + 1);
+                assert_eq!(amt.unwrap().amount.u128(), liquidity_amount + 1000);
             },
         );
         suite.query_balance(
             suite.pool_manager_addr.to_string(),
             "uluna".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), 2 * liquidity_amount + 1);
+                assert_eq!(amt.unwrap().amount.u128(), 2 * liquidity_amount);
             },
         );
     }
@@ -1024,9 +1021,9 @@ mod router {
     #[test]
     fn checks_minimum_receive() {
         let mut suite = TestingSuite::default_with_balances(vec![
-            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
-            coin(1_000_000_001u128, "uusd".to_string()),
+            coin(1_000_000_000u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
         let _other = suite.senders[1].clone();
@@ -1152,10 +1149,9 @@ mod router {
             },
         ];
 
-        // before swap uusd balance = 1_000_000_001
+        // before swap uusd balance = 1_000_000_000
         // - 2*1_000 pair creation fee
         // - 1_000_000 liquidity provision
-        // - 1 for native token creation (for decimal precisions)
         // = 998_998_000
         let pre_swap_amount = 998_998_000;
         suite.query_balance(creator.to_string(), "uusd".to_string(), |amt| {
