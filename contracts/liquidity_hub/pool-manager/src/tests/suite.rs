@@ -362,6 +362,42 @@ impl TestingSuite {
 
         self
     }
+
+    /// Adds swap routes to the pool manager contract.
+    #[track_caller]
+    pub(crate) fn add_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
+
+    /// Removes swap routes from the pool manager contract.
+    #[track_caller]
+    pub(crate) fn remove_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::RemoveSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
 }
 
 /// queries
@@ -545,7 +581,7 @@ impl TestingSuite {
     }
 
     /// Retrieves the swap routes for a given pair of assets.
-    pub(crate) fn _query_swap_routes(
+    pub(crate) fn query_swap_routes(
         &mut self,
         result: impl Fn(StdResult<SwapRoutesResponse>),
     ) -> &mut Self {
