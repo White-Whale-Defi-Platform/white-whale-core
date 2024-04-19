@@ -170,8 +170,9 @@ pub fn execute_swap_operations(
 
 pub fn add_swap_routes(
     deps: DepsMut,
-    env: Env,
-    sender: Addr,
+    // TODO: still need to save the swap route creator into state
+    _env: Env,
+    _sender: Addr,
     swap_routes: Vec<SwapRoute>,
 ) -> Result<Response, ContractError> {
     let mut attributes = vec![];

@@ -1315,6 +1315,17 @@ mod router {
             }));
         });
 
+        // Re-add the same swap route should fail
+        suite.add_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+            assert_eq!(
+                result.unwrap_err().downcast_ref::<ContractError>(),
+                Some(&ContractError::SwapRouteAlreadyExists {
+                    offer_asset: "uwhale".to_string(),
+                    ask_asset: "uusd".to_string()
+                })
+            );
+        });
+
         // Let's query for the swap route
         suite.query_swap_routes(|result| {
             assert_eq!(result.unwrap().swap_routes[0], swap_route_1);
@@ -1470,6 +1481,17 @@ mod router {
         // Let's query for the swap route
         suite.query_swap_routes(|result| {
             assert_eq!(result.unwrap().swap_routes.len(), 0);
+        });
+
+        // Re-remove the same swap route should fail
+        suite.remove_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+            assert_eq!(
+                result.unwrap_err().downcast_ref::<ContractError>(),
+                Some(&ContractError::NoSwapRouteForAssets {
+                    offer_asset: "uwhale".to_string(),
+                    ask_asset: "uusd".to_string()
+                })
+            );
         });
     }
 }
