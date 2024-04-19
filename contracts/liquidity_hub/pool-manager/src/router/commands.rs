@@ -174,8 +174,6 @@ pub fn add_swap_routes(
     sender: Addr,
     swap_routes: Vec<SwapRoute>,
 ) -> Result<Response, ContractError> {
-    assert_admin(deps.as_ref(), &env, &sender)?;
-
     let mut attributes = vec![];
 
     for swap_route in swap_routes {
