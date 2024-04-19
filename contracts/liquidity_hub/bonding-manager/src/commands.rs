@@ -227,15 +227,17 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Con
         !claimable_epochs.is_empty(),
         ContractError::NothingToClaim {}
     );
-
+    print!("Claimable epochs: {:?}", claimable_epochs);
+    let global = GLOBAL.load(deps.storage)?;
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
         let bonding_weight_response = query_weight(
             deps.as_ref(),
             env.block.time,
             info.sender.to_string(),
-            Some(epoch.global_index.clone()),
+            Some(global.clone()),
         )?;
+        println!("Bonding weight response: {:?}", bonding_weight_response);
 
         for fee in epoch.total.iter() {
             let reward = fee.amount * bonding_weight_response.share;
@@ -361,8 +363,15 @@ pub(crate) fn fill_rewards(
                 skip_swap = true;
             }
         });
+        // Suggested method for swaps
+        // Loop over the assets in info.funds
+        // If whale is in the fund object then skip that
+        // Everything else either gets swapped or if its an LP token withdrawn and then swapped
+        // For each swapped coin we need to simulate swap operations and get the route from SwapRoutes
+        // For each swapped coin if there is no funds found in the pool found via SwapRoutes, skip it. e.g newly made pools
+        // Might need to add a reply to the contract as if doing it only in this method we can only save the simulation amount in the state
+        // Alternatively we could add a reply and try to get the actual amount swapped from there.
 
-        println!("Response: {:?}", resp);
         if !skip_swap {
             let swap_operations = vec![white_whale_std::pool_manager::SwapOperation::WhaleSwap {
                 token_in_denom: info.funds[0].denom.to_string(),
@@ -383,15 +392,21 @@ pub(crate) fn fill_rewards(
             };
             messages.push(wrapped_msg.into());
         }
-
         // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
         // Note: After swap,
+        // TODO: Remove hardcode below after more testing
         EPOCHS.update(
             deps.storage,
             &most_recent_epoch_id,
             |bucket| -> StdResult<_> {
                 let mut bucket = bucket.unwrap_or_default();
-                bucket.available = asset::aggregate_coins(bucket.available, vec![])?;
+                bucket.available = asset::aggregate_coins(
+                    bucket.available,
+                    vec![Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::new(1000u128),
+                    }],
+                )?;
                 Ok(bucket)
             },
         )?;

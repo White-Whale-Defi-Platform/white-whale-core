@@ -1,9 +1,9 @@
 use anyhow::Error;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Timestamp, Uint128, Uint64,
+    coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint128, Uint64,
 };
-use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+// use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
@@ -12,7 +12,7 @@ use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::contract::query;
-use crate::state::{EPOCHS, LAST_CLAIMED_EPOCH};
+use crate::state::EPOCHS;
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
@@ -20,8 +20,7 @@ use white_whale_std::bonding_manager::{
 };
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
-use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-use white_whale_testing::integration::integration_mocks::mock_app_with_balance;
+use white_whale_std::pool_network::asset::PairType;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -74,6 +73,7 @@ pub struct TestingRobot {
     pub another_sender: Addr,
     pub bonding_manager_addr: Addr,
     pub pool_manager_addr: Addr,
+    pub epoch_manager_addr: Addr,
     owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
     env: cosmwasm_std::Env,
 }
@@ -117,6 +117,7 @@ impl TestingRobot {
             another_sender,
             bonding_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
+            epoch_manager_addr: Addr::unchecked(""),
             owned_deps: mock_dependencies(),
             env: mock_env(),
         }
@@ -139,10 +140,6 @@ impl TestingRobot {
         )
     }
 
-    pub(crate) fn get_bonding_manager_addr(&self) -> Addr {
-        self.bonding_manager_addr.clone()
-    }
-
     pub(crate) fn instantiate(
         &mut self,
         unbonding_period: Uint64,
@@ -155,7 +152,7 @@ impl TestingRobot {
             "epoch_manager_id: {}",
             self.app.block_info().time.minus_seconds(10).nanos()
         );
-        let _epoch_manager_addr = self
+        let epoch_manager_addr = self
             .app
             .instantiate_contract(
                 epoch_manager_id,
@@ -189,7 +186,7 @@ impl TestingRobot {
             .app
             .execute_contract(
                 self.sender.clone(),
-                _epoch_manager_addr.clone(),
+                epoch_manager_addr.clone(),
                 &hook_registration_msg,
                 &[],
             )
@@ -202,7 +199,7 @@ impl TestingRobot {
         self.app
             .execute_contract(
                 self.sender.clone(),
-                _epoch_manager_addr.clone(),
+                epoch_manager_addr.clone(),
                 &new_epoch_msg,
                 &[],
             )
@@ -243,6 +240,7 @@ impl TestingRobot {
             .unwrap();
         self.bonding_manager_addr = bonding_manager_addr;
         self.pool_manager_addr = pool_manager_addr;
+        self.epoch_manager_addr = epoch_manager_addr;
         self
     }
 
@@ -295,6 +293,21 @@ impl TestingRobot {
         self
     }
 
+    pub(crate) fn claim(
+        &mut self,
+        sender: Addr,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Claim {};
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
     pub(crate) fn withdraw(
         &mut self,
         sender: Addr,
@@ -307,6 +320,21 @@ impl TestingRobot {
             self.app
                 .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
         );
+
+        self
+    }
+
+    pub(crate) fn create_new_epoch(&mut self) -> &mut Self {
+        let new_epoch_msg =
+            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
+        self.app
+            .execute_contract(
+                self.sender.clone(),
+                self.epoch_manager_addr.clone(),
+                &new_epoch_msg,
+                &[],
+            )
+            .unwrap();
 
         self
     }
@@ -357,17 +385,6 @@ impl TestingRobot {
                 .unwrap();
         }
 
-        self
-    }
-
-    pub(crate) fn add_last_claimed_epoch_to_state(
-        &mut self,
-        address: Addr,
-        epoch_id: Uint64,
-    ) -> &mut Self {
-        LAST_CLAIMED_EPOCH
-            .save(&mut self.owned_deps.storage, &address, &epoch_id)
-            .unwrap();
         self
     }
 }
@@ -464,6 +481,37 @@ impl TestingRobot {
         let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
 
         response(Ok((self, res.epochs)));
+
+        self
+    }
+
+    pub(crate) fn query_claimable_epochs_live(
+        &mut self,
+        address: Option<Addr>,
+        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
+    ) -> &mut Self {
+        let query_res = if let Some(address) = address {
+            let bonded_response: ClaimableEpochsResponse = self
+                .app
+                .wrap()
+                .query_wasm_smart(
+                    &self.bonding_manager_addr,
+                    &QueryMsg::Claimable {
+                        addr: address.to_string(),
+                    },
+                )
+                .unwrap();
+            bonded_response
+        } else {
+            let bonded_response: ClaimableEpochsResponse = self
+                .app
+                .wrap()
+                .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::ClaimableEpochs {})
+                .unwrap();
+            bonded_response
+        };
+
+        response(Ok((self, query_res.epochs)));
 
         self
     }

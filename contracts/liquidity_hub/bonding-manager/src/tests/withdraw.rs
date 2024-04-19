@@ -2,7 +2,7 @@ use cosmwasm_std::{coins, Coin, Event, Uint128};
 
 use white_whale_std::bonding_manager::WithdrawableResponse;
 
-use crate::tests::{bond, robot::TestingRobot};
+use crate::tests::robot::TestingRobot;
 
 #[test]
 fn test_withdraw_successfully() {

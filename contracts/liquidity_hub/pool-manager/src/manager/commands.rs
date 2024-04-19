@@ -1,7 +1,9 @@
 use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
-use white_whale_std::{fee::PoolFee, pool_network::asset::PairType, whale_lair::fill_rewards_msg_coin};
+use white_whale_std::{
+    fee::PoolFee, pool_network::asset::PairType, whale_lair::fill_rewards_msg_coin,
+};
 
 use crate::state::{get_pair_by_identifier, PAIR_COUNTER};
 use crate::{

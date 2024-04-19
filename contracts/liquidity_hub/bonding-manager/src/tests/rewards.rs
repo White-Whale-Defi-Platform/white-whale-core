@@ -1,6 +1,4 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env};
-use cosmwasm_std::{coin, Coin, Decimal, Uint128, Uint64};
-use white_whale_std::coin;
+use cosmwasm_std::{coin, Coin, Decimal, Uint128};
 use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
@@ -10,15 +8,9 @@ use crate::tests::test_helpers;
 #[test]
 fn test_fill_rewards_from_pool_manager() {
     let mut robot = TestingRobot::default();
-    let grace_period = Uint64::new(21);
     let creator = robot.sender.clone();
     let epochs = test_helpers::get_epochs();
-    let binding = epochs.clone();
-    let claimable_epochs = binding
-        .iter()
-        .rev()
-        .take(grace_period.u64() as usize)
-        .collect::<Vec<_>>();
+
     let asset_infos = vec!["uwhale".to_string(), "uusdc".to_string()];
 
     // Default Pool fees white_whale_std::pool_network::pair::PoolFee

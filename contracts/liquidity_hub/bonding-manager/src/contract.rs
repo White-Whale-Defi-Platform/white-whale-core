@@ -144,6 +144,17 @@ pub fn execute(
             println!("New epoch created: {}", next_epoch_id);
             // Return early if the epoch is the first one
             if new_epoch_id == 1 {
+                // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+                // Add a new rewards bucket for the new epoch
+                EPOCHS.save(
+                    deps.storage,
+                    &new_epoch_id.to_be_bytes(),
+                    &Epoch {
+                        id: next_epoch_id.into(),
+                        start_time: current_epoch.start_time,
+                        ..Epoch::default()
+                    },
+                )?;
                 return Ok(Response::default()
                     .add_attributes(vec![("action", "epoch_changed_hook".to_string())]));
             }
@@ -155,6 +166,7 @@ pub fn execute(
                 Some(_) => Err(ContractError::Unauthorized {}),
                 None => Err(ContractError::Unauthorized {}), // Handle the case where there is no expiring epoch
             };
+            println!("New epoch created: {}", next_epoch_id);
 
             // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
             // Add a new rewards bucket for the new epoch
@@ -172,6 +184,7 @@ pub fn execute(
             let amount_to_be_forwarded = EPOCHS
                 .load(deps.storage, &expiring_epoch_id.to_be_bytes())?
                 .available;
+            println!("Amount to be forwarded: {:?}", amount_to_be_forwarded);
             EPOCHS.update(
                 deps.storage,
                 &new_epoch_id.to_be_bytes(),
