@@ -1,9 +1,15 @@
 use cosmwasm_std::{
-    attr, coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Response, Uint128,
+    attr, coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response,
+    Uint128,
 };
-use white_whale_std::pool_manager::SwapOperation;
+use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
 
-use crate::{state::MANAGER_CONFIG, swap::perform_swap::perform_swap, ContractError};
+use crate::{
+    helpers::{assert_admin, simulate_swap_operations},
+    state::{MANAGER_CONFIG, SWAP_ROUTES},
+    swap::perform_swap::perform_swap,
+    ContractError,
+};
 
 /// Checks that the output of each [`SwapOperation`] acts as the input of the next swap.
 fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError> {
@@ -160,4 +166,75 @@ pub fn execute_swap_operations(
             attr("return_amount", receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))
+}
+
+pub fn add_swap_routes(
+    deps: DepsMut,
+    env: Env,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    assert_admin(deps.as_ref(), &env, &sender)?;
+
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        simulate_swap_operations(
+            deps.as_ref(),
+            Uint128::one(),
+            swap_route.clone().swap_operations,
+        )
+        .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
+
+        // TODO: do we need to derivate the key from the pair identifier too?
+        let swap_route_key =
+            SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
+
+        // Add the swap route if it does not exist, otherwise return an error
+        if swap_route_key.may_load(deps.storage)?.is_some() {
+            return Err(ContractError::SwapRouteAlreadyExists {
+                offer_asset: swap_route.offer_asset_denom,
+                ask_asset: swap_route.ask_asset_denom,
+            });
+        }
+        swap_route_key.save(deps.storage, &swap_route.clone().swap_operations)?;
+
+        attributes.push(attr("swap_route", swap_route.clone().to_string()));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "add_swap_routes")
+        .add_attributes(attributes))
+}
+
+pub fn remove_swap_routes(
+    deps: DepsMut,
+    env: Env,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    assert_admin(deps.as_ref(), &env, &sender)?;
+
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        // TODO: do we need to derivate the key from the pair identifier too?
+        let swap_route_key =
+            SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
+
+        // Remove the swap route if it exists
+        if swap_route_key.has(deps.storage) {
+            swap_route_key.remove(deps.storage);
+            attributes.push(attr("swap_route", swap_route.clone().to_string()));
+        } else {
+            return Err(ContractError::NoSwapRouteForAssets {
+                offer_asset: swap_route.offer_asset_denom,
+                ask_asset: swap_route.ask_asset_denom,
+            });
+        }
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "remove_swap_routes")
+        .add_attributes(attributes))
 }

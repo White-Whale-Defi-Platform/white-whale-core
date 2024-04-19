@@ -425,17 +425,12 @@ impl TestingSuite {
         &mut self,
         pair_identifier: String,
         offer_asset: Coin,
-        ask_asset: String,
         result: impl Fn(StdResult<SimulationResponse>),
     ) -> &mut Self {
         let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
-                ask_asset: Coin {
-                    amount: Uint128::zero(),
-                    denom: ask_asset,
-                },
                 pair_identifier,
             },
         );

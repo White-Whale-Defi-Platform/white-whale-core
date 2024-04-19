@@ -184,6 +184,8 @@ pub enum ExecuteMsg {
     // },
     /// Adds swap routes to the router.
     AddSwapRoutes { swap_routes: Vec<SwapRoute> },
+    /// Removes swap routes from the router.
+    RemoveSwapRoutes { swap_routes: Vec<SwapRoute> },
     /// Updates the configuration of the contract.
     /// If a field is not specified (i.e., set to `None`), it will not be modified.
     UpdateConfig {
@@ -216,7 +218,7 @@ pub enum QueryMsg {
     #[returns(SimulationResponse)]
     Simulation {
         offer_asset: Coin,
-        ask_asset: Coin,
+        // ask_asset: Coin,
         pair_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
@@ -311,4 +313,10 @@ pub struct FeatureToggle {
     pub withdrawals_enabled: bool,
     pub deposits_enabled: bool,
     pub swaps_enabled: bool,
+}
+
+// We define a custom struct for each query response
+#[cw_serde]
+pub struct SimulateSwapOperationsResponse {
+    pub amount: Uint128,
 }

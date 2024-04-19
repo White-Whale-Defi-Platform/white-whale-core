@@ -1290,7 +1290,6 @@ mod swapping {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            "uluna".to_string(),
             |result| {
                 // Ensure that the return amount is 1_000 minus spread
                 assert_eq!(
@@ -1496,7 +1495,6 @@ mod swapping {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            "uluna".to_string(),
             |result| {
                 println!("{:?}", result);
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;

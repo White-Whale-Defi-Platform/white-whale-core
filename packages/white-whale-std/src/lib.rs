@@ -1,5 +1,6 @@
 pub mod common;
 
+pub mod coin;
 pub mod constants;
 pub mod epoch_manager;
 pub mod fee;
@@ -11,8 +12,6 @@ pub mod migrate_guards;
 pub mod pool_manager;
 pub mod pool_network;
 pub mod token_factory;
-
-pub mod coin;
 
 #[cfg(any(
     feature = "token_factory",

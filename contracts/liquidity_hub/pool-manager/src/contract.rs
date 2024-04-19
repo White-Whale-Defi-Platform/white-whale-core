@@ -1,5 +1,6 @@
 use crate::error::ContractError;
 use crate::queries::{get_swap_route, get_swap_routes};
+use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
@@ -146,7 +147,12 @@ pub fn execute(
         //         max_spread,
         //     )
         // }
-        ExecuteMsg::AddSwapRoutes { swap_routes: _ } => Ok(Response::new()),
+        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+            add_swap_routes(deps, env, info.sender, swap_routes)
+        }
+        ExecuteMsg::RemoveSwapRoutes { swap_routes } => {
+            remove_swap_routes(deps, env, info.sender, swap_routes)
+        }
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             pool_creation_fee,
@@ -191,13 +197,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::Simulation {
             offer_asset,
-            ask_asset,
+            // ask_asset,
             pair_identifier,
         } => Ok(to_json_binary(&queries::query_simulation(
             deps,
-            env,
+            // env,
             offer_asset,
-            ask_asset,
+            // ask_asset,
             pair_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {

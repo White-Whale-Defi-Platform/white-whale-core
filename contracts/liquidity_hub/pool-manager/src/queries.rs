@@ -47,9 +47,7 @@ pub fn query_asset_decimals(
 // Simulate a swap with the provided asset to determine the amount of the other asset that would be received
 pub fn query_simulation(
     deps: Deps,
-    _env: Env,
     offer_asset: Coin,
-    _ask_asset: Coin,
     pair_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
