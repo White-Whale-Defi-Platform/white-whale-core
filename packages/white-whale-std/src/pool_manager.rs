@@ -218,7 +218,6 @@ pub enum QueryMsg {
     #[returns(SimulationResponse)]
     Simulation {
         offer_asset: Coin,
-        // ask_asset: Coin,
         pair_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to

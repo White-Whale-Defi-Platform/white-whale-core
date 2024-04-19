@@ -197,13 +197,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::Simulation {
             offer_asset,
-            // ask_asset,
             pair_identifier,
         } => Ok(to_json_binary(&queries::query_simulation(
             deps,
-            // env,
             offer_asset,
-            // ask_asset,
             pair_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {
