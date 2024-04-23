@@ -83,10 +83,7 @@ pub fn execute_swap_operations(
     for operation in operations {
         match operation {
             SwapOperation::WhaleSwap {
-                // TODO: do we need to use token_in_denom?
-                token_in_denom: _,
-                pool_identifier,
-                ..
+                pool_identifier, ..
             } => {
                 // inside assert_operations() we have already checked that
                 // the output of each swap is the input of the next swap.
@@ -185,7 +182,6 @@ pub fn add_swap_routes(
         )
         .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
 
-        // TODO: do we need to derivate the key from the pair identifier too?
         let swap_route_key =
             SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
 
@@ -220,7 +216,6 @@ pub fn remove_swap_routes(
     let mut attributes = vec![];
 
     for swap_route in swap_routes {
-        // TODO: do we need to derivate the key from the pair identifier too?
         let swap_route_key =
             SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
 
