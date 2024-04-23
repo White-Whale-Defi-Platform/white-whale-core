@@ -240,11 +240,11 @@ pub enum QueryMsg {
     SwapRoutes {},
 
     // /// Simulates swap operations.
-    // #[returns(SimulateSwapOperationsResponse)]
-    // SimulateSwapOperations {
-    //     offer_amount: Uint128,
-    //     operations: Vec<SwapOperation>,
-    // },
+    #[returns(SimulateSwapOperationsResponse)]
+    SimulateSwapOperations {
+        offer_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
     // /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
     // /// is needed to perform the swap.
     // #[returns(SimulateSwapOperationsResponse)]

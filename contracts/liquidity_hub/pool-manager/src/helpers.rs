@@ -599,6 +599,8 @@ pub fn assert_admin(deps: Deps, env: &Env, sender: &Addr) -> Result<(), Contract
     Ok(())
 }
 
+/// This function iterates over the swap operations, simulates each swap
+/// to get the final amount after all the swaps.
 pub fn simulate_swap_operations(
     deps: Deps,
     offer_amount: Uint128,
