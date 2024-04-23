@@ -562,7 +562,7 @@ impl TestingSuite {
     }
 
     /// Retrieves a swap route for a given pair of assets.
-    pub(crate) fn _query_swap_route(
+    pub(crate) fn query_swap_route(
         &mut self,
         offer_asset_denom: String,
         ask_asset_denom: String,

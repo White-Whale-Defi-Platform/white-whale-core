@@ -1473,9 +1473,21 @@ mod router {
             }));
         });
 
-        // Let's query for the swap route
+        // Let's query for all swap routes
         suite.query_swap_routes(|result| {
-            assert_eq!(result.unwrap().swap_routes[0], swap_route_1);
+            assert_eq!(result.unwrap().swap_routes[0], swap_route_1.clone());
+        });
+
+        // Let's query for the swap route
+        suite.query_swap_route("uwhale".to_string(), "uusd".to_string(), |result| {
+            assert_eq!(
+                result.unwrap().swap_route,
+                SwapRoute {
+                    offer_asset_denom: "uwhale".to_string(),
+                    ask_asset_denom: "uusd".to_string(),
+                    swap_operations: swap_route_1.swap_operations.clone(),
+                }
+            );
         });
 
         // Let;s query for the swap route creator
@@ -1501,7 +1513,7 @@ mod router {
             }));
         });
 
-        // Let's query for the swap route
+        // Let's query for all swap routes
         suite.query_swap_routes(|result| {
             assert_eq!(result.unwrap().swap_routes.len(), 0);
         });
