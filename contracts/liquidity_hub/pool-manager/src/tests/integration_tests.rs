@@ -317,7 +317,7 @@ mod pair_creation_failures {
 
 mod router {
     use cosmwasm_std::Event;
-    use white_whale_std::pool_manager::SwapRoute;
+    use white_whale_std::pool_manager::{SwapRoute, SwapRouteCreatorResponse};
 
     use super::*;
     #[test]
@@ -1326,10 +1326,19 @@ mod router {
             );
         });
 
-        // Let's query for the swap route
+        // Let's query all swap routes
         suite.query_swap_routes(|result| {
             assert_eq!(result.unwrap().swap_routes[0], swap_route_1);
         });
+
+        // Let;s query for the swap route creator
+        suite.query_swap_route_creator(
+            "uwhale".to_string(),
+            "uusd".to_string(),
+            |result: Result<SwapRouteCreatorResponse, _>| {
+                assert_eq!(result.unwrap().creator, creator);
+            },
+        );
     }
 
     #[test]
@@ -1340,8 +1349,8 @@ mod router {
             coin(1_000_000_001u128, "uusd".to_string()),
         ]);
         let creator = suite.creator();
-        let _other = suite.senders[1].clone();
-        let _unauthorized = suite.senders[2].clone();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
 
         let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
         let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
@@ -1456,7 +1465,7 @@ mod router {
             ],
         };
 
-        suite.add_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+        suite.add_swap_routes(other.clone(), vec![swap_route_1.clone()], |result| {
             assert!(result.unwrap().events.into_iter().any(|attr| {
                 attr.attributes
                     .iter()
@@ -1469,8 +1478,22 @@ mod router {
             assert_eq!(result.unwrap().swap_routes[0], swap_route_1);
         });
 
-        // Lets try to remove the swap route
-        suite.remove_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+        // Let;s query for the swap route creator
+        suite.query_swap_route_creator(
+            "uwhale".to_string(),
+            "uusd".to_string(),
+            |result: Result<SwapRouteCreatorResponse, _>| {
+                assert_eq!(result.unwrap().creator, other);
+            },
+        );
+
+        // Removing a swap route as a non-route-creator & non-admin should fail
+        suite.remove_swap_routes(unauthorized.clone(), vec![swap_route_1.clone()], |result| {
+            assert!(result.is_err());
+        });
+
+        // Lets try to remove the swap route as the swap route creator
+        suite.remove_swap_routes(other.clone(), vec![swap_route_1.clone()], |result| {
             assert!(result.unwrap().events.into_iter().any(|attr| {
                 attr.attributes
                     .iter()

@@ -3,7 +3,8 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
-    AssetDecimalsResponse, Config, SwapRoute, SwapRouteResponse, SwapRoutesResponse,
+    AssetDecimalsResponse, Config, SwapRoute, SwapRouteCreatorResponse, SwapRouteResponse,
+    SwapRoutesResponse,
 };
 use white_whale_std::pool_network::{
     asset::PairType,
@@ -256,7 +257,7 @@ pub fn get_swap_routes(deps: Deps) -> Result<SwapRoutesResponse, ContractError> 
             Ok(SwapRoute {
                 offer_asset_denom,
                 ask_asset_denom,
-                swap_operations,
+                swap_operations: swap_operations.swap_operations,
             })
         })
         .collect::<StdResult<Vec<SwapRoute>>>()?;
@@ -282,8 +283,27 @@ pub fn get_swap_route(
         swap_route: SwapRoute {
             offer_asset_denom,
             ask_asset_denom,
-            swap_operations,
+            swap_operations: swap_operations.swap_operations,
         },
+    })
+}
+
+pub fn get_swap_route_creator(
+    deps: Deps,
+    offer_asset_denom: String,
+    ask_asset_denom: String,
+) -> Result<SwapRouteCreatorResponse, ContractError> {
+    let swap_route_key = SWAP_ROUTES.key((&offer_asset_denom, &ask_asset_denom));
+
+    let swap_operations =
+        swap_route_key
+            .load(deps.storage)
+            .map_err(|_| ContractError::NoSwapRouteForAssets {
+                offer_asset: offer_asset_denom.clone(),
+                ask_asset: ask_asset_denom.clone(),
+            })?;
+    Ok(SwapRouteCreatorResponse {
+        creator: swap_operations.creator,
     })
 }
 

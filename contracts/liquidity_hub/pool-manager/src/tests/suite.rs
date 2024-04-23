@@ -1,6 +1,7 @@
 use cosmwasm_std::testing::MockStorage;
 use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PairInfoResponse, SwapOperation, SwapRouteResponse, SwapRoutesResponse,
+    Config, FeatureToggle, PairInfoResponse, SwapOperation, SwapRouteCreatorResponse,
+    SwapRouteResponse, SwapRoutesResponse,
 };
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
@@ -591,6 +592,27 @@ impl TestingSuite {
         );
 
         result(swap_routes_response);
+
+        self
+    }
+
+    /// Retrieves the swap route creator for a given pair of assets.
+    pub(crate) fn query_swap_route_creator(
+        &mut self,
+        offer_asset_denom: String,
+        ask_asset_denom: String,
+        result: impl Fn(StdResult<SwapRouteCreatorResponse>),
+    ) -> &mut Self {
+        let swap_route_creator_response: StdResult<SwapRouteCreatorResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::SwapRouteCreator {
+                    offer_asset_denom,
+                    ask_asset_denom,
+                },
+            );
+
+        result(swap_route_creator_response);
 
         self
     }

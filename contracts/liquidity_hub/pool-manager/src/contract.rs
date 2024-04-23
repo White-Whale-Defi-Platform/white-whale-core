@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::queries::{get_swap_route, get_swap_routes};
+use crate::queries::{get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
@@ -148,10 +148,10 @@ pub fn execute(
         //     )
         // }
         ExecuteMsg::AddSwapRoutes { swap_routes } => {
-            add_swap_routes(deps, env, info.sender, swap_routes)
+            add_swap_routes(deps, info.sender, swap_routes)
         }
         ExecuteMsg::RemoveSwapRoutes { swap_routes } => {
-            remove_swap_routes(deps, env, info.sender, swap_routes)
+            remove_swap_routes(deps, info.sender, swap_routes)
         }
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
@@ -242,6 +242,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(&PairInfoResponse {
             pair_info: PAIRS.load(deps.storage, &pair_identifier)?,
         })?),
+        QueryMsg::SwapRouteCreator {
+            offer_asset_denom,
+            ask_asset_denom,
+        } => Ok(to_json_binary(&get_swap_route_creator(
+            deps,
+            offer_asset_denom,
+            ask_asset_denom,
+        )?)?),
     }
 }
 

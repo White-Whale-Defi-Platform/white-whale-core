@@ -254,6 +254,12 @@ pub enum QueryMsg {
     // },
     #[returns(PairInfoResponse)]
     Pair { pair_identifier: String },
+    /// Retrieves the creator of the swap routes that can then remove them.
+    #[returns(SwapRouteCreatorResponse)]
+    SwapRouteCreator {
+        offer_asset_denom: String,
+        ask_asset_denom: String,
+    },
 }
 
 #[cw_serde]
@@ -318,4 +324,9 @@ pub struct FeatureToggle {
 #[cw_serde]
 pub struct SimulateSwapOperationsResponse {
     pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct SwapRouteCreatorResponse {
+    pub creator: String,
 }

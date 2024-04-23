@@ -1,12 +1,11 @@
 use cosmwasm_std::{
-    attr, coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Response,
-    Uint128,
+    attr, coin, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Response, Uint128,
 };
 use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
 
 use crate::{
-    helpers::{assert_admin, simulate_swap_operations},
-    state::{MANAGER_CONFIG, SWAP_ROUTES},
+    helpers::simulate_swap_operations,
+    state::{SwapOperations, MANAGER_CONFIG, SWAP_ROUTES},
     swap::perform_swap::perform_swap,
     ContractError,
 };
@@ -170,9 +169,7 @@ pub fn execute_swap_operations(
 
 pub fn add_swap_routes(
     deps: DepsMut,
-    // TODO: still need to save the swap route creator into state
-    _env: Env,
-    _sender: Addr,
+    sender: Addr,
     swap_routes: Vec<SwapRoute>,
 ) -> Result<Response, ContractError> {
     let mut attributes = vec![];
@@ -196,7 +193,13 @@ pub fn add_swap_routes(
                 ask_asset: swap_route.ask_asset_denom,
             });
         }
-        swap_route_key.save(deps.storage, &swap_route.clone().swap_operations)?;
+        swap_route_key.save(
+            deps.storage,
+            &SwapOperations {
+                creator: sender.to_string(),
+                swap_operations: swap_route.clone().swap_operations,
+            },
+        )?;
 
         attributes.push(attr("swap_route", swap_route.clone().to_string()));
     }
@@ -208,12 +211,9 @@ pub fn add_swap_routes(
 
 pub fn remove_swap_routes(
     deps: DepsMut,
-    env: Env,
     sender: Addr,
     swap_routes: Vec<SwapRoute>,
 ) -> Result<Response, ContractError> {
-    assert_admin(deps.as_ref(), &env, &sender)?;
-
     let mut attributes = vec![];
 
     for swap_route in swap_routes {
@@ -223,6 +223,11 @@ pub fn remove_swap_routes(
 
         // Remove the swap route if it exists
         if swap_route_key.has(deps.storage) {
+            // only contract owner or route creator can remove the swap route
+            let creator = swap_route_key.load(deps.storage)?.creator;
+            if !cw_ownable::is_owner(deps.storage, &sender)? && sender != creator {
+                return Err(ContractError::Unauthorized {});
+            }
             swap_route_key.remove(deps.storage);
             attributes.push(attr("swap_route", swap_route.clone().to_string()));
         } else {
