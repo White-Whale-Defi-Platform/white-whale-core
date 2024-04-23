@@ -1,9 +1,12 @@
 use crate::{state::MANAGER_CONFIG, ContractError};
-use cosmwasm_std::{Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{
+    to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+};
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
 use cosmwasm_std::Decimal;
+use white_whale_std::whale_lair;
 
 use super::perform_swap::perform_swap;
 
@@ -52,18 +55,20 @@ pub fn swap(
             amount: vec![swap_result.return_asset.clone()],
         }));
     }
+
     // then we add the fees
     if !swap_result.burn_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Burn {
             amount: vec![swap_result.burn_fee_asset.clone()],
         }));
     }
-
-    //todo this should be not a BankMsg but a fill_rewards msg
     if !swap_result.protocol_fee_asset.amount.is_zero() {
-        messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.whale_lair_addr.to_string(),
-            amount: vec![swap_result.protocol_fee_asset.clone()],
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: config.whale_lair_addr.to_string(),
+            msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewards {
+                assets: vec![swap_result.protocol_fee_asset.clone()],
+            })?,
+            funds: vec![swap_result.protocol_fee_asset.clone()],
         }));
     }
 
