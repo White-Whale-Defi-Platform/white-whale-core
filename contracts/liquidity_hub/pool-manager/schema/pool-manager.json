@@ -289,6 +289,31 @@
         "additionalProperties": false
       },
       {
+        "description": "Removes swap routes from the router.",
+        "type": "object",
+        "required": [
+          "remove_swap_routes"
+        ],
+        "properties": {
+          "remove_swap_routes": {
+            "type": "object",
+            "required": [
+              "swap_routes"
+            ],
+            "properties": {
+              "swap_routes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/SwapRoute"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Updates the configuration of the contract. If a field is not specified (i.e., set to `None`), it will not be modified.",
         "type": "object",
         "required": [
@@ -704,14 +729,10 @@
           "simulation": {
             "type": "object",
             "required": [
-              "ask_asset",
               "offer_asset",
               "pair_identifier"
             ],
             "properties": {
-              "ask_asset": {
-                "$ref": "#/definitions/Coin"
-              },
               "offer_asset": {
                 "$ref": "#/definitions/Coin"
               },
@@ -807,6 +828,32 @@
             ],
             "properties": {
               "pair_identifier": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Retrieves the creator of the swap routes that can then remove them.",
+        "type": "object",
+        "required": [
+          "swap_route_creator"
+        ],
+        "properties": {
+          "swap_route_creator": {
+            "type": "object",
+            "required": [
+              "ask_asset_denom",
+              "offer_asset_denom"
+            ],
+            "properties": {
+              "ask_asset_denom": {
+                "type": "string"
+              },
+              "offer_asset_denom": {
                 "type": "string"
               }
             },
@@ -1381,6 +1428,20 @@
           "additionalProperties": false
         }
       }
+    },
+    "swap_route_creator": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SwapRouteCreatorResponse",
+      "type": "object",
+      "required": [
+        "creator"
+      ],
+      "properties": {
+        "creator": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
     },
     "swap_routes": {
       "$schema": "http://json-schema.org/draft-07/schema#",

@@ -52,14 +52,10 @@
         "simulation": {
           "type": "object",
           "required": [
-            "ask_asset",
             "offer_asset",
             "pair_identifier"
           ],
           "properties": {
-            "ask_asset": {
-              "$ref": "#/definitions/Coin"
-            },
             "offer_asset": {
               "$ref": "#/definitions/Coin"
             },
@@ -155,6 +151,32 @@
           ],
           "properties": {
             "pair_identifier": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Retrieves the creator of the swap routes that can then remove them.",
+      "type": "object",
+      "required": [
+        "swap_route_creator"
+      ],
+      "properties": {
+        "swap_route_creator": {
+          "type": "object",
+          "required": [
+            "ask_asset_denom",
+            "offer_asset_denom"
+          ],
+          "properties": {
+            "ask_asset_denom": {
+              "type": "string"
+            },
+            "offer_asset_denom": {
               "type": "string"
             }
           },
