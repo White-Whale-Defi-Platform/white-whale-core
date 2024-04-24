@@ -1,6 +1,6 @@
 [package]
 name = "fee-distributor-mock"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Kerber0x <kerber0x@protonmail.com>"]
 edition = "2021"
 
