@@ -1,6 +1,6 @@
 [package]
 name = "frontend-helper"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 edition.workspace = true
 description = "A helper contract to pair the pool network to the incentive contracts"
