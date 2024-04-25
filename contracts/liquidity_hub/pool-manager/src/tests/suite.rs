@@ -6,17 +6,19 @@ use white_whale_std::pool_manager::{
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, Contract, ContractWrapper, DistributionKeeper,
     Executor, FailingModule, GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
+
+use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig};
 use white_whale_std::fee::PoolFee;
+use white_whale_std::incentive_manager::PositionsResponse;
+use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
-
-use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
-use white_whale_std::lp_common::LP_SYMBOL;
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new_with_empty(
@@ -29,11 +31,35 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
 }
 
 /// Creates the whale lair contract
-pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         whale_lair::contract::execute,
         whale_lair::contract::instantiate,
         whale_lair::contract::query,
+    )
+    .with_migrate(whale_lair::contract::migrate);
+
+    Box::new(contract)
+}
+
+/// Creates the epoch manager contract
+pub fn epoch_manager_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        epoch_manager::contract::execute,
+        epoch_manager::contract::instantiate,
+        epoch_manager::contract::query,
+    )
+    .with_migrate(whale_lair::contract::migrate);
+
+    Box::new(contract)
+}
+
+/// Creates the incentive manager contract
+pub fn incentive_manager_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        incentive_manager::contract::execute,
+        incentive_manager::contract::instantiate,
+        incentive_manager::contract::query,
     )
     .with_migrate(whale_lair::contract::migrate);
 
@@ -56,8 +82,10 @@ type OsmosisTokenFactoryApp = App<
 pub struct TestingSuite {
     app: OsmosisTokenFactoryApp,
     pub senders: [Addr; 3],
-    pub whale_lair_addr: Addr,
+    pub bonding_manager_addr: Addr,
     pub pool_manager_addr: Addr,
+    pub incentive_manager_addr: Addr,
+    pub epoch_manager_addr: Addr,
     pub cw20_tokens: Vec<Addr>,
 }
 
@@ -113,16 +141,23 @@ impl TestingSuite {
         Self {
             app,
             senders: [sender_1, sender_2, sender_3],
-            whale_lair_addr: Addr::unchecked(""),
+            bonding_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
+            incentive_manager_addr: Addr::unchecked(""),
+            epoch_manager_addr: Addr::unchecked(""),
             cw20_tokens: vec![],
         }
     }
 
     #[track_caller]
-    pub(crate) fn instantiate(&mut self, whale_lair_addr: String) -> &mut Self {
+    pub(crate) fn instantiate(
+        &mut self,
+        bonding_manager_addr: String,
+        incentive_manager_addr: String,
+    ) -> &mut Self {
         let msg = InstantiateMsg {
-            fee_collector_addr: whale_lair_addr,
+            bonding_manager_addr,
+            incentive_manager_addr,
             pool_creation_fee: coin(1_000, "uusd"),
         };
 
@@ -147,19 +182,25 @@ impl TestingSuite {
 
     #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
-        self.create_whale_lair();
+        self.create_bonding_manager();
+        self.create_epoch_manager();
+        self.create_incentive_manager();
 
-        // 17 May 2023 17:00:00 UTC
-        let timestamp = Timestamp::from_seconds(1684342800u64);
+        // 25 April 2024 15:00:00 UTC
+        let timestamp = Timestamp::from_seconds(1714057200);
         self.set_time(timestamp);
 
-        self.instantiate(self.whale_lair_addr.to_string())
+        self.instantiate(
+            self.bonding_manager_addr.to_string(),
+            self.incentive_manager_addr.to_string(),
+        )
     }
 
-    fn create_whale_lair(&mut self) {
-        let whale_lair_id = self.app.store_code(whale_lair_contract());
+    fn create_bonding_manager(&mut self) {
+        let bonding_manager_id = self.app.store_code(bonding_manager_contract());
 
         // create whale lair
+        // todo replace with bonding manager InstantiateMsg
         let msg = white_whale_std::whale_lair::InstantiateMsg {
             unbonding_period: Uint64::new(86400u64),
             growth_rate: Decimal::one(),
@@ -175,14 +216,76 @@ impl TestingSuite {
 
         let creator = self.creator().clone();
 
-        self.whale_lair_addr = self
+        self.bonding_manager_addr = self
             .app
             .instantiate_contract(
-                whale_lair_id,
+                bonding_manager_id,
                 creator.clone(),
                 &msg,
                 &[],
-                "White Whale Lair".to_string(),
+                "Bonding Manager".to_string(),
+                Some(creator.to_string()),
+            )
+            .unwrap();
+    }
+    fn create_epoch_manager(&mut self) {
+        let epoch_manager_id = self.app.store_code(epoch_manager_contract());
+
+        let msg = white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
+            start_epoch: Epoch {
+                id: 0,
+                start_time: Timestamp::from_seconds(1714057200),
+            },
+            epoch_config: EpochConfig {
+                duration: Uint64::new(86_400_000000000),
+                genesis_epoch: Uint64::new(1714057200_000000000),
+            },
+        };
+
+        let creator = self.creator().clone();
+
+        self.epoch_manager_addr = self
+            .app
+            .instantiate_contract(
+                epoch_manager_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "Epoch Manager".to_string(),
+                Some(creator.to_string()),
+            )
+            .unwrap();
+    }
+    fn create_incentive_manager(&mut self) {
+        let incentive_manager_id = self.app.store_code(incentive_manager_contract());
+
+        let creator = self.creator().clone();
+        let epoch_manager_addr = self.epoch_manager_addr.to_string();
+        let bonding_manager_addr = self.bonding_manager_addr.to_string();
+
+        let msg = white_whale_std::incentive_manager::InstantiateMsg {
+            owner: creator.clone().to_string(),
+            epoch_manager_addr,
+            bonding_manager_addr,
+            create_incentive_fee: Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::zero(),
+            },
+            max_concurrent_incentives: 5,
+            max_incentive_epoch_buffer: 014,
+            min_unlocking_duration: 86_400,
+            max_unlocking_duration: 31_536_000,
+            emergency_unlock_penalty: Decimal::percent(10),
+        };
+
+        self.incentive_manager_addr = self
+            .app
+            .instantiate_contract(
+                incentive_manager_id,
+                creator.clone(),
+                &msg,
+                &[],
+                "Incentive Manager".to_string(),
                 Some(creator.to_string()),
             )
             .unwrap();
@@ -213,6 +316,8 @@ impl TestingSuite {
         &mut self,
         sender: Addr,
         pair_identifier: String,
+        unlocking_duration: Option<u64>,
+        lock_position_identifier: Option<String>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -220,6 +325,8 @@ impl TestingSuite {
             pair_identifier,
             slippage_tolerance: None,
             receiver: None,
+            unlocking_duration,
+            lock_position_identifier,
         };
 
         result(
@@ -613,6 +720,26 @@ impl TestingSuite {
             );
 
         result(swap_route_creator_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_incentive_positions(
+        &mut self,
+        address: Addr,
+        open_state: Option<bool>,
+        result: impl Fn(StdResult<PositionsResponse>),
+    ) -> &mut Self {
+        let positions_response: StdResult<PositionsResponse> = self.app.wrap().query_wasm_smart(
+            &self.incentive_manager_addr,
+            &white_whale_std::incentive_manager::QueryMsg::Positions {
+                address: address.to_string(),
+                open_state,
+            },
+        );
+
+        result(positions_response);
 
         self
     }

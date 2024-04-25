@@ -16,7 +16,7 @@ pub fn update_config(
     MANAGER_CONFIG.update(deps.storage, |mut config| {
         if let Some(whale_lair_addr) = whale_lair_addr {
             let whale_lair_addr = deps.api.addr_validate(&whale_lair_addr)?;
-            config.whale_lair_addr = whale_lair_addr;
+            config.bonding_manager_addr = whale_lair_addr;
         }
 
         if let Some(pool_creation_fee) = pool_creation_fee {

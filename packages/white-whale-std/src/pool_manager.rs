@@ -105,7 +105,10 @@ impl PairInfo {}
 
 #[cw_serde]
 pub struct Config {
-    pub whale_lair_addr: Addr,
+    /// The address of the bonding manager contract.
+    pub bonding_manager_addr: Addr,
+    /// The address of the incentive manager contract.
+    pub incentive_manager_addr: Addr,
     // We must set a creation fee on instantiation to prevent spamming of pools
     pub pool_creation_fee: Coin,
     //  Whether or not swaps, deposits, and withdrawals are enabled
@@ -114,7 +117,8 @@ pub struct Config {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub fee_collector_addr: String,
+    pub bonding_manager_addr: String,
+    pub incentive_manager_addr: String,
     pub pool_creation_fee: Coin,
 }
 
@@ -137,6 +141,11 @@ pub enum ExecuteMsg {
         slippage_tolerance: Option<Decimal>,
         receiver: Option<String>,
         pair_identifier: String,
+        /// The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed,
+        /// the tokens will not be locked and the LP tokens will be returned to the user.
+        unlocking_duration: Option<u64>,
+        /// The identifier of the position to lock the LP tokens in the incentive manager, if any.
+        lock_position_identifier: Option<String>,
     },
     /// Swap an offer asset to the other
     Swap {

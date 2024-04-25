@@ -1,8 +1,10 @@
-use crate::ContractError;
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Uint128};
+
 use white_whale_std::fee::Fee;
 use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
+
+use crate::ContractError;
 
 use super::suite::TestingSuite;
 
@@ -13,7 +15,7 @@ use super::suite::TestingSuite;
 fn instantiate_normal() {
     let mut suite = TestingSuite::default_with_balances(vec![]);
 
-    suite.instantiate(suite.senders[0].to_string());
+    suite.instantiate(suite.senders[0].to_string(), suite.senders[1].to_string());
 }
 
 // add features `token_factory` so tests are compiled using the correct flag
@@ -85,6 +87,8 @@ fn deposit_and_withdraw_sanity_check() {
         .provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -167,8 +171,8 @@ fn deposit_and_withdraw_sanity_check() {
 }
 
 mod pair_creation_failures {
-
     use super::*;
+
     // Insufficient fee to create pair; 90 instead of 100
     #[test]
     fn insufficient_pair_creation_fee() {
@@ -320,6 +324,7 @@ mod router {
     use white_whale_std::pool_manager::{SwapRoute, SwapRouteCreatorResponse};
 
     use super::*;
+
     #[test]
     fn basic_swap_operations_test() {
         let mut suite = TestingSuite::default_with_balances(vec![
@@ -397,6 +402,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -418,6 +425,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -482,21 +491,21 @@ mod router {
 
         // ensure that fees got sent to the appropriate place
         suite.query_balance(
-            suite.whale_lair_addr.to_string(),
+            suite.bonding_manager_addr.to_string(),
             "uusd".to_string(),
             |amt| {
                 assert_eq!(amt.unwrap().amount.u128(), 2000 + 4 * 2);
             },
         );
         suite.query_balance(
-            suite.whale_lair_addr.to_string(),
+            suite.bonding_manager_addr.to_string(),
             "uwhale".to_string(),
             |amt| {
                 assert_eq!(amt.unwrap().amount.u128(), 0);
             },
         );
         suite.query_balance(
-            suite.whale_lair_addr.to_string(),
+            suite.bonding_manager_addr.to_string(),
             "uluna".to_string(),
             |amt| {
                 assert_eq!(amt.unwrap().amount.u128(), 4 * 2);
@@ -584,6 +593,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -605,6 +616,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -721,6 +734,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -743,6 +758,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -788,7 +805,7 @@ mod router {
                     result.unwrap_err().downcast_ref::<self::ContractError>(),
                     Some(&ContractError::NonConsecutiveSwapOperations {
                         previous_output: "uluna".to_string(),
-                        next_input: "uwhale".to_string()
+                        next_input: "uwhale".to_string(),
                     })
                 );
             },
@@ -876,6 +893,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -897,6 +916,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -1096,6 +1117,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1117,6 +1140,8 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uluna".to_string(),
@@ -1172,7 +1197,7 @@ mod router {
                     result.unwrap_err().downcast_ref::<ContractError>(),
                     Some(&ContractError::MinimumReceiveAssertion {
                         minimum_receive: Uint128::new(975),
-                        swap_amount: Uint128::new(974)
+                        swap_amount: Uint128::new(974),
                     })
                 )
             },
@@ -1604,6 +1629,8 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1815,6 +1842,8 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -2016,6 +2045,8 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -2092,7 +2123,7 @@ mod swapping {
         // Verify fee collection by querying the address of the whale lair and checking its balance
         // Should be 297 uLUNA
         suite.query_balance(
-            suite.whale_lair_addr.to_string(),
+            suite.bonding_manager_addr.to_string(),
             "uluna".to_string(),
             |result| {
                 assert_eq!(result.unwrap().amount, Uint128::from(297u128));
@@ -2225,8 +2256,388 @@ mod ownership {
         );
 
         let config = suite.query_config();
-        assert_ne!(config.whale_lair_addr, initial_config.whale_lair_addr);
+        assert_ne!(
+            config.bonding_manager_addr,
+            initial_config.bonding_manager_addr
+        );
         assert_ne!(config.pool_creation_fee, initial_config.pool_creation_fee);
         assert_ne!(config.feature_toggle, initial_config.feature_toggle);
+    }
+}
+
+mod locking_lp {
+    use cosmwasm_std::{coin, Coin, Decimal, Uint128};
+
+    use white_whale_std::fee::{Fee, PoolFee};
+    use white_whale_std::incentive_manager::Position;
+    use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
+
+    use crate::tests::suite::TestingSuite;
+
+    #[test]
+    fn provide_liquidity_locking_lp_no_lock_position_identifier() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(10_000_000u128, "uwhale".to_string()),
+            coin(10_000_000u128, "uluna".to_string()),
+            coin(10_000u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+
+        // Asset denoms with uwhale and uluna
+        let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
+
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_denoms,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        let contract_addr = suite.pool_manager_addr.clone();
+        let incentive_manager_addr = suite.incentive_manager_addr.clone();
+        let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
+
+        // Lets try to add liquidity
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                Some(86_400u64),
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
+                    assert!(result.unwrap().events.iter().any(|event| {
+                        event.attributes.iter().any(|attr| {
+                            attr.key == "share"
+                                && attr.value
+                                    == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                        .to_string()
+                        })
+                    }));
+                },
+            )
+            .query_all_balances(creator.to_string(), |result| {
+                let balances = result.unwrap();
+                // the lp tokens should have gone to the incentive manager
+                assert!(!balances
+                    .iter()
+                    .any(|coin| { coin.denom == lp_denom.clone() }));
+            })
+            // contract should have 1_000 LP shares (MINIMUM_LIQUIDITY_AMOUNT)
+            .query_all_balances(contract_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom.clone() && coin.amount == MINIMUM_LIQUIDITY_AMOUNT
+                }));
+            })
+            // check the LP went to the incentive manager
+            .query_all_balances(incentive_manager_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom && coin.amount == Uint128::from(999_000u128)
+                }));
+            });
+
+        suite.query_incentive_positions(creator.clone(), None, |result| {
+            let positions = result.unwrap().positions;
+            assert_eq!(positions.len(), 1);
+            assert_eq!(positions[0], Position {
+                identifier: "1".to_string(),
+                lp_asset: Coin{ denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                unlocking_duration: 86_400,
+                open: true,
+                expiring_at: None,
+                receiver: creator.clone(),
+            });
+        });
+
+        // let's do it again, it should create another position on the incentive manager
+
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                Some(200_000u64),
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_all_balances(creator.to_string(), |result| {
+                let balances = result.unwrap();
+                // the lp tokens should have gone to the incentive manager
+                assert!(!balances
+                    .iter()
+                    .any(|coin| { coin.denom == lp_denom.clone() }));
+            })
+            // check the LP went to the incentive manager
+            .query_all_balances(incentive_manager_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom && coin.amount == Uint128::from(1_999_000u128)
+                }));
+            });
+
+        suite.query_incentive_positions(creator.clone(), None, |result| {
+            let positions = result.unwrap().positions;
+            assert_eq!(positions.len(), 2);
+            assert_eq!(positions[0], Position {
+                identifier: "1".to_string(),
+                lp_asset: Coin{ denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                unlocking_duration: 86_400,
+                open: true,
+                expiring_at: None,
+                receiver: creator.clone(),
+            });
+            assert_eq!(positions[1], Position {
+                identifier: "2".to_string(),
+                lp_asset: Coin{ denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_000_000u128) },
+                unlocking_duration: 200_000,
+                open: true,
+                expiring_at: None,
+                receiver: creator.clone(),
+            });
+        });
+    }
+
+    #[test]
+    fn provide_liquidity_locking_lp_reusing_position_identifier() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(10_000_000u128, "uwhale".to_string()),
+            coin(10_000_000u128, "uluna".to_string()),
+            coin(10_000u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+
+        // Asset denoms with uwhale and uluna
+        let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
+
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_denoms,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        let contract_addr = suite.pool_manager_addr.clone();
+        let incentive_manager_addr = suite.incentive_manager_addr.clone();
+        let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
+
+        // Lets try to add liquidity
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                Some(86_400u64),
+                Some("incentive_identifier".to_string()),
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    // Ensure we got 999_000 in the response which is 1_000_000 less the initial liquidity amount
+                    assert!(result.unwrap().events.iter().any(|event| {
+                        event.attributes.iter().any(|attr| {
+                            attr.key == "share"
+                                && attr.value
+                                    == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                        .to_string()
+                        })
+                    }));
+                },
+            )
+            .query_all_balances(creator.to_string(), |result| {
+                let balances = result.unwrap();
+                // the lp tokens should have gone to the incentive manager
+                assert!(!balances
+                    .iter()
+                    .any(|coin| { coin.denom == lp_denom.clone() }));
+            })
+            // contract should have 1_000 LP shares (MINIMUM_LIQUIDITY_AMOUNT)
+            .query_all_balances(contract_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom.clone() && coin.amount == MINIMUM_LIQUIDITY_AMOUNT
+                }));
+            })
+            // check the LP went to the incentive manager
+            .query_all_balances(incentive_manager_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom && coin.amount == Uint128::from(999_000u128)
+                }));
+            });
+
+        suite.query_incentive_positions(creator.clone(), None, |result| {
+            let positions = result.unwrap().positions;
+            assert_eq!(positions.len(), 1);
+            assert_eq!(positions[0], Position {
+                identifier: "incentive_identifier".to_string(),
+                lp_asset: Coin{ denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                unlocking_duration: 86_400,
+                open: true,
+                expiring_at: None,
+                receiver: creator.clone(),
+            });
+        });
+
+        // let's do it again, reusing the same incentive identifier
+
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                Some(200_000u64),
+                Some("incentive_identifier".to_string()),
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_all_balances(creator.to_string(), |result| {
+                let balances = result.unwrap();
+                // the lp tokens should have gone to the incentive manager
+                assert!(!balances
+                    .iter()
+                    .any(|coin| { coin.denom == lp_denom.clone() }));
+            })
+            // check the LP went to the incentive manager
+            .query_all_balances(incentive_manager_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert!(balances.iter().any(|coin| {
+                    coin.denom == lp_denom && coin.amount == Uint128::from(1_999_000u128)
+                }));
+            });
+
+        suite.query_incentive_positions(creator.clone(), None, |result| {
+            let positions = result.unwrap().positions;
+            // the position should be updated
+            assert_eq!(positions.len(), 1);
+            assert_eq!(positions[0], Position {
+                identifier: "incentive_identifier".to_string(),
+                lp_asset: Coin{ denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_999_000u128) },
+                unlocking_duration: 86_400,
+                open: true,
+                expiring_at: None,
+                receiver: creator.clone(),
+            });
+        });
     }
 }

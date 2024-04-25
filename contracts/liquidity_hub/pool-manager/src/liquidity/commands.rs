@@ -1,4 +1,6 @@
-use cosmwasm_std::{BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{
+    coins, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+};
 use white_whale_std::pool_network::asset::PairType;
 
 use crate::{
@@ -20,9 +22,7 @@ pub const MAX_ASSETS_PER_POOL: usize = 4;
 
 // todo allow providing liquidity with a single asset
 
-//todo allow passing an optional locking period for the LP once the liquidity is provided, so tokens
-// are locked in the incentive manager
-
+#[allow(clippy::too_many_arguments)]
 pub fn provide_liquidity(
     deps: DepsMut,
     env: Env,
@@ -30,6 +30,8 @@ pub fn provide_liquidity(
     slippage_tolerance: Option<Decimal>,
     receiver: Option<String>,
     pair_identifier: String,
+    unlocking_duration: Option<u64>,
+    lock_position_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
     // check if the deposit feature is enabled
@@ -145,12 +147,40 @@ pub fn provide_liquidity(
     // mint LP token to sender
     let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
 
-    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-        liquidity_token,
-        &info.sender,
-        &env.contract.address,
-        share,
-    )?);
+    // if the unlocking duration is set, lock the LP tokens in the incentive manager
+    if let Some(unlocking_duration) = unlocking_duration {
+        // mint the lp tokens to the contract
+        messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+            liquidity_token.clone(),
+            &env.contract.address,
+            &env.contract.address,
+            share,
+        )?);
+
+        // lock the lp tokens in the incentive manager on behalf of the receiver
+        messages.push(
+            wasm_execute(
+                config.incentive_manager_addr,
+                &white_whale_std::incentive_manager::ExecuteMsg::ManagePosition {
+                    action: white_whale_std::incentive_manager::PositionAction::Fill {
+                        identifier: lock_position_identifier,
+                        unlocking_duration,
+                        receiver: Some(receiver.clone()),
+                    },
+                },
+                coins(share.u128(), liquidity_token),
+            )?
+            .into(),
+        );
+    } else {
+        // if not, just mint the LP tokens to the receiver
+        messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+            liquidity_token,
+            &info.sender,
+            &env.contract.address,
+            share,
+        )?);
+    }
 
     pair.assets = pool_assets.clone();
     PAIRS.save(deps.storage, &pair_identifier, &pair)?;

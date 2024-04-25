@@ -108,7 +108,7 @@ pub fn create_pair(
 
     // send pair creation fee to whale lair i.e the new fee_collector
     messages.push(fill_rewards_msg(
-        config.whale_lair_addr.into_string(),
+        config.bonding_manager_addr.into_string(),
         creation_fee,
     )?);
 
