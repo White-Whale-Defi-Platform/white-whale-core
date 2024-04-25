@@ -1,6 +1,6 @@
 [package]
 name = "incentive"
-version = "1.0.8"
+version = "1.0.9"
 authors = ["kaimen-sano <kaimen_sano@protonmail.com>"]
 edition.workspace = true
 description = "An incentive manager for an LP token"

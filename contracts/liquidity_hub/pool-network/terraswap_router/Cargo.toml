@@ -1,6 +1,6 @@
 [package]
 name = "terraswap-router"
-version = "1.1.1"
+version = "1.1.2"
 authors = [
   "Terraform Labs, PTE.",
   "DELIGHT LABS",
