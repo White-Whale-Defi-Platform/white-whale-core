@@ -3,11 +3,15 @@
   "title": "InstantiateMsg",
   "type": "object",
   "required": [
-    "fee_collector_addr",
+    "bonding_manager_addr",
+    "incentive_manager_addr",
     "pool_creation_fee"
   ],
   "properties": {
-    "fee_collector_addr": {
+    "bonding_manager_addr": {
+      "type": "string"
+    },
+    "incentive_manager_addr": {
       "type": "string"
     },
     "pool_creation_fee": {

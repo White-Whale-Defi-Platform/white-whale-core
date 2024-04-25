@@ -34,19 +34,33 @@
     "Config": {
       "type": "object",
       "required": [
+        "bonding_manager_addr",
         "feature_toggle",
-        "pool_creation_fee",
-        "whale_lair_addr"
+        "incentive_manager_addr",
+        "pool_creation_fee"
       ],
       "properties": {
+        "bonding_manager_addr": {
+          "description": "The address of the bonding manager contract.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
         "feature_toggle": {
           "$ref": "#/definitions/FeatureToggle"
         },
+        "incentive_manager_addr": {
+          "description": "The address of the incentive manager contract.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Addr"
+            }
+          ]
+        },
         "pool_creation_fee": {
           "$ref": "#/definitions/Coin"
-        },
-        "whale_lair_addr": {
-          "$ref": "#/definitions/Addr"
         }
       },
       "additionalProperties": false

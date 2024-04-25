@@ -7,11 +7,15 @@
     "title": "InstantiateMsg",
     "type": "object",
     "required": [
-      "fee_collector_addr",
+      "bonding_manager_addr",
+      "incentive_manager_addr",
       "pool_creation_fee"
     ],
     "properties": {
-      "fee_collector_addr": {
+      "bonding_manager_addr": {
+        "type": "string"
+      },
+      "incentive_manager_addr": {
         "type": "string"
       },
       "pool_creation_fee": {
@@ -105,6 +109,13 @@
               "pair_identifier"
             ],
             "properties": {
+              "lock_position_identifier": {
+                "description": "The identifier of the position to lock the LP tokens in the incentive manager, if any.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "pair_identifier": {
                 "type": "string"
               },
@@ -123,6 +134,15 @@
                     "type": "null"
                   }
                 ]
+              },
+              "unlocking_duration": {
+                "description": "The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed, the tokens will not be locked and the LP tokens will be returned to the user.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
@@ -1033,19 +1053,33 @@
         "Config": {
           "type": "object",
           "required": [
+            "bonding_manager_addr",
             "feature_toggle",
-            "pool_creation_fee",
-            "whale_lair_addr"
+            "incentive_manager_addr",
+            "pool_creation_fee"
           ],
           "properties": {
+            "bonding_manager_addr": {
+              "description": "The address of the bonding manager contract.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
+            },
             "feature_toggle": {
               "$ref": "#/definitions/FeatureToggle"
             },
+            "incentive_manager_addr": {
+              "description": "The address of the incentive manager contract.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Addr"
+                }
+              ]
+            },
             "pool_creation_fee": {
               "$ref": "#/definitions/Coin"
-            },
-            "whale_lair_addr": {
-              "$ref": "#/definitions/Addr"
             }
           },
           "additionalProperties": false
