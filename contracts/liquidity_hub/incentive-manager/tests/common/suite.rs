@@ -201,7 +201,7 @@ impl TestingSuite {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate(
         &mut self,
-        whale_lair_addr: String,
+        bonding_manager_addr: String,
         epoch_manager_addr: String,
         create_incentive_fee: Coin,
         max_concurrent_incentives: u32,
@@ -213,7 +213,7 @@ impl TestingSuite {
         let msg = InstantiateMsg {
             owner: self.creator().to_string(),
             epoch_manager_addr,
-            whale_lair_addr: bonding_manager_addr,
+            bonding_manager_addr,
             create_incentive_fee,
             max_concurrent_incentives,
             max_incentive_epoch_buffer,
@@ -244,7 +244,7 @@ impl TestingSuite {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn instantiate_err(
         &mut self,
-        whale_lair_addr: String,
+        bonding_manager_addr: String,
         epoch_manager_addr: String,
         create_incentive_fee: Coin,
         max_concurrent_incentives: u32,
@@ -257,7 +257,7 @@ impl TestingSuite {
         let msg = InstantiateMsg {
             owner: self.creator().to_string(),
             epoch_manager_addr,
-            whale_lair_addr: bonding_manager_addr,
+            bonding_manager_addr,
             create_incentive_fee,
             max_concurrent_incentives,
             max_incentive_epoch_buffer,

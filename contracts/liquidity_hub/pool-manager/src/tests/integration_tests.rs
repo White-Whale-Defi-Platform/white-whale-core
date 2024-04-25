@@ -1278,6 +1278,8 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -1295,6 +1297,8 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "uluna-uusd".to_string(),
+                None,
+                None,
                 vec![
                     Coin {
                         denom: "uluna".to_string(),
@@ -1436,6 +1440,8 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -1453,6 +1459,8 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "uluna-uusd".to_string(),
+                None,
+                None,
                 vec![
                     Coin {
                         denom: "uluna".to_string(),
