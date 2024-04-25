@@ -184,6 +184,8 @@ pub enum ExecuteMsg {
     // },
     /// Adds swap routes to the router.
     AddSwapRoutes { swap_routes: Vec<SwapRoute> },
+    /// Removes swap routes from the router.
+    RemoveSwapRoutes { swap_routes: Vec<SwapRoute> },
     /// Updates the configuration of the contract.
     /// If a field is not specified (i.e., set to `None`), it will not be modified.
     UpdateConfig {
@@ -216,7 +218,6 @@ pub enum QueryMsg {
     #[returns(SimulationResponse)]
     Simulation {
         offer_asset: Coin,
-        ask_asset: Coin,
         pair_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
@@ -239,11 +240,11 @@ pub enum QueryMsg {
     SwapRoutes {},
 
     // /// Simulates swap operations.
-    // #[returns(SimulateSwapOperationsResponse)]
-    // SimulateSwapOperations {
-    //     offer_amount: Uint128,
-    //     operations: Vec<SwapOperation>,
-    // },
+    #[returns(SimulateSwapOperationsResponse)]
+    SimulateSwapOperations {
+        offer_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
     // /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
     // /// is needed to perform the swap.
     // #[returns(SimulateSwapOperationsResponse)]
@@ -253,6 +254,12 @@ pub enum QueryMsg {
     // },
     #[returns(PairInfoResponse)]
     Pair { pair_identifier: String },
+    /// Retrieves the creator of the swap routes that can then remove them.
+    #[returns(SwapRouteCreatorResponse)]
+    SwapRouteCreator {
+        offer_asset_denom: String,
+        ask_asset_denom: String,
+    },
 }
 
 #[cw_serde]
@@ -311,4 +318,15 @@ pub struct FeatureToggle {
     pub withdrawals_enabled: bool,
     pub deposits_enabled: bool,
     pub swaps_enabled: bool,
+}
+
+// We define a custom struct for each query response
+#[cw_serde]
+pub struct SimulateSwapOperationsResponse {
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct SwapRouteCreatorResponse {
+    pub creator: String,
 }

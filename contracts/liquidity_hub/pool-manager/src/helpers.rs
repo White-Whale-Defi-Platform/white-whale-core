@@ -2,13 +2,18 @@ use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Coin, Decimal, Decimal256, StdError, StdResult, Storage, Uint128, Uint256};
+use cosmwasm_std::{
+    coin, Addr, Coin, Decimal, Decimal256, Deps, Env, StdError, StdResult, Storage, Uint128,
+    Uint256,
+};
 
 use white_whale_std::fee::PoolFee;
+use white_whale_std::pool_manager::{SimulateSwapOperationsResponse, SwapOperation};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
+use crate::queries::query_simulation;
 
 pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
@@ -577,4 +582,53 @@ pub fn instantiate_fees(
             },
         ],
     )
+}
+
+/// This function compares the address of the message sender with the contract admin
+/// address. This provides a convenient way to verify if the sender
+/// is the admin in a single line.
+pub fn assert_admin(deps: Deps, env: &Env, sender: &Addr) -> Result<(), ContractError> {
+    let contract_info = deps
+        .querier
+        .query_wasm_contract_info(env.contract.address.clone())?;
+    if let Some(admin) = contract_info.admin {
+        if sender != deps.api.addr_validate(admin.as_str())? {
+            return Err(ContractError::Unauthorized {});
+        }
+    }
+    Ok(())
+}
+
+/// This function iterates over the swap operations, simulates each swap
+/// to get the final amount after all the swaps.
+pub fn simulate_swap_operations(
+    deps: Deps,
+    offer_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided {});
+    }
+
+    let mut amount = offer_amount;
+
+    for operation in operations.into_iter() {
+        match operation {
+            SwapOperation::WhaleSwap {
+                token_in_denom,
+                token_out_denom: _,
+                pool_identifier,
+            } => {
+                let res = query_simulation(
+                    deps,
+                    coin(offer_amount.u128(), token_in_denom),
+                    pool_identifier,
+                )?;
+                amount = res.return_amount;
+            }
+        }
+    }
+
+    Ok(SimulateSwapOperationsResponse { amount })
 }

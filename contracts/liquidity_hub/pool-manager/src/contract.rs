@@ -1,5 +1,7 @@
 use crate::error::ContractError;
-use crate::queries::{get_swap_route, get_swap_routes};
+use crate::helpers::simulate_swap_operations;
+use crate::queries::{get_swap_route, get_swap_route_creator, get_swap_routes};
+use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
@@ -146,7 +148,12 @@ pub fn execute(
         //         max_spread,
         //     )
         // }
-        ExecuteMsg::AddSwapRoutes { swap_routes: _ } => Ok(Response::new()),
+        ExecuteMsg::AddSwapRoutes { swap_routes } => {
+            add_swap_routes(deps, info.sender, swap_routes)
+        }
+        ExecuteMsg::RemoveSwapRoutes { swap_routes } => {
+            remove_swap_routes(deps, info.sender, swap_routes)
+        }
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
             pool_creation_fee,
@@ -191,13 +198,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::Simulation {
             offer_asset,
-            ask_asset,
             pair_identifier,
         } => Ok(to_json_binary(&queries::query_simulation(
             deps,
-            env,
             offer_asset,
-            ask_asset,
             pair_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {
@@ -211,15 +215,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             offer_asset,
             pair_identifier,
         )?)?),
-        // QueryMsg::SimulateSwapOperations {
-        //     offer_amount,
-        //     operations,
-        // } => Ok(to_binary(&queries::simulate_swap_operations(
-        //     deps,
-        //     env,
-        //     offer_amount,
-        //     operations,
-        // )?)?),
+        QueryMsg::SimulateSwapOperations {
+            offer_amount,
+            operations,
+        } => Ok(to_json_binary(&simulate_swap_operations(
+            deps,
+            offer_amount,
+            operations,
+        )?)?),
         // QueryMsg::ReverseSimulateSwapOperations {
         //     ask_amount,
         //     operations,
@@ -239,6 +242,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(&PairInfoResponse {
             pair_info: PAIRS.load(deps.storage, &pair_identifier)?,
         })?),
+        QueryMsg::SwapRouteCreator {
+            offer_asset_denom,
+            ask_asset_denom,
+        } => Ok(to_json_binary(&get_swap_route_creator(
+            deps,
+            offer_asset_denom,
+            ask_asset_denom,
+        )?)?),
     }
 }
 

@@ -2,10 +2,15 @@ use cosmwasm_std::{
     attr, coin, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo,
     Response, Uint128, WasmMsg,
 };
-use white_whale_std::pool_manager::SwapOperation;
+use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
 use white_whale_std::whale_lair;
 
-use crate::{state::MANAGER_CONFIG, swap::perform_swap::perform_swap, ContractError};
+use crate::{
+    helpers::simulate_swap_operations,
+    state::{SwapOperations, MANAGER_CONFIG, SWAP_ROUTES},
+    swap::perform_swap::perform_swap,
+    ContractError,
+};
 
 /// Checks that the output of each [`SwapOperation`] acts as the input of the next swap.
 fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError> {
@@ -78,10 +83,7 @@ pub fn execute_swap_operations(
     for operation in operations {
         match operation {
             SwapOperation::WhaleSwap {
-                // TODO: do we need to use token_in_denom?
-                token_in_denom: _,
-                pool_identifier,
-                ..
+                pool_identifier, ..
             } => {
                 // inside assert_operations() we have already checked that
                 // the output of each swap is the input of the next swap.
@@ -163,4 +165,78 @@ pub fn execute_swap_operations(
             attr("return_amount", receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))
+}
+
+pub fn add_swap_routes(
+    deps: DepsMut,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        simulate_swap_operations(
+            deps.as_ref(),
+            Uint128::one(),
+            swap_route.clone().swap_operations,
+        )
+        .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
+
+        let swap_route_key =
+            SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
+
+        // Add the swap route if it does not exist, otherwise return an error
+        if swap_route_key.may_load(deps.storage)?.is_some() {
+            return Err(ContractError::SwapRouteAlreadyExists {
+                offer_asset: swap_route.offer_asset_denom,
+                ask_asset: swap_route.ask_asset_denom,
+            });
+        }
+        swap_route_key.save(
+            deps.storage,
+            &SwapOperations {
+                creator: sender.to_string(),
+                swap_operations: swap_route.clone().swap_operations,
+            },
+        )?;
+
+        attributes.push(attr("swap_route", swap_route.clone().to_string()));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "add_swap_routes")
+        .add_attributes(attributes))
+}
+
+pub fn remove_swap_routes(
+    deps: DepsMut,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        let swap_route_key =
+            SWAP_ROUTES.key((&swap_route.offer_asset_denom, &swap_route.ask_asset_denom));
+
+        // Remove the swap route if it exists
+        if swap_route_key.has(deps.storage) {
+            // only contract owner or route creator can remove the swap route
+            let creator = swap_route_key.load(deps.storage)?.creator;
+            if !cw_ownable::is_owner(deps.storage, &sender)? && sender != creator {
+                return Err(ContractError::Unauthorized {});
+            }
+            swap_route_key.remove(deps.storage);
+            attributes.push(attr("swap_route", swap_route.clone().to_string()));
+        } else {
+            return Err(ContractError::NoSwapRouteForAssets {
+                offer_asset: swap_route.offer_asset_denom,
+                ask_asset: swap_route.ask_asset_denom,
+            });
+        }
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "remove_swap_routes")
+        .add_attributes(attributes))
 }

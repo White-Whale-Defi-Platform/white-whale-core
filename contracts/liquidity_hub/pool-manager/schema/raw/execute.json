@@ -246,6 +246,31 @@
       "additionalProperties": false
     },
     {
+      "description": "Removes swap routes from the router.",
+      "type": "object",
+      "required": [
+        "remove_swap_routes"
+      ],
+      "properties": {
+        "remove_swap_routes": {
+          "type": "object",
+          "required": [
+            "swap_routes"
+          ],
+          "properties": {
+            "swap_routes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SwapRoute"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Updates the configuration of the contract. If a field is not specified (i.e., set to `None`), it will not be modified.",
       "type": "object",
       "required": [
