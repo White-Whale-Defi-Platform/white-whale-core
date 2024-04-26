@@ -43,7 +43,7 @@ pub fn instantiate(
 
     let config = Config {
         epoch_manager_addr: deps.api.addr_validate(&msg.epoch_manager_addr)?,
-        whale_lair_addr: deps.api.addr_validate(&msg.whale_lair_addr)?,
+        whale_lair_addr: deps.api.addr_validate(&msg.bonding_manager_addr)?,
         create_incentive_fee: msg.create_incentive_fee,
         max_concurrent_incentives: msg.max_concurrent_incentives,
         max_incentive_epoch_buffer: msg.max_incentive_epoch_buffer,

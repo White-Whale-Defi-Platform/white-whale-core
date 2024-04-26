@@ -14,7 +14,7 @@ pub struct InstantiateMsg {
     /// The epoch manager address, where the epochs are managed
     pub epoch_manager_addr: String,
     /// The whale lair address, where protocol fees are distributed
-    pub whale_lair_addr: String,
+    pub bonding_manager_addr: String,
     /// The fee that must be paid to create an incentive.
     pub create_incentive_fee: Coin,
     /// The maximum amount of incentives that can exist for a single LP token at a time.
