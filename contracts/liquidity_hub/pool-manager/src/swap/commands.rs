@@ -63,7 +63,7 @@ pub fn swap(
     }
     if !swap_result.protocol_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: config.whale_lair_addr.to_string(),
+            contract_addr: config.bonding_manager_addr.to_string(),
             msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewardsCoin {
             })?,
             funds: vec![swap_result.protocol_fee_asset.clone()],
@@ -73,7 +73,7 @@ pub fn swap(
     // todo remove, this stays within the pool
     if !swap_result.swap_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.whale_lair_addr.to_string(),
+            to_address: config.bonding_manager_addr.to_string(),
             amount: vec![swap_result.swap_fee_asset.clone()],
         }));
     }

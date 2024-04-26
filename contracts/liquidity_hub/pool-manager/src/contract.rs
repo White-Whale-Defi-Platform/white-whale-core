@@ -27,7 +27,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config: Config = Config {
-        whale_lair_addr: deps.api.addr_validate(&msg.fee_collector_addr)?,
+        bonding_manager_addr: deps.api.addr_validate(&msg.bonding_manager_addr)?,
+        incentive_manager_addr: deps.api.addr_validate(&msg.incentive_manager_addr)?,
         // We must set a creation fee on instantiation to prevent spamming of pools
         pool_creation_fee: msg.pool_creation_fee,
         feature_toggle: FeatureToggle {
@@ -72,6 +73,8 @@ pub fn execute(
             slippage_tolerance,
             receiver,
             pair_identifier,
+            unlocking_duration,
+            lock_position_identifier,
         } => liquidity::commands::provide_liquidity(
             deps,
             env,
@@ -79,6 +82,8 @@ pub fn execute(
             slippage_tolerance,
             receiver,
             pair_identifier,
+            unlocking_duration,
+            lock_position_identifier,
         ),
         ExecuteMsg::Swap {
             offer_asset,
