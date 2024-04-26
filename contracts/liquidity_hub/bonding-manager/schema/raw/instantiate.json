@@ -4,6 +4,7 @@
   "type": "object",
   "required": [
     "bonding_assets",
+    "distribution_denom",
     "grace_period",
     "growth_rate",
     "unbonding_period"
@@ -15,6 +16,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "distribution_denom": {
+      "description": "Denom to be swapped to and rewarded",
+      "type": "string"
     },
     "grace_period": {
       "description": "Grace period the maximum age of a bucket before fees are forwarded from it",

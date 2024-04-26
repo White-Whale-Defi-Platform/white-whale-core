@@ -4,9 +4,11 @@
   "type": "object",
   "required": [
     "bonding_assets",
+    "distribution_denom",
     "grace_period",
     "growth_rate",
     "owner",
+    "pool_manager_addr",
     "unbonding_period"
   ],
   "properties": {
@@ -16,6 +18,10 @@
       "items": {
         "type": "string"
       }
+    },
+    "distribution_denom": {
+      "description": "Distribution denom for the rewards",
+      "type": "string"
     },
     "grace_period": {
       "description": "The duration of the grace period in epochs, i.e. how many expired epochs can be claimed",
@@ -35,6 +41,14 @@
     },
     "owner": {
       "description": "Owner of the contract.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Addr"
+        }
+      ]
+    },
+    "pool_manager_addr": {
+      "description": "Pool Manager contract address for swapping",
       "allOf": [
         {
           "$ref": "#/definitions/Addr"

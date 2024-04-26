@@ -206,7 +206,8 @@ impl TestingRobot {
             .unwrap();
 
         let msg = white_whale_std::pool_manager::InstantiateMsg {
-            fee_collector_addr: bonding_manager_addr.clone().to_string(),
+            bonding_manager_addr: bonding_manager_addr.clone().to_string(),
+            incentive_manager_addr: bonding_manager_addr.clone().to_string(),
             pool_creation_fee: Coin {
                 amount: Uint128::from(1_000u128),
                 denom: "uwhale".to_string(),
@@ -611,6 +612,8 @@ impl TestingRobot {
             pair_identifier,
             slippage_tolerance: None,
             receiver: None,
+            lock_position_identifier: None,
+            unlocking_duration: None,
         };
 
         result(

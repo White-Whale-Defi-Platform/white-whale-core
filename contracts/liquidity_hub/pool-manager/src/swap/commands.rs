@@ -64,8 +64,7 @@ pub fn swap(
     if !swap_result.protocol_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: config.bonding_manager_addr.to_string(),
-            msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewardsCoin {
-            })?,
+            msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewardsCoin {})?,
             funds: vec![swap_result.protocol_fee_asset.clone()],
         }));
     }

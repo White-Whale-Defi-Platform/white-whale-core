@@ -82,7 +82,7 @@ pub struct GlobalIndex {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    /// Denom to be swapped to and rewarded 
+    /// Denom to be swapped to and rewarded
     pub distribution_denom: String,
     /// Unbonding period in nanoseconds.
     pub unbonding_period: Uint64,

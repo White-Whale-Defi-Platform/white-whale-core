@@ -70,7 +70,6 @@ fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock"
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
-epoch-manager = { path = "./contracts/liquidity_hub/epoch-manager" }
 incentive-manager = { path = "./contracts/liquidity_hub/incentive-manager" }
 
 [workspace.metadata.dylint]
