@@ -1,5 +1,8 @@
+use std::vec;
+
 use cosmwasm_std::{coin, Coin, Decimal, Uint128};
 use white_whale_std::fee::{Fee, PoolFee};
+use white_whale_std::pool_manager::SwapRoute;
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
 use crate::tests::robot::TestingRobot;
@@ -38,7 +41,7 @@ fn test_fill_rewards_from_pool_manager() {
             pool_fees.clone(),
             white_whale_std::pool_network::asset::PairType::ConstantProduct,
             Some("whale-uusdc".to_string()),
-            vec![coin(1000, "uusdc")],
+            vec![coin(1000, "uwhale")],
             |result| {
                 result.unwrap();
             },
@@ -71,6 +74,20 @@ fn test_fill_rewards_from_pool_manager() {
         },
     );
 
+    // Lets try to add a swap route
+    let swap_route_1 = SwapRoute {
+        offer_asset_denom: "uwhale".to_string(),
+        ask_asset_denom: "uusd".to_string(),
+        swap_operations: vec![white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+            token_in_denom: "uusdc".to_string(),
+            token_out_denom: "uwhale".to_string(),
+            pool_identifier: "whale-uusdc".to_string(),
+        }],
+    };
+    robot.add_swap_routes(creator.clone(), vec![swap_route_1], |res| {
+        println!("{:?}", res.unwrap());
+    });
+
     robot.swap(
         creator.clone(),
         coin(1_000u128, "uusdc"),
@@ -94,7 +111,8 @@ fn test_fill_rewards_from_pool_manager() {
         robot.bonding_manager_addr.clone(),
         |res| {
             // 1_000u128 - 9u128 swap_fee - 9u128 protocol_fee where protocol_fee and swap_fee are 1% of the swap amount
-            assert_eq!(res, Uint128::from(18u128));
+            // + 1_000u128 uwhale pool creation fee
+            assert_eq!(res, Uint128::from(1018u128));
         },
     );
 
@@ -104,7 +122,7 @@ fn test_fill_rewards_from_pool_manager() {
         pool_fees.clone(),
         white_whale_std::pool_network::asset::PairType::ConstantProduct,
         Some("whale-uusdc-second".to_string()),
-        vec![coin(1000, "uusdc")],
+        vec![coin(1000, "uwhale")],
         |result| {
             result.unwrap();
         },
@@ -115,7 +133,7 @@ fn test_fill_rewards_from_pool_manager() {
         "uwhale".to_string(),
         robot.bonding_manager_addr.clone(),
         |res| {
-            assert_eq!(res, Uint128::from(1017u128));
+            assert_eq!(res, Uint128::from(2018u128));
         },
     );
 
@@ -126,7 +144,7 @@ fn test_fill_rewards_from_pool_manager() {
         pool_fees,
         white_whale_std::pool_network::asset::PairType::ConstantProduct,
         Some("whale-uusdc-third".to_string()),
-        vec![coin(1000, "uusdc")],
+        vec![coin(1000, "uwhale")],
         |result| {
             result.unwrap();
         },
@@ -136,7 +154,7 @@ fn test_fill_rewards_from_pool_manager() {
         "uwhale".to_string(),
         robot.bonding_manager_addr.clone(),
         |res| {
-            assert_eq!(res, Uint128::from(2016u128));
+            assert_eq!(res, Uint128::from(3018u128));
         },
     );
 }

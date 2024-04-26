@@ -16,6 +16,8 @@ fn test_instantiate_successfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),

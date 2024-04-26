@@ -209,7 +209,7 @@ impl TestingRobot {
             fee_collector_addr: bonding_manager_addr.clone().to_string(),
             pool_creation_fee: Coin {
                 amount: Uint128::from(1_000u128),
-                denom: "uusdc".to_string(),
+                denom: "uwhale".to_string(),
             },
         };
 
@@ -228,12 +228,11 @@ impl TestingRobot {
                 Some(creator.into_string()),
             )
             .unwrap();
-        // Now set the fee distributor on the config of the whale lair
-        // So that we can check claims before letting them bond/unbond
         let msg = ExecuteMsg::UpdateConfig {
+            pool_manager_addr: Some(pool_manager_addr.clone().to_string()),
+            growth_rate: None,
             owner: None,
             unbonding_period: None,
-            growth_rate: None,
         };
         self.app
             .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
@@ -356,12 +355,14 @@ impl TestingRobot {
         &mut self,
         sender: Addr,
         owner: Option<String>,
+        pool_manager_addr: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
             owner,
+            pool_manager_addr,
             unbonding_period,
             growth_rate,
         };
@@ -398,6 +399,7 @@ fn instantiate_contract(
 ) -> anyhow::Result<Addr, Error> {
     let msg = InstantiateMsg {
         unbonding_period,
+        distribution_denom: "uwhale".to_string(),
         growth_rate,
         bonding_assets,
         grace_period: Uint64::new(21),
@@ -644,6 +646,23 @@ impl TestingRobot {
         result(
             self.app
                 .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn add_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
         );
 
         self

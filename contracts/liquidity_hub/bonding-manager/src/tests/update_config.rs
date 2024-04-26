@@ -13,6 +13,8 @@ fn test_update_config_successfully() {
         .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
@@ -20,6 +22,7 @@ fn test_update_config_successfully() {
         })
         .update_config(
             owner.clone(),
+            None,
             None,
             Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
@@ -30,6 +33,8 @@ fn test_update_config_successfully() {
         )
         .assert_config(Config {
             owner: owner.clone(),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
             grace_period: Uint64::new(21u64),
@@ -39,11 +44,14 @@ fn test_update_config_successfully() {
             owner,
             Some("new_owner".to_string()),
             None,
+            None,
             Some(Decimal::one()),
             |_res| {},
         )
         .assert_config(Config {
             owner: Addr::unchecked("new_owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
@@ -59,6 +67,8 @@ fn test_update_config_unsuccessfully() {
         .instantiate_default()
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
@@ -67,6 +77,7 @@ fn test_update_config_unsuccessfully() {
         .update_config(
             Addr::unchecked("unauthorized"),
             None,
+            None,
             Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
                 Uint128::new(1u128),
@@ -82,6 +93,8 @@ fn test_update_config_unsuccessfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
@@ -89,6 +102,7 @@ fn test_update_config_unsuccessfully() {
         })
         .update_config(
             Addr::unchecked("owner"),
+            None,
             None,
             Some(Uint64::new(500u64)),
             Some(Decimal::from_ratio(
@@ -105,6 +119,8 @@ fn test_update_config_unsuccessfully() {
         )
         .assert_config(Config {
             owner: Addr::unchecked("owner"),
+            pool_manager_addr: Addr::unchecked("contract2"),
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),

@@ -182,7 +182,7 @@ fn test_bond_successfully() {
         pool_fees.clone(),
         white_whale_std::pool_network::asset::PairType::ConstantProduct,
         Some("whale-uusdc".to_string()),
-        vec![coin(1000, "uusdc")],
+        vec![coin(1000, "uwhale")],
         |result| {
             result.unwrap();
         },
@@ -240,6 +240,13 @@ fn test_bond_successfully() {
         });
 
     robot.claim(sender, |res| {
-        println!("{:?}", res);
+        let result = res.unwrap();
+        println!("{:?}", result);
+        assert!(result.events.iter().any(|event| {
+            event
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "amount" && attr.value == "390uwhale")
+        }));
     });
 }

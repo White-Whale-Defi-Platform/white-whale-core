@@ -14,7 +14,6 @@ pub mod pool_network;
 pub mod token_factory;
 
 pub mod bonding_manager;
-pub mod coin;
 
 #[cfg(any(
     feature = "token_factory",

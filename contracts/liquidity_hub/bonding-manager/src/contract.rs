@@ -1,4 +1,4 @@
-use cosmwasm_std::{ensure, entry_point, Coin};
+use cosmwasm_std::{ensure, entry_point, Addr, Coin};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::PaymentError;
@@ -38,6 +38,8 @@ pub fn instantiate(
 
     let config = Config {
         owner: deps.api.addr_validate(info.sender.as_str())?,
+        pool_manager_addr: Addr::unchecked(""),
+        distribution_denom: msg.distribution_denom,
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
         bonding_assets: msg.bonding_assets.clone(),
@@ -116,9 +118,17 @@ pub fn execute(
         }
         ExecuteMsg::UpdateConfig {
             owner,
+            pool_manager_addr,
             unbonding_period,
             growth_rate,
-        } => commands::update_config(deps, info, owner, unbonding_period, growth_rate),
+        } => commands::update_config(
+            deps,
+            info,
+            owner,
+            pool_manager_addr,
+            unbonding_period,
+            growth_rate,
+        ),
         ExecuteMsg::FillRewards { .. } => commands::fill_rewards(deps, env, info),
         ExecuteMsg::FillRewardsCoin => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),

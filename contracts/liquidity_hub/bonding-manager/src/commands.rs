@@ -1,9 +1,7 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo,
-    Order, Response, StdError, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
+    ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
+    StdError, StdResult, Timestamp, Uint128, Uint64,
 };
-use white_whale_std::constants::LP_SYMBOL;
-use white_whale_std::pool_manager::PairInfoResponse;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::Bond;
@@ -188,6 +186,7 @@ pub(crate) fn update_config(
     deps: DepsMut,
     info: MessageInfo,
     owner: Option<String>,
+    pool_manager_addr: Option<String>,
     unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
 ) -> Result<Response, ContractError> {
@@ -195,6 +194,10 @@ pub(crate) fn update_config(
     let mut config = CONFIG.load(deps.storage)?;
     if config.owner != info.sender {
         return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(pool_manager_addr) = pool_manager_addr {
+        config.pool_manager_addr = deps.api.addr_validate(&pool_manager_addr)?;
     }
 
     if let Some(owner) = owner {
@@ -215,6 +218,7 @@ pub(crate) fn update_config(
     Ok(Response::default().add_attributes(vec![
         ("action", "update_config".to_string()),
         ("owner", config.owner.to_string()),
+        ("pool_manager_addr", config.pool_manager_addr.to_string()),
         ("unbonding_period", config.unbonding_period.to_string()),
         ("growth_rate", config.growth_rate.to_string()),
     ]))
@@ -320,93 +324,45 @@ pub(crate) fn fill_rewards(
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
     {
-        // Use aggregate_coins to get the total amount of new coins
         // Finding the most recent EpochID
         let most_recent_epoch_id = EPOCHS
             .keys(deps.storage, None, None, Order::Descending)
             .next()
             .unwrap()?;
 
+        let config = CONFIG.load(deps.storage)?;
+        let distribution_denom = config.distribution_denom.clone();
+
         let mut messages: Vec<CosmosMsg> = vec![];
-        // Verify coins are coming
         // swap non-whale to whale
         // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
-        let _lp_tokens = info
+        let mut whale = info
             .funds
             .iter()
-            .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL));
-        // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        // let _pair_identifier = lp_tokens
-        //     .map(|coin| coin.denom.split(".pair.").collect::<Vec<&str>>()[1])
-        //     .next()
-        //     .unwrap();
-
-        // // if LP Tokens ,verify and withdraw then swap to whale
-        // let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier: pair_identifier.to_string() };
-        // messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        //     contract_addr: ,
-        //     msg: to_json_binary(&lp_withdrawal_msg)?,
-        //     funds: vec![],
-        // }));
-
-        let pool_identifier = "whale-uusdc".to_string();
-        let pool_query = white_whale_std::pool_manager::QueryMsg::Pair {
-            pair_identifier: pool_identifier.clone(),
-        };
-        let resp: PairInfoResponse = deps
-            .querier
-            .query_wasm_smart("contract2".to_string(), &pool_query)?;
-        let mut skip_swap = false;
-        // Check pair 'assets' and if either one has 0 amount then don't do swaps
-        resp.pair_info.assets.iter().for_each(|asset| {
-            if asset.amount.is_zero() {
-                skip_swap = true;
-            }
-        });
-        // Suggested method for swaps
-        // Loop over the assets in info.funds
-        // If whale is in the fund object then skip that
-        // Everything else either gets swapped or if its an LP token withdrawn and then swapped
-        // For each swapped coin we need to simulate swap operations and get the route from SwapRoutes
-        // For each swapped coin if there is no funds found in the pool found via SwapRoutes, skip it. e.g newly made pools
-        // Might need to add a reply to the contract as if doing it only in this method we can only save the simulation amount in the state
-        // Alternatively we could add a reply and try to get the actual amount swapped from there.
-
-        if !skip_swap {
-            let swap_operations = vec![white_whale_std::pool_manager::SwapOperation::WhaleSwap {
-                token_in_denom: info.funds[0].denom.to_string(),
-                token_out_denom: "uwhale".to_string(),
-                pool_identifier,
-            }];
-            let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
-                operations: swap_operations,
-                minimum_receive: None,
-                to: None,
-                max_spread: None,
-            };
-            let binary_msg = to_json_binary(&msg)?;
-            let wrapped_msg = WasmMsg::Execute {
-                contract_addr: "contract2".to_string(),
-                msg: binary_msg,
-                funds: info.funds.to_vec(),
-            };
-            messages.push(wrapped_msg.into());
-        }
-        // Note: Might need to convert back to ints and use that for ranking to get the most recent ID
-        // Note: After swap,
-        // TODO: Remove hardcode below after more testing
+            .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+            .unwrap()
+            .to_owned();
+        // Each of these helpers will add messages to the messages vector
+        // and may increment the whale Coin above with the result of the swaps
+        helpers::handle_lp_tokens(&info, &config, &mut messages)?;
+        helpers::swap_coins_to_main_token(
+            info,
+            &deps,
+            config,
+            &mut whale,
+            &distribution_denom,
+            &mut messages,
+        )?;
+        // Add the whale to the funds, the whale figure now should be the result
+        // of all the LP token withdrawals and swaps
+        // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
+        // If this became an issue would could look at replys instead of the query
         EPOCHS.update(
             deps.storage,
             &most_recent_epoch_id,
             |bucket| -> StdResult<_> {
                 let mut bucket = bucket.unwrap_or_default();
-                bucket.available = asset::aggregate_coins(
-                    bucket.available,
-                    vec![Coin {
-                        denom: "uwhale".to_string(),
-                        amount: Uint128::new(1000u128),
-                    }],
-                )?;
+                bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
                 Ok(bucket)
             },
         )?;

@@ -12,6 +12,10 @@ use cosmwasm_std::{
 pub struct Config {
     /// Owner of the contract.
     pub owner: Addr,
+    /// Pool Manager contract address for swapping
+    pub pool_manager_addr: Addr,
+    /// Distribution denom for the rewards
+    pub distribution_denom: String,
     /// Unbonding period in nanoseconds.
     pub unbonding_period: Uint64,
     /// A fraction that controls the effect of time on the weight of a bond. If the growth rate is set
@@ -78,6 +82,8 @@ pub struct GlobalIndex {
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// Denom to be swapped to and rewarded 
+    pub distribution_denom: String,
     /// Unbonding period in nanoseconds.
     pub unbonding_period: Uint64,
     /// Weight grow rate. Needs to be between 0 and 1.
@@ -108,6 +114,7 @@ pub enum ExecuteMsg {
     /// Updates the [Config] of the contract.
     UpdateConfig {
         owner: Option<String>,
+        pool_manager_addr: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
     },
