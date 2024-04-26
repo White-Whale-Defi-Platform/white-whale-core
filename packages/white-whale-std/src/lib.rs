@@ -1,5 +1,6 @@
 pub mod common;
 
+pub mod coin;
 pub mod constants;
 pub mod epoch_manager;
 pub mod fee;

@@ -7,6 +7,7 @@ use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
+use white_whale_std::pool_manager::SwapRoute;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -147,6 +148,15 @@ pub enum ContractError {
 
     #[error("Funds for {denom} were missing when performing swap")]
     MissingNativeSwapFunds { denom: String },
+
+    #[error("Swap route already exists for {offer_asset} - {ask_asset}")]
+    SwapRouteAlreadyExists {
+        offer_asset: String,
+        ask_asset: String,
+    },
+
+    #[error("Invalid swap route: {0}")]
+    InvalidSwapRoute(SwapRoute),
 }
 
 impl From<semver::Error> for ContractError {

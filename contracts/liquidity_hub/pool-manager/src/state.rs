@@ -1,3 +1,4 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Deps;
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, UniqueIndex};
 use white_whale_std::pool_manager::{PairInfo, SwapOperation};
@@ -33,8 +34,15 @@ pub fn get_pair_by_identifier(
         .ok_or(ContractError::UnExistingPair {})
 }
 
-// Swap routes are used to establish defined routes for a given fee token to a desired fee token and is used for fee collection
-pub const SWAP_ROUTES: Map<(&str, &str), Vec<SwapOperation>> = Map::new("swap_routes");
+// Swap routes are used to establish defined routes for a given fee
+// token to a desired fee token and is used for fee collection
+#[cw_serde]
+pub struct SwapOperations {
+    // creator of the swap route, can remove it later
+    pub creator: String,
+    pub swap_operations: Vec<SwapOperation>,
+}
+pub const SWAP_ROUTES: Map<(&str, &str), SwapOperations> = Map::new("swap_routes");
 
 pub use white_whale_std::pool_manager::Config;
 pub const MANAGER_CONFIG: Item<Config> = Item::new("manager_config");

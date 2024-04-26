@@ -317,6 +317,7 @@ mod pair_creation_failures {
 
 mod router {
     use cosmwasm_std::Event;
+    use white_whale_std::pool_manager::{SwapRoute, SwapRouteCreatorResponse};
 
     use super::*;
     #[test]
@@ -1177,6 +1178,353 @@ mod router {
             },
         );
     }
+
+    #[test]
+    fn add_swap_routes() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            extra_fees: vec![],
+        };
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite
+            .instantiate_default()
+            .create_pair(
+                creator.clone(),
+                first_pair,
+                vec![6u8, 6u8],
+                pool_fees.clone(),
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pair(
+                creator.clone(),
+                second_pair,
+                vec![6u8, 6u8],
+                pool_fees,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("uluna-uusd".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                creator.clone(),
+                "uluna-uusd".to_string(),
+                vec![
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                    Coin {
+                        denom: "uusd".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add a swap route
+        let swap_route_1 = SwapRoute {
+            offer_asset_denom: "uwhale".to_string(),
+            ask_asset_denom: "uusd".to_string(),
+            swap_operations: vec![
+                white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                    token_in_denom: "uwhale".to_string(),
+                    token_out_denom: "uluna".to_string(),
+                    pool_identifier: "whale-uluna".to_string(),
+                },
+                white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                    token_in_denom: "uluna".to_string(),
+                    token_out_denom: "uusd".to_string(),
+                    pool_identifier: "uluna-uusd".to_string(),
+                },
+            ],
+        };
+
+        suite.add_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+            assert!(result.unwrap().events.into_iter().any(|attr| {
+                attr.attributes
+                    .iter()
+                    .any(|attr| attr.value == "add_swap_routes")
+            }));
+        });
+
+        // Re-add the same swap route should fail
+        suite.add_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+            assert_eq!(
+                result.unwrap_err().downcast_ref::<ContractError>(),
+                Some(&ContractError::SwapRouteAlreadyExists {
+                    offer_asset: "uwhale".to_string(),
+                    ask_asset: "uusd".to_string()
+                })
+            );
+        });
+
+        // Let's query all swap routes
+        suite.query_swap_routes(|result| {
+            assert_eq!(result.unwrap().swap_routes[0], swap_route_1);
+        });
+
+        // Let;s query for the swap route creator
+        suite.query_swap_route_creator(
+            "uwhale".to_string(),
+            "uusd".to_string(),
+            |result: Result<SwapRouteCreatorResponse, _>| {
+                assert_eq!(result.unwrap().creator, creator);
+            },
+        );
+    }
+
+    #[test]
+    fn remove_swap_routes() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let unauthorized = suite.senders[2].clone();
+
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            extra_fees: vec![],
+        };
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite
+            .instantiate_default()
+            .create_pair(
+                creator.clone(),
+                first_pair,
+                vec![6u8, 6u8],
+                pool_fees.clone(),
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pair(
+                creator.clone(),
+                second_pair,
+                vec![6u8, 6u8],
+                pool_fees,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("uluna-uusd".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                creator.clone(),
+                "uluna-uusd".to_string(),
+                vec![
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                    Coin {
+                        denom: "uusd".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add a swap route
+        let swap_route_1 = SwapRoute {
+            offer_asset_denom: "uwhale".to_string(),
+            ask_asset_denom: "uusd".to_string(),
+            swap_operations: vec![
+                white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                    token_in_denom: "uwhale".to_string(),
+                    token_out_denom: "uluna".to_string(),
+                    pool_identifier: "whale-uluna".to_string(),
+                },
+                white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                    token_in_denom: "uluna".to_string(),
+                    token_out_denom: "uusd".to_string(),
+                    pool_identifier: "uluna-uusd".to_string(),
+                },
+            ],
+        };
+
+        suite.add_swap_routes(other.clone(), vec![swap_route_1.clone()], |result| {
+            assert!(result.unwrap().events.into_iter().any(|attr| {
+                attr.attributes
+                    .iter()
+                    .any(|attr| attr.value == "add_swap_routes")
+            }));
+        });
+
+        // Let's query for all swap routes
+        suite.query_swap_routes(|result| {
+            assert_eq!(result.unwrap().swap_routes[0], swap_route_1.clone());
+        });
+
+        // Let's query for the swap route
+        suite.query_swap_route("uwhale".to_string(), "uusd".to_string(), |result| {
+            assert_eq!(
+                result.unwrap().swap_route,
+                SwapRoute {
+                    offer_asset_denom: "uwhale".to_string(),
+                    ask_asset_denom: "uusd".to_string(),
+                    swap_operations: swap_route_1.swap_operations.clone(),
+                }
+            );
+        });
+
+        // Let;s query for the swap route creator
+        suite.query_swap_route_creator(
+            "uwhale".to_string(),
+            "uusd".to_string(),
+            |result: Result<SwapRouteCreatorResponse, _>| {
+                assert_eq!(result.unwrap().creator, other);
+            },
+        );
+
+        // Removing a swap route as a non-route-creator & non-admin should fail
+        suite.remove_swap_routes(unauthorized.clone(), vec![swap_route_1.clone()], |result| {
+            assert!(result.is_err());
+        });
+
+        // Lets try to remove the swap route as the swap route creator
+        suite.remove_swap_routes(other.clone(), vec![swap_route_1.clone()], |result| {
+            assert!(result.unwrap().events.into_iter().any(|attr| {
+                attr.attributes
+                    .iter()
+                    .any(|attr| attr.value == "remove_swap_routes")
+            }));
+        });
+
+        // Let's query for all swap routes
+        suite.query_swap_routes(|result| {
+            assert_eq!(result.unwrap().swap_routes.len(), 0);
+        });
+
+        // Re-remove the same swap route should fail
+        suite.remove_swap_routes(creator.clone(), vec![swap_route_1.clone()], |result| {
+            assert_eq!(
+                result.unwrap_err().downcast_ref::<ContractError>(),
+                Some(&ContractError::NoSwapRouteForAssets {
+                    offer_asset: "uwhale".to_string(),
+                    ask_asset: "uusd".to_string()
+                })
+            );
+        });
+    }
 }
 
 mod swapping {
@@ -1286,7 +1634,6 @@ mod swapping {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            "uluna".to_string(),
             |result| {
                 // Ensure that the return amount is 1_000 minus spread
                 assert_eq!(
@@ -1492,7 +1839,6 @@ mod swapping {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
             },
-            "uluna".to_string(),
             |result| {
                 println!("{:?}", result);
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
@@ -1743,7 +2089,7 @@ mod swapping {
             },
         );
 
-        // Verify fee collection by querying the address of the fee_collector and checking its balance
+        // Verify fee collection by querying the address of the whale lair and checking its balance
         // Should be 297 uLUNA
         suite.query_balance(
             suite.whale_lair_addr.to_string(),
