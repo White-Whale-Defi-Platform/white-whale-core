@@ -1,9 +1,6 @@
 use cosmwasm_std::testing::MockStorage;
-use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
-    SimulateSwapOperationsResponse, SwapOperation, SwapRouteCreatorResponse, SwapRouteResponse,
-    SwapRoutesResponse,
-};
+use std::cell::RefCell;
+use white_whale_std::pool_manager::{Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse, ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse};
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
@@ -17,7 +14,6 @@ use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig};
 use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::PositionsResponse;
 use white_whale_std::lp_common::LP_SYMBOL;
-use white_whale_std::pool_manager::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
@@ -764,6 +760,26 @@ impl TestingSuite {
         );
 
         result(positions_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_lp_supply(
+        &mut self,
+        identifier: String,
+        result: impl Fn(StdResult<Coin>),
+    ) -> &mut Self {
+        let lp_denom = RefCell::new("".to_string());
+
+        let pair = self.query_pair_info(identifier.clone(), |res| {
+            let response = res.unwrap();
+            *lp_denom.borrow_mut() = response.pair_info.lp_denom.clone();
+        });
+
+        let supply_response = self.app.wrap().query_supply(lp_denom.into_inner());
+
+        result(supply_response);
 
         self
     }

@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    coins, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    coins, ensure, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    StdError,
 };
 use white_whale_std::pool_network::asset::PairType;
 
@@ -14,13 +15,12 @@ use crate::{
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
+use white_whale_std::coin::aggregate_coins;
 use white_whale_std::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
     U256,
 };
 pub const MAX_ASSETS_PER_POOL: usize = 4;
-
-// todo allow providing liquidity with a single asset
 
 #[allow(clippy::too_many_arguments)]
 pub fn provide_liquidity(
@@ -45,18 +45,40 @@ pub fn provide_liquidity(
     let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
 
     let mut pool_assets = pair.assets.clone();
-    let mut assets = info.funds.clone();
+    let deposits = aggregate_coins(info.funds.clone())?;
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    //TODO verify that the assets sent in info match the ones from the pool!!!
+    ensure!(!deposits.is_empty(), ContractError::EmptyAssets);
 
-    for (i, pool) in assets.iter_mut().enumerate() {
-        // Increment the pool asset amount by the amount sent
-        pool_assets[i].amount = pool_assets[i].amount.checked_add(pool.amount)?;
+    // verify that the assets sent match the ones from the pool
+    ensure!(
+        deposits.iter().all(|asset| pool_assets
+            .iter()
+            .any(|pool_asset| pool_asset.denom == asset.denom)),
+        ContractError::AssetMismatch {}
+    );
+
+    // check if the user is providing liquidity with a single asset
+    let is_single_asset_provision = deposits.len() == 1;
+
+    for asset in deposits.iter() {
+        let asset_denom = &asset.denom;
+        if let Some(pool_asset_index) = pool_assets
+            .iter()
+            .position(|pool_asset| pool_asset.denom == *asset_denom)
+        {
+            // Increment the pool asset amount by the amount sent
+            pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
+                .amount
+                .checked_add(asset.amount)?;
+        } else {
+            return Err(ContractError::AssetMismatch {});
+        }
     }
 
-    // After totting up the pool assets we need to check if any of them are zero
-    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
+    // After totting up the pool assets we need to check if any of them are zero.
+    // The very first deposit cannot be done with a single asset
+    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) && is_single_asset_provision {
         return Err(ContractError::InvalidZeroAmount {});
     }
 
@@ -70,7 +92,6 @@ pub fn provide_liquidity(
             if total_share == Uint128::zero() {
                 // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                 // depositor preventing small liquidity providers from joining the pool
-
                 let share = Uint128::new(
                     (U256::from(pool_assets[0].amount.u128())
                         .checked_mul(U256::from(pool_assets[1].amount.u128()))
@@ -82,6 +103,7 @@ pub fn provide_liquidity(
                 .map_err(|_| {
                     ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
                 })?;
+
                 // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
                 if share.is_zero() {
                     return Err(ContractError::InvalidInitialLiquidityAmount(
@@ -98,19 +120,19 @@ pub fn provide_liquidity(
 
                 share
             } else {
-                let share = {
-                    let numerator = U256::from(pool_assets[0].amount.u128())
-                        .checked_mul(U256::from(total_share.u128()))
-                        .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
-
-                    let denominator = U256::from(pool_assets[0].amount.u128());
-
-                    let result = numerator
-                        .checked_div(denominator)
-                        .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
-
-                    Uint128::from(result.as_u128())
-                };
+                // let share = {
+                //     let numerator = U256::from(pool_assets[0].amount.u128())
+                //         .checked_mul(U256::from(total_share.u128()))
+                //         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
+                //
+                //     let denominator = U256::from(pool_assets[0].amount.u128());
+                //
+                //     let result = numerator
+                //         .checked_div(denominator)
+                //         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
+                //
+                //     Uint128::from(result.as_u128())
+                // };
 
                 let amount = std::cmp::min(
                     pool_assets[0]
@@ -121,20 +143,31 @@ pub fn provide_liquidity(
                         .multiply_ratio(total_share, pool_assets[1].amount),
                 );
 
-                let deps_as = [pool_assets[0].amount, pool_assets[1].amount];
-                let pools_as = [pool_assets[0].clone(), pool_assets[1].clone()];
+                //todo i think we need to skip slippage_tolerance assertion in this case
+                if !is_single_asset_provision {
+                    let deposits_as: [Uint128; 2] = deposits
+                        .iter()
+                        .map(|coin| coin.amount)
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
+                    let pools_as: [Coin; 2] = pool_assets
+                        .to_vec()
+                        .try_into()
+                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
 
-                // assert slippage tolerance
-                helpers::assert_slippage_tolerance(
-                    &slippage_tolerance,
-                    &deps_as,
-                    &pools_as,
-                    pair.pair_type.clone(),
-                    amount,
-                    total_share,
-                )?;
+                    // assert slippage tolerance
+                    helpers::assert_slippage_tolerance(
+                        &slippage_tolerance,
+                        &deposits_as,
+                        &pools_as,
+                        pair.pair_type.clone(),
+                        amount,
+                        total_share,
+                    )?;
+                }
 
-                share
+                amount
             }
         }
         PairType::StableSwap { amp: _ } => {

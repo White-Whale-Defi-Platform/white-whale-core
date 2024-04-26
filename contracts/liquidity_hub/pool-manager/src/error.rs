@@ -65,6 +65,9 @@ pub enum ContractError {
     #[error("{asset} is invalid")]
     InvalidAsset { asset: String },
 
+    #[error("Trying to provide liquidity without any assets")]
+    EmptyAssets,
+
     #[error("Pair does not exist")]
     UnExistingPair {},
 
