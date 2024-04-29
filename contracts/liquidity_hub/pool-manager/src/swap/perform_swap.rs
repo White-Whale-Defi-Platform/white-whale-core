@@ -91,8 +91,6 @@ pub fn perform_swap(
         offer_asset.clone(),
         return_asset.clone(),
         swap_computation.spread_amount,
-        offer_decimal,
-        ask_decimal,
     )?;
 
     // State changes to the pairs balances

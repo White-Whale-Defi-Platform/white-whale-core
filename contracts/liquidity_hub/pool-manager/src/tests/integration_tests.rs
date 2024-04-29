@@ -320,7 +320,8 @@ mod pair_creation_failures {
 }
 
 mod router {
-    use cosmwasm_std::Event;
+    use cosmwasm_std::{Event, StdError};
+    use std::error::Error;
     use white_whale_std::pool_manager::{SwapRoute, SwapRouteCreatorResponse};
 
     use super::*;
@@ -1716,17 +1717,34 @@ mod router {
 
         // execute the swap operations to unbalance the pools
         // sold 10_000 whale for some uusd, so the price of whale should go down
-        suite.execute_swap_operations(
-            creator.clone(),
-            swap_operations.clone(),
-            None,
-            None,
-            None,
-            vec![coin(10_000u128, "uwhale".to_string())],
-            |result| {
-                result.unwrap();
-            },
-        );
+        suite
+            .execute_swap_operations(
+                creator.clone(),
+                swap_operations.clone(),
+                None,
+                None,
+                None,
+                vec![coin(10_000u128, "uwhale".to_string())],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                    assert_eq!(
+                        err,
+                        ContractError::Std(StdError::generic_err("Spread limit exceeded"))
+                    );
+                },
+            )
+            .execute_swap_operations(
+                creator.clone(),
+                swap_operations.clone(),
+                None,
+                None,
+                Some(Decimal::percent(5)),
+                vec![coin(10_000u128, "uwhale".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // now to get 1_000 uusd we should swap more whale than before
         suite.query_reverse_simulate_swap_operations(
