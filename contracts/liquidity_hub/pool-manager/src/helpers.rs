@@ -620,11 +620,39 @@ pub fn simulate_swap_operations(
                 token_out_denom: _,
                 pool_identifier,
             } => {
-                let res = query_simulation(
-                    deps,
-                    coin(offer_amount.u128(), token_in_denom),
-                    pool_identifier,
-                )?;
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
+                amount = res.return_amount;
+            }
+        }
+    }
+
+    Ok(SimulateSwapOperationsResponse { amount })
+}
+
+/// This function iterates over the swap operations in the reverse order,
+/// simulates each swap to get the final amount after all the swaps.
+pub fn reverse_simulate_swap_operations(
+    deps: Deps,
+    ask_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided {});
+    }
+
+    let mut amount = ask_amount;
+
+    for operation in operations.into_iter().rev() {
+        match operation {
+            SwapOperation::WhaleSwap {
+                token_in_denom: _,
+                token_out_denom,
+                pool_identifier,
+            } => {
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
                 amount = res.return_amount;
             }
         }

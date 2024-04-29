@@ -1558,6 +1558,196 @@ mod router {
             );
         });
     }
+
+    #[test]
+    fn query_swap_operations() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_000u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_000u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+
+        // Asset infos with uwhale and uluna
+        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50), // 0.5%
+            },
+            extra_fees: vec![],
+        };
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            swap_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            burn_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::bps(50),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite
+            .instantiate_default()
+            .create_pair(
+                creator.clone(),
+                first_pair,
+                vec![6u8, 6u8],
+                pool_fees.clone(),
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1_000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pair(
+                creator.clone(),
+                second_pair,
+                vec![6u8, 6u8],
+                pool_fees,
+                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                Some("uluna-uusd".to_string()),
+                vec![coin(1_000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna".to_string(),
+            None,
+            None,
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+            ],
+            |result| {
+                // ensure we got 999,000 in the response (1m - initial liquidity amount)
+                let result = result.unwrap();
+                assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
+            },
+        );
+
+        // Lets try to add liquidity
+        suite.provide_liquidity(
+            creator.clone(),
+            "uluna-uusd".to_string(),
+            None,
+            None,
+            vec![
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+            ],
+            |result| {
+                // ensure we got 999,000 in the response (1m - initial liquidity amount)
+                let result = result.unwrap();
+                assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
+            },
+        );
+
+        // Prepare the swap operations, we want to go from WHALE -> UUSD
+        // We will use the uluna-uusd pair as the intermediary pool
+
+        let swap_operations = vec![
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
+                pool_identifier: "whale-uluna".to_string(),
+            },
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                token_in_denom: "uluna".to_string(),
+                token_out_denom: "uusd".to_string(),
+                pool_identifier: "uluna-uusd".to_string(),
+            },
+        ];
+
+        // simulating (reverse) swap operations should return the correct same amount as the pools are balanced
+        // going from whale -> uusd should return 974 uusd
+        // going from uusd -> whale should return 974 whale
+        suite.query_simulate_swap_operations(
+            Uint128::new(1_000),
+            swap_operations.clone(),
+            |result| {
+                let result = result.unwrap();
+                assert_eq!(result.amount.u128(), 974);
+            },
+        );
+        suite.query_reverse_simulate_swap_operations(
+            Uint128::new(1_000),
+            swap_operations.clone(),
+            |result| {
+                let result = result.unwrap();
+                assert_eq!(result.amount.u128(), 974);
+            },
+        );
+
+        // execute the swap operations to unbalance the pools
+        // sold 10_000 whale for some uusd, so the price of whale should go down
+        suite.execute_swap_operations(
+            creator.clone(),
+            swap_operations.clone(),
+            None,
+            None,
+            None,
+            vec![coin(10_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        // now to get 1_000 uusd we should swap more whale than before
+        suite.query_reverse_simulate_swap_operations(
+            Uint128::new(1_000),
+            swap_operations.clone(),
+            |result| {
+                let result = result.unwrap();
+                assert_eq!(result.amount.u128(), 1_006);
+            },
+        );
+
+        // and if simulate swap operations with 1_000 more whale we should get even less uusd than before
+        suite.query_simulate_swap_operations(
+            Uint128::new(1_000),
+            swap_operations.clone(),
+            |result| {
+                let result = result.unwrap();
+                assert_eq!(result.amount.u128(), 935);
+            },
+        );
+    }
 }
 
 mod swapping {
