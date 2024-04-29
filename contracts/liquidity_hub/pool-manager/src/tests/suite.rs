@@ -681,23 +681,6 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn _query_lp_token(&mut self, identifier: String, _sender: String) -> String {
-        // Get the LP token from Config
-        let lp_token_response: PairInfo = self
-            .app
-            .wrap()
-            .query_wasm_smart(
-                &self.pool_manager_addr,
-                &white_whale_std::pool_manager::QueryMsg::Pair {
-                    pair_identifier: identifier,
-                },
-            )
-            .unwrap();
-
-        // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
-        lp_token_response.lp_denom
-    }
-
     /// Retrieves the current configuration of the pool manager contract.
     pub(crate) fn query_config(&mut self) -> Config {
         self.app

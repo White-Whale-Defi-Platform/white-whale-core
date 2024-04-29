@@ -285,6 +285,7 @@ pub struct SwapRoutesResponse {
 #[cw_serde]
 pub struct PairInfoResponse {
     pub pair_info: PairInfo,
+    pub total_share: Coin,
 }
 
 /// The response for the `AssetDecimals` query.
