@@ -139,6 +139,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulates swap operations.",
       "type": "object",
       "required": [
         "simulate_swap_operations"
@@ -152,6 +153,35 @@
           ],
           "properties": {
             "offer_amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SwapOperation"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset is needed to perform the swap.",
+      "type": "object",
+      "required": [
+        "reverse_simulate_swap_operations"
+      ],
+      "properties": {
+        "reverse_simulate_swap_operations": {
+          "type": "object",
+          "required": [
+            "ask_amount",
+            "operations"
+          ],
+          "properties": {
+            "ask_amount": {
               "$ref": "#/definitions/Uint128"
             },
             "operations": {

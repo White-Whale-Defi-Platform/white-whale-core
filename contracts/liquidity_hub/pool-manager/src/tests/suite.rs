@@ -1,6 +1,8 @@
 use cosmwasm_std::testing::MockStorage;
 use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse, SimulateSwapOperationsResponse, SwapOperation, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse
+    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
+    SimulateSwapOperationsResponse, SwapOperation, SwapRouteCreatorResponse, SwapRouteResponse,
+    SwapRoutesResponse,
 };
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
@@ -15,8 +17,8 @@ use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig};
 use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::PositionsResponse;
 use white_whale_std::lp_common::LP_SYMBOL;
-use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_std::pool_manager::{ReverseSimulationResponse, SimulationResponse};
+use white_whale_std::pool_network::asset::{AssetInfo, PairType};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
@@ -614,13 +616,14 @@ impl TestingSuite {
         operations: Vec<SwapOperation>,
         result: impl Fn(StdResult<SimulateSwapOperationsResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<SimulateSwapOperationsResponse> = self.app.wrap().query_wasm_smart(
-            &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
-                offer_amount,
-                operations,
-            },
-        );
+        let pair_info_response: StdResult<SimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
+                    offer_amount,
+                    operations,
+                },
+            );
 
         result(pair_info_response);
 
@@ -633,13 +636,14 @@ impl TestingSuite {
         operations: Vec<SwapOperation>,
         result: impl Fn(StdResult<ReverseSimulateSwapOperationsResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<ReverseSimulateSwapOperationsResponse> = self.app.wrap().query_wasm_smart(
-            &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::ReverseSimulateSwapOperations {
-                ask_amount,
-                operations,
-            },
-        );
+        let pair_info_response: StdResult<ReverseSimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::ReverseSimulateSwapOperations {
+                    ask_amount,
+                    operations,
+                },
+            );
 
         result(pair_info_response);
 
