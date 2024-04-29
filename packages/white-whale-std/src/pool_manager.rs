@@ -248,19 +248,20 @@ pub enum QueryMsg {
     #[returns(SwapRoutesResponse)]
     SwapRoutes {},
 
-    // /// Simulates swap operations.
+    /// Simulates swap operations.
     #[returns(SimulateSwapOperationsResponse)]
     SimulateSwapOperations {
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
-    // /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
-    // /// is needed to perform the swap.
-    // #[returns(SimulateSwapOperationsResponse)]
-    // ReverseSimulateSwapOperations {
-    //     ask_amount: Uint128,
-    //     operations: Vec<SwapOperation>,
-    // },
+    /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
+    /// is needed to perform the swap.
+    #[returns(ReverseSimulateSwapOperationsResponse)]
+    ReverseSimulateSwapOperations {
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
+
     #[returns(PairInfoResponse)]
     Pair { pair_identifier: String },
     /// Retrieves the creator of the swap routes that can then remove them.
@@ -332,6 +333,11 @@ pub struct FeatureToggle {
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct SimulateSwapOperationsResponse {
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct ReverseSimulateSwapOperationsResponse {
     pub amount: Uint128,
 }
 
