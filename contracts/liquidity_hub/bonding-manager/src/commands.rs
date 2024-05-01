@@ -19,14 +19,12 @@ pub(crate) fn bond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
-    _env: Env,
+    env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    helpers::validate_funds(&deps, &info, &asset, asset.denom.clone())?;
-
     // helpers::validate_claimed(&deps, &info)?;
 
-    // helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     let mut bond = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -71,7 +69,7 @@ pub(crate) fn unbond(
     mut deps: DepsMut,
     timestamp: Timestamp,
     info: MessageInfo,
-    _env: Env,
+    env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
     ensure!(
@@ -80,7 +78,7 @@ pub(crate) fn unbond(
     );
 
     // helpers::validate_claimed(&deps, &info)?;
-    // helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     if let Some(mut unbond) = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -242,8 +240,10 @@ pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, Con
             Some(global.clone()),
         )?;
         println!("Bonding weight response: {:?}", bonding_weight_response);
-
+        println!("Epoch: {:?}", epoch);
         for fee in epoch.total.iter() {
+            println!("Fee: {:?}", fee);
+
             let reward = fee.amount * bonding_weight_response.share;
 
             if reward.is_zero() {
@@ -325,10 +325,13 @@ pub(crate) fn fill_rewards(
 ) -> Result<Response, ContractError> {
     {
         // Finding the most recent EpochID
-        let most_recent_epoch_id = EPOCHS
+        let most_recent_epoch_id = match EPOCHS
             .keys(deps.storage, None, None, Order::Descending)
             .next()
-            .unwrap()?;
+        {
+            Some(epoch_id) => epoch_id?,
+            None => return Err(ContractError::Unauthorized {}),
+        };
 
         let config = CONFIG.load(deps.storage)?;
         let distribution_denom = config.distribution_denom.clone();
@@ -363,6 +366,7 @@ pub(crate) fn fill_rewards(
             |bucket| -> StdResult<_> {
                 let mut bucket = bucket.unwrap_or_default();
                 bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
+                bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
                 Ok(bucket)
             },
         )?;

@@ -1,7 +1,8 @@
 use cosmwasm_std::{
-    to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, StdResult, Timestamp,
-    Uint64, WasmMsg,
+    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, StdResult,
+    Timestamp, Uint64, WasmMsg,
 };
+use cw_utils::PaymentError;
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
@@ -22,24 +23,31 @@ pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
 }
 
 /// Validates that the asset sent on the message matches the asset provided and is whitelisted for bonding.
-pub fn validate_funds(
-    deps: &DepsMut,
-    info: &MessageInfo,
-    asset: &Coin,
-    denom: String,
-) -> Result<(), ContractError> {
-    let bonding_assets = CONFIG.load(deps.storage)?.bonding_assets;
+pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    // Ensure that the user has sent some funds
+    ensure!(!info.funds.is_empty(), PaymentError::NoFunds {});
+    let asset_to_bond = {
+        // Filter the funds to include only those with accepted denominations
+        let valid_funds: Vec<&Coin> = info
+            .funds
+            .iter()
+            .filter(|coin| config.bonding_assets.contains(&coin.denom))
+            .collect();
 
-    if info.funds.len() != 1
-        || info.funds[0].amount.is_zero()
-        || info.funds[0].amount != asset.amount
-        || info.funds[0].denom != denom
-        || !bonding_assets.iter().any(|asset_info| asset_info == &denom)
-    {
-        return Err(ContractError::AssetMismatch {});
-    }
+        // Check if there are no valid funds after filtering
+        if valid_funds.is_empty() {
+            Err(PaymentError::NoFunds {})
+        } else if valid_funds.len() == 1 {
+            // If exactly one valid fund is found, return the amount
+            Ok(valid_funds[0])
+        } else {
+            // If multiple valid denominations are found (which shouldn't happen), return an error
+            Err(PaymentError::MultipleDenoms {})
+        }
+    }?;
 
-    Ok(())
+    Ok(asset_to_bond.to_owned())
 }
 
 /// if user has unclaimed rewards, fail with an exception prompting them to claim
@@ -57,20 +65,29 @@ pub fn validate_claimed(deps: &DepsMut, _info: &MessageInfo) -> Result<(), Contr
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
+/// global_index timestamp issues when querying the weight.
 pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
     let epoch_response: EpochResponse = get_current_epoch(deps.as_ref()).unwrap();
 
     let current_epoch = epoch_response.epoch;
     let current_time = env.block.time.seconds();
-    pub const DAY_IN_SECONDS: u64 = 86_400u64;
+    const DAY_IN_SECONDS: u64 = 86_400u64;
 
-    // if the current time is more than a day after the epoch start time, then it means the latest
-    // epoch has not been created and thus, prevent users from bonding/unbonding to avoid global_index
-    // timestamp issues when querying the weight.
-    if current_epoch.id != Uint64::zero()
-        && current_time - current_epoch.start_time.seconds() > DAY_IN_SECONDS
-    {
-        return Err(ContractError::NewEpochNotCreatedYet {});
+    // Check if the current time is more than a day after the epoch start time
+    // to avoid potential overflow
+    if current_epoch.id != Uint64::zero() {
+        let start_time_seconds = current_epoch
+            .start_time
+            .seconds()
+            .checked_add(DAY_IN_SECONDS);
+        match start_time_seconds {
+            Some(start_time_plus_day) => {
+                if current_time > start_time_plus_day {
+                    return Err(ContractError::NewEpochNotCreatedYet {});
+                }
+            }
+            None => return Err(ContractError::Unauthorized {}),
+        }
     }
 
     Ok(())
@@ -107,11 +124,11 @@ pub fn handle_lp_tokens(
     let lp_tokens: Vec<&Coin> = info
         .funds
         .iter()
-        .filter(|coin| coin.denom.contains(".pair.") | coin.denom.contains(LP_SYMBOL))
+        .filter(|coin| coin.denom.contains(".pool.") | coin.denom.contains(LP_SYMBOL))
         .collect();
     for lp_token in lp_tokens {
-        // LP tokens have the format "{pair_label}.pair.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        let pair_identifier = lp_token.denom.split(".pair.").collect::<Vec<&str>>()[1];
+        // LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
+        let pair_identifier = lp_token.denom.split(".pool.").collect::<Vec<&str>>()[1];
 
         // if LP Tokens ,verify and withdraw then swap to whale
         let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
@@ -139,7 +156,7 @@ pub fn swap_coins_to_main_token(
         .funds
         .iter()
         .filter(|coin| {
-            !coin.denom.contains(".pair.")
+            !coin.denom.contains(".pool.")
                 & !coin.denom.contains(LP_SYMBOL)
                 & !coin.denom.eq(distribution_denom)
         })

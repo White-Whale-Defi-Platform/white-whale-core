@@ -37,7 +37,7 @@ fn test_claimable_epochs() {
 }
 
 #[test]
-fn test_bond_successfully() {
+fn test_claim_successfully() {
     let mut robot = TestingRobot::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();

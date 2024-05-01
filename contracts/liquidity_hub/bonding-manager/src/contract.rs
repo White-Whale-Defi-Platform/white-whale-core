@@ -1,7 +1,6 @@
-use cosmwasm_std::{ensure, entry_point, Addr, Coin};
+use cosmwasm_std::{entry_point, Addr};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
-use cw_utils::PaymentError;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::{
@@ -9,7 +8,7 @@ use white_whale_std::bonding_manager::{
 };
 
 use crate::error::ContractError;
-use crate::helpers::validate_growth_rate;
+use crate::helpers::{self, validate_growth_rate};
 use crate::queries::get_expiring_epoch;
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
 use crate::{commands, queries};
@@ -21,7 +20,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -54,7 +53,7 @@ pub fn instantiate(
         &0u64.to_be_bytes(),
         &Epoch {
             id: 0u64.into(),
-            start_time: _env.block.time,
+            start_time: env.block.time,
             ..Epoch::default()
         },
     )?;
@@ -77,29 +76,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Bond {} => {
-            let config = CONFIG.load(deps.storage)?;
-            // Ensure that the user has sent some funds
-            ensure!(!info.funds.is_empty(), PaymentError::NoFunds {});
-            let asset_to_bond = {
-                // Filter the funds to include only those with accepted denominations
-                let valid_funds: Vec<&Coin> = info
-                    .funds
-                    .iter()
-                    .filter(|coin| config.bonding_assets.contains(&coin.denom))
-                    .collect();
-
-                // Check if there are no valid funds after filtering
-                if valid_funds.is_empty() {
-                    Err(PaymentError::MissingDenom("test".to_string()))
-                } else if valid_funds.len() == 1 {
-                    // If exactly one valid fund is found, return the amount
-                    Ok(valid_funds[0])
-                } else {
-                    // If multiple valid denominations are found (which shouldn't happen), return an error
-                    Err(PaymentError::MultipleDenoms {})
-                }
-            }?;
-
+            let asset_to_bond = helpers::validate_funds(&deps, &info)?;
             commands::bond(
                 deps,
                 env.block.time,
@@ -137,9 +114,14 @@ pub fn execute(
             // and forward the expiring epoch
             // Store epoch manager and verify the sender is him
             println!("New epoch created: {:?}", current_epoch);
+            // let config = CONFIG.load(deps.storage)?;
+            // let global = GLOBAL.load(deps.storage)?;
 
             let new_epoch_id = current_epoch.id;
-            let next_epoch_id = new_epoch_id.checked_add(1u64).unwrap();
+            let next_epoch_id = match new_epoch_id.checked_add(1u64) {
+                Some(next_epoch_id) => next_epoch_id,
+                None => return Err(ContractError::Unauthorized {}),
+            };
             // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
             // Add a new rewards bucket for the new epoch
             EPOCHS.save(
@@ -169,53 +151,39 @@ pub fn execute(
                     .add_attributes(vec![("action", "epoch_changed_hook".to_string())]));
             }
 
-            let expiring_epoch_id = new_epoch_id.checked_sub(1u64).unwrap();
-            // Verify that it is indeed the expiring epoch that is being forwarded
-            let _ = match get_expiring_epoch(deps.as_ref())? {
-                Some(epoch) if epoch.id.u64() == expiring_epoch_id => Ok(()),
-                Some(_) => Err(ContractError::Unauthorized {}),
-                None => Err(ContractError::Unauthorized {}), // Handle the case where there is no expiring epoch
-            };
-            println!("New epoch created: {}", next_epoch_id);
+            // forward fees from the expiring epoch to the new one.
+            let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
 
-            // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
-            // Add a new rewards bucket for the new epoch
-            EPOCHS.save(
-                deps.storage,
-                &next_epoch_id.to_be_bytes(),
-                &Epoch {
-                    id: next_epoch_id.into(),
-                    start_time: current_epoch.start_time,
-                    ..Epoch::default()
-                },
-            )?;
-
-            // Load all the available assets from the expiring epoch
-            let amount_to_be_forwarded = EPOCHS
-                .load(deps.storage, &expiring_epoch_id.to_be_bytes())?
-                .available;
-            println!("Amount to be forwarded: {:?}", amount_to_be_forwarded);
-            EPOCHS.update(
-                deps.storage,
-                &new_epoch_id.to_be_bytes(),
-                |epoch| -> StdResult<_> {
-                    let mut epoch = epoch.unwrap_or_default();
-                    epoch.available =
-                        asset::aggregate_coins(epoch.available, amount_to_be_forwarded)?;
-                    epoch.total = epoch.available.clone();
-                    Ok(epoch)
-                },
-            )?;
-            // Set the available assets for the expiring epoch to an empty vec now that they have been forwarded
-            EPOCHS.update(
-                deps.storage,
-                &expiring_epoch_id.to_be_bytes(),
-                |epoch| -> StdResult<_> {
-                    let mut epoch = epoch.unwrap_or_default();
-                    epoch.available = vec![];
-                    Ok(epoch)
-                },
-            )?;
+            if let Some(expiring_epoch) = expiring_epoch.as_mut() {
+                // Load all the available assets from the expiring epoch
+                let amount_to_be_forwarded = EPOCHS
+                    .load(deps.storage, &expiring_epoch.id.to_be_bytes())?
+                    .available;
+                println!("Amount to be forwarded: {:?}", amount_to_be_forwarded);
+                EPOCHS.update(
+                    deps.storage,
+                    &new_epoch_id.to_be_bytes(),
+                    |epoch| -> StdResult<_> {
+                        let mut epoch = epoch.unwrap_or_default();
+                        epoch.available = asset::aggregate_coins(
+                            epoch.available,
+                            amount_to_be_forwarded.clone(),
+                        )?;
+                        epoch.total = asset::aggregate_coins(epoch.total, amount_to_be_forwarded)?;
+                        Ok(epoch)
+                    },
+                )?;
+                // Set the available assets for the expiring epoch to an empty vec now that they have been forwarded
+                EPOCHS.update(
+                    deps.storage,
+                    &expiring_epoch.id.to_be_bytes(),
+                    |epoch| -> StdResult<_> {
+                        let mut epoch = epoch.unwrap_or_default();
+                        epoch.available = vec![];
+                        Ok(epoch)
+                    },
+                )?;
+            }
 
             Ok(Response::default()
                 .add_attributes(vec![("action", "epoch_changed_hook".to_string())]))
