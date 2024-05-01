@@ -71,7 +71,6 @@ pub fn provide_liquidity(
     let is_single_asset_provision = deposits.len() == 1usize;
 
     if is_single_asset_provision {
-        //todo maybe put all the code within this block in a function??
         ensure!(
             !pool_assets.iter().any(|asset| asset.amount.is_zero()),
             ContractError::EmptyPoolForSingleSideLiquidityProvision
@@ -143,7 +142,7 @@ pub fn provide_liquidity(
             },
         )?;
 
-        return Ok(Response::default()
+        Ok(Response::default()
             .add_submessage(SubMsg::reply_on_success(
                 wasm_execute(
                     env.contract.address.into_string(),
@@ -159,162 +158,162 @@ pub fn provide_liquidity(
                 )?,
                 SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID,
             ))
-            .add_attributes(vec![("action", "single_side_liquidity_provision")]));
-    }
-
-    for asset in deposits.iter() {
-        let asset_denom = &asset.denom;
-
-        let pool_asset_index = pool_assets
-            .iter()
-            .position(|pool_asset| &pool_asset.denom == asset_denom)
-            .ok_or(ContractError::AssetMismatch {})?;
-
-        // Increment the pool asset amount by the amount sent
-        pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
-            .amount
-            .checked_add(asset.amount)?;
-    }
-
-    // After totting up the pool assets we need to check if any of them are zero.
-    // The very first deposit cannot be done with a single asset
-    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
-        return Err(ContractError::InvalidZeroAmount {});
-    }
-
-    let mut messages: Vec<CosmosMsg> = vec![];
-
-    let liquidity_token = pair.lp_denom.clone();
-
-    // Compute share and other logic based on the number of assets
-    let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
-
-    let share = match &pair.pair_type {
-        PairType::ConstantProduct => {
-            if total_share == Uint128::zero() {
-                // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
-                // depositor preventing small liquidity providers from joining the pool
-                let share = Uint128::new(
-                    (U256::from(pool_assets[0].amount.u128())
-                        .checked_mul(U256::from(pool_assets[1].amount.u128()))
-                        .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
-                    .integer_sqrt()
-                    .as_u128(),
-                )
-                .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                .map_err(|_| {
-                    ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
-                })?;
-
-                // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
-                if share.is_zero() {
-                    return Err(ContractError::InvalidInitialLiquidityAmount(
-                        MINIMUM_LIQUIDITY_AMOUNT,
-                    ));
-                }
-
-                messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-                    liquidity_token.clone(),
-                    &env.contract.address,
-                    &env.contract.address,
-                    MINIMUM_LIQUIDITY_AMOUNT,
-                )?);
-
-                share
-            } else {
-                let amount = std::cmp::min(
-                    pool_assets[0]
-                        .amount
-                        .multiply_ratio(total_share, pool_assets[0].amount),
-                    pool_assets[1]
-                        .amount
-                        .multiply_ratio(total_share, pool_assets[1].amount),
-                );
-
-                let deposits_as: [Uint128; 2] = deposits
-                    .iter()
-                    .map(|coin| coin.amount)
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-                let pools_as: [Coin; 2] = pool_assets
-                    .to_vec()
-                    .try_into()
-                    .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-
-                // assert slippage tolerance
-                helpers::assert_slippage_tolerance(
-                    &slippage_tolerance,
-                    &deposits_as,
-                    &pools_as,
-                    pair.pair_type.clone(),
-                    amount,
-                    total_share,
-                )?;
-
-                amount
-            }
-        }
-        PairType::StableSwap { amp: _ } => {
-            // TODO: Handle stableswap
-
-            Uint128::one()
-        }
-    };
-
-    // if the unlocking duration is set, lock the LP tokens in the incentive manager
-    if let Some(unlocking_duration) = unlocking_duration {
-        // mint the lp tokens to the contract
-        messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-            liquidity_token.clone(),
-            &env.contract.address,
-            &env.contract.address,
-            share,
-        )?);
-
-        // lock the lp tokens in the incentive manager on behalf of the receiver
-        messages.push(
-            wasm_execute(
-                config.incentive_manager_addr,
-                &white_whale_std::incentive_manager::ExecuteMsg::ManagePosition {
-                    action: white_whale_std::incentive_manager::PositionAction::Fill {
-                        identifier: lock_position_identifier,
-                        unlocking_duration,
-                        receiver: Some(receiver.clone()),
-                    },
-                },
-                coins(share.u128(), liquidity_token),
-            )?
-            .into(),
-        );
+            .add_attributes(vec![("action", "single_side_liquidity_provision")]))
     } else {
-        // if not, just mint the LP tokens to the receiver
-        messages.push(white_whale_std::lp_common::mint_lp_token_msg(
-            liquidity_token,
-            &deps.api.addr_validate(&receiver)?,
-            &env.contract.address,
-            share,
-        )?);
-    }
+        for asset in deposits.iter() {
+            let asset_denom = &asset.denom;
 
-    pair.assets = pool_assets.clone();
-
-    PAIRS.save(deps.storage, &pair_identifier, &pair)?;
-
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("action", "provide_liquidity"),
-        ("sender", info.sender.as_str()),
-        ("receiver", receiver.as_str()),
-        (
-            "assets",
-            &pool_assets
+            let pool_asset_index = pool_assets
                 .iter()
-                .map(|asset| asset.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-        ),
-        ("share", &share.to_string()),
-    ]))
+                .position(|pool_asset| &pool_asset.denom == asset_denom)
+                .ok_or(ContractError::AssetMismatch {})?;
+
+            // Increment the pool asset amount by the amount sent
+            pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
+                .amount
+                .checked_add(asset.amount)?;
+        }
+
+        // After totting up the pool assets we need to check if any of them are zero.
+        // The very first deposit cannot be done with a single asset
+        if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
+            return Err(ContractError::InvalidZeroAmount {});
+        }
+
+        let mut messages: Vec<CosmosMsg> = vec![];
+
+        let liquidity_token = pair.lp_denom.clone();
+
+        // Compute share and other logic based on the number of assets
+        let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
+
+        let share = match &pair.pair_type {
+            PairType::ConstantProduct => {
+                if total_share == Uint128::zero() {
+                    // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                    // depositor preventing small liquidity providers from joining the pool
+                    let share = Uint128::new(
+                        (U256::from(pool_assets[0].amount.u128())
+                            .checked_mul(U256::from(pool_assets[1].amount.u128()))
+                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+                        .integer_sqrt()
+                        .as_u128(),
+                    )
+                    .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
+                    .map_err(|_| {
+                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
+                    })?;
+
+                    // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
+                    if share.is_zero() {
+                        return Err(ContractError::InvalidInitialLiquidityAmount(
+                            MINIMUM_LIQUIDITY_AMOUNT,
+                        ));
+                    }
+
+                    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+                        liquidity_token.clone(),
+                        &env.contract.address,
+                        &env.contract.address,
+                        MINIMUM_LIQUIDITY_AMOUNT,
+                    )?);
+
+                    share
+                } else {
+                    let amount = std::cmp::min(
+                        pool_assets[0]
+                            .amount
+                            .multiply_ratio(total_share, pool_assets[0].amount),
+                        pool_assets[1]
+                            .amount
+                            .multiply_ratio(total_share, pool_assets[1].amount),
+                    );
+
+                    let deposits_as: [Uint128; 2] = deposits
+                        .iter()
+                        .map(|coin| coin.amount)
+                        .collect::<Vec<_>>()
+                        .try_into()
+                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
+                    let pools_as: [Coin; 2] = pool_assets
+                        .to_vec()
+                        .try_into()
+                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
+
+                    // assert slippage tolerance
+                    helpers::assert_slippage_tolerance(
+                        &slippage_tolerance,
+                        &deposits_as,
+                        &pools_as,
+                        pair.pair_type.clone(),
+                        amount,
+                        total_share,
+                    )?;
+
+                    amount
+                }
+            }
+            PairType::StableSwap { amp: _ } => {
+                // TODO: Handle stableswap
+
+                Uint128::one()
+            }
+        };
+
+        // if the unlocking duration is set, lock the LP tokens in the incentive manager
+        if let Some(unlocking_duration) = unlocking_duration {
+            // mint the lp tokens to the contract
+            messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+                liquidity_token.clone(),
+                &env.contract.address,
+                &env.contract.address,
+                share,
+            )?);
+
+            // lock the lp tokens in the incentive manager on behalf of the receiver
+            messages.push(
+                wasm_execute(
+                    config.incentive_manager_addr,
+                    &white_whale_std::incentive_manager::ExecuteMsg::ManagePosition {
+                        action: white_whale_std::incentive_manager::PositionAction::Fill {
+                            identifier: lock_position_identifier,
+                            unlocking_duration,
+                            receiver: Some(receiver.clone()),
+                        },
+                    },
+                    coins(share.u128(), liquidity_token),
+                )?
+                .into(),
+            );
+        } else {
+            // if not, just mint the LP tokens to the receiver
+            messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+                liquidity_token,
+                &deps.api.addr_validate(&receiver)?,
+                &env.contract.address,
+                share,
+            )?);
+        }
+
+        pair.assets = pool_assets.clone();
+
+        PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+
+        Ok(Response::new().add_messages(messages).add_attributes(vec![
+            ("action", "provide_liquidity"),
+            ("sender", info.sender.as_str()),
+            ("receiver", receiver.as_str()),
+            (
+                "assets",
+                &pool_assets
+                    .iter()
+                    .map(|asset| asset.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            ),
+            ("share", &share.to_string()),
+        ]))
+    }
 }
 
 /// Withdraws the liquidity. The user burns the LP tokens in exchange for the tokens provided, including
