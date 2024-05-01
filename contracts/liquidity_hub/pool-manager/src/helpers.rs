@@ -1,16 +1,14 @@
 use std::ops::Mul;
-use std::str::FromStr;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, Addr, Coin, Decimal, Decimal256, Deps, Env, Fraction, StdError, StdResult, Storage,
-    Uint128, Uint256,
+    coin, Addr, Coin, Decimal, Decimal256, Deps, Env, StdError, StdResult, Storage, Uint128,
+    Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
 use white_whale_std::pool_manager::{SimulateSwapOperationsResponse, SwapOperation};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
-use white_whale_std::pool_network::swap::{DEFAULT_SLIPPAGE, MAX_ALLOWED_SLIPPAGE};
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
@@ -422,42 +420,6 @@ pub struct OfferAmountComputation {
     pub burn_fee_amount: Uint128,
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
-}
-
-/// If `belief_price` and `max_spread` both are given,
-/// we compute new spread else we just use pool network
-/// spread to check `max_spread`
-pub fn assert_max_spread(
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    offer_asset: Coin,
-    return_asset: Coin,
-    spread_amount: Uint128,
-) -> Result<(), ContractError> {
-    let max_spread: Decimal256 = max_spread
-        .unwrap_or(Decimal::from_str(DEFAULT_SLIPPAGE)?)
-        .min(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?)
-        .into();
-
-    if let Some(belief_price) = belief_price {
-        let expected_return = offer_asset.amount
-            * belief_price
-                .inv()
-                .ok_or_else(|| StdError::generic_err("Belief price can't be zero"))?;
-        let spread_amount = expected_return.saturating_sub(return_asset.amount);
-
-        if return_asset.amount < expected_return
-            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
-        {
-            return Err(StdError::generic_err("Spread limit exceeded").into());
-        }
-    } else if Decimal256::from_ratio(spread_amount, return_asset.amount + spread_amount)
-        > max_spread
-    {
-        return Err(StdError::generic_err("Spread limit exceeded").into());
-    }
-
-    Ok(())
 }
 
 pub fn assert_slippage_tolerance(
