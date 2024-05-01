@@ -1824,33 +1824,44 @@ mod swapping {
         });
 
         // Lets try to add liquidity
-        suite.provide_liquidity(
-            creator.clone(),
-            "whale-uluna".to_string(),
-            None,
-            None,
-            vec![
-                Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1000000u128),
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1000000u128),
+                    },
+                ],
+                |result| {
+                    // Ensure we got 999_000 in the response which is 1mil less the initial liquidity amount
+                    assert!(result.unwrap().events.iter().any(|event| {
+                        event.attributes.iter().any(|attr| {
+                            attr.key == "share"
+                                && attr.value
+                                    == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
+                                        .to_string()
+                        })
+                    }));
                 },
-                Coin {
-                    denom: "uluna".to_string(),
-                    amount: Uint128::from(1000000u128),
-                },
-            ],
-            |result| {
-                // Ensure we got 999_000 in the response which is 1mil less the initial liquidity amount
-                assert!(result.unwrap().events.iter().any(|event| {
-                    event.attributes.iter().any(|attr| {
-                        attr.key == "share"
-                            && attr.value
-                                == (Uint128::from(1_000_000u128) - MINIMUM_LIQUIDITY_AMOUNT)
-                                    .to_string()
-                    })
-                }));
-            },
-        );
+            )
+            .query_pair_info("whale-uluna".to_string(), |result| {
+                let response = result.unwrap();
+                assert_eq!(
+                    response.total_share,
+                    Coin {
+                        denom: response.pair_info.lp_denom,
+                        amount: Uint128::from(1_000_000u128)
+                    }
+                );
+            });
 
         let simulated_return_amount = RefCell::new(Uint128::zero());
         suite.query_simulation(
@@ -1925,7 +1936,6 @@ mod swapping {
                 amount: Uint128::from(1000u128),
             },
             |result| {
-                println!("{:?}", result);
                 *simulated_offer_amount.borrow_mut() = result.unwrap().offer_amount;
             },
         );
@@ -1953,7 +1963,6 @@ mod swapping {
                 let mut offer_amount = String::new();
 
                 for event in result.unwrap().events {
-                    println!("{:?}", event);
                     if event.ty == "wasm" {
                         for attribute in event.attributes {
                             match attribute.key.as_str() {

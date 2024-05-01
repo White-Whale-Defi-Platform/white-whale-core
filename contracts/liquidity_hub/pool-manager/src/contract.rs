@@ -1,8 +1,8 @@
 use crate::error::ContractError;
 use crate::helpers::{reverse_simulate_swap_operations, simulate_swap_operations};
-use crate::queries::{get_swap_route, get_swap_route_creator, get_swap_routes};
+use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
-use crate::state::{Config, MANAGER_CONFIG, PAIRS, PAIR_COUNTER};
+use crate::state::{Config, MANAGER_CONFIG, PAIR_COUNTER};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
@@ -11,7 +11,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use semver::Version;
 use white_whale_std::pool_manager::{
-    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, PairInfoResponse, QueryMsg,
+    ExecuteMsg, FeatureToggle, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 // version info for migration info
@@ -244,9 +244,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-        QueryMsg::Pair { pair_identifier } => Ok(to_json_binary(&PairInfoResponse {
-            pair_info: PAIRS.load(deps.storage, &pair_identifier)?,
-        })?),
+        QueryMsg::Pair { pair_identifier } => {
+            Ok(to_json_binary(&get_pair(deps, pair_identifier)?)?)
+        }
         QueryMsg::SwapRouteCreator {
             offer_asset_denom,
             ask_asset_denom,

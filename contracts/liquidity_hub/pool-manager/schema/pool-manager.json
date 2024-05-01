@@ -1241,11 +1241,15 @@
       "title": "PairInfoResponse",
       "type": "object",
       "required": [
-        "pair_info"
+        "pair_info",
+        "total_share"
       ],
       "properties": {
         "pair_info": {
           "$ref": "#/definitions/PairInfo"
+        },
+        "total_share": {
+          "$ref": "#/definitions/Coin"
         }
       },
       "additionalProperties": false,
