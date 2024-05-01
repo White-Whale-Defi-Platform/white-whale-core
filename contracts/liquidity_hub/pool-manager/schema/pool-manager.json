@@ -116,6 +116,16 @@
                   "null"
                 ]
               },
+              "max_spread": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Decimal"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "pair_identifier": {
                 "type": "string"
               },
