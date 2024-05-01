@@ -89,6 +89,7 @@ fn deposit_and_withdraw_sanity_check() {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -405,6 +406,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -426,6 +428,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -596,6 +599,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -617,6 +621,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -737,6 +742,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -758,6 +764,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -895,6 +902,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -916,6 +924,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -1119,6 +1128,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1140,6 +1150,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -1280,6 +1291,7 @@ mod router {
                 "whale-uluna".to_string(),
                 None,
                 None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -1297,6 +1309,7 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "uluna-uusd".to_string(),
+                None,
                 None,
                 None,
                 vec![
@@ -1442,6 +1455,7 @@ mod router {
                 "whale-uluna".to_string(),
                 None,
                 None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -1459,6 +1473,7 @@ mod router {
             .provide_liquidity(
                 creator.clone(),
                 "uluna-uusd".to_string(),
+                None,
                 None,
                 None,
                 vec![
@@ -1638,6 +1653,7 @@ mod router {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -1659,6 +1675,7 @@ mod router {
         suite.provide_liquidity(
             creator.clone(),
             "uluna-uusd".to_string(),
+            None,
             None,
             None,
             vec![
@@ -1845,6 +1862,7 @@ mod swapping {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
                 None,
                 None,
                 vec![
@@ -2068,6 +2086,7 @@ mod swapping {
             "whale-uluna".to_string(),
             None,
             None,
+            None,
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
@@ -2266,6 +2285,7 @@ mod swapping {
         suite.provide_liquidity(
             creator.clone(),
             "whale-uluna".to_string(),
+            None,
             None,
             None,
             vec![
@@ -2565,6 +2585,7 @@ mod locking_lp {
                 "whale-uluna".to_string(),
                 Some(86_400u64),
                 None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -2629,6 +2650,7 @@ mod locking_lp {
                 creator.clone(),
                 "whale-uluna".to_string(),
                 Some(200_000u64),
+                None,
                 None,
                 vec![
                     Coin {
@@ -2752,6 +2774,7 @@ mod locking_lp {
                 "whale-uluna".to_string(),
                 Some(86_400u64),
                 Some("incentive_identifier".to_string()),
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -2817,6 +2840,7 @@ mod locking_lp {
                 "whale-uluna".to_string(),
                 Some(200_000u64),
                 Some("incentive_identifier".to_string()),
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -2863,7 +2887,7 @@ mod locking_lp {
 }
 
 mod provide_liquidity {
-    use cosmwasm_std::{coin, Coin, Decimal, Uint128};
+    use cosmwasm_std::{coin, Coin, Decimal, StdError, Uint128};
 
     use white_whale_std::fee::{Fee, PoolFee};
     use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
@@ -2942,6 +2966,7 @@ mod provide_liquidity {
                 "whale-uluna".to_string(),
                 None,
                 None,
+                None,
                 vec![],
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -2955,6 +2980,7 @@ mod provide_liquidity {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
                 None,
                 None,
                 vec![Coin {
@@ -2973,6 +2999,7 @@ mod provide_liquidity {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
                 None,
                 None,
                 vec![Coin {
@@ -2998,6 +3025,7 @@ mod provide_liquidity {
                 "whale-uluna".to_string(),
                 None,
                 None,
+                None,
                 vec![
                     Coin {
                         denom: "uosmo".to_string(),
@@ -3020,6 +3048,7 @@ mod provide_liquidity {
             .provide_liquidity(
                 creator.clone(),
                 "whale-uluna".to_string(),
+                None,
                 None,
                 None,
                 vec![
@@ -3059,6 +3088,7 @@ mod provide_liquidity {
                 "whale-uluna".to_string(),
                 None,
                 None,
+                None,
                 vec![
                     Coin {
                         denom: "uwhale".to_string(),
@@ -3067,6 +3097,31 @@ mod provide_liquidity {
                     Coin {
                         denom: "uwhale".to_string(),
                         amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                    assert_eq!(
+                        err,
+                        ContractError::Std(StdError::generic_err("Spread limit exceeded"))
+                    );
+                },
+            )
+            .provide_liquidity(
+                other.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                Some(Decimal::percent(50)),
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(500_000u128),
+                    },
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(500_000u128),
                     },
                 ],
                 |result| {
@@ -3109,8 +3164,8 @@ mod provide_liquidity {
                     .find(|coin| coin.denom == "uluna".to_string())
                     .unwrap();
 
-                assert_eq!(whale.amount, Uint128::from(3_000_000u128));
-                assert_eq!(luna.amount, Uint128::from(995_000u128));
+                assert_eq!(whale.amount, Uint128::from(2_000_000u128));
+                assert_eq!(luna.amount, Uint128::from(996_667u128));
             });
 
         let pool_manager = suite.pool_manager_addr.clone();
@@ -3127,11 +3182,11 @@ mod provide_liquidity {
                         },
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(995_000u128),
+                            amount: Uint128::from(996_667u128),
                         },
                         Coin {
                             denom: "uwhale".to_string(),
-                            amount: Uint128::from(3_000_000u128),
+                            amount: Uint128::from(2_000_000u128),
                         },
                     ]
                 );
@@ -3182,7 +3237,7 @@ mod provide_liquidity {
                     vec![
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(9_497_002u128),
+                            amount: Uint128::from(9_497_835u128),
                         },
                         Coin {
                             denom: "uosmo".to_string(),
@@ -3194,7 +3249,7 @@ mod provide_liquidity {
                         },
                         Coin {
                             denom: "uwhale".to_string(),
-                            amount: Uint128::from(10_498_500u128),
+                            amount: Uint128::from(9_999_000u128),
                         },
                     ]
                 );
@@ -3226,7 +3281,7 @@ mod provide_liquidity {
                         },
                         Coin {
                             denom: "uwhale".to_string(),
-                            amount: Uint128::from(8_000_000u128),
+                            amount: Uint128::from(9_000_000u128),
                         },
                     ]
                 );
@@ -3249,7 +3304,7 @@ mod provide_liquidity {
                     vec![
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(10_497_500u128),
+                            amount: Uint128::from(10_498_333u128),
                         },
                         Coin {
                             denom: "uosmo".to_string(),
@@ -3261,7 +3316,7 @@ mod provide_liquidity {
                         },
                         Coin {
                             denom: "uwhale".to_string(),
-                            amount: Uint128::from(9_499_999u128),
+                            amount: Uint128::from(9_999_999u128),
                         },
                     ]
                 );
@@ -3275,7 +3330,7 @@ mod provide_liquidity {
                     vec![
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(5_000u128),
+                            amount: Uint128::from(3_333u128),
                         },
                         Coin {
                             denom: "uusd".to_string(),

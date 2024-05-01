@@ -1,11 +1,11 @@
 use cosmwasm_std::testing::MockStorage;
 use std::cell::RefCell;
+use white_whale_std::pool_manager::InstantiateMsg;
 use white_whale_std::pool_manager::{
     Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
     ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
     SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
-use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -320,13 +320,14 @@ impl TestingSuite {
         pair_identifier: String,
         unlocking_duration: Option<u64>,
         lock_position_identifier: Option<String>,
+        max_spread: Option<Decimal>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
             pair_identifier,
             slippage_tolerance: None,
-            max_spread: None,
+            max_spread,
             receiver: None,
             unlocking_duration,
             lock_position_identifier,

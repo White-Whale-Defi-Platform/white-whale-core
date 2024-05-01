@@ -1,9 +1,11 @@
 use crate::error::ContractError;
-use crate::helpers::{reverse_simulate_swap_operations, simulate_swap_operations, validate_asset_balance};
+use crate::helpers::{
+    reverse_simulate_swap_operations, simulate_swap_operations, validate_asset_balance,
+};
 use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{
-    Config, SingleSideLiquidityProvisionBuffer, MANAGER_CONFIG, PAIRS, PAIR_COUNTER,
+    Config, SingleSideLiquidityProvisionBuffer, MANAGER_CONFIG, PAIR_COUNTER,
     TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
 };
 use crate::{liquidity, manager, queries, router, swap};
