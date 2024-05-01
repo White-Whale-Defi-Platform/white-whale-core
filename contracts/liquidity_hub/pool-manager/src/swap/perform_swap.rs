@@ -1,5 +1,6 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
 use white_whale_std::pool_manager::PairInfo;
+use white_whale_std::pool_network::swap::assert_max_spread;
 
 use crate::{
     helpers,
@@ -85,14 +86,12 @@ pub fn perform_swap(
 
     // Assert spread and other operations
     // check max spread limit if exist
-    helpers::assert_max_spread(
+    assert_max_spread(
         belief_price,
         max_spread,
-        offer_asset.clone(),
-        return_asset.clone(),
+        offer_asset.amount,
+        return_asset.amount,
         swap_computation.spread_amount,
-        offer_decimal,
-        ask_decimal,
     )?;
 
     // State changes to the pairs balances
