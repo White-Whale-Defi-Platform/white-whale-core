@@ -156,17 +156,16 @@ pub fn provide_liquidity(
 
     for asset in deposits.iter() {
         let asset_denom = &asset.denom;
-        if let Some(pool_asset_index) = pool_assets
+
+        let pool_asset_index = pool_assets
             .iter()
-            .position(|pool_asset| pool_asset.denom == *asset_denom)
-        {
-            // Increment the pool asset amount by the amount sent
-            pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
-                .amount
-                .checked_add(asset.amount)?;
-        } else {
-            return Err(ContractError::AssetMismatch {});
-        }
+            .position(|pool_asset| &pool_asset.denom == asset_denom)
+            .ok_or(ContractError::AssetMismatch {})?;
+
+        // Increment the pool asset amount by the amount sent
+        pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
+            .amount
+            .checked_add(asset.amount)?;
     }
 
     // After totting up the pool assets we need to check if any of them are zero.
