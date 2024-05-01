@@ -82,7 +82,7 @@ pub fn provide_liquidity(
         // swap half of the deposit asset for the other asset in the pool
         let swap_half = Coin {
             denom: deposit.denom.clone(),
-            amount: deposit.amount.checked_div(Uint128::new(2))?,
+            amount: deposit.amount.checked_div_floor((2u64, 1u64))?,
         };
 
         let swap_simulation_response =
@@ -112,7 +112,15 @@ pub fn provide_liquidity(
 
         expected_ask_asset_balance_in_contract.amount = expected_ask_asset_balance_in_contract
             .amount
-            .checked_sub(aggregate_outgoing_fees(&swap_simulation_response)?)?;
+            .saturating_sub(aggregate_outgoing_fees(&swap_simulation_response)?);
+
+        // sanity check. Theoretically, with the given conditions of min LP, pool fees and max spread assertion,
+        // the expected ask asset balance in the contract will always be greater than zero after
+        // subtracting the fees.
+        ensure!(
+            !expected_ask_asset_balance_in_contract.amount.is_zero(),
+            StdError::generic_err("Spread limit exceeded")
+        );
 
         TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.save(
             deps.storage,
@@ -337,15 +345,17 @@ pub fn withdraw_liquidity(
     // Get the ratio of the amount to withdraw to the total share
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
 
+    // sanity check, the share_ratio cannot possibly be greater than 1
+    ensure!(share_ratio <= Decimal::one(), ContractError::InvalidLpShare);
+
     // Use the ratio to calculate the amount of each pool asset to refund
     let refund_assets: Vec<Coin> = pair
         .assets
         .iter()
         .map(|pool_asset| {
-            let refund_amount = pool_asset.amount;
             Ok(Coin {
                 denom: pool_asset.denom.clone(),
-                amount: refund_amount * share_ratio,
+                amount: pool_asset.amount * share_ratio,
             })
         })
         .collect::<Result<Vec<Coin>, OverflowError>>()?;

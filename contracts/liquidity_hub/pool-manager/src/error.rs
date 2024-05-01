@@ -1,7 +1,8 @@
 use crate::liquidity::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
-    CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
-    Instantiate2AddressError, OverflowError, StdError, Uint128,
+    CheckedFromRatioError, CheckedMultiplyFractionError, CheckedMultiplyRatioError,
+    ConversionOverflowError, DivideByZeroError, Instantiate2AddressError, OverflowError, StdError,
+    Uint128,
 };
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
@@ -89,6 +90,9 @@ pub enum ContractError {
     #[error("Failed to compute the LP share with the given deposit")]
     LiquidityShareComputation {},
 
+    #[error("The amount of LP shares to withdraw is invalid")]
+    InvalidLpShare,
+
     #[error("Spread limit exceeded")]
     MaxSpreadAssertion {},
 
@@ -124,6 +128,9 @@ pub enum ContractError {
 
     #[error(transparent)]
     CheckedMultiplyRatioError(#[from] CheckedMultiplyRatioError),
+
+    #[error(transparent)]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error(transparent)]
     CheckedFromRatioError(#[from] CheckedFromRatioError),

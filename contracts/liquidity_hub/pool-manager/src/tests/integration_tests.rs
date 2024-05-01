@@ -2928,10 +2928,10 @@ mod provide_liquidity {
         #[cfg(feature = "osmosis")]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::percent(1),
             },
             swap_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::percent(1),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -3339,5 +3339,149 @@ mod provide_liquidity {
                     ]
                 );
             });
+    }
+
+    #[test]
+    fn provide_liquidity_with_single_asset_edge_case() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000u128, "uwhale".to_string()),
+            coin(1_000_000u128, "uluna".to_string()),
+            coin(1_000_000u128, "uosmo".to_string()),
+            coin(10_000u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+
+        // Asset denoms with uwhale and uluna
+        let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
+
+        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(15),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(5),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(15),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(5),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::percent(10),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pair
+        suite.instantiate_default().create_pair(
+            creator.clone(),
+            asset_denoms,
+            vec![6u8, 6u8],
+            pool_fees,
+            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        let contract_addr = suite.pool_manager_addr.clone();
+
+        // let's provide liquidity with two assets
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_100u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_100u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_all_balances(contract_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                println!("contract_addr {:?}", balances);
+            });
+
+        // now let's provide liquidity with a single asset
+        suite
+            .provide_liquidity(
+                other.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                Some(Decimal::percent(50)),
+                vec![Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1_760u128),
+                }],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                    assert_eq!(
+                        err,
+                        ContractError::Std(StdError::generic_err("Spread limit exceeded"))
+                    );
+                },
+            )
+            .provide_liquidity(
+                other.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                Some(Decimal::percent(50)),
+                vec![Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(10_000u128),
+                }],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                    assert_eq!(
+                        err,
+                        ContractError::Std(StdError::generic_err("Spread limit exceeded"))
+                    );
+                },
+            )
+            .provide_liquidity(
+                other.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                Some(Decimal::percent(50)),
+                vec![Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1_000u128),
+                }],
+                |result| {
+                    result.unwrap();
+                },
+            );
     }
 }
