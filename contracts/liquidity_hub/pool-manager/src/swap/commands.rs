@@ -1,10 +1,12 @@
 use crate::{state::MANAGER_CONFIG, ContractError};
 use cosmwasm_std::{
-    to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    ensure, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    WasmMsg,
 };
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
+use crate::state::get_pair_by_identifier;
 use cosmwasm_std::Decimal;
 use white_whale_std::whale_lair;
 
@@ -17,7 +19,7 @@ pub fn swap(
     info: MessageInfo,
     sender: Addr,
     offer_asset: Coin,
-    _ask_asset_denom: String,
+    ask_asset_denom: String,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<Addr>,
@@ -25,15 +27,28 @@ pub fn swap(
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
-    if !config.feature_toggle.swaps_enabled {
-        return Err(ContractError::OperationDisabled("swap".to_string()));
-    }
+    ensure!(
+        config.feature_toggle.swaps_enabled,
+        ContractError::OperationDisabled("swap".to_string())
+    );
 
+    // todo remove this, not needed. You can just swap whatever it is sent in info.funds, just worth
+    // veritying the asset is the same as the one in the pool
     if cw_utils::one_coin(&info)? != offer_asset {
         return Err(ContractError::AssetMismatch {});
     }
 
-    //todo get the pool by pair_identifier and verify the ask_asset_denom matches the one in the pool
+    // verify that the assets sent match the ones from the pool
+    let pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
+    ensure!(
+        vec![ask_asset_denom, offer_asset.denom.clone()]
+            .iter()
+            .all(|asset| pair
+                .assets
+                .iter()
+                .any(|pool_asset| pool_asset.denom == *asset)),
+        ContractError::AssetMismatch {}
+    );
 
     // perform the swap
     let swap_result = perform_swap(
@@ -72,16 +87,15 @@ pub fn swap(
         }));
     }
 
-    // todo remove, this stays within the pool
-    if !swap_result.swap_fee_asset.amount.is_zero() {
-        messages.push(CosmosMsg::Bank(BankMsg::Send {
-            to_address: config.bonding_manager_addr.to_string(),
-            amount: vec![swap_result.swap_fee_asset.clone()],
-        }));
-    }
+    //todo remove, this stays within the pool. Verify this with a test with multiple (duplicated)
+    // pools, see how the swap fees behave
+    // if !swap_result.swap_fee_asset.amount.is_zero() {
+    //     messages.push(CosmosMsg::Bank(BankMsg::Send {
+    //         to_address: config.bonding_manager_addr.to_string(),
+    //         amount: vec![swap_result.swap_fee_asset.clone()],
+    //     }));
+    // }
 
-    // 1. send collateral token from the contract to a user
-    // 2. stores the protocol fees
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "swap"),
         ("sender", sender.as_str()),
@@ -105,6 +119,11 @@ pub fn swap(
         (
             "burn_fee_amount",
             &swap_result.burn_fee_asset.amount.to_string(),
+        ),
+        #[cfg(feature = "osmosis")]
+        (
+            "osmosis_fee_amount",
+            &swap_result.osmosis_fee_amount.to_string(),
         ),
         ("swap_type", swap_result.pair_info.pair_type.get_label()),
     ]))

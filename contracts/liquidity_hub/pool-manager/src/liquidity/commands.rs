@@ -1,8 +1,16 @@
 use cosmwasm_std::{
-    coins, ensure, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response,
-    StdError,
+    coin, coins, ensure, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
+    Response, StdError, SubMsg,
 };
+use cosmwasm_std::{Decimal, OverflowError, Uint128};
+
+use white_whale_std::coin::aggregate_coins;
+use white_whale_std::pool_manager::ExecuteMsg;
 use white_whale_std::pool_network::asset::PairType;
+use white_whale_std::pool_network::{
+    asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
+    U256,
+};
 
 use crate::{
     helpers::{self},
@@ -14,12 +22,13 @@ use crate::{
 };
 // After writing create_pair I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
-use cosmwasm_std::{Decimal, OverflowError, Uint128};
-use white_whale_std::coin::aggregate_coins;
-use white_whale_std::pool_network::{
-    asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
-    U256,
+use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
+use crate::helpers::aggregate_outgoing_fees;
+use crate::queries::query_simulation;
+use crate::state::{
+    LiquidityProvisionData, SingleSideLiquidityProvisionBuffer, TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
 };
+
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
 #[allow(clippy::too_many_arguments)]
@@ -28,6 +37,7 @@ pub fn provide_liquidity(
     env: Env,
     info: MessageInfo,
     slippage_tolerance: Option<Decimal>,
+    max_spread: Option<Decimal>,
     receiver: Option<String>,
     pair_identifier: String,
     unlocking_duration: Option<u64>,
@@ -35,18 +45,16 @@ pub fn provide_liquidity(
 ) -> Result<Response, ContractError> {
     let config = MANAGER_CONFIG.load(deps.storage)?;
     // check if the deposit feature is enabled
-    if !config.feature_toggle.deposits_enabled {
-        return Err(ContractError::OperationDisabled(
-            "provide_liquidity".to_string(),
-        ));
-    }
+    ensure!(
+        config.feature_toggle.deposits_enabled,
+        ContractError::OperationDisabled("provide_liquidity".to_string())
+    );
 
     // Get the pair by the pair_identifier
     let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
 
     let mut pool_assets = pair.assets.clone();
     let deposits = aggregate_coins(info.funds.clone())?;
-    let mut messages: Vec<CosmosMsg> = vec![];
 
     ensure!(!deposits.is_empty(), ContractError::EmptyAssets);
 
@@ -58,8 +66,93 @@ pub fn provide_liquidity(
         ContractError::AssetMismatch {}
     );
 
+    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     // check if the user is providing liquidity with a single asset
-    let is_single_asset_provision = deposits.len() == 1;
+    let is_single_asset_provision = deposits.len() == 1usize;
+
+    if is_single_asset_provision {
+        //todo maybe put all the code within this block in a function??
+        ensure!(
+            !pool_assets.iter().any(|asset| asset.amount.is_zero()),
+            ContractError::EmptyPoolForSingleSideLiquidityProvision
+        );
+
+        let deposit = deposits[0].clone();
+
+        // swap half of the deposit asset for the other asset in the pool
+        let swap_half = Coin {
+            denom: deposit.denom.clone(),
+            amount: deposit.amount.checked_div(Uint128::new(2))?,
+        };
+
+        let swap_simulation_response =
+            query_simulation(deps.as_ref(), swap_half.clone(), pair_identifier.clone())?;
+
+        let ask_denom = pool_assets
+            .iter()
+            .find(|pool_asset| pool_asset.denom != deposit.denom)
+            .ok_or(ContractError::AssetMismatch {})?
+            .denom
+            .clone();
+
+        // let's compute the expected offer asset balance in the contract after the swap and liquidity
+        // provision takes place. This should be the same value as of now. Even though half of it
+        // will be swapped, eventually all of it will be sent to the contract in the second step of
+        // the single side liquidity provision
+        let expected_offer_asset_balance_in_contract = deps
+            .querier
+            .query_balance(&env.contract.address, deposit.denom)?;
+
+        // let's compute the expected ask asset balance in the contract after the swap and liquidity
+        // provision takes place. It should be the current balance minus the fees that will be sent
+        // off the contract.
+        let mut expected_ask_asset_balance_in_contract = deps
+            .querier
+            .query_balance(&env.contract.address, ask_denom.clone())?;
+
+        expected_ask_asset_balance_in_contract.amount = expected_ask_asset_balance_in_contract
+            .amount
+            .checked_sub(aggregate_outgoing_fees(&swap_simulation_response)?)?;
+
+        TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.save(
+            deps.storage,
+            &SingleSideLiquidityProvisionBuffer {
+                receiver,
+                expected_offer_asset_balance_in_contract,
+                expected_ask_asset_balance_in_contract,
+                offer_asset_half: swap_half.clone(),
+                expected_ask_asset: coin(
+                    swap_simulation_response.return_amount.u128(),
+                    ask_denom.clone(),
+                ),
+                liquidity_provision_data: LiquidityProvisionData {
+                    max_spread,
+                    slippage_tolerance,
+                    pair_identifier: pair_identifier.clone(),
+                    unlocking_duration,
+                    lock_position_identifier,
+                },
+            },
+        )?;
+
+        return Ok(Response::default()
+            .add_submessage(SubMsg::reply_on_success(
+                wasm_execute(
+                    env.contract.address.into_string(),
+                    &ExecuteMsg::Swap {
+                        offer_asset: swap_half.clone(),
+                        ask_asset_denom: ask_denom,
+                        belief_price: None,
+                        max_spread,
+                        to: None,
+                        pair_identifier,
+                    },
+                    vec![swap_half],
+                )?,
+                SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID,
+            ))
+            .add_attributes(vec![("action", "single_side_liquidity_provision")]));
+    }
 
     for asset in deposits.iter() {
         let asset_denom = &asset.denom;
@@ -78,9 +171,11 @@ pub fn provide_liquidity(
 
     // After totting up the pool assets we need to check if any of them are zero.
     // The very first deposit cannot be done with a single asset
-    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) && is_single_asset_provision {
+    if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
         return Err(ContractError::InvalidZeroAmount {});
     }
+
+    let mut messages: Vec<CosmosMsg> = vec![];
 
     let liquidity_token = pair.lp_denom.clone();
 
@@ -120,20 +215,6 @@ pub fn provide_liquidity(
 
                 share
             } else {
-                // let share = {
-                //     let numerator = U256::from(pool_assets[0].amount.u128())
-                //         .checked_mul(U256::from(total_share.u128()))
-                //         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
-                //
-                //     let denominator = U256::from(pool_assets[0].amount.u128());
-                //
-                //     let result = numerator
-                //         .checked_div(denominator)
-                //         .ok_or::<ContractError>(ContractError::LiquidityShareComputation {})?;
-                //
-                //     Uint128::from(result.as_u128())
-                // };
-
                 let amount = std::cmp::min(
                     pool_assets[0]
                         .amount
@@ -143,29 +224,26 @@ pub fn provide_liquidity(
                         .multiply_ratio(total_share, pool_assets[1].amount),
                 );
 
-                //todo i think we need to skip slippage_tolerance assertion in this case
-                if !is_single_asset_provision {
-                    let deposits_as: [Uint128; 2] = deposits
-                        .iter()
-                        .map(|coin| coin.amount)
-                        .collect::<Vec<_>>()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-                    let pools_as: [Coin; 2] = pool_assets
-                        .to_vec()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
+                let deposits_as: [Uint128; 2] = deposits
+                    .iter()
+                    .map(|coin| coin.amount)
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
+                let pools_as: [Coin; 2] = pool_assets
+                    .to_vec()
+                    .try_into()
+                    .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
 
-                    // assert slippage tolerance
-                    helpers::assert_slippage_tolerance(
-                        &slippage_tolerance,
-                        &deposits_as,
-                        &pools_as,
-                        pair.pair_type.clone(),
-                        amount,
-                        total_share,
-                    )?;
-                }
+                // assert slippage tolerance
+                helpers::assert_slippage_tolerance(
+                    &slippage_tolerance,
+                    &deposits_as,
+                    &pools_as,
+                    pair.pair_type.clone(),
+                    amount,
+                    total_share,
+                )?;
 
                 amount
             }
@@ -176,9 +254,6 @@ pub fn provide_liquidity(
             Uint128::one()
         }
     };
-
-    // mint LP token to sender
-    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
 
     // if the unlocking duration is set, lock the LP tokens in the incentive manager
     if let Some(unlocking_duration) = unlocking_duration {
@@ -209,13 +284,14 @@ pub fn provide_liquidity(
         // if not, just mint the LP tokens to the receiver
         messages.push(white_whale_std::lp_common::mint_lp_token_msg(
             liquidity_token,
-            &info.sender,
+            &deps.api.addr_validate(&receiver)?,
             &env.contract.address,
             share,
         )?);
     }
 
     pair.assets = pool_assets.clone();
+
     PAIRS.save(deps.storage, &pair_identifier, &pair)?;
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![

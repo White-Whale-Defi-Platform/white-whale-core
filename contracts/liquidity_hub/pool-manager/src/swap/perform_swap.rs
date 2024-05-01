@@ -1,4 +1,5 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
+
 use white_whale_std::pool_manager::PairInfo;
 use white_whale_std::pool_network::swap::assert_max_spread;
 
@@ -8,6 +9,7 @@ use crate::{
     ContractError,
 };
 
+#[derive(Debug)]
 pub struct SwapResult {
     /// The asset that should be returned to the user from the swap.
     pub return_asset: Coin,
@@ -17,7 +19,9 @@ pub struct SwapResult {
     pub protocol_fee_asset: Coin,
     /// The swap fee of `return_asset` associated with this swap transaction.
     pub swap_fee_asset: Coin,
-
+    /// The osmosis fee of `return_asset` associated with this swap transaction.
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_asset: Coin,
     /// The pair that was traded.
     pub pair_info: PairInfo,
     /// The amount of spread that occurred during the swap from the original exchange rate.
@@ -99,36 +103,60 @@ pub fn perform_swap(
     if offer_asset.denom == pools[0].denom {
         pair_info.assets[0].amount += offer_amount;
         pair_info.assets[1].amount -= swap_computation.return_amount;
+        pair_info.assets[1].amount -= swap_computation.protocol_fee_amount;
+        pair_info.assets[1].amount -= swap_computation.burn_fee_amount;
     } else {
         pair_info.assets[1].amount += offer_amount;
         pair_info.assets[0].amount -= swap_computation.return_amount;
+        pair_info.assets[0].amount -= swap_computation.protocol_fee_amount;
+        pair_info.assets[0].amount -= swap_computation.burn_fee_amount;
     }
 
     PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
 
     // TODO: Might be handy to make the below fees into a helper method
-    // burn ask_asset from the pool
     let burn_fee_asset = Coin {
         denom: ask_pool.denom.clone(),
         amount: swap_computation.burn_fee_amount,
     };
-    // Prepare a message to send the protocol fee and the swap fee to the protocol fee collector
     let protocol_fee_asset = Coin {
         denom: ask_pool.denom.clone(),
         amount: swap_computation.protocol_fee_amount,
     };
-    // Prepare a message to send the swap fee to the swap fee collector
+
+    #[allow(clippy::redundant_clone)]
     let swap_fee_asset = Coin {
-        denom: ask_pool.denom,
+        denom: ask_pool.denom.clone(),
         amount: swap_computation.swap_fee_amount,
     };
 
-    Ok(SwapResult {
-        return_asset,
-        swap_fee_asset,
-        burn_fee_asset,
-        protocol_fee_asset,
-        pair_info,
-        spread_amount: swap_computation.spread_amount,
-    })
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(SwapResult {
+            return_asset,
+            swap_fee_asset,
+            burn_fee_asset,
+            protocol_fee_asset,
+            pair_info,
+            spread_amount: swap_computation.spread_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_asset = Coin {
+            denom: ask_pool.denom,
+            amount: swap_computation.swap_fee_amount,
+        };
+
+        Ok(SwapResult {
+            return_asset,
+            swap_fee_asset,
+            burn_fee_asset,
+            protocol_fee_asset,
+            osmosis_fee_asset,
+            pair_info,
+            spread_amount: swap_computation.spread_amount,
+        })
+    }
 }

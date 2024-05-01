@@ -2,12 +2,14 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, Addr, Coin, Decimal, Decimal256, Deps, Env, StdError, StdResult, Storage, Uint128,
-    Uint256,
+    coin, ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult,
+    Storage, Uint128, Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::{SimulateSwapOperationsResponse, SwapOperation};
+use white_whale_std::pool_manager::{
+    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
+};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::error::ContractError;
@@ -170,6 +172,9 @@ pub fn compute_swap(
             let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
             let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
             let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
+
+            //todo compute the extra fees
+            //let extra_fees_amount: Uint256 = pool_fees.extra_fees.compute(return_amount);
 
             // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
             #[cfg(not(feature = "osmosis"))]
@@ -589,4 +594,50 @@ pub fn reverse_simulate_swap_operations(
     }
 
     Ok(SimulateSwapOperationsResponse { amount })
+}
+
+/// Validates the amounts after a single side liquidity provision swap are correct.
+pub fn validate_asset_balance(
+    deps: &DepsMut,
+    env: &Env,
+    expected_balance: &Coin,
+) -> Result<(), ContractError> {
+    let new_asset_balance = deps
+        .querier
+        .query_balance(&env.contract.address, expected_balance.denom.to_owned())?;
+
+    ensure!(
+        expected_balance == &new_asset_balance,
+        ContractError::InvalidSingleSideLiquidityProvisionSwap {
+            expected: expected_balance.amount,
+            actual: new_asset_balance.amount
+        }
+    );
+
+    Ok(())
+}
+
+/// Aggregates the fees from a simulation response that go out of the contract, i.e. protocol fee, burn fee
+/// and osmosis fee, if applicable. Doesn't know about the denom, just the amount.
+pub fn aggregate_outgoing_fees(
+    simulation_response: &SimulationResponse,
+) -> Result<Uint128, ContractError> {
+    let fees = {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            simulation_response
+                .protocol_fee_amount
+                .checked_add(simulation_response.burn_fee_amount)?
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            simulation_response
+                .protocol_fee_amount
+                .checked_add(simulation_response.burn_fee_amount)?
+                .checked_add(simulation_response.osmosis_fee_amount)?
+        }
+    };
+
+    Ok(fees)
 }

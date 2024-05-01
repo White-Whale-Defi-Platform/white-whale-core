@@ -139,6 +139,7 @@ pub enum ExecuteMsg {
     /// Provides liquidity to the pool
     ProvideLiquidity {
         slippage_tolerance: Option<Decimal>,
+        max_spread: Option<Decimal>,
         receiver: Option<String>,
         pair_identifier: String,
         /// The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed,
@@ -149,6 +150,7 @@ pub enum ExecuteMsg {
     },
     /// Swap an offer asset to the other
     Swap {
+        //todo remove offer_asset, take it from info.funds
         offer_asset: Coin,
         ask_asset_denom: String,
         belief_price: Option<Decimal>,

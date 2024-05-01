@@ -1,13 +1,17 @@
 use crate::error::ContractError;
-use crate::helpers::{reverse_simulate_swap_operations, simulate_swap_operations};
+use crate::helpers::{reverse_simulate_swap_operations, simulate_swap_operations, validate_asset_balance};
 use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
-use crate::state::{Config, MANAGER_CONFIG, PAIR_COUNTER};
+use crate::state::{
+    Config, SingleSideLiquidityProvisionBuffer, MANAGER_CONFIG, PAIRS, PAIR_COUNTER,
+    TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
+};
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
     entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 };
+use cosmwasm_std::{wasm_execute, Reply, StdError};
 use cw2::set_contract_version;
 use semver::Version;
 use white_whale_std::pool_manager::{
@@ -17,6 +21,7 @@ use white_whale_std::pool_manager::{
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ww-pool-manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID: u64 = 1;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -46,6 +51,41 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.id {
+        SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID => {
+            let SingleSideLiquidityProvisionBuffer {
+                receiver,
+                expected_offer_asset_balance_in_contract,
+                expected_ask_asset_balance_in_contract,
+                offer_asset_half,
+                expected_ask_asset,
+                liquidity_provision_data,
+            } = TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.load(deps.storage)?;
+
+            validate_asset_balance(&deps, &env, &expected_offer_asset_balance_in_contract)?;
+            validate_asset_balance(&deps, &env, &expected_ask_asset_balance_in_contract)?;
+
+            TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.remove(deps.storage);
+
+            Ok(Response::default().add_message(wasm_execute(
+                env.contract.address.into_string(),
+                &ExecuteMsg::ProvideLiquidity {
+                    slippage_tolerance: liquidity_provision_data.slippage_tolerance,
+                    max_spread: liquidity_provision_data.max_spread,
+                    receiver: Some(receiver),
+                    pair_identifier: liquidity_provision_data.pair_identifier,
+                    unlocking_duration: liquidity_provision_data.unlocking_duration,
+                    lock_position_identifier: liquidity_provision_data.lock_position_identifier,
+                },
+                vec![offer_asset_half, expected_ask_asset],
+            )?))
+        }
+        _ => Err(StdError::generic_err("reply id not found").into()),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -70,6 +110,7 @@ pub fn execute(
             pair_identifier,
         ),
         ExecuteMsg::ProvideLiquidity {
+            max_spread,
             slippage_tolerance,
             receiver,
             pair_identifier,
@@ -80,6 +121,7 @@ pub fn execute(
             env,
             info,
             slippage_tolerance,
+            max_spread,
             receiver,
             pair_identifier,
             unlocking_duration,

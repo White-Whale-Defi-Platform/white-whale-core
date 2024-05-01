@@ -1,6 +1,10 @@
 use cosmwasm_std::testing::MockStorage;
 use std::cell::RefCell;
-use white_whale_std::pool_manager::{Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse, ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse};
+use white_whale_std::pool_manager::{
+    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
+    ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
+    SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
+};
 use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
@@ -22,7 +26,8 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
-    );
+    )
+    .with_reply(crate::contract::reply);
 
     Box::new(contract)
 }
@@ -321,6 +326,7 @@ impl TestingSuite {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
             pair_identifier,
             slippage_tolerance: None,
+            max_spread: None,
             receiver: None,
             unlocking_duration,
             lock_position_identifier,
@@ -772,7 +778,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let lp_denom = RefCell::new("".to_string());
 
-        let pair = self.query_pair_info(identifier.clone(), |res| {
+        self.query_pair_info(identifier.clone(), |res| {
             let response = res.unwrap();
             *lp_denom.borrow_mut() = response.pair_info.lp_denom.clone();
         });

@@ -139,7 +139,6 @@ fn try_native_to_token() {
         }],
     );
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
-    println!("{:?}", res);
     assert_eq!(res.messages.len(), 1);
 
     let msg_transfer = res.messages.get(0).expect("no message");

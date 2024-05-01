@@ -68,6 +68,12 @@ pub enum ContractError {
     #[error("Trying to provide liquidity without any assets")]
     EmptyAssets,
 
+    #[error("Invalid single side liquidity provision swap, expected {expected} got {actual}")]
+    InvalidSingleSideLiquidityProvisionSwap { expected: Uint128, actual: Uint128 },
+
+    #[error("Cannot provide single-side liquidity when the pool is empty")]
+    EmptyPoolForSingleSideLiquidityProvision,
+
     #[error("Pair does not exist")]
     UnExistingPair {},
 

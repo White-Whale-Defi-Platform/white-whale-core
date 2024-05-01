@@ -750,7 +750,6 @@ mod router {
             |result| {
                 // ensure we got 999,000 in the response (1m - initial liquidity amount)
                 let result = result.unwrap();
-                println!("{:?}", result);
                 assert!(result.has_event(&Event::new("wasm").add_attribute("share", "999000")));
             },
         );
@@ -1752,7 +1751,7 @@ mod router {
             swap_operations.clone(),
             |result| {
                 let result = result.unwrap();
-                assert_eq!(result.amount.u128(), 1_006);
+                assert_eq!(result.amount.u128(), 1_007);
             },
         );
 
@@ -2094,7 +2093,6 @@ mod swapping {
                 amount: Uint128::from(1000u128),
             },
             |result| {
-                println!("{:?}", result);
                 *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
             },
         );
@@ -2155,7 +2153,6 @@ mod swapping {
                 amount: Uint128::from(1000u128),
             },
             |result| {
-                println!("{:?}", result);
                 *simulated_offer_amount.borrow_mut() = result.unwrap().offer_amount;
             },
         );
@@ -2183,7 +2180,6 @@ mod swapping {
                 let mut offer_amount = String::new();
 
                 for event in result.unwrap().events {
-                    println!("{:?}", event);
                     if event.ty == "wasm" {
                         for attribute in event.attributes {
                             match attribute.key.as_str() {
@@ -2322,7 +2318,6 @@ mod swapping {
                 let mut offer_amount = String::new();
 
                 for event in result.unwrap().events {
-                    println!("{:?}", event);
                     if event.ty == "wasm" {
                         for attribute in event.attributes {
                             match attribute.key.as_str() {
@@ -2346,12 +2341,12 @@ mod swapping {
         );
 
         // Verify fee collection by querying the address of the whale lair and checking its balance
-        // Should be 297 uLUNA
+        // Should be 99 uLUNA
         suite.query_balance(
             suite.bonding_manager_addr.to_string(),
             "uluna".to_string(),
             |result| {
-                assert_eq!(result.unwrap().amount, Uint128::from(297u128));
+                assert_eq!(result.unwrap().amount, Uint128::from(99u128));
             },
         );
     }
@@ -2895,10 +2890,10 @@ mod provide_liquidity {
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::percent(1),
             },
             swap_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::percent(1),
             },
             burn_fee: Fee {
                 share: Decimal::zero(),
@@ -2938,7 +2933,6 @@ mod provide_liquidity {
         );
 
         let contract_addr = suite.pool_manager_addr.clone();
-        let incentive_manager_addr = suite.incentive_manager_addr.clone();
         let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
 
         // Lets try to add liquidity
@@ -2989,30 +2983,9 @@ mod provide_liquidity {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                     match err {
-                        ContractError::InvalidZeroAmount {} => {}
+                        ContractError::EmptyPoolForSingleSideLiquidityProvision {} => {}
                         _ => panic!(
-                            "Wrong error type, should return ContractError::InvalidZeroAmount"
-                        ),
-                    }
-                },
-            )
-            .provide_liquidity(
-                creator.clone(),
-                "whale-uluna".to_string(),
-                None,
-                None,
-                vec![Coin {
-                    denom: "uwhale".to_string(),
-                    amount: Uint128::from(1_000_000u128),
-                }],
-                |result| {
-                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                    // it was trying to provide single-side liquidity with no funds in the pool
-                    match err {
-                        ContractError::InvalidZeroAmount {} => {}
-                        _ => panic!(
-                            "Wrong error type, should return ContractError::InvalidZeroAmount"
+                            "Wrong error type, should return ContractError::EmptyPoolForSingleSideLiquidityProvision"
                         ),
                     }
                 },
@@ -3027,31 +3000,6 @@ mod provide_liquidity {
                 None,
                 vec![
                     Coin {
-                        denom: "uwhale".to_string(),
-                        amount: Uint128::from(1_000_000u128),
-                    },
-                    Coin {
-                        denom: "uosmo".to_string(),
-                        amount: Uint128::from(1_000_000u128),
-                    },
-                ],
-                |result| {
-                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                    // it was trying to provide single-side liquidity with no funds in the pool
-                    match err {
-                        ContractError::AssetMismatch {} => {}
-                        _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
-                    }
-                },
-            )
-            .provide_liquidity(
-                creator.clone(),
-                "whale-uluna".to_string(),
-                None,
-                None,
-                vec![
-                    Coin {
                         denom: "uosmo".to_string(),
                         amount: Uint128::from(1_000_000u128),
                     },
@@ -3063,7 +3011,6 @@ mod provide_liquidity {
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                    // it was trying to provide single-side liquidity with no funds in the pool
                     match err {
                         ContractError::AssetMismatch {} => {}
                         _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
@@ -3128,7 +3075,6 @@ mod provide_liquidity {
             )
             .query_all_balances(other.to_string(), |result| {
                 let balances = result.unwrap();
-
                 assert!(balances.iter().any(|coin| {
                     coin.denom == lp_denom && coin.amount == Uint128::from(1_000_000u128)
                 }));
@@ -3164,11 +3110,32 @@ mod provide_liquidity {
                     .unwrap();
 
                 assert_eq!(whale.amount, Uint128::from(3_000_000u128));
-                assert_eq!(luna.amount, Uint128::from(1_000_000u128));
+                assert_eq!(luna.amount, Uint128::from(995_000u128));
             });
 
+        let pool_manager = suite.pool_manager_addr.clone();
         // let's withdraw both LPs
         suite
+            .query_all_balances(pool_manager.clone().to_string(), |result| {
+                let balances = result.unwrap();
+                assert_eq!(
+                    balances,
+                    vec![
+                        Coin {
+                            denom: lp_denom.clone(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "uluna".to_string(),
+                            amount: Uint128::from(995_000u128),
+                        },
+                        Coin {
+                            denom: "uwhale".to_string(),
+                            amount: Uint128::from(3_000_000u128),
+                        },
+                    ]
+                );
+            })
             .query_all_balances(creator.clone().to_string(), |result| {
                 let balances = result.unwrap();
                 assert_eq!(
@@ -3215,7 +3182,7 @@ mod provide_liquidity {
                     vec![
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(9_499_500u128),
+                            amount: Uint128::from(9_497_002u128),
                         },
                         Coin {
                             denom: "uosmo".to_string(),
@@ -3232,6 +3199,8 @@ mod provide_liquidity {
                     ]
                 );
             });
+
+        let bonding_manager = suite.bonding_manager_addr.clone();
 
         suite
             .query_all_balances(other.clone().to_string(), |result| {
@@ -3280,7 +3249,7 @@ mod provide_liquidity {
                     vec![
                         Coin {
                             denom: "uluna".to_string(),
-                            amount: Uint128::from(10_499_999u128),
+                            amount: Uint128::from(10_497_500u128),
                         },
                         Coin {
                             denom: "uosmo".to_string(),
@@ -3293,6 +3262,24 @@ mod provide_liquidity {
                         Coin {
                             denom: "uwhale".to_string(),
                             amount: Uint128::from(9_499_999u128),
+                        },
+                    ]
+                );
+            })
+            .query_all_balances(bonding_manager.to_string(), |result| {
+                let balances = result.unwrap();
+                // check that the bonding manager got the luna fees for the single-side lp
+                // plus the pool creation fee
+                assert_eq!(
+                    balances,
+                    vec![
+                        Coin {
+                            denom: "uluna".to_string(),
+                            amount: Uint128::from(5_000u128),
+                        },
+                        Coin {
+                            denom: "uusd".to_string(),
+                            amount: Uint128::from(1_000u128),
                         },
                     ]
                 );
