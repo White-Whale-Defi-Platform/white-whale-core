@@ -1,12 +1,11 @@
-use std::str::FromStr;
-
-use cosmwasm_std::{entry_point, Addr, Coin, Order, Reply, Uint128};
+use cosmwasm_std::{entry_point, from_json, Addr, Coin, Order, Reply, Uint128};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
+use cw_utils::parse_reply_execute_data;
 use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::{
-    Config, Epoch, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+    Config, Epoch, ExecuteMsg, GlobalIndex, InstantiateMsg, MigrateMsg, QueryMsg,
 };
 
 use crate::error::ContractError;
@@ -24,7 +23,7 @@ pub const LP_WITHDRAWAL_REPLY_ID: u64 = 0;
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -52,15 +51,16 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
     // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
     // Add a new rewards bucket for the new epoch
-    EPOCHS.save(
-        deps.storage,
-        &0u64.to_be_bytes(),
-        &Epoch {
-            id: 0u64.into(),
-            start_time: env.block.time,
-            ..Epoch::default()
-        },
-    )?;
+    // EPOCHS.save(
+    //     deps.storage,
+    //     &0u64.to_be_bytes(),
+    //     &Epoch {
+    //         id: 0u64.into(),
+    //         start_time: env.block.time,
+    //         ..Epoch::default()
+    //     },
+    // )?;
+    // GLOBAL.save(deps.storage, &GlobalIndex{ bonded_amount: Uint128::zero(), bonded_assets: vec![], timestamp: env.block.time, weight: Uint128::zero() })?;
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", config.owner.to_string()),
@@ -119,7 +119,27 @@ pub fn execute(
             // Store epoch manager and verify the sender is him
             println!("New epoch created: {:?}", current_epoch);
             // let config = CONFIG.load(deps.storage)?;
-            let global = GLOBAL.load(deps.storage).unwrap_or_default();
+            let global = GLOBAL.may_load(deps.storage)?;
+            println!("Global: {:?}", global);
+            // This happens only on the first epoch where Global has not been initialised yet
+            if global.is_none() {
+                let default_global = GlobalIndex {
+                    timestamp: env.block.time,
+                    ..Default::default()
+                };
+                GLOBAL.save(deps.storage, &default_global)?;
+                EPOCHS.save(
+                    deps.storage,
+                    &current_epoch.id.to_be_bytes(),
+                    &Epoch {
+                        id: current_epoch.id.into(),
+                        start_time: current_epoch.start_time,
+                        global_index: default_global,
+                        ..Epoch::default()
+                    },
+                )?;
+            }
+            let global = GLOBAL.load(deps.storage)?;
 
             // Review, what if current_epoch form the hook is actually next_epoch_id and then epoch - 1 would be previous one
             let new_epoch_id = current_epoch.id;
@@ -139,28 +159,28 @@ pub fn execute(
                     ..Epoch::default()
                 },
             )?;
-            println!("New epoch created: {}", next_epoch_id);
-            // Return early if the epoch is the first one
-            if new_epoch_id == 1 {
-                // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
-                // Add a new rewards bucket for the new epoch
-                EPOCHS.save(
-                    deps.storage,
-                    &new_epoch_id.to_be_bytes(),
-                    &Epoch {
-                        id: next_epoch_id.into(),
-                        start_time: current_epoch.start_time,
-                        global_index: global.clone(),
-                        ..Epoch::default()
-                    },
-                )?;
-                return Ok(Response::default()
-                    .add_attributes(vec![("action", "epoch_changed_hook".to_string())]));
-            }
+            println!("Nexts epoch created: {}", next_epoch_id);
+            // // Return early if the epoch is the first one
+            // if new_epoch_id == 1 {
+            //     // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+            //     // Add a new rewards bucket for the new epoch
+            //     EPOCHS.save(
+            //         deps.storage,
+            //         &new_epoch_id.to_be_bytes(),
+            //         &Epoch {
+            //             id: next_epoch_id.into(),
+            //             start_time: current_epoch.start_time,
+            //             global_index: global.clone(),
+            //             ..Epoch::default()
+            //         },
+            //     )?;
+            //     return Ok(Response::default()
+            //         .add_attributes(vec![("action", "epoch_changed_hook".to_string())]));
+            // }
 
             // forward fees from the expiring epoch to the new one.
             let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
-
+            println!("Expiring epoch: {:?}", expiring_epoch);
             if let Some(expiring_epoch) = expiring_epoch.as_mut() {
                 // Load all the available assets from the expiring epoch
                 let amount_to_be_forwarded = EPOCHS
@@ -252,34 +272,40 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 #[entry_point]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     println!("Reply from fill_rewards: {:?}", msg.clone());
-    // Read the epoch sent by the fee collector through the ForwardFeesResponse
-    // let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
-    // let data = execute_contract_response
-    //     .data
-    //     .ok_or(ContractError::Unauthorized {})?;
+
     match msg.id {
         LP_WITHDRAWAL_REPLY_ID => {
+            // Read the epoch sent by the fee collector through the ForwardFeesResponse
+            let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
+            let data = execute_contract_response
+                .data
+                .ok_or(ContractError::Unauthorized {})?;
+
+            let coins: Vec<Coin> = from_json(data.as_slice())?;
+            println!("Coins: {:?}", coins);
             let config = CONFIG.load(deps.storage)?;
             let distribution_denom = config.distribution_denom.clone();
             let mut messages = vec![];
-            let mut coins = Vec::new();
-            // Loop msg events to find the transfer event and the assets received
-            for event in msg.result.unwrap().events {
-                if event.ty == "transfer" {
-                    let attributes = event.attributes;
-                    for attr in attributes {
-                        if attr.key == "amount" {
-                            let amount_str = attr.value;
-                            let amounts: Vec<&str> = amount_str.split(',').collect();
-                            println!("Amounts: {:?}", amounts);
-                            for amount in amounts {
-                                // XXXXucoin is the format at this point, pass it to from_str to get the Coin struct
-                                coins.push(Coin::from_str(amount).unwrap());
-                            }
-                        }
-                    }
-                }
-            }
+            // // Loop msg events to find the transfer event and the assets received
+            // for event in msg.result.unwrap().events {
+            //     if event.ty == "transfer" {
+            //         let attributes = event.attributes;
+            //         for attr in attributes {
+            //             if attr.key == "amount" {
+            //                 let amount_str = attr.value;
+            //                 let amounts: Vec<&str> = amount_str.split(',').collect();
+            //                 println!("Amounts: {:?}", amounts);
+            //                 for amount in amounts {
+            //                     // XXXXucoin is the format at this point, pass it to from_str to get the Coin struct
+            //                     coins.push(Coin::from_str(amount).unwrap());
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+
+            // Instead of going over events
+            //
 
             // Search received coins funds for the distribution denom
             let mut whale = coins

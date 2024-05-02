@@ -22,7 +22,10 @@ fn test_unbond_successfully() {
                 amount: Uint128::new(1_000u128),
             },
             &coins(1_000u128, "ampWHALE"),
-            |_res| {},
+            |res| {
+                println!("{:?}", res.unwrap());
+                println!("Bonded successfully\n\n\n");
+            },
         )
         .fast_forward(10u64)
         .assert_bonding_weight_response(
@@ -41,7 +44,9 @@ fn test_unbond_successfully() {
                 denom: "ampWHALE".to_string(),
                 amount: Uint128::new(300u128),
             },
-            |_res| {},
+            |res| {
+                println!("{:?}", res.unwrap());
+            },
         )
         .fast_forward(10u64)
         .assert_unbonding_response(

@@ -12,7 +12,7 @@ use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::contract::query;
-use crate::state::EPOCHS;
+use crate::state::{CONFIG, EPOCHS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
@@ -387,6 +387,20 @@ impl TestingRobot {
                 )
                 .unwrap();
         }
+        CONFIG
+            .save(
+                &mut self.owned_deps.storage,
+                &Config {
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: Uint64::new(1_000_000_000_000u64),
+                    growth_rate: Decimal::one(),
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                    grace_period: Uint64::new(21),
+                    owner: Addr::unchecked("owner"),
+                    pool_manager_addr: Addr::unchecked("pool_manager"),
+                },
+            )
+            .unwrap();
 
         self
     }

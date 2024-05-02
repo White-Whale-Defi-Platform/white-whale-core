@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use white_whale_std::epoch_manager::epoch_manager::ConfigResponse;
 
 use cosmwasm_std::{
@@ -213,6 +213,7 @@ pub(crate) fn query_weight(
     println!("unique_denoms: {:?}", global_index);
 
     // Represents the share of the global weight that the address has
+    // If global_index.weight is zero no one has bonded yet so the share is
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
 
     Ok(BondingWeightResponse {
@@ -257,22 +258,29 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
 /// a new epoch is created.
 pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
-    let grace_period = CONFIG.load(deps.storage)?.grace_period;
-
-    // last epochs within the grace period
-    let epochs = EPOCHS
+    let config = CONFIG.load(deps.storage)?;
+    // Adding 1 because we store the future epoch in the map also, so grace_period + 1
+    let grace_period = config.grace_period.u64() + 1;
+    // Take grace_period + 1 and then slice last one off
+    let mut epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period.u64() as usize)
+        .take(grace_period as usize)
         .map(|item| {
             let (_, epoch) = item?;
             Ok(epoch)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<VecDeque<Epoch>>>()?;
+
+    if epochs.len() > 1 {
+        // First the future epoch from stack
+        epochs.pop_front();
+    }
 
     // if the epochs vector's length is the same as the grace period it means there is one epoch that
     // is expiring once the new one is created i.e. the last epoch in the vector
-    if epochs.len() == grace_period.u64() as usize {
-        Ok(Some(epochs.last().cloned().unwrap_or_default()))
+    if epochs.len() == config.grace_period.u64() as usize {
+        let expiring_epoch: Epoch = epochs.into_iter().last().unwrap_or_default();
+        Ok(Some(expiring_epoch))
     } else {
         // nothing is expiring yet
         Ok(None)
@@ -282,18 +290,29 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
 /// Returns the epochs that are within the grace period, i.e. the ones which fees can still be claimed.
 /// The result is ordered by epoch id, descending. Thus, the first element is the current epoch.
 pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
-    let grace_period: Uint64 = Uint64::new(21);
-
-    let epochs = EPOCHS
+    let config = CONFIG.load(deps.storage)?;
+    // Adding 1 because we store the future epoch in the map also, so grace_period + 1
+    let grace_period = config.grace_period.u64() + 1;
+    // Take grace_period + 1 and then slice last one off
+    let mut epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period.u64() as usize)
+        .take(grace_period as usize)
         .map(|item| {
             let (_, epoch) = item?;
+
             Ok(epoch)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<VecDeque<Epoch>>>()?;
 
-    Ok(ClaimableEpochsResponse { epochs })
+    if epochs.len() > 1 {
+        // First the future epoch from stack
+        epochs.pop_front();
+    }
+    epochs.retain(|epoch| !epoch.available.is_empty());
+
+    Ok(ClaimableEpochsResponse {
+        epochs: epochs.into(),
+    })
 }
 
 /// Returns the epochs that can be claimed by the given address.

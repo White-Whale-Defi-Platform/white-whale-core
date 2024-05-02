@@ -7,7 +7,7 @@ use white_whale_std::pool_network::asset;
 use white_whale_std::bonding_manager::Bond;
 
 use crate::helpers::validate_growth_rate;
-use crate::queries::{query_claimable, query_weight, MAX_PAGE_LIMIT};
+use crate::queries::{get_current_epoch, query_claimable, query_weight, MAX_PAGE_LIMIT};
 use crate::state::{
     update_global_weight, update_local_weight, BOND, CONFIG, EPOCHS, GLOBAL, LAST_CLAIMED_EPOCH,
     UNBOND,
@@ -22,8 +22,7 @@ pub(crate) fn bond(
     env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    // helpers::validate_claimed(&deps, &info)?;
-
+    helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     let mut bond = BOND
         .key((&info.sender, &asset.denom))
@@ -55,6 +54,17 @@ pub(crate) fn bond(
     global_index = update_global_weight(&mut deps, timestamp, global_index)?;
 
     GLOBAL.save(deps.storage, &global_index)?;
+
+    let epoch = get_current_epoch(deps.as_ref())?.epoch;
+    EPOCHS.update(
+        deps.storage,
+        &epoch.id.to_be_bytes(),
+        |bucket| -> StdResult<_> {
+            let mut bucket = bucket.unwrap_or_default();
+            bucket.global_index = global_index.clone();
+            Ok(bucket)
+        },
+    )?;
     println!("Bonded asset: {:?}", global_index);
 
     Ok(Response::default().add_attributes(vec![
@@ -77,7 +87,7 @@ pub(crate) fn unbond(
         ContractError::InvalidUnbondingAmount {}
     );
 
-    // helpers::validate_claimed(&deps, &info)?;
+    helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     if let Some(mut unbond) = BOND
         .key((&info.sender, &asset.denom))
@@ -223,21 +233,21 @@ pub(crate) fn update_config(
 }
 
 /// Claims pending rewards for the sender.
-pub fn claim(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn claim(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let claimable_epochs = query_claimable(deps.as_ref(), &info.sender)?.epochs;
     ensure!(
         !claimable_epochs.is_empty(),
         ContractError::NothingToClaim {}
     );
     print!("Claimable epochs: {:?}", claimable_epochs);
-    let global = GLOBAL.load(deps.storage)?;
+    let _global = GLOBAL.load(deps.storage)?;
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
         let bonding_weight_response = query_weight(
             deps.as_ref(),
-            env.block.time,
+            epoch.start_time,
             info.sender.to_string(),
-            Some(global.clone()),
+            Some(epoch.global_index.clone()),
         )?;
         println!("Bonding weight response: {:?}", bonding_weight_response);
         println!("Epoch: {:?}", epoch);

@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use cosmwasm_std::{coin, Uint64};
 use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
@@ -17,18 +19,19 @@ fn test_claimable_epochs() {
 
     let epochs = test_helpers::get_epochs();
     let binding = epochs.clone();
-    let claimable_epochs = binding
+    let mut claimable_epochs = binding
         .iter()
         .rev()
         .take(grace_period.u64() as usize)
-        .collect::<Vec<_>>();
+        .collect::<VecDeque<_>>();
+    claimable_epochs.pop_front();
 
     robot
         .instantiate_default()
         .add_epochs_to_state(epochs)
         .query_claimable_epochs(None, |res| {
             let (_, epochs) = res.unwrap();
-
+            println!("{:?}", epochs);
             assert_eq!(epochs.len(), claimable_epochs.len());
             for (e, a) in epochs.iter().zip(claimable_epochs.iter()) {
                 assert_eq!(e, *a);
@@ -246,7 +249,7 @@ fn test_claim_successfully() {
             event
                 .attributes
                 .iter()
-                .any(|attr| attr.key == "amount" && attr.value == "390uwhale")
+                .any(|attr| attr.key == "amount" && attr.value == "448uwhale")
         }));
     });
 
@@ -257,7 +260,7 @@ fn test_claim_successfully() {
             event
                 .attributes
                 .iter()
-                .any(|attr| attr.key == "amount" && attr.value == "206uwhale")
+                .any(|attr| attr.key == "amount" && attr.value == "560uwhale")
         }));
     });
 }
