@@ -615,6 +615,7 @@ impl TestingRobot {
             receiver: None,
             lock_position_identifier: None,
             unlocking_duration: None,
+            max_spread: None,
         };
 
         result(

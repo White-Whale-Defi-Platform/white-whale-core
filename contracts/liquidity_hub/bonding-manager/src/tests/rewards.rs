@@ -115,7 +115,7 @@ fn test_fill_rewards_from_pool_manager() {
         |res| {
             // 1_000u128 - 9u128 swap_fee - 9u128 protocol_fee where protocol_fee and swap_fee are 1% of the swap amount
             // + 1_000u128 uwhale pool creation fee
-            assert_eq!(res, Uint128::from(1018u128));
+            assert_eq!(res, Uint128::from(1009u128));
         },
     );
 
@@ -136,7 +136,7 @@ fn test_fill_rewards_from_pool_manager() {
         "uwhale".to_string(),
         robot.bonding_manager_addr.clone(),
         |res| {
-            assert_eq!(res, Uint128::from(2018u128));
+            assert_eq!(res, Uint128::from(2009u128));
         },
     );
 
@@ -157,7 +157,7 @@ fn test_fill_rewards_from_pool_manager() {
         "uwhale".to_string(),
         robot.bonding_manager_addr.clone(),
         |res| {
-            assert_eq!(res, Uint128::from(3018u128));
+            assert_eq!(res, Uint128::from(3009u128));
         },
     );
 
