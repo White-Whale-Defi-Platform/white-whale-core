@@ -65,7 +65,6 @@ pub(crate) fn bond(
             Ok(bucket)
         },
     )?;
-    println!("Bonded asset: {:?}", global_index);
 
     Ok(Response::default().add_attributes(vec![
         ("action", "bond".to_string()),
@@ -239,7 +238,6 @@ pub fn claim(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, Co
         !claimable_epochs.is_empty(),
         ContractError::NothingToClaim {}
     );
-    print!("Claimable epochs: {:?}", claimable_epochs);
     let _global = GLOBAL.load(deps.storage)?;
     let mut claimable_fees = vec![];
     for mut epoch in claimable_epochs.clone() {
@@ -249,11 +247,8 @@ pub fn claim(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, Co
             info.sender.to_string(),
             Some(epoch.global_index.clone()),
         )?;
-        println!("Bonding weight response: {:?}", bonding_weight_response);
-        println!("Epoch: {:?}", epoch);
-        for fee in epoch.total.iter() {
-            println!("Fee: {:?}", fee);
 
+        for fee in epoch.total.iter() {
             let reward = fee.amount * bonding_weight_response.share;
 
             if reward.is_zero() {

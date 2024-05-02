@@ -55,7 +55,6 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 pub fn validate_claimed(deps: &DepsMut, _info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
     let claimable_rewards: ClaimableEpochsResponse = get_claimable_epochs(deps.as_ref()).unwrap();
-    println!("Claimable rewards: {:?}", claimable_rewards);
     // If epochs is greater than none
     if !claimable_rewards.epochs.is_empty() {
         return Err(ContractError::UnclaimedRewards {});
@@ -108,11 +107,9 @@ pub fn calculate_epoch(
 
     let elapsed_time =
         Uint64::new(timestamp.nanos()).checked_sub(genesis_epoch_config.genesis_epoch)?;
-    println!("Elapsed time: {:?}", elapsed_time);
     let epoch = elapsed_time
         .checked_div(epoch_duration)?
         .checked_add(Uint64::one())?;
-    println!("Epoch: {:?}", epoch);
 
     Ok(epoch)
 }

@@ -31,7 +31,6 @@ fn test_claimable_epochs() {
         .add_epochs_to_state(epochs)
         .query_claimable_epochs(None, |res| {
             let (_, epochs) = res.unwrap();
-            println!("{:?}", epochs);
             assert_eq!(epochs.len(), claimable_epochs.len());
             for (e, a) in epochs.iter().zip(claimable_epochs.iter()) {
                 assert_eq!(e, *a);
@@ -244,7 +243,6 @@ fn test_claim_successfully() {
 
     robot.claim(sender, |res| {
         let result = res.unwrap();
-        println!("{:?}", result);
         assert!(result.events.iter().any(|event| {
             event
                 .attributes
@@ -255,7 +253,6 @@ fn test_claim_successfully() {
 
     robot.claim(another_sender, |res| {
         let result = res.unwrap();
-        println!("{:?}", result);
         assert!(result.events.iter().any(|event| {
             event
                 .attributes

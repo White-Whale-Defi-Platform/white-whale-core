@@ -37,7 +37,6 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
-    println!("bonds is empty : {:?}", bonds.is_empty());
 
     // if it doesn't have bonded, return empty response
     if bonds.is_empty() {
@@ -47,7 +46,6 @@ pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedRespo
             first_bonded_epoch_id: Uint64::zero(),
         });
     }
-    println!("bonds: {:?}", bonds);
 
     let mut total_bonded = Uint128::zero();
     let mut bonded_assets = vec![];
@@ -105,7 +103,6 @@ pub(crate) fn query_unbonding(
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
-    println!("unbonding: {:?}", unbonding);
     // aggregate all the amounts in unbonding vec and return uint128
     let unbonding_amount = unbonding.iter().try_fold(Uint128::zero(), |acc, bond| {
         acc.checked_add(bond.asset.amount)
@@ -182,7 +179,6 @@ pub(crate) fn query_weight(
             config.growth_rate,
             bond.timestamp,
         )?;
-        println!("bond: {:?}", bond);
 
         if !unique_denoms.contains(&bond.asset.denom) {
             unique_denoms.insert(bond.asset.denom.clone());
@@ -200,7 +196,6 @@ pub(crate) fn query_weight(
             .unwrap_or_else(|_| Some(GlobalIndex::default()))
             .ok_or_else(|| StdError::generic_err("Global index not found"))?
     };
-    println!("unique_denoms: {:?}", global_index);
 
     // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
@@ -210,7 +205,6 @@ pub(crate) fn query_weight(
         config.growth_rate,
         global_index.timestamp,
     )?;
-    println!("unique_denoms: {:?}", global_index);
 
     // Represents the share of the global weight that the address has
     // If global_index.weight is zero no one has bonded yet so the share is
@@ -338,7 +332,6 @@ pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsR
             claimable_epochs.retain(|epoch| epoch.id > bonded_response.first_bonded_epoch_id);
         }
     };
-    println!("claimable_epochs: {:?}", claimable_epochs);
     // filter out epochs that have no available fees. This would only happen in case the grace period
     // gets increased after epochs have expired, which would lead to make them available for claiming
     // again without any available rewards, as those were forwarded to newer epochs.

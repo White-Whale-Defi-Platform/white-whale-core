@@ -81,13 +81,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Bond {} => {
             let asset_to_bond = helpers::validate_funds(&deps, &info)?;
-            commands::bond(
-                deps,
-                env.block.time,
-                info.clone(),
-                env,
-                asset_to_bond.to_owned(),
-            )
+            commands::bond(deps, env.block.time, info, env, asset_to_bond)
         }
         ExecuteMsg::Unbond { asset } => {
             cw_utils::nonpayable(&info)?;
@@ -117,10 +111,7 @@ pub fn execute(
             // Epoch has been updated, update rewards bucket
             // and forward the expiring epoch
             // Store epoch manager and verify the sender is him
-            println!("New epoch created: {:?}", current_epoch);
-            // let config = CONFIG.load(deps.storage)?;
             let global = GLOBAL.may_load(deps.storage)?;
-            println!("Global: {:?}", global);
             // This happens only on the first epoch where Global has not been initialised yet
             if global.is_none() {
                 let default_global = GlobalIndex {
@@ -155,11 +146,10 @@ pub fn execute(
                 &Epoch {
                     id: next_epoch_id.into(),
                     start_time: current_epoch.start_time.plus_days(1),
-                    global_index: global.clone(),
+                    global_index: global,
                     ..Epoch::default()
                 },
             )?;
-            println!("Nexts epoch created: {}", next_epoch_id);
             // // Return early if the epoch is the first one
             // if new_epoch_id == 1 {
             //     // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
@@ -180,13 +170,11 @@ pub fn execute(
 
             // forward fees from the expiring epoch to the new one.
             let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
-            println!("Expiring epoch: {:?}", expiring_epoch);
             if let Some(expiring_epoch) = expiring_epoch.as_mut() {
                 // Load all the available assets from the expiring epoch
                 let amount_to_be_forwarded = EPOCHS
                     .load(deps.storage, &expiring_epoch.id.to_be_bytes())?
                     .available;
-                println!("Amount to be forwarded: {:?}", amount_to_be_forwarded);
                 EPOCHS.update(
                     deps.storage,
                     &new_epoch_id.to_be_bytes(),
@@ -271,8 +259,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 // Reply entrypoint handling LP withdraws from fill_rewards
 #[entry_point]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    println!("Reply from fill_rewards: {:?}", msg.clone());
-
     match msg.id {
         LP_WITHDRAWAL_REPLY_ID => {
             // Read the epoch sent by the fee collector through the ForwardFeesResponse
@@ -282,7 +268,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 .ok_or(ContractError::Unauthorized {})?;
 
             let coins: Vec<Coin> = from_json(data.as_slice())?;
-            println!("Coins: {:?}", coins);
             let config = CONFIG.load(deps.storage)?;
             let distribution_denom = config.distribution_denom.clone();
             let mut messages = vec![];
@@ -333,8 +318,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 Some(epoch_id) => epoch_id?,
                 None => return Err(ContractError::Unauthorized {}),
             };
-            let epoch_to_log = EPOCHS.load(deps.storage, &next_epoch_id)?;
-            println!("Most recent epoch: {:?}", epoch_to_log);
             EPOCHS.update(deps.storage, &next_epoch_id, |bucket| -> StdResult<_> {
                 let mut bucket = bucket.unwrap_or_default();
                 bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
