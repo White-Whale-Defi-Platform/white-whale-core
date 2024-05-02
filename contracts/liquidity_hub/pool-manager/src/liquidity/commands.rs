@@ -65,7 +65,7 @@ pub fn provide_liquidity(
         deposits.iter().all(|asset| pool_assets
             .iter()
             .any(|pool_asset| pool_asset.denom == asset.denom)),
-        ContractError::AssetMismatch {}
+        ContractError::AssetMismatch
     );
 
     let receiver =
@@ -95,7 +95,7 @@ pub fn provide_liquidity(
         let ask_denom = pool_assets
             .iter()
             .find(|pool_asset| pool_asset.denom != deposit.denom)
-            .ok_or(ContractError::AssetMismatch {})?
+            .ok_or(ContractError::AssetMismatch)?
             .denom
             .clone();
 
@@ -123,7 +123,7 @@ pub fn provide_liquidity(
         // subtracting the fees.
         ensure!(
             !expected_ask_asset_balance_in_contract.amount.is_zero(),
-            StdError::generic_err("Spread limit exceeded")
+            ContractError::MaxSpreadAssertion
         );
 
         SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.save(
@@ -170,7 +170,7 @@ pub fn provide_liquidity(
             let pool_asset_index = pool_assets
                 .iter()
                 .position(|pool_asset| &pool_asset.denom == asset_denom)
-                .ok_or(ContractError::AssetMismatch {})?;
+                .ok_or(ContractError::AssetMismatch)?;
 
             // Increment the pool asset amount by the amount sent
             pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
@@ -181,7 +181,7 @@ pub fn provide_liquidity(
         // After totting up the pool assets we need to check if any of them are zero.
         // The very first deposit cannot be done with a single asset
         if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
-            return Err(ContractError::InvalidZeroAmount {});
+            return Err(ContractError::InvalidZeroAmount);
         }
 
         let mut messages: Vec<CosmosMsg> = vec![];
@@ -199,7 +199,9 @@ pub fn provide_liquidity(
                     let share = Uint128::new(
                         (U256::from(pool_assets[0].amount.u128())
                             .checked_mul(U256::from(pool_assets[1].amount.u128()))
-                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+                            .ok_or::<ContractError>(
+                                ContractError::LiquidityShareComputationFailed,
+                            ))?
                         .integer_sqrt()
                         .as_u128(),
                     )

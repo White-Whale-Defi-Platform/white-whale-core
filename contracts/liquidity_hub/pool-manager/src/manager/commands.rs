@@ -117,7 +117,7 @@ pub fn create_pair(
         .iter()
         .any(|asset| asset_denoms.iter().filter(|&a| a == asset).count() > 1)
     {
-        return Err(ContractError::SameAsset {});
+        return Err(ContractError::SameAsset);
     }
 
     // Verify pool fees
@@ -179,7 +179,7 @@ pub fn create_pair(
         not(feature = "injective")
     ))]
     {
-        return Err(ContractError::TokenFactoryNotEnabled {});
+        return Err(ContractError::TokenFactoryNotEnabled);
     }
 
     messages.push(white_whale_std::tokenfactory::create_denom::create_denom(

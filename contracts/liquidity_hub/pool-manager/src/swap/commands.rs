@@ -42,7 +42,7 @@ pub fn swap(
                 .assets
                 .iter()
                 .any(|pool_asset| pool_asset.denom == *asset)),
-        ContractError::AssetMismatch {}
+        ContractError::AssetMismatch
     );
 
     // perform the swap
@@ -59,7 +59,6 @@ pub fn swap(
 
     let receiver = validate_addr_or_default(&deps.as_ref(), receiver, info.sender);
 
-    // first we add the swap result
     if !swap_result.return_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Send {
             to_address: receiver.clone().into_string(),
@@ -67,12 +66,12 @@ pub fn swap(
         }));
     }
 
-    // then we add the fees
     if !swap_result.burn_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Bank(BankMsg::Burn {
             amount: vec![swap_result.burn_fee_asset.clone()],
         }));
     }
+
     if !swap_result.protocol_fee_asset.amount.is_zero() {
         messages.push(
             wasm_execute(

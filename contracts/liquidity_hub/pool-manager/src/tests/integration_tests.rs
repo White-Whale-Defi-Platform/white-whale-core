@@ -501,7 +501,7 @@ mod router {
             suite.bonding_manager_addr.to_string(),
             "uusd".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), 2000 + 4 * 2);
+                assert_eq!(amt.unwrap().amount.u128(), 2000 + 4);
             },
         );
         suite.query_balance(
@@ -515,7 +515,7 @@ mod router {
             suite.bonding_manager_addr.to_string(),
             "uluna".to_string(),
             |amt| {
-                assert_eq!(amt.unwrap().amount.u128(), 4 * 2);
+                assert_eq!(amt.unwrap().amount.u128(), 4);
             },
         );
     }
@@ -659,7 +659,7 @@ mod router {
             |result| {
                 assert_eq!(
                     result.unwrap_err().downcast_ref::<ContractError>(),
-                    Some(&ContractError::NoSwapOperationsProvided {})
+                    Some(&ContractError::NoSwapOperationsProvided)
                 )
             },
         );
@@ -2995,7 +2995,7 @@ mod provide_liquidity {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                     match err {
-                        ContractError::AssetMismatch { .. } => {}
+                        ContractError::AssetMismatch => {}
                         _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
                     }
                 },
@@ -3045,7 +3045,7 @@ mod provide_liquidity {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                     match err {
-                        ContractError::AssetMismatch {} => {}
+                        ContractError::AssetMismatch => {}
                         _ => panic!("Wrong error type, should return ContractError::AssetMismatch"),
                     }
                 },

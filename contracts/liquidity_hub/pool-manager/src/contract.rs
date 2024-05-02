@@ -1,7 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::{
-    reverse_simulate_swap_operations, simulate_swap_operations, validate_asset_balance,
-};
+use crate::helpers::validate_asset_balance;
 use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{
@@ -246,7 +244,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
-        } => Ok(to_json_binary(&simulate_swap_operations(
+        } => Ok(to_json_binary(&queries::simulate_swap_operations(
             deps,
             offer_amount,
             operations,
@@ -254,7 +252,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
             operations,
-        } => Ok(to_json_binary(&reverse_simulate_swap_operations(
+        } => Ok(to_json_binary(&queries::reverse_simulate_swap_operations(
             deps, ask_amount, operations,
         )?)?),
         QueryMsg::SwapRoute {

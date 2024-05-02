@@ -2,26 +2,22 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult,
-    Storage, Uint128, Uint256,
+    ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult, Storage,
+    Uint128, Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::{
-    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
-};
+use white_whale_std::pool_manager::SimulationResponse;
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::queries::query_simulation;
-
-pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
 
-// the number of pools in the pair
+// todo isn't this for the 3pool? shouldn't it be 3
+// the number of assets in the pair
 const N_COINS: Uint256 = Uint256::from_u128(2);
 
 fn calculate_stableswap_d(
@@ -81,7 +77,7 @@ fn calculate_stableswap_d(
 
     // completed iterations
     // but we never approximated correctly
-    Err(ContractError::ConvergeError {})
+    Err(ContractError::ConvergeError)
 }
 
 /// Determines the direction of `offer_pool` -> `ask_pool`.
@@ -132,18 +128,14 @@ pub fn calculate_stableswap_y(
 
         if y >= previous_y {
             if y.checked_sub(previous_y)? <= Uint256::one() {
-                return y
-                    .try_into()
-                    .map_err(|_| ContractError::SwapOverflowError {});
+                return y.try_into().map_err(|_| ContractError::SwapOverflowError);
             }
         } else if y < previous_y && previous_y.checked_sub(y)? <= Uint256::one() {
-            return y
-                .try_into()
-                .map_err(|_| ContractError::SwapOverflowError {});
+            return y.try_into().map_err(|_| ContractError::SwapOverflowError);
         }
     }
 
-    Err(ContractError::ConvergeError {})
+    Err(ContractError::ConvergeError)
 }
 
 pub fn compute_swap(
@@ -187,19 +179,19 @@ pub fn compute_swap(
                 Ok(SwapComputation {
                     return_amount: return_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     spread_amount: spread_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     swap_fee_amount: swap_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     protocol_fee_amount: protocol_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     burn_fee_amount: burn_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                 })
             }
 
@@ -216,22 +208,22 @@ pub fn compute_swap(
                 Ok(SwapComputation {
                     return_amount: return_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     spread_amount: spread_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     swap_fee_amount: swap_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     protocol_fee_amount: protocol_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     burn_fee_amount: burn_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     osmosis_fee_amount: osmosis_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                 })
             }
         }
@@ -274,19 +266,19 @@ pub fn compute_swap(
                 Ok(SwapComputation {
                     return_amount: return_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     spread_amount: spread_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     swap_fee_amount: swap_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     protocol_fee_amount: protocol_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     burn_fee_amount: burn_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                 })
             }
 
@@ -303,22 +295,22 @@ pub fn compute_swap(
                 Ok(SwapComputation {
                     return_amount: return_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     spread_amount: spread_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     swap_fee_amount: swap_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     protocol_fee_amount: protocol_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     burn_fee_amount: burn_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                     osmosis_fee_amount: osmosis_fee_amount
                         .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
+                        .map_err(|_| ContractError::SwapOverflowError)?,
                 })
             }
         }
@@ -458,7 +450,7 @@ pub fn assert_slippage_tolerance(
                 // slippage when adding liquidity. Due to the math behind the stableswap, the amp factor
                 // needs to be in as well, much like when swaps are done
                 if pool_ratio * one_minus_slippage_tolerance > deposit_ratio {
-                    return Err(ContractError::MaxSlippageAssertion {});
+                    return Err(ContractError::MaxSlippageAssertion);
                 }
             }
             PairType::ConstantProduct => {
@@ -468,7 +460,7 @@ pub fn assert_slippage_tolerance(
                         * one_minus_slippage_tolerance
                         > Decimal256::from_ratio(pools[1], pools[0])
                 {
-                    return Err(ContractError::MaxSlippageAssertion {});
+                    return Err(ContractError::MaxSlippageAssertion);
                 }
             }
         }
@@ -528,72 +520,10 @@ pub fn assert_admin(deps: Deps, env: &Env, sender: &Addr) -> Result<(), Contract
         .query_wasm_contract_info(env.contract.address.clone())?;
     if let Some(admin) = contract_info.admin {
         if sender != deps.api.addr_validate(admin.as_str())? {
-            return Err(ContractError::Unauthorized {});
+            return Err(ContractError::Unauthorized);
         }
     }
     Ok(())
-}
-
-/// This function iterates over the swap operations, simulates each swap
-/// to get the final amount after all the swaps.
-pub fn simulate_swap_operations(
-    deps: Deps,
-    offer_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
-
-    let mut amount = offer_amount;
-
-    for operation in operations.into_iter() {
-        match operation {
-            SwapOperation::WhaleSwap {
-                token_in_denom,
-                token_out_denom: _,
-                pool_identifier,
-            } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
-                amount = res.return_amount;
-            }
-        }
-    }
-
-    Ok(SimulateSwapOperationsResponse { amount })
-}
-
-/// This function iterates over the swap operations in the reverse order,
-/// simulates each swap to get the final amount after all the swaps.
-pub fn reverse_simulate_swap_operations(
-    deps: Deps,
-    ask_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
-
-    let mut amount = ask_amount;
-
-    for operation in operations.into_iter().rev() {
-        match operation {
-            SwapOperation::WhaleSwap {
-                token_in_denom: _,
-                token_out_denom,
-                pool_identifier,
-            } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
-                amount = res.return_amount;
-            }
-        }
-    }
-
-    Ok(SimulateSwapOperationsResponse { amount })
 }
 
 /// Validates the amounts after a single side liquidity provision swap are correct.

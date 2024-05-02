@@ -78,7 +78,7 @@ pub fn get_pair_by_identifier(
 ) -> Result<PairInfo, ContractError> {
     PAIRS
         .may_load(deps.storage, pair_identifier)?
-        .ok_or(ContractError::UnExistingPair {})
+        .ok_or(ContractError::UnExistingPair)
 }
 
 /// Swap routes are used to establish defined routes for a given fee

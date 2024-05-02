@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
+use cosmwasm_std::{coin, Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
-    AssetDecimalsResponse, Config, PairInfoResponse, ReverseSimulationResponse, SimulationResponse,
-    SwapRoute, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
+    AssetDecimalsResponse, Config, PairInfoResponse, ReverseSimulationResponse,
+    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation, SwapRoute,
+    SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
 use white_whale_std::pool_network::asset::PairType;
 
@@ -32,7 +33,7 @@ pub fn query_asset_decimals(
         .asset_denoms
         .iter()
         .position(|d| d.clone() == denom)
-        .ok_or(ContractError::AssetMismatch {})?;
+        .ok_or(ContractError::AssetMismatch)?;
 
     Ok(AssetDecimalsResponse {
         pair_identifier,
@@ -70,7 +71,7 @@ pub fn query_simulation(
         offer_decimal = decimals[1];
         ask_decimal = decimals[0];
     } else {
-        return Err(ContractError::AssetMismatch {});
+        return Err(ContractError::AssetMismatch);
     }
 
     let pool_fees = pair_info.pool_fees;
@@ -315,105 +316,64 @@ pub fn get_pair(deps: Deps, pair_identifier: String) -> Result<PairInfoResponse,
     })
 }
 
-// TODO: May need to remove this for a new implementation, router swap operation queries
-// pub fn simulate_swap_operations(
-//     deps: Deps,
-//     env: Env,
-//     offer_amount: Uint128,
-//     operations: Vec<SwapOperation>,
-// ) -> Result<SimulateSwapOperationsResponse, ContractError> {
-//     let operations_len = operations.len();
-//     if operations_len == 0 {
-//         return Err(ContractError::NoSwapOperationsProvided {});
-//     }
+/// This function iterates over the swap operations, simulates each swap
+/// to get the final amount after all the swaps.
+pub fn simulate_swap_operations(
+    deps: Deps,
+    offer_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided);
+    }
 
-//     let mut offer_amount = offer_amount;
-//     for operation in operations.into_iter() {
-//         match operation {
-//             SwapOperation::WhaleSwap {
-//                 token_in_info,
-//                 token_out_info,
-//                 pool_identifier,
-//             } => {
-//                 let res: SimulationResponse = query_simulation(
-//                     deps,
-//                     env.clone(),
-//                     Asset {
-//                         info: token_in_info,
-//                         amount: offer_amount,
-//                     },
-//                     Asset {
-//                         info: token_out_info,
-//                         amount: Uint128::zero(),
-//                     },
-//                     pool_identifier,
-//                 )?;
+    let mut amount = offer_amount;
 
-//                 offer_amount = res.return_amount;
-//             }
-//         }
-//     }
+    for operation in operations.into_iter() {
+        match operation {
+            SwapOperation::WhaleSwap {
+                token_in_denom,
+                token_out_denom: _,
+                pool_identifier,
+            } => {
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
+                amount = res.return_amount;
+            }
+        }
+    }
 
-//     Ok(SimulateSwapOperationsResponse {
-//         amount: offer_amount,
-//     })
-// }
+    Ok(SimulateSwapOperationsResponse { amount })
+}
 
-// pub fn reverse_simulate_swap_operations(
-//     deps: Deps,
-//     env: Env,
-//     ask_amount: Uint128,
-//     operations: Vec<SwapOperation>,
-// ) -> Result<SimulateSwapOperationsResponse, ContractError> {
-//     let operations_len = operations.len();
-//     if operations_len == 0 {
-//         return Err(ContractError::NoSwapOperationsProvided {});
-//     }
+/// This function iterates over the swap operations in the reverse order,
+/// simulates each swap to get the final amount after all the swaps.
+pub fn reverse_simulate_swap_operations(
+    deps: Deps,
+    ask_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided);
+    }
 
-//     let mut ask_amount = ask_amount;
-//     for operation in operations.into_iter().rev() {
-//         ask_amount = match operation {
-//             SwapOperation::WhaleSwap {
-//                 token_in_info: offer_asset_info,
-//                 token_out_info: ask_asset_info,
-//                 pool_identifier,
-//             } => reverse_simulate_return_amount(
-//                 deps,
-//                 env.clone(),
-//                 ask_amount,
-//                 offer_asset_info,
-//                 ask_asset_info,
-//                 pool_identifier,
-//             )?,
-//         }
-//     }
+    let mut amount = ask_amount;
 
-//     Ok(SimulateSwapOperationsResponse { amount: ask_amount })
-// }
+    for operation in operations.into_iter().rev() {
+        match operation {
+            SwapOperation::WhaleSwap {
+                token_in_denom: _,
+                token_out_denom,
+                pool_identifier,
+            } => {
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
+                amount = res.return_amount;
+            }
+        }
+    }
 
-// pub fn reverse_simulate_return_amount(
-//     deps: Deps,
-//     env: Env,
-//     _ask_amount: Uint128,
-//     offer_asset_info: AssetInfo,
-//     ask_asset_info: AssetInfo,
-//     pool_identifier: String,
-// ) -> Result<Uint128, ContractError> {
-//     let _pair_info = get_pair_by_identifier(&deps, pool_identifier.clone())?;
-
-//     let res: ReverseSimulationResponse = query_reverse_simulation(
-//         deps,
-//         env,
-//         Asset {
-//             info: ask_asset_info,
-//             amount: Uint128::zero(),
-//         },
-//         Asset {
-//             info: offer_asset_info,
-//             amount: Uint128::zero(),
-//         },
-//         pool_identifier,
-//     )?;
-
-//     Ok(res.offer_amount)
-// }
+    Ok(SimulateSwapOperationsResponse { amount })
+}

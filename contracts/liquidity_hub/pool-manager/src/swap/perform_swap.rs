@@ -67,7 +67,7 @@ pub fn perform_swap(
         offer_decimal = decimals[1];
         ask_decimal = decimals[0];
     } else {
-        return Err(ContractError::AssetMismatch {});
+        return Err(ContractError::AssetMismatch);
     }
 
     let offer_amount = offer_asset.amount;

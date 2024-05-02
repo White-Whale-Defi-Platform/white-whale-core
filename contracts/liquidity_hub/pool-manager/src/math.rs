@@ -23,7 +23,7 @@ impl Decimal256Helper for Decimal256 {
         precision: u8,
     ) -> Result<Decimal256, ContractError> {
         Decimal256::from_atomics(value, u32::from(precision))
-            .map_err(|_| ContractError::DecimalOverflow {})
+            .map_err(|_| ContractError::DecimalOverflow)
     }
 
     fn checked_multiply_ratio(
