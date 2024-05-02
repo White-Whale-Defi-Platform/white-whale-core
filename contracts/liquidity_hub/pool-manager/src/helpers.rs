@@ -1,14 +1,15 @@
-use std::cmp::Ordering;
 use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, Addr, Coin, Decimal, Decimal256, Deps, Env, StdError, StdResult, Storage, Uint128,
-    Uint256,
+    coin, ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult,
+    Storage, Uint128, Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::{SimulateSwapOperationsResponse, SwapOperation};
+use white_whale_std::pool_manager::{
+    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
+};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
 
 use crate::error::ContractError;
@@ -171,6 +172,9 @@ pub fn compute_swap(
             let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
             let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
             let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
+
+            //todo compute the extra fees
+            //let extra_fees_amount: Uint256 = pool_fees.extra_fees.compute(return_amount);
 
             // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
             #[cfg(not(feature = "osmosis"))]
@@ -423,75 +427,6 @@ pub struct OfferAmountComputation {
     pub osmosis_fee_amount: Uint128,
 }
 
-/// If `belief_price` and `max_spread` both are given,
-/// we compute new spread else we just use pool network
-/// spread to check `max_spread`
-pub fn assert_max_spread(
-    belief_price: Option<Decimal>,
-    max_spread: Option<Decimal>,
-    offer_asset: Coin,
-    return_asset: Coin,
-    spread_amount: Uint128,
-    offer_decimal: u8,
-    return_decimal: u8,
-) -> Result<(), ContractError> {
-    let (offer_amount, return_amount, spread_amount): (Uint256, Uint256, Uint256) =
-        match offer_decimal.cmp(&return_decimal) {
-            Ordering::Greater => {
-                let diff_decimal = 10u64.pow((offer_decimal - return_decimal).into());
-
-                (
-                    offer_asset.amount.into(),
-                    return_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    spread_amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                )
-            }
-            Ordering::Less => {
-                let diff_decimal = 10u64.pow((return_decimal - offer_decimal).into());
-
-                (
-                    offer_asset
-                        .amount
-                        .checked_mul(Uint128::from(diff_decimal))?
-                        .into(),
-                    return_asset.amount.into(),
-                    spread_amount.into(),
-                )
-            }
-            Ordering::Equal => (
-                offer_asset.amount.into(),
-                return_asset.amount.into(),
-                spread_amount.into(),
-            ),
-        };
-
-    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
-        let belief_price: Decimal256 = belief_price.into();
-        let max_spread: Decimal256 = max_spread.into();
-
-        let expected_return = offer_amount * (Decimal256::one() / belief_price);
-        let spread_amount = expected_return.saturating_sub(return_amount);
-
-        if return_amount < expected_return
-            && Decimal256::from_ratio(spread_amount, expected_return) > max_spread
-        {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    } else if let Some(max_spread) = max_spread {
-        let max_spread: Decimal256 = max_spread.into();
-        if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
-            return Err(ContractError::MaxSpreadAssertion {});
-        }
-    }
-
-    Ok(())
-}
-
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
@@ -620,15 +555,89 @@ pub fn simulate_swap_operations(
                 token_out_denom: _,
                 pool_identifier,
             } => {
-                let res = query_simulation(
-                    deps,
-                    coin(offer_amount.u128(), token_in_denom),
-                    pool_identifier,
-                )?;
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
                 amount = res.return_amount;
             }
         }
     }
 
     Ok(SimulateSwapOperationsResponse { amount })
+}
+
+/// This function iterates over the swap operations in the reverse order,
+/// simulates each swap to get the final amount after all the swaps.
+pub fn reverse_simulate_swap_operations(
+    deps: Deps,
+    ask_amount: Uint128,
+    operations: Vec<SwapOperation>,
+) -> Result<SimulateSwapOperationsResponse, ContractError> {
+    let operations_len = operations.len();
+    if operations_len == 0 {
+        return Err(ContractError::NoSwapOperationsProvided {});
+    }
+
+    let mut amount = ask_amount;
+
+    for operation in operations.into_iter().rev() {
+        match operation {
+            SwapOperation::WhaleSwap {
+                token_in_denom: _,
+                token_out_denom,
+                pool_identifier,
+            } => {
+                let res =
+                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
+                amount = res.return_amount;
+            }
+        }
+    }
+
+    Ok(SimulateSwapOperationsResponse { amount })
+}
+
+/// Validates the amounts after a single side liquidity provision swap are correct.
+pub fn validate_asset_balance(
+    deps: &DepsMut,
+    env: &Env,
+    expected_balance: &Coin,
+) -> Result<(), ContractError> {
+    let new_asset_balance = deps
+        .querier
+        .query_balance(&env.contract.address, expected_balance.denom.to_owned())?;
+
+    ensure!(
+        expected_balance == &new_asset_balance,
+        ContractError::InvalidSingleSideLiquidityProvisionSwap {
+            expected: expected_balance.amount,
+            actual: new_asset_balance.amount
+        }
+    );
+
+    Ok(())
+}
+
+/// Aggregates the fees from a simulation response that go out of the contract, i.e. protocol fee, burn fee
+/// and osmosis fee, if applicable. Doesn't know about the denom, just the amount.
+pub fn aggregate_outgoing_fees(
+    simulation_response: &SimulationResponse,
+) -> Result<Uint128, ContractError> {
+    let fees = {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            simulation_response
+                .protocol_fee_amount
+                .checked_add(simulation_response.burn_fee_amount)?
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            simulation_response
+                .protocol_fee_amount
+                .checked_add(simulation_response.burn_fee_amount)?
+                .checked_add(simulation_response.osmosis_fee_amount)?
+        }
+    };
+
+    Ok(fees)
 }

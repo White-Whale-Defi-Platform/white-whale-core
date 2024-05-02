@@ -1,9 +1,11 @@
 use cosmwasm_std::testing::MockStorage;
+use std::cell::RefCell;
+use white_whale_std::pool_manager::InstantiateMsg;
 use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PairInfoResponse, SwapOperation, SwapRouteCreatorResponse,
-    SwapRouteResponse, SwapRoutesResponse,
+    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
+    ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
+    SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
-use white_whale_std::pool_manager::{InstantiateMsg, PairInfo};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
@@ -17,7 +19,6 @@ use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::PositionsResponse;
 use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_network::asset::{AssetInfo, PairType};
-use white_whale_std::pool_network::pair::{ReverseSimulationResponse, SimulationResponse};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
@@ -25,7 +26,8 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
-    );
+    )
+    .with_reply(crate::contract::reply);
 
     Box::new(contract)
 }
@@ -318,12 +320,14 @@ impl TestingSuite {
         pair_identifier: String,
         unlocking_duration: Option<u64>,
         lock_position_identifier: Option<String>,
+        max_spread: Option<Decimal>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
             pair_identifier,
             slippage_tolerance: None,
+            max_spread,
             receiver: None,
             unlocking_duration,
             lock_position_identifier,
@@ -609,6 +613,46 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn query_simulate_swap_operations(
+        &mut self,
+        offer_amount: Uint128,
+        operations: Vec<SwapOperation>,
+        result: impl Fn(StdResult<SimulateSwapOperationsResponse>),
+    ) -> &mut Self {
+        let pair_info_response: StdResult<SimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
+                    offer_amount,
+                    operations,
+                },
+            );
+
+        result(pair_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_reverse_simulate_swap_operations(
+        &mut self,
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+        result: impl Fn(StdResult<ReverseSimulateSwapOperationsResponse>),
+    ) -> &mut Self {
+        let pair_info_response: StdResult<ReverseSimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::ReverseSimulateSwapOperations {
+                    ask_amount,
+                    operations,
+                },
+            );
+
+        result(pair_info_response);
+
+        self
+    }
+
     pub(crate) fn query_amount_of_lp_token(
         &mut self,
         identifier: String,
@@ -638,23 +682,6 @@ impl TestingSuite {
 
         result(Result::Ok(balance));
         self
-    }
-
-    pub(crate) fn _query_lp_token(&mut self, identifier: String, _sender: String) -> String {
-        // Get the LP token from Config
-        let lp_token_response: PairInfo = self
-            .app
-            .wrap()
-            .query_wasm_smart(
-                &self.pool_manager_addr,
-                &white_whale_std::pool_manager::QueryMsg::Pair {
-                    pair_identifier: identifier,
-                },
-            )
-            .unwrap();
-
-        // Get balance of LP token, if native we can just query balance otherwise we need to go to cw20
-        lp_token_response.lp_denom
     }
 
     /// Retrieves the current configuration of the pool manager contract.
@@ -740,6 +767,26 @@ impl TestingSuite {
         );
 
         result(positions_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_lp_supply(
+        &mut self,
+        identifier: String,
+        result: impl Fn(StdResult<Coin>),
+    ) -> &mut Self {
+        let lp_denom = RefCell::new("".to_string());
+
+        self.query_pair_info(identifier.clone(), |res| {
+            let response = res.unwrap();
+            *lp_denom.borrow_mut() = response.pair_info.lp_denom.clone();
+        });
+
+        let supply_response = self.app.wrap().query_supply(lp_denom.into_inner());
+
+        result(supply_response);
 
         self
     }

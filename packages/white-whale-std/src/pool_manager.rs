@@ -147,6 +147,7 @@ pub enum ExecuteMsg {
     /// Provides liquidity to the pool
     ProvideLiquidity {
         slippage_tolerance: Option<Decimal>,
+        max_spread: Option<Decimal>,
         receiver: Option<String>,
         pair_identifier: String,
         /// The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed,
@@ -157,6 +158,7 @@ pub enum ExecuteMsg {
     },
     /// Swap an offer asset to the other
     Swap {
+        //todo remove offer_asset, take it from info.funds
         offer_asset: Coin,
         ask_asset_denom: String,
         belief_price: Option<Decimal>,
@@ -256,19 +258,20 @@ pub enum QueryMsg {
     #[returns(SwapRoutesResponse)]
     SwapRoutes {},
 
-    // /// Simulates swap operations.
+    /// Simulates swap operations.
     #[returns(SimulateSwapOperationsResponse)]
     SimulateSwapOperations {
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
     },
-    // /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
-    // /// is needed to perform the swap.
-    // #[returns(SimulateSwapOperationsResponse)]
-    // ReverseSimulateSwapOperations {
-    //     ask_amount: Uint128,
-    //     operations: Vec<SwapOperation>,
-    // },
+    /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
+    /// is needed to perform the swap.
+    #[returns(ReverseSimulateSwapOperationsResponse)]
+    ReverseSimulateSwapOperations {
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+    },
+
     #[returns(PairInfoResponse)]
     Pair { pair_identifier: String },
     /// Retrieves the creator of the swap routes that can then remove them.
@@ -292,6 +295,7 @@ pub struct SwapRoutesResponse {
 #[cw_serde]
 pub struct PairInfoResponse {
     pub pair_info: PairInfo,
+    pub total_share: Coin,
 }
 
 /// The response for the `AssetDecimals` query.
@@ -340,6 +344,11 @@ pub struct FeatureToggle {
 // We define a custom struct for each query response
 #[cw_serde]
 pub struct SimulateSwapOperationsResponse {
+    pub amount: Uint128,
+}
+
+#[cw_serde]
+pub struct ReverseSimulateSwapOperationsResponse {
     pub amount: Uint128,
 }
 
