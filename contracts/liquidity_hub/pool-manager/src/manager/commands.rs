@@ -88,7 +88,7 @@ pub fn create_pair(
     // Load config for pool creation fee
     let config: Config = MANAGER_CONFIG.load(deps.storage)?;
 
-    // Check if fee was provided and is sufficient
+    // Check if fee was provided and is sufficientd
     if !config.pool_creation_fee.amount.is_zero() {
         // verify fee payment
         let amount = cw_utils::must_pay(&info, &config.pool_creation_fee.denom)?;

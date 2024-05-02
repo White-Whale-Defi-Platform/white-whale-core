@@ -3,14 +3,10 @@ use std::cmp::Ordering;
 use cosmwasm_std::{Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
-    AssetDecimalsResponse, Config, PairInfoResponse, SwapRoute, SwapRouteCreatorResponse,
-    SwapRouteResponse, SwapRoutesResponse,
+    AssetDecimalsResponse, Config, PairInfoResponse, ReverseSimulationResponse, SimulationResponse,
+    SwapRoute, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
-use white_whale_std::pool_network::{
-    asset::PairType,
-    pair::{ReverseSimulationResponse, SimulationResponse},
-    // router::SimulateSwapOperationsResponse,
-};
+use white_whale_std::pool_network::asset::PairType;
 
 use crate::state::{MANAGER_CONFIG, PAIRS};
 use crate::{
@@ -53,6 +49,7 @@ pub fn query_simulation(
 ) -> Result<SimulationResponse, ContractError> {
     let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
     let pools = pair_info.assets.clone();
+
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Coin;
     let ask_pool: Coin;

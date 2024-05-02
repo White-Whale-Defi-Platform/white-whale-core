@@ -1,7 +1,8 @@
 use crate::liquidity::commands::MAX_ASSETS_PER_POOL;
 use cosmwasm_std::{
-    CheckedFromRatioError, CheckedMultiplyRatioError, ConversionOverflowError, DivideByZeroError,
-    Instantiate2AddressError, OverflowError, StdError, Uint128,
+    CheckedFromRatioError, CheckedMultiplyFractionError, CheckedMultiplyRatioError,
+    ConversionOverflowError, DivideByZeroError, Instantiate2AddressError, OverflowError, StdError,
+    Uint128,
 };
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
@@ -65,6 +66,15 @@ pub enum ContractError {
     #[error("{asset} is invalid")]
     InvalidAsset { asset: String },
 
+    #[error("Trying to provide liquidity without any assets")]
+    EmptyAssets,
+
+    #[error("Invalid single side liquidity provision swap, expected {expected} got {actual}")]
+    InvalidSingleSideLiquidityProvisionSwap { expected: Uint128, actual: Uint128 },
+
+    #[error("Cannot provide single-side liquidity when the pool is empty")]
+    EmptyPoolForSingleSideLiquidityProvision,
+
     #[error("Pair does not exist")]
     UnExistingPair {},
 
@@ -79,6 +89,9 @@ pub enum ContractError {
 
     #[error("Failed to compute the LP share with the given deposit")]
     LiquidityShareComputation {},
+
+    #[error("The amount of LP shares to withdraw is invalid")]
+    InvalidLpShare,
 
     #[error("Spread limit exceeded")]
     MaxSpreadAssertion {},
@@ -115,6 +128,9 @@ pub enum ContractError {
 
     #[error(transparent)]
     CheckedMultiplyRatioError(#[from] CheckedMultiplyRatioError),
+
+    #[error(transparent)]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error(transparent)]
     CheckedFromRatioError(#[from] CheckedFromRatioError),
