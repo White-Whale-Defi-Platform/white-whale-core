@@ -2,7 +2,7 @@ use cosmwasm_std::testing::MockStorage;
 use std::cell::RefCell;
 use white_whale_std::pool_manager::InstantiateMsg;
 use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PairInfoResponse, ReverseSimulateSwapOperationsResponse,
+    Config, FeatureToggle, PoolInfoResponse, ReverseSimulateSwapOperationsResponse,
     ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
     SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
@@ -18,7 +18,7 @@ use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig};
 use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::PositionsResponse;
 use white_whale_std::lp_common::LP_SYMBOL;
-use white_whale_std::pool_network::asset::{AssetInfo, PairType};
+use white_whale_std::pool_network::asset::{AssetInfo, PoolType};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
@@ -105,11 +105,11 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn get_lp_denom(&self, pair_id: String) -> String {
+    pub(crate) fn get_lp_denom(&self, pool_identifier: String) -> String {
         // TODO: this should have
         format!(
             "factory/{}/u{}.pool.{}.{}",
-            self.pool_manager_addr, pair_id, pair_id, LP_SYMBOL
+            self.pool_manager_addr, pool_identifier, pool_identifier, LP_SYMBOL
         )
     }
 }
@@ -317,7 +317,7 @@ impl TestingSuite {
     pub(crate) fn provide_liquidity(
         &mut self,
         sender: Addr,
-        pair_identifier: String,
+        pool_identifier: String,
         unlocking_duration: Option<u64>,
         lock_position_identifier: Option<String>,
         max_spread: Option<Decimal>,
@@ -326,7 +326,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
-            pair_identifier,
+            pool_identifier,
             slippage_tolerance: None,
             max_spread,
             receiver,
@@ -351,7 +351,7 @@ impl TestingSuite {
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
         receiver: Option<String>,
-        pair_identifier: String,
+        pool_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -360,7 +360,7 @@ impl TestingSuite {
             belief_price,
             max_spread,
             receiver,
-            pair_identifier,
+            pool_identifier,
         };
 
         result(
@@ -378,7 +378,7 @@ impl TestingSuite {
         sender: Addr,
         operations: Vec<SwapOperation>,
         minimum_receive: Option<Uint128>,
-        to: Option<String>,
+        receiver: Option<String>,
         max_spread: Option<Decimal>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -386,7 +386,7 @@ impl TestingSuite {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
             operations,
             minimum_receive,
-            to,
+            receiver,
             max_spread,
         };
 
@@ -400,30 +400,30 @@ impl TestingSuite {
 
     #[track_caller]
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn create_pair(
+    pub(crate) fn create_pool(
         &mut self,
         sender: Addr,
         asset_denoms: Vec<String>,
         asset_decimals: Vec<u8>,
         pool_fees: PoolFee,
-        pair_type: PairType,
-        pair_identifier: Option<String>,
-        pair_creation_fee_funds: Vec<Coin>,
+        pool_type: PoolType,
+        pool_identifier: Option<String>,
+        pool_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePool {
             asset_denoms,
             asset_decimals,
             pool_fees,
-            pair_type,
-            pair_identifier,
+            pool_type,
+            pool_identifier,
         };
 
         result(self.app.execute_contract(
             sender,
             self.pool_manager_addr.clone(),
             &msg,
-            &pair_creation_fee_funds,
+            &pool_creation_fee_funds,
         ));
 
         self
@@ -433,11 +433,11 @@ impl TestingSuite {
     pub(crate) fn withdraw_liquidity(
         &mut self,
         sender: Addr,
-        pair_identifier: String,
+        pool_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pair_identifier };
+        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pool_identifier };
 
         result(
             self.app
@@ -553,48 +553,48 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_pair_info(
+    pub(crate) fn query_pool_info(
         &self,
-        pair_identifier: String,
-        result: impl Fn(StdResult<PairInfoResponse>),
+        pool_identifier: String,
+        result: impl Fn(StdResult<PoolInfoResponse>),
     ) -> &Self {
-        let pair_info_response: StdResult<PairInfoResponse> = self.app.wrap().query_wasm_smart(
+        let pool_info_response: StdResult<PoolInfoResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::Pair { pair_identifier },
+            &white_whale_std::pool_manager::QueryMsg::Pool { pool_identifier },
         );
 
-        result(pair_info_response);
+        result(pool_info_response);
 
         self
     }
 
     pub(crate) fn query_simulation(
         &mut self,
-        pair_identifier: String,
+        pool_identifier: String,
         offer_asset: Coin,
         result: impl Fn(StdResult<SimulationResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
+        let pool_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
-                pair_identifier,
+                pool_identifier,
             },
         );
 
-        result(pair_info_response);
+        result(pool_info_response);
 
         self
     }
 
     pub(crate) fn query_reverse_simulation(
         &mut self,
-        pair_identifier: String,
+        pool_identifier: String,
         offer_asset: String,
         ask_asset: Coin,
         result: impl Fn(StdResult<ReverseSimulationResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<ReverseSimulationResponse> =
+        let pool_info_response: StdResult<ReverseSimulationResponse> =
             self.app.wrap().query_wasm_smart(
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
@@ -603,11 +603,11 @@ impl TestingSuite {
                         denom: offer_asset,
                     },
                     ask_asset,
-                    pair_identifier,
+                    pool_identifier,
                 },
             );
 
-        result(pair_info_response);
+        result(pool_info_response);
 
         self
     }
@@ -618,7 +618,7 @@ impl TestingSuite {
         operations: Vec<SwapOperation>,
         result: impl Fn(StdResult<SimulateSwapOperationsResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<SimulateSwapOperationsResponse> =
+        let pool_info_response: StdResult<SimulateSwapOperationsResponse> =
             self.app.wrap().query_wasm_smart(
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
@@ -627,7 +627,7 @@ impl TestingSuite {
                 },
             );
 
-        result(pair_info_response);
+        result(pool_info_response);
 
         self
     }
@@ -638,7 +638,7 @@ impl TestingSuite {
         operations: Vec<SwapOperation>,
         result: impl Fn(StdResult<ReverseSimulateSwapOperationsResponse>),
     ) -> &mut Self {
-        let pair_info_response: StdResult<ReverseSimulateSwapOperationsResponse> =
+        let pool_info_response: StdResult<ReverseSimulateSwapOperationsResponse> =
             self.app.wrap().query_wasm_smart(
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulateSwapOperations {
@@ -647,7 +647,7 @@ impl TestingSuite {
                 },
             );
 
-        result(pair_info_response);
+        result(pool_info_response);
 
         self
     }
@@ -659,13 +659,13 @@ impl TestingSuite {
         result: impl Fn(StdResult<Uint128>),
     ) -> &mut Self {
         // Get the LP token from Config
-        let lp_token_response: PairInfoResponse = self
+        let lp_token_response: PoolInfoResponse = self
             .app
             .wrap()
             .query_wasm_smart(
                 &self.pool_manager_addr,
-                &white_whale_std::pool_manager::QueryMsg::Pair {
-                    pair_identifier: identifier,
+                &white_whale_std::pool_manager::QueryMsg::Pool {
+                    pool_identifier: identifier,
                 },
             )
             .unwrap();
@@ -675,7 +675,7 @@ impl TestingSuite {
         let balance: Uint128 = self
             .app
             .wrap()
-            .query_balance(sender, lp_token_response.pair_info.lp_denom)
+            .query_balance(sender, lp_token_response.pool_info.lp_denom)
             .unwrap()
             .amount;
 
@@ -694,7 +694,7 @@ impl TestingSuite {
             .unwrap()
     }
 
-    /// Retrieves a swap route for a given pair of assets.
+    /// Retrieves a swap route for a given pool of assets.
     pub(crate) fn query_swap_route(
         &mut self,
         offer_asset_denom: String,
@@ -714,7 +714,7 @@ impl TestingSuite {
         self
     }
 
-    /// Retrieves the swap routes for a given pair of assets.
+    /// Retrieves the swap routes for a given poolr of assets.
     pub(crate) fn query_swap_routes(
         &mut self,
         result: impl Fn(StdResult<SwapRoutesResponse>),
@@ -729,7 +729,7 @@ impl TestingSuite {
         self
     }
 
-    /// Retrieves the swap route creator for a given pair of assets.
+    /// Retrieves the swap route creator for a given pool of assets.
     pub(crate) fn query_swap_route_creator(
         &mut self,
         offer_asset_denom: String,
@@ -778,9 +778,9 @@ impl TestingSuite {
     ) -> &mut Self {
         let lp_denom = RefCell::new("".to_string());
 
-        self.query_pair_info(identifier.clone(), |res| {
+        self.query_pool_info(identifier.clone(), |res| {
             let response = res.unwrap();
-            *lp_denom.borrow_mut() = response.pair_info.lp_denom.clone();
+            *lp_denom.borrow_mut() = response.pool_info.lp_denom.clone();
         });
 
         let supply_response = self.app.wrap().query_supply(lp_denom.into_inner());

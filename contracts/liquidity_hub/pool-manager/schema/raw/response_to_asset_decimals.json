@@ -6,7 +6,7 @@
   "required": [
     "decimals",
     "denom",
-    "pair_identifier"
+    "pool_identifier"
   ],
   "properties": {
     "decimals": {
@@ -16,11 +16,11 @@
       "minimum": 0.0
     },
     "denom": {
-      "description": "The queried denom in the given pair_identifier.",
+      "description": "The queried denom in the given pool_identifier.",
       "type": "string"
     },
-    "pair_identifier": {
-      "description": "The pair identifier to do the query for.",
+    "pool_identifier": {
+      "description": "The pool identifier to do the query for.",
       "type": "string"
     }
   },

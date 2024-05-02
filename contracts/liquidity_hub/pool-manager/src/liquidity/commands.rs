@@ -6,8 +6,7 @@ use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
 use white_whale_std::coin::aggregate_coins;
 use white_whale_std::common::validate_addr_or_default;
-use white_whale_std::pool_manager::ExecuteMsg;
-use white_whale_std::pool_network::asset::PairType;
+use white_whale_std::pool_manager::{ExecuteMsg, PoolType};
 use white_whale_std::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
     U256,
@@ -15,13 +14,13 @@ use white_whale_std::pool_network::{
 
 use crate::{
     helpers::{self},
-    state::get_pair_by_identifier,
+    state::get_pool_by_identifier,
 };
 use crate::{
-    state::{CONFIG, PAIRS},
+    state::{CONFIG, POOLS},
     ContractError,
 };
-// After writing create_pair I see this can get quite verbose so attempting to
+// After writing create_pool I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
 use crate::helpers::aggregate_outgoing_fees;
@@ -41,7 +40,7 @@ pub fn provide_liquidity(
     slippage_tolerance: Option<Decimal>,
     max_spread: Option<Decimal>,
     receiver: Option<String>,
-    pair_identifier: String,
+    pool_identifier: String,
     unlocking_duration: Option<u64>,
     lock_position_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
@@ -52,10 +51,10 @@ pub fn provide_liquidity(
         ContractError::OperationDisabled("provide_liquidity".to_string())
     );
 
-    // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
+    // Get the pool by the pool_identifier
+    let mut pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
 
-    let mut pool_assets = pair.assets.clone();
+    let mut pool_assets = pool.assets.clone();
     let deposits = aggregate_coins(info.funds.clone())?;
 
     ensure!(!deposits.is_empty(), ContractError::EmptyAssets);
@@ -90,7 +89,7 @@ pub fn provide_liquidity(
         };
 
         let swap_simulation_response =
-            query_simulation(deps.as_ref(), swap_half.clone(), pair_identifier.clone())?;
+            query_simulation(deps.as_ref(), swap_half.clone(), pool_identifier.clone())?;
 
         let ask_denom = pool_assets
             .iter()
@@ -140,7 +139,7 @@ pub fn provide_liquidity(
                 liquidity_provision_data: LiquidityProvisionData {
                     max_spread,
                     slippage_tolerance,
-                    pair_identifier: pair_identifier.clone(),
+                    pool_identifier: pool_identifier.clone(),
                     unlocking_duration,
                     lock_position_identifier,
                 },
@@ -156,7 +155,7 @@ pub fn provide_liquidity(
                         belief_price: None,
                         max_spread,
                         receiver: None,
-                        pair_identifier,
+                        pool_identifier,
                     },
                     vec![swap_half],
                 )?,
@@ -186,13 +185,13 @@ pub fn provide_liquidity(
 
         let mut messages: Vec<CosmosMsg> = vec![];
 
-        let liquidity_token = pair.lp_denom.clone();
+        let liquidity_token = pool.lp_denom.clone();
 
         // Compute share and other logic based on the number of assets
         let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
-        let share = match &pair.pair_type {
-            PairType::ConstantProduct => {
+        let share = match &pool.pool_type {
+            PoolType::ConstantProduct => {
                 if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
@@ -251,7 +250,7 @@ pub fn provide_liquidity(
                         &slippage_tolerance,
                         &deposits_as,
                         &pools_as,
-                        pair.pair_type.clone(),
+                        pool.pool_type.clone(),
                         amount,
                         total_share,
                     )?;
@@ -259,7 +258,7 @@ pub fn provide_liquidity(
                     amount
                 }
             }
-            PairType::StableSwap { amp: _ } => {
+            PoolType::StableSwap { amp: _ } => {
                 // TODO: Handle stableswap
 
                 Uint128::one()
@@ -301,9 +300,9 @@ pub fn provide_liquidity(
             )?);
         }
 
-        pair.assets = pool_assets.clone();
+        pool.assets = pool_assets.clone();
 
-        PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+        POOLS.save(deps.storage, &pool_identifier, &pool)?;
 
         Ok(Response::new().add_messages(messages).add_attributes(vec![
             ("action", "provide_liquidity"),
@@ -328,7 +327,7 @@ pub fn withdraw_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    pair_identifier: String,
+    pool_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     // check if the withdraw feature is enabled
@@ -338,9 +337,9 @@ pub fn withdraw_liquidity(
         ));
     }
 
-    // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
-    let liquidity_token = pair.lp_denom.clone();
+    // Get the pool by the pool_identifier
+    let mut pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
+    let liquidity_token = pool.lp_denom.clone();
     // Verify that the LP token was sent
     let amount = cw_utils::must_pay(&info, &liquidity_token)?;
 
@@ -354,7 +353,7 @@ pub fn withdraw_liquidity(
     ensure!(share_ratio <= Decimal::one(), ContractError::InvalidLpShare);
 
     // Use the ratio to calculate the amount of each pool asset to refund
-    let refund_assets: Vec<Coin> = pair
+    let refund_assets: Vec<Coin> = pool
         .assets
         .iter()
         .map(|pool_asset| {
@@ -373,12 +372,12 @@ pub fn withdraw_liquidity(
         amount: refund_assets.clone(),
     }));
 
-    // Deduct balances on pair_info by the amount of each refund asset
-    for (i, pool_asset) in pair.assets.iter_mut().enumerate() {
+    // Deduct balances on pool_info by the amount of each refund asset
+    for (i, pool_asset) in pool.assets.iter_mut().enumerate() {
         pool_asset.amount = pool_asset.amount.checked_sub(refund_assets[i].amount)?;
     }
 
-    PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+    POOLS.save(deps.storage, &pool_identifier, &pool)?;
 
     // Burn the LP tokens
     messages.push(white_whale_std::lp_common::burn_lp_asset_msg(

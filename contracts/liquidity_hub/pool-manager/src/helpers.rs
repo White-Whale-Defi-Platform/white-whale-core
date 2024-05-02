@@ -7,8 +7,8 @@ use cosmwasm_std::{
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::SimulationResponse;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_manager::{PoolType, SimulationResponse};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
@@ -17,7 +17,7 @@ use crate::math::Decimal256Helper;
 const NEWTON_ITERATIONS: u64 = 32;
 
 // todo isn't this for the 3pool? shouldn't it be 3
-// the number of assets in the pair
+// the number of assets in the pool
 const N_COINS: Uint256 = Uint256::from_u128(2);
 
 fn calculate_stableswap_d(
@@ -143,7 +143,7 @@ pub fn compute_swap(
     ask_pool: Uint128,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-    swap_type: &PairType,
+    swap_type: &PoolType,
     offer_precision: u8,
     ask_precision: u8,
 ) -> Result<SwapComputation, ContractError> {
@@ -152,7 +152,7 @@ pub fn compute_swap(
     let offer_amount: Uint256 = offer_amount.into();
 
     match swap_type {
-        PairType::ConstantProduct => {
+        PoolType::ConstantProduct => {
             // offer => ask
             // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee - burn_fee
             let return_amount: Uint256 = Uint256::one()
@@ -227,7 +227,7 @@ pub fn compute_swap(
                 })
             }
         }
-        PairType::StableSwap { amp } => {
+        PoolType::StableSwap { amp } => {
             let offer_pool = Decimal256::decimal_with_precision(offer_pool, offer_precision)?;
             let ask_pool = Decimal256::decimal_with_precision(ask_pool, ask_precision)?;
             let offer_amount = Decimal256::decimal_with_precision(offer_amount, offer_precision)?;
@@ -423,7 +423,7 @@ pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
     pools: &[Coin; 2],
-    pair_type: PairType,
+    pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
@@ -438,8 +438,8 @@ pub fn assert_slippage_tolerance(
         let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
-        match pair_type {
-            PairType::StableSwap { .. } => {
+        match pool_type {
+            PoolType::StableSwap { .. } => {
                 let pools_total = pools[0].checked_add(pools[1])?;
                 let deposits_total = deposits[0].checked_add(deposits[1])?;
 
@@ -453,7 +453,7 @@ pub fn assert_slippage_tolerance(
                     return Err(ContractError::MaxSlippageAssertion);
                 }
             }
-            PairType::ConstantProduct => {
+            PoolType::ConstantProduct => {
                 if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
                     > Decimal256::from_ratio(pools[0], pools[1])
                     || Decimal256::from_ratio(deposits[1], deposits[0])
@@ -492,12 +492,12 @@ pub fn instantiate_fees(
     storage: &mut dyn Storage,
     asset_info_0: AssetInfo,
     asset_info_1: AssetInfo,
-    pair_key: &Vec<u8>,
-    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], std::vec::Vec<Asset>>,
+    pool_key: &Vec<u8>,
+    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], Vec<Asset>>,
 ) -> StdResult<()> {
     fee_storage_item.save(
         storage,
-        pair_key,
+        pool_key,
         &vec![
             Asset {
                 info: asset_info_0,

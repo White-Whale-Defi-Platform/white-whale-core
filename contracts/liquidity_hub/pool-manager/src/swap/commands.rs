@@ -1,11 +1,11 @@
 use crate::{state::CONFIG, ContractError};
 use cosmwasm_std::{
-    ensure, wasm_execute, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response,
+    ensure, wasm_execute, Addr, BankMsg, CosmosMsg, DepsMut, MessageInfo, Response,
 };
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
-use crate::state::get_pair_by_identifier;
+use crate::state::get_pool_by_identifier;
 use cosmwasm_std::Decimal;
 use white_whale_std::common::validate_addr_or_default;
 use white_whale_std::whale_lair;
@@ -15,14 +15,13 @@ use super::perform_swap::perform_swap;
 #[allow(clippy::too_many_arguments)]
 pub fn swap(
     mut deps: DepsMut,
-    _env: Env,
     info: MessageInfo,
     sender: Addr,
     ask_asset_denom: String,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     receiver: Option<String>,
-    pair_identifier: String,
+    pool_identifier: String,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
@@ -34,11 +33,11 @@ pub fn swap(
     let offer_asset = cw_utils::one_coin(&info)?;
 
     // verify that the assets sent match the ones from the pool
-    let pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
+    let pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
     ensure!(
         vec![ask_asset_denom, offer_asset.denom.clone()]
             .iter()
-            .all(|asset| pair
+            .all(|asset| pool
                 .assets
                 .iter()
                 .any(|pool_asset| pool_asset.denom == *asset)),
@@ -49,7 +48,7 @@ pub fn swap(
     let swap_result = perform_swap(
         deps.branch(),
         offer_asset.clone(),
-        pair_identifier,
+        pool_identifier,
         belief_price,
         max_spread,
     )?;
@@ -113,7 +112,7 @@ pub fn swap(
         ),
         (
             "swap_type",
-            swap_result.pair_info.pair_type.get_label().to_string(),
+            swap_result.pool_info.pool_type.get_label().to_string(),
         ),
     ]))
 }

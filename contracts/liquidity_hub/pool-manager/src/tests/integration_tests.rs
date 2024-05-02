@@ -8,9 +8,6 @@ use crate::ContractError;
 
 use super::suite::TestingSuite;
 
-// Using our suite lets test create pair
-// and add liquidity to it
-
 #[test]
 fn instantiate_normal() {
     let mut suite = TestingSuite::default_with_balances(vec![]);
@@ -33,7 +30,6 @@ fn deposit_and_withdraw_sanity_check() {
     // Asset denoms with uwhale and uluna
     let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
-    // Default Pool fees white_whale_std::pool_network::pair::PoolFee
     #[cfg(not(feature = "osmosis"))]
     let pool_fees = PoolFee {
         protocol_fee: Fee {
@@ -65,13 +61,13 @@ fn deposit_and_withdraw_sanity_check() {
         extra_fees: vec![],
     };
 
-    // Create a pair
-    suite.instantiate_default().create_pair(
+    // Create a pool
+    suite.instantiate_default().create_pool(
         creator.clone(),
         asset_denoms,
         vec![6u8, 6u8],
         pool_fees,
-        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        white_whale_std::pool_network::asset::PoolType::ConstantProduct,
         Some("whale-uluna".to_string()),
         vec![coin(1000, "uusd")],
         |result| {
@@ -124,7 +120,7 @@ fn deposit_and_withdraw_sanity_check() {
         // contract should have 1_000 LP shares (MINIMUM_LIQUIDITY_AMOUNT)
         .query_all_balances(contract_addr.to_string(), |result| {
             let balances = result.unwrap();
-            // check that balances has 999_000 factory/migaloo1wug8sewp6cedgkmrmvhl3lf3tulagm9hnvy8p0rppz9yjw0g4wtqvk723g/uwhale-uluna.vault.whale-uluna.uLP
+            // check that balances has 999_000 factory/migaloo1wug8sewp6cedgkmrmvhl3lf3tulagm9hnvy8p0rppz9yjw0g4wtqvk723g/uwhale-uluna.pool.whale-uluna.uLP
             assert!(balances.iter().any(|coin| {
                 coin.denom == lp_denom.clone() && coin.amount == MINIMUM_LIQUIDITY_AMOUNT
             }));
@@ -172,12 +168,12 @@ fn deposit_and_withdraw_sanity_check() {
         });
 }
 
-mod pair_creation_failures {
+mod pool_creation_failures {
     use super::*;
 
-    // Insufficient fee to create pair; 90 instead of 100
+    // Insufficient fee to create pool; 90 instead of 100
     #[test]
-    fn insufficient_pair_creation_fee() {
+    fn insufficient_pool_creation_fee() {
         let mut suite = TestingSuite::default_with_balances(vec![
             coin(1_000_000_001u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
@@ -190,7 +186,6 @@ mod pair_creation_failures {
 
         let asset_infos = vec!["uwhale".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -221,20 +216,20 @@ mod pair_creation_failures {
             },
             extra_fees: vec![],
         };
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a poo
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_infos,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             None,
             vec![coin(90, "uusd")],
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                 match err {
-                    ContractError::InvalidPairCreationFee { .. } => {}
+                    ContractError::InvalidPoolCreationFee { .. } => {}
                     _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
                 }
             },
@@ -242,7 +237,7 @@ mod pair_creation_failures {
     }
 
     #[test]
-    fn cant_recreate_existing_pair() {
+    fn cant_recreate_existing_poo() {
         let mut suite = TestingSuite::default_with_balances(vec![
             coin(1_000_000_001u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
@@ -255,7 +250,6 @@ mod pair_creation_failures {
 
         let asset_infos = vec!["uwhale".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -287,34 +281,34 @@ mod pair_creation_failures {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a poo
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
                 asset_infos.clone(),
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                Some("mycoolpair".to_string()),
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
+                Some("mycoolpoo".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
                 asset_infos,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
-                Some("mycoolpair".to_string()),
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
+                Some("mycoolpoo".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
                     match err {
-                        ContractError::PairExists { .. } => {}
-                        _ => panic!("Wrong error type, should return ContractError::PairExists"),
+                        ContractError::PoolExists { .. } => {}
+                        _ => panic!("Wrong error type, should return ContractError::PoolExists"),
                     }
                 },
             );
@@ -340,8 +334,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -373,27 +367,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -452,7 +446,7 @@ mod router {
         );
 
         // Prepare the swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary pool
+        // We will use the uluna-uusd pool as the intermediary pool
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
@@ -468,7 +462,7 @@ mod router {
         ];
 
         // before swap uusd balance = 1_000_000_000
-        // - 2*1_000 pair creation fee
+        // - 2*1_000 pool creation fee
         // - 1_000_000 liquidity provision
         // = 998_998_000
         let pre_swap_amount = 998_998_000;
@@ -532,10 +526,9 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -568,27 +561,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -677,10 +670,9 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -713,27 +705,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -792,7 +784,7 @@ mod router {
         );
 
         // Prepare the swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary pool
+        // We will use the uluna-uusd pool as the intermediary pool
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
@@ -838,10 +830,9 @@ mod router {
         let unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -874,27 +865,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -954,7 +945,7 @@ mod router {
         );
 
         // Prepare the swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary pool
+        // We will use the uluna-uusd pool as the intermediary pool
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
@@ -1070,8 +1061,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
         // Asset infos with uwhale and uluna
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1103,27 +1094,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1182,7 +1173,7 @@ mod router {
         );
 
         // Prepare the swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary pool
+        // We will use the uluna-uusd pool as the intermediary pool
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
@@ -1198,7 +1189,7 @@ mod router {
         ];
 
         // before swap uusd balance = 1_000_000_000
-        // - 2*1_000 pair creation fee
+        // - 2*1_000 pool creation fee
         // - 1_000_000 liquidity provision
         // = 998_998_000
         let pre_swap_amount = 998_998_000;
@@ -1237,8 +1228,8 @@ mod router {
         let _other = suite.senders[1].clone();
         let _unauthorized = suite.senders[2].clone();
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1270,27 +1261,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1403,8 +1394,8 @@ mod router {
         let other = suite.senders[1].clone();
         let unauthorized = suite.senders[2].clone();
 
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1436,27 +1427,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1000, "uusd")],
                 |result| {
@@ -1601,8 +1592,8 @@ mod router {
         let _unauthorized = suite.senders[2].clone();
 
         // Asset infos with uwhale and uluna
-        let first_pair = vec!["uwhale".to_string(), "uluna".to_string()];
-        let second_pair = vec!["uluna".to_string(), "uusd".to_string()];
+        let first_pool = vec!["uwhale".to_string(), "uluna".to_string()];
+        let second_pool = vec!["uluna".to_string(), "uusd".to_string()];
 
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1634,27 +1625,27 @@ mod router {
             extra_fees: vec![],
         };
 
-        // Create a pair
+        // Create a pool
         suite
             .instantiate_default()
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                first_pair,
+                first_pool,
                 vec![6u8, 6u8],
                 pool_fees.clone(),
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("whale-uluna".to_string()),
                 vec![coin(1_000, "uusd")],
                 |result| {
                     result.unwrap();
                 },
             )
-            .create_pair(
+            .create_pool(
                 creator.clone(),
-                second_pair,
+                second_pool,
                 vec![6u8, 6u8],
                 pool_fees,
-                white_whale_std::pool_network::asset::PairType::ConstantProduct,
+                white_whale_std::pool_network::asset::PoolType::ConstantProduct,
                 Some("uluna-uusd".to_string()),
                 vec![coin(1_000, "uusd")],
                 |result| {
@@ -1713,7 +1704,7 @@ mod router {
         );
 
         // Prepare the swap operations, we want to go from WHALE -> UUSD
-        // We will use the uluna-uusd pair as the intermediary pool
+        // We will use the uluna-uusd pool as the intermediary pool
 
         let swap_operations = vec![
             white_whale_std::pool_manager::SwapOperation::WhaleSwap {
@@ -1822,7 +1813,6 @@ mod swapping {
 
         let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -1855,13 +1845,13 @@ mod swapping {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_infos,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -1869,9 +1859,9 @@ mod swapping {
             },
         );
 
-        // Query pair info to ensure the query is working fine
-        suite.query_pair_info("whale-uluna".to_string(), |result| {
-            assert_eq!(result.unwrap().pair_info.asset_decimals, vec![6u8, 6u8]);
+        // Query pool info to ensure the query is working fine
+        suite.query_pool_info("whale-uluna".to_string(), |result| {
+            assert_eq!(result.unwrap().pool_info.asset_decimals, vec![6u8, 6u8]);
         });
 
         // Lets try to add liquidity
@@ -1905,12 +1895,12 @@ mod swapping {
                     }));
                 },
             )
-            .query_pair_info("whale-uluna".to_string(), |result| {
+            .query_pool_info("whale-uluna".to_string(), |result| {
                 let response = result.unwrap();
                 assert_eq!(
                     response.total_share,
                     Coin {
-                        denom: response.pair_info.lp_denom,
+                        denom: response.pool_info.lp_denom,
                         amount: Uint128::from(1_000_000u128)
                     }
                 );
@@ -2043,7 +2033,6 @@ mod swapping {
 
         let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -2076,13 +2065,13 @@ mod swapping {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_infos,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::StableSwap { amp: 100 },
+            white_whale_std::pool_network::asset::PoolType::StableSwap { amp: 100 },
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -2237,7 +2226,6 @@ mod swapping {
 
         let asset_infos = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         // Protocol fee is 0.001% and swap fee is 0.002% and burn fee is 0%
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
@@ -2270,13 +2258,13 @@ mod swapping {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_infos,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -2528,7 +2516,6 @@ mod locking_lp {
         // Asset denoms with uwhale and uluna
         let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -2560,13 +2547,13 @@ mod locking_lp {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_denoms,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -2719,7 +2706,6 @@ mod locking_lp {
         // Asset denoms with uwhale and uluna
         let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -2751,13 +2737,13 @@ mod locking_lp {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_denoms,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -2914,7 +2900,6 @@ mod provide_liquidity {
         // Asset denoms with uwhale and uluna
         let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -2946,13 +2931,13 @@ mod provide_liquidity {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_denoms,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
@@ -3156,17 +3141,17 @@ mod provide_liquidity {
                 // 1_000 to the contract, and 1_000_000 to the second, single-side LP
                 assert_eq!(res.unwrap().amount, Uint128::from(2_000_000u128));
             })
-            .query_pair_info("whale-uluna".to_string(), |res| {
+            .query_pool_info("whale-uluna".to_string(), |res| {
                 let response = res.unwrap();
 
                 let whale = response
-                    .pair_info
+                    .pool_info
                     .assets
                     .iter()
                     .find(|coin| coin.denom == "uwhale".to_string())
                     .unwrap();
                 let luna = response
-                    .pair_info
+                    .pool_info
                     .assets
                     .iter()
                     .find(|coin| coin.denom == "uluna".to_string())
@@ -3364,7 +3349,6 @@ mod provide_liquidity {
         // Asset denoms with uwhale and uluna
         let asset_denoms = vec!["uwhale".to_string(), "uluna".to_string()];
 
-        // Default Pool fees white_whale_std::pool_network::pair::PoolFee
         #[cfg(not(feature = "osmosis"))]
         let pool_fees = PoolFee {
             protocol_fee: Fee {
@@ -3396,13 +3380,13 @@ mod provide_liquidity {
             extra_fees: vec![],
         };
 
-        // Create a pair
-        suite.instantiate_default().create_pair(
+        // Create a pool
+        suite.instantiate_default().create_pool(
             creator.clone(),
             asset_denoms,
             vec![6u8, 6u8],
             pool_fees,
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_network::asset::PoolType::ConstantProduct,
             Some("whale-uluna".to_string()),
             vec![coin(1000, "uusd")],
             |result| {
