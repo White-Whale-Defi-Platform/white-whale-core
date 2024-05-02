@@ -12,19 +12,44 @@
   ],
   "properties": {
     "burn_fee_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The burn fee amount of the swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "offer_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The amount of the offer asset needed to get the ask amount.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "protocol_fee_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The protocol fee amount of the swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "spread_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The spread amount of the swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "swap_fee_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The swap fee amount of the swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     }
   },
   "additionalProperties": false,

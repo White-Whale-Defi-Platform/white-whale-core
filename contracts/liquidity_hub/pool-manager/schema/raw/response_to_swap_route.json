@@ -1,20 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "SwapRouteResponse",
+  "description": "The response for the `SwapRoute` query.",
   "type": "object",
   "required": [
     "swap_route"
   ],
   "properties": {
     "swap_route": {
-      "$ref": "#/definitions/SwapRoute"
+      "description": "The swap route taken for the queried swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/SwapRoute"
+        }
+      ]
     }
   },
   "additionalProperties": false,
   "definitions": {
     "SwapOperation": {
+      "description": "The type of swap operation to perform.",
       "oneOf": [
         {
+          "description": "A swap operation that uses the WhaleSwap router.",
           "type": "object",
           "required": [
             "whale_swap"
@@ -29,12 +37,15 @@
               ],
               "properties": {
                 "pool_identifier": {
+                  "description": "The identifier of the pool to use for the swap.",
                   "type": "string"
                 },
                 "token_in_denom": {
+                  "description": "The token denom to swap in.",
                   "type": "string"
                 },
                 "token_out_denom": {
+                  "description": "The token denom returning from the swap.",
                   "type": "string"
                 }
               },
@@ -46,6 +57,7 @@
       ]
     },
     "SwapRoute": {
+      "description": "The swap route structure",
       "type": "object",
       "required": [
         "ask_asset_denom",
@@ -54,12 +66,15 @@
       ],
       "properties": {
         "ask_asset_denom": {
+          "description": "The ask asset denom, i.e. the asset that is being received.",
           "type": "string"
         },
         "offer_asset_denom": {
+          "description": "The offer asset denom, i.e. the asset that is being swapped.",
           "type": "string"
         },
         "swap_operations": {
+          "description": "The swap operations to perform to get from offer asset to ask asset.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapOperation"

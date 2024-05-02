@@ -115,7 +115,6 @@ pub fn query_reverse_simulation(
     deps: Deps,
     _env: Env,
     ask_asset: Coin,
-    _offer_asset: Coin,
     pool_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;

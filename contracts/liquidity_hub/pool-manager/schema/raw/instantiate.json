@@ -9,13 +9,20 @@
   ],
   "properties": {
     "bonding_manager_addr": {
+      "description": "The address of the bonding manager contract.",
       "type": "string"
     },
     "incentive_manager_addr": {
+      "description": "The address of the incentive manager contract.",
       "type": "string"
     },
     "pool_creation_fee": {
-      "$ref": "#/definitions/Coin"
+      "description": "How much it costs to create a pool. It helps prevent spamming of new pools.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Coin"
+        }
+      ]
     }
   },
   "additionalProperties": false,

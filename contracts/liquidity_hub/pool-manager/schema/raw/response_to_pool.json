@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "PoolInfoResponse",
+  "description": "The response for the `Pool` query.",
   "type": "object",
   "required": [
     "pool_info",
@@ -8,10 +9,20 @@
   ],
   "properties": {
     "pool_info": {
-      "$ref": "#/definitions/PoolInfo"
+      "description": "The pool information for the given pool identifier.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/PoolInfo"
+        }
+      ]
     },
     "total_share": {
-      "$ref": "#/definitions/Coin"
+      "description": "The total LP tokens in the pool.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Coin"
+        }
+      ]
     }
   },
   "additionalProperties": false,
@@ -92,6 +103,7 @@
       "additionalProperties": false
     },
     "PoolInfo": {
+      "description": "Contains the pool information",
       "type": "object",
       "required": [
         "asset_decimals",
@@ -103,6 +115,7 @@
       ],
       "properties": {
         "asset_decimals": {
+          "description": "The decimals for the given asset denoms, provided in the same order as asset_denoms.",
           "type": "array",
           "items": {
             "type": "integer",
@@ -111,38 +124,47 @@
           }
         },
         "asset_denoms": {
+          "description": "The asset denoms for the pool.",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
         "assets": {
+          "description": "The total amount of assets in the pool.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Coin"
           }
         },
         "lp_denom": {
+          "description": "The LP denom of the pool.",
           "type": "string"
         },
         "pool_fees": {
-          "$ref": "#/definitions/PoolFee"
+          "description": "The fees for the pool.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PoolFee"
+            }
+          ]
         },
         "pool_type": {
-          "$ref": "#/definitions/PoolType"
+          "description": "The type of pool to create.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PoolType"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
     "PoolType": {
+      "description": "Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.",
       "oneOf": [
         {
-          "type": "string",
-          "enum": [
-            "constant_product"
-          ]
-        },
-        {
+          "description": "A stable swap pool.",
           "type": "object",
           "required": [
             "stable_swap"
@@ -165,6 +187,13 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "xyk pool",
+          "type": "string",
+          "enum": [
+            "constant_product"
+          ]
         }
       ]
     },

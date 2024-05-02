@@ -493,7 +493,7 @@
       ]
     },
     "FeatureToggle": {
-      "description": "Pool feature toggle",
+      "description": "Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.",
       "type": "object",
       "required": [
         "deposits_enabled",
@@ -502,12 +502,15 @@
       ],
       "properties": {
         "deposits_enabled": {
+          "description": "Whether or not deposits are enabled",
           "type": "boolean"
         },
         "swaps_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         },
         "withdrawals_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         }
       },
@@ -570,14 +573,10 @@
       "additionalProperties": false
     },
     "PoolType": {
+      "description": "Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.",
       "oneOf": [
         {
-          "type": "string",
-          "enum": [
-            "constant_product"
-          ]
-        },
-        {
+          "description": "A stable swap pool.",
           "type": "object",
           "required": [
             "stable_swap"
@@ -600,12 +599,21 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "xyk pool",
+          "type": "string",
+          "enum": [
+            "constant_product"
+          ]
         }
       ]
     },
     "SwapOperation": {
+      "description": "The type of swap operation to perform.",
       "oneOf": [
         {
+          "description": "A swap operation that uses the WhaleSwap router.",
           "type": "object",
           "required": [
             "whale_swap"
@@ -620,12 +628,15 @@
               ],
               "properties": {
                 "pool_identifier": {
+                  "description": "The identifier of the pool to use for the swap.",
                   "type": "string"
                 },
                 "token_in_denom": {
+                  "description": "The token denom to swap in.",
                   "type": "string"
                 },
                 "token_out_denom": {
+                  "description": "The token denom returning from the swap.",
                   "type": "string"
                 }
               },
@@ -637,6 +648,7 @@
       ]
     },
     "SwapRoute": {
+      "description": "The swap route structure",
       "type": "object",
       "required": [
         "ask_asset_denom",
@@ -645,12 +657,15 @@
       ],
       "properties": {
         "ask_asset_denom": {
+          "description": "The ask asset denom, i.e. the asset that is being received.",
           "type": "string"
         },
         "offer_asset_denom": {
+          "description": "The offer asset denom, i.e. the asset that is being swapped.",
           "type": "string"
         },
         "swap_operations": {
+          "description": "The swap operations to perform to get from offer asset to ask asset.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapOperation"

@@ -13,13 +13,20 @@
     ],
     "properties": {
       "bonding_manager_addr": {
+        "description": "The address of the bonding manager contract.",
         "type": "string"
       },
       "incentive_manager_addr": {
+        "description": "The address of the incentive manager contract.",
         "type": "string"
       },
       "pool_creation_fee": {
-        "$ref": "#/definitions/Coin"
+        "description": "How much it costs to create a pool. It helps prevent spamming of new pools.",
+        "allOf": [
+          {
+            "$ref": "#/definitions/Coin"
+          }
+        ]
       }
     },
     "additionalProperties": false,
@@ -540,7 +547,7 @@
         ]
       },
       "FeatureToggle": {
-        "description": "Pool feature toggle",
+        "description": "Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.",
         "type": "object",
         "required": [
           "deposits_enabled",
@@ -549,12 +556,15 @@
         ],
         "properties": {
           "deposits_enabled": {
+            "description": "Whether or not deposits are enabled",
             "type": "boolean"
           },
           "swaps_enabled": {
+            "description": "Whether or not swaps are enabled",
             "type": "boolean"
           },
           "withdrawals_enabled": {
+            "description": "Whether or not swaps are enabled",
             "type": "boolean"
           }
         },
@@ -617,14 +627,10 @@
         "additionalProperties": false
       },
       "PoolType": {
+        "description": "Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.",
         "oneOf": [
           {
-            "type": "string",
-            "enum": [
-              "constant_product"
-            ]
-          },
-          {
+            "description": "A stable swap pool.",
             "type": "object",
             "required": [
               "stable_swap"
@@ -647,12 +653,21 @@
               }
             },
             "additionalProperties": false
+          },
+          {
+            "description": "xyk pool",
+            "type": "string",
+            "enum": [
+              "constant_product"
+            ]
           }
         ]
       },
       "SwapOperation": {
+        "description": "The type of swap operation to perform.",
         "oneOf": [
           {
+            "description": "A swap operation that uses the WhaleSwap router.",
             "type": "object",
             "required": [
               "whale_swap"
@@ -667,12 +682,15 @@
                 ],
                 "properties": {
                   "pool_identifier": {
+                    "description": "The identifier of the pool to use for the swap.",
                     "type": "string"
                   },
                   "token_in_denom": {
+                    "description": "The token denom to swap in.",
                     "type": "string"
                   },
                   "token_out_denom": {
+                    "description": "The token denom returning from the swap.",
                     "type": "string"
                   }
                 },
@@ -684,6 +702,7 @@
         ]
       },
       "SwapRoute": {
+        "description": "The swap route structure",
         "type": "object",
         "required": [
           "ask_asset_denom",
@@ -692,12 +711,15 @@
         ],
         "properties": {
           "ask_asset_denom": {
+            "description": "The ask asset denom, i.e. the asset that is being received.",
             "type": "string"
           },
           "offer_asset_denom": {
+            "description": "The offer asset denom, i.e. the asset that is being swapped.",
             "type": "string"
           },
           "swap_operations": {
+            "description": "The swap operations to perform to get from offer asset to ask asset.",
             "type": "array",
             "items": {
               "$ref": "#/definitions/SwapOperation"
@@ -730,17 +752,10 @@
     "oneOf": [
       {
         "description": "Retrieves the contract's config.",
-        "type": "object",
-        "required": [
+        "type": "string",
+        "enum": [
           "config"
-        ],
-        "properties": {
-          "config": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+        ]
       },
       {
         "description": "Retrieves the decimals for the given asset.",
@@ -757,9 +772,11 @@
             ],
             "properties": {
               "denom": {
+                "description": "The queried denom in the given pool_identifier.",
                 "type": "string"
               },
               "pool_identifier": {
+                "description": "The pool identifier to do the query for.",
                 "type": "string"
               }
             },
@@ -783,9 +800,15 @@
             ],
             "properties": {
               "offer_asset": {
-                "$ref": "#/definitions/Coin"
+                "description": "The offer asset to swap.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Coin"
+                  }
+                ]
               },
               "pool_identifier": {
+                "description": "The pool identifier to swap in.",
                 "type": "string"
               }
             },
@@ -805,17 +828,19 @@
             "type": "object",
             "required": [
               "ask_asset",
-              "offer_asset",
               "pool_identifier"
             ],
             "properties": {
               "ask_asset": {
-                "$ref": "#/definitions/Coin"
-              },
-              "offer_asset": {
-                "$ref": "#/definitions/Coin"
+                "description": "The ask asset to get after the swap.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Coin"
+                  }
+                ]
               },
               "pool_identifier": {
+                "description": "The pool identifier to swap in.",
                 "type": "string"
               }
             },
@@ -839,9 +864,11 @@
             ],
             "properties": {
               "ask_asset_denom": {
+                "description": "The ask asset denom, i.e. the asset that is being received.",
                 "type": "string"
               },
               "offer_asset_denom": {
+                "description": "The offer asset denom, i.e. the asset that is being swapped.",
                 "type": "string"
               }
             },
@@ -852,17 +879,10 @@
       },
       {
         "description": "Gets all swap routes registered",
-        "type": "object",
-        "required": [
+        "type": "string",
+        "enum": [
           "swap_routes"
-        ],
-        "properties": {
-          "swap_routes": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+        ]
       },
       {
         "description": "Simulates swap operations.",
@@ -879,9 +899,15 @@
             ],
             "properties": {
               "offer_amount": {
-                "$ref": "#/definitions/Uint128"
+                "description": "The amount to swap.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                ]
               },
               "operations": {
+                "description": "The operations to perform.",
                 "type": "array",
                 "items": {
                   "$ref": "#/definitions/SwapOperation"
@@ -908,9 +934,15 @@
             ],
             "properties": {
               "ask_amount": {
-                "$ref": "#/definitions/Uint128"
+                "description": "The amount to get after the swap.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Uint128"
+                  }
+                ]
               },
               "operations": {
+                "description": "The operations to perform.",
                 "type": "array",
                 "items": {
                   "$ref": "#/definitions/SwapOperation"
@@ -923,6 +955,7 @@
         "additionalProperties": false
       },
       {
+        "description": "Retrieves the pool information for the given pool identifier.",
         "type": "object",
         "required": [
           "pool"
@@ -944,7 +977,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Retrieves the creator of the swap routes that can then remove them.",
+        "description": "Retrieves the creator of the swap route to get from offer to ask asset. The creator of the swap route can remove it.",
         "type": "object",
         "required": [
           "swap_route_creator"
@@ -958,9 +991,11 @@
             ],
             "properties": {
               "ask_asset_denom": {
+                "description": "The ask asset denom, i.e. the asset that is being received.",
                 "type": "string"
               },
               "offer_asset_denom": {
+                "description": "The offer asset denom, i.e. the asset that is being swapped.",
                 "type": "string"
               }
             },
@@ -1001,8 +1036,10 @@
         }
       },
       "SwapOperation": {
+        "description": "The type of swap operation to perform.",
         "oneOf": [
           {
+            "description": "A swap operation that uses the WhaleSwap router.",
             "type": "object",
             "required": [
               "whale_swap"
@@ -1017,12 +1054,15 @@
                 ],
                 "properties": {
                   "pool_identifier": {
+                    "description": "The identifier of the pool to use for the swap.",
                     "type": "string"
                   },
                   "token_in_denom": {
+                    "description": "The token denom to swap in.",
                     "type": "string"
                   },
                   "token_out_denom": {
+                    "description": "The token denom returning from the swap.",
                     "type": "string"
                   }
                 },
@@ -1042,7 +1082,6 @@
   "migrate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "MigrateMsg",
-    "description": "The migrate message",
     "type": "object",
     "additionalProperties": false
   },
@@ -1079,13 +1118,19 @@
     "config": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ConfigResponse",
+      "description": "The response for the `Config` query.",
       "type": "object",
       "required": [
         "config"
       ],
       "properties": {
         "config": {
-          "$ref": "#/definitions/Config"
+          "description": "The contract configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Config"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1110,6 +1155,7 @@
           }
         },
         "Config": {
+          "description": "The contract configuration.",
           "type": "object",
           "required": [
             "bonding_manager_addr",
@@ -1138,13 +1184,18 @@
               ]
             },
             "pool_creation_fee": {
-              "$ref": "#/definitions/Coin"
+              "description": "How much it costs to create a pool. It helps prevent spamming of new pools.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Coin"
+                }
+              ]
             }
           },
           "additionalProperties": false
         },
         "FeatureToggle": {
-          "description": "Pool feature toggle",
+          "description": "Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.",
           "type": "object",
           "required": [
             "deposits_enabled",
@@ -1153,12 +1204,15 @@
           ],
           "properties": {
             "deposits_enabled": {
+              "description": "Whether or not deposits are enabled",
               "type": "boolean"
             },
             "swaps_enabled": {
+              "description": "Whether or not swaps are enabled",
               "type": "boolean"
             },
             "withdrawals_enabled": {
+              "description": "Whether or not swaps are enabled",
               "type": "boolean"
             }
           },
@@ -1268,6 +1322,7 @@
     "pool": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PoolInfoResponse",
+      "description": "The response for the `Pool` query.",
       "type": "object",
       "required": [
         "pool_info",
@@ -1275,10 +1330,20 @@
       ],
       "properties": {
         "pool_info": {
-          "$ref": "#/definitions/PoolInfo"
+          "description": "The pool information for the given pool identifier.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PoolInfo"
+            }
+          ]
         },
         "total_share": {
-          "$ref": "#/definitions/Coin"
+          "description": "The total LP tokens in the pool.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Coin"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1359,6 +1424,7 @@
           "additionalProperties": false
         },
         "PoolInfo": {
+          "description": "Contains the pool information",
           "type": "object",
           "required": [
             "asset_decimals",
@@ -1370,6 +1436,7 @@
           ],
           "properties": {
             "asset_decimals": {
+              "description": "The decimals for the given asset denoms, provided in the same order as asset_denoms.",
               "type": "array",
               "items": {
                 "type": "integer",
@@ -1378,38 +1445,47 @@
               }
             },
             "asset_denoms": {
+              "description": "The asset denoms for the pool.",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "assets": {
+              "description": "The total amount of assets in the pool.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/Coin"
               }
             },
             "lp_denom": {
+              "description": "The LP denom of the pool.",
               "type": "string"
             },
             "pool_fees": {
-              "$ref": "#/definitions/PoolFee"
+              "description": "The fees for the pool.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PoolFee"
+                }
+              ]
             },
             "pool_type": {
-              "$ref": "#/definitions/PoolType"
+              "description": "The type of pool to create.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PoolType"
+                }
+              ]
             }
           },
           "additionalProperties": false
         },
         "PoolType": {
+          "description": "Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.",
           "oneOf": [
             {
-              "type": "string",
-              "enum": [
-                "constant_product"
-              ]
-            },
-            {
+              "description": "A stable swap pool.",
               "type": "object",
               "required": [
                 "stable_swap"
@@ -1432,6 +1508,13 @@
                 }
               },
               "additionalProperties": false
+            },
+            {
+              "description": "xyk pool",
+              "type": "string",
+              "enum": [
+                "constant_product"
+              ]
             }
           ]
         },
@@ -1444,13 +1527,19 @@
     "reverse_simulate_swap_operations": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ReverseSimulateSwapOperationsResponse",
+      "description": "The response for the `ReverseSimulateSwapOperations` query.",
       "type": "object",
       "required": [
         "amount"
       ],
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The amount of the initial token needed to get the final token after the swap operations.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1475,19 +1564,44 @@
       ],
       "properties": {
         "burn_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The burn fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "offer_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The amount of the offer asset needed to get the ask amount.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "protocol_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The protocol fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "spread_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The spread amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "swap_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The swap fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1501,13 +1615,19 @@
     "simulate_swap_operations": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SimulateSwapOperationsResponse",
+      "description": "The response for the `SimulateSwapOperations` query.",
       "type": "object",
       "required": [
         "amount"
       ],
       "properties": {
         "amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The amount of the final token after the swap operations.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1532,19 +1652,44 @@
       ],
       "properties": {
         "burn_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The burn fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "protocol_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The protocol fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "return_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The return amount of the ask asset given the offer amount.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "spread_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The spread amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "swap_fee_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The swap fee amount of the swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -1558,20 +1703,28 @@
     "swap_route": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SwapRouteResponse",
+      "description": "The response for the `SwapRoute` query.",
       "type": "object",
       "required": [
         "swap_route"
       ],
       "properties": {
         "swap_route": {
-          "$ref": "#/definitions/SwapRoute"
+          "description": "The swap route taken for the queried swap.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SwapRoute"
+            }
+          ]
         }
       },
       "additionalProperties": false,
       "definitions": {
         "SwapOperation": {
+          "description": "The type of swap operation to perform.",
           "oneOf": [
             {
+              "description": "A swap operation that uses the WhaleSwap router.",
               "type": "object",
               "required": [
                 "whale_swap"
@@ -1586,12 +1739,15 @@
                   ],
                   "properties": {
                     "pool_identifier": {
+                      "description": "The identifier of the pool to use for the swap.",
                       "type": "string"
                     },
                     "token_in_denom": {
+                      "description": "The token denom to swap in.",
                       "type": "string"
                     },
                     "token_out_denom": {
+                      "description": "The token denom returning from the swap.",
                       "type": "string"
                     }
                   },
@@ -1603,6 +1759,7 @@
           ]
         },
         "SwapRoute": {
+          "description": "The swap route structure",
           "type": "object",
           "required": [
             "ask_asset_denom",
@@ -1611,12 +1768,15 @@
           ],
           "properties": {
             "ask_asset_denom": {
+              "description": "The ask asset denom, i.e. the asset that is being received.",
               "type": "string"
             },
             "offer_asset_denom": {
+              "description": "The offer asset denom, i.e. the asset that is being swapped.",
               "type": "string"
             },
             "swap_operations": {
+              "description": "The swap operations to perform to get from offer asset to ask asset.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/SwapOperation"
@@ -1630,12 +1790,14 @@
     "swap_route_creator": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SwapRouteCreatorResponse",
+      "description": "The response for the `SwapRouteCreator` query.",
       "type": "object",
       "required": [
         "creator"
       ],
       "properties": {
         "creator": {
+          "description": "The creator of the swap route.",
           "type": "string"
         }
       },
@@ -1644,12 +1806,14 @@
     "swap_routes": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SwapRoutesResponse",
+      "description": "The response for the `SwapRoutes` query.",
       "type": "object",
       "required": [
         "swap_routes"
       ],
       "properties": {
         "swap_routes": {
+          "description": "The swap routes registered in the contract.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapRoute"
@@ -1659,8 +1823,10 @@
       "additionalProperties": false,
       "definitions": {
         "SwapOperation": {
+          "description": "The type of swap operation to perform.",
           "oneOf": [
             {
+              "description": "A swap operation that uses the WhaleSwap router.",
               "type": "object",
               "required": [
                 "whale_swap"
@@ -1675,12 +1841,15 @@
                   ],
                   "properties": {
                     "pool_identifier": {
+                      "description": "The identifier of the pool to use for the swap.",
                       "type": "string"
                     },
                     "token_in_denom": {
+                      "description": "The token denom to swap in.",
                       "type": "string"
                     },
                     "token_out_denom": {
+                      "description": "The token denom returning from the swap.",
                       "type": "string"
                     }
                   },
@@ -1692,6 +1861,7 @@
           ]
         },
         "SwapRoute": {
+          "description": "The swap route structure",
           "type": "object",
           "required": [
             "ask_asset_denom",
@@ -1700,12 +1870,15 @@
           ],
           "properties": {
             "ask_asset_denom": {
+              "description": "The ask asset denom, i.e. the asset that is being received.",
               "type": "string"
             },
             "offer_asset_denom": {
+              "description": "The offer asset denom, i.e. the asset that is being swapped.",
               "type": "string"
             },
             "swap_operations": {
+              "description": "The swap operations to perform to get from offer asset to ask asset.",
               "type": "array",
               "items": {
                 "$ref": "#/definitions/SwapOperation"

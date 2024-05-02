@@ -5,11 +5,16 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
+/// The type of swap operation to perform.
 #[cw_serde]
 pub enum SwapOperation {
+    /// A swap operation that uses the WhaleSwap router.
     WhaleSwap {
+        /// The token denom to swap in.
         token_in_denom: String,
+        /// The token denom returning from the swap.
         token_out_denom: String,
+        /// The identifier of the pool to use for the swap.
         pool_identifier: String,
     },
 }
@@ -47,16 +52,21 @@ impl fmt::Display for SwapOperation {
     }
 }
 
+/// The swap route structure
 #[cw_serde]
 pub struct SwapRoute {
+    /// The offer asset denom, i.e. the asset that is being swapped.
     pub offer_asset_denom: String,
+    /// The ask asset denom, i.e. the asset that is being received.
     pub ask_asset_denom: String,
+    /// The swap operations to perform to get from offer asset to ask asset.
     pub swap_operations: Vec<SwapOperation>,
 }
 
-// Used for all swap routes
+/// The response for the `SwapRoute` query.
 #[cw_serde]
 pub struct SwapRouteResponse {
+    /// The swap route taken for the queried swap.
     pub swap_route: SwapRoute,
 }
 
@@ -70,7 +80,8 @@ impl fmt::Display for SwapRoute {
     }
 }
 
-// Define a structure for Fees which names a number of defined fee collection types, maybe leaving room for a custom room a user can use to pass a fee with a defined custom name
+// Defines a structure for Fees which names a number of defined fee collection types, leaving
+// room for a custom fee a user can use to pass a fee with a defined custom name
 #[cw_serde]
 pub enum FeeTypes {
     Protocol,
@@ -79,35 +90,48 @@ pub enum FeeTypes {
     Custom(String),
 }
 
+/// Params for the stable swap, used when changing the amplification factor
 #[cw_serde]
-
 pub struct StableSwapParams {
+    /// Initial amplification factor
     pub initial_amp: String,
+    /// Future amplification factor, i.e. target
     pub future_amp: String,
+    /// Block height when the initial amplification factor kicks in. It goes gradually from the
+    /// initial to the future amplification factor between the given blocks.
     pub initial_amp_block: String,
+    /// Block height when the future amplification factor will be set.  It goes gradually from the
+    /// initial to the future amplification factor between the given blocks.
     pub future_amp_block: String,
 }
 
-// Store PoolInfo to N
-// We define a custom struct for which allows for dynamic but defined pools
+/// Contains the pool information
 #[cw_serde]
 pub struct PoolInfo {
+    /// The asset denoms for the pool.
     pub asset_denoms: Vec<String>,
+    /// The LP denom of the pool.
     pub lp_denom: String,
+    /// The decimals for the given asset denoms, provided in the same order as asset_denoms.
     pub asset_decimals: Vec<u8>,
+    /// The total amount of assets in the pool.
     pub assets: Vec<Coin>,
+    /// The type of pool to create.
     pub pool_type: PoolType,
+    /// The fees for the pool.
     pub pool_fees: PoolFee,
     //pub stable_swap_params: Option<StableSwapParams>
 }
-impl PoolInfo {}
 
+/// Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.
 #[cw_serde]
 pub enum PoolType {
+    /// A stable swap pool.
     StableSwap {
         /// The amount of amplification to perform on the constant product part of the swap formula.
         amp: u64,
     },
+    /// xyk pool
     ConstantProduct,
 }
 
@@ -121,13 +145,14 @@ impl PoolType {
     }
 }
 
+/// The contract configuration.
 #[cw_serde]
 pub struct Config {
     /// The address of the bonding manager contract.
     pub bonding_manager_addr: Addr,
     /// The address of the incentive manager contract.
     pub incentive_manager_addr: Addr,
-    // We must set a creation fee on instantiation to prevent spamming of pools
+    /// How much it costs to create a pool. It helps prevent spamming of new pools.
     pub pool_creation_fee: Coin,
     //  Whether or not swaps, deposits, and withdrawals are enabled
     pub feature_toggle: FeatureToggle,
@@ -135,12 +160,14 @@ pub struct Config {
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    /// The address of the bonding manager contract.
     pub bonding_manager_addr: String,
+    /// The address of the incentive manager contract.
     pub incentive_manager_addr: String,
+    /// How much it costs to create a pool. It helps prevent spamming of new pools.
     pub pool_creation_fee: Coin,
 }
 
-/// The migrate message
 #[cw_serde]
 pub struct MigrateMsg {}
 
@@ -239,77 +266,94 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     /// Retrieves the contract's config.
     #[returns(ConfigResponse)]
-    Config {},
-
+    Config,
     /// Retrieves the decimals for the given asset.
     #[returns(AssetDecimalsResponse)]
     AssetDecimals {
+        /// The pool identifier to do the query for.
         pool_identifier: String,
+        /// The queried denom in the given pool_identifier.
         denom: String,
     },
-
     /// Simulates a swap.
     #[returns(SimulationResponse)]
     Simulation {
+        /// The offer asset to swap.
         offer_asset: Coin,
+        /// The pool identifier to swap in.
         pool_identifier: String,
     },
-    /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
-    /// perform the swap.
+    /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed
+    /// to perform the swap.
     #[returns(ReverseSimulationResponse)]
     ReverseSimulation {
+        /// The ask asset to get after the swap.
         ask_asset: Coin,
-        offer_asset: Coin,
+        /// The pool identifier to swap in.
         pool_identifier: String,
     },
-
     /// Gets the swap route for the given offer and ask assets.
     #[returns(SwapRouteResponse)]
     SwapRoute {
+        /// The offer asset denom, i.e. the asset that is being swapped.
         offer_asset_denom: String,
+        /// The ask asset denom, i.e. the asset that is being received.
         ask_asset_denom: String,
     },
     /// Gets all swap routes registered
     #[returns(SwapRoutesResponse)]
-    SwapRoutes {},
-
+    SwapRoutes,
     /// Simulates swap operations.
     #[returns(SimulateSwapOperationsResponse)]
     SimulateSwapOperations {
+        /// The amount to swap.
         offer_amount: Uint128,
+        /// The operations to perform.
         operations: Vec<SwapOperation>,
     },
     /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
     /// is needed to perform the swap.
     #[returns(ReverseSimulateSwapOperationsResponse)]
     ReverseSimulateSwapOperations {
+        /// The amount to get after the swap.
         ask_amount: Uint128,
+        /// The operations to perform.
         operations: Vec<SwapOperation>,
     },
-
+    /// Retrieves the pool information for the given pool identifier.
     #[returns(PoolInfoResponse)]
     Pool { pool_identifier: String },
-    /// Retrieves the creator of the swap routes that can then remove them.
+    /// Retrieves the creator of the swap route to get from offer to ask asset. The creator of
+    /// the swap route can remove it.
     #[returns(SwapRouteCreatorResponse)]
     SwapRouteCreator {
+        /// The offer asset denom, i.e. the asset that is being swapped.
         offer_asset_denom: String,
+        /// The ask asset denom, i.e. the asset that is being received.
         ask_asset_denom: String,
     },
 }
 
+/// The response for the `Config` query.
 #[cw_serde]
 pub struct ConfigResponse {
+    /// The contract configuration.
     pub config: Config,
 }
 
+/// The response for the `SwapRoutes` query.
 #[cw_serde]
 pub struct SwapRoutesResponse {
+    /// The swap routes registered in the contract.
     pub swap_routes: Vec<SwapRoute>,
 }
 
+/// The response for the `Pool` query.
 #[cw_serde]
 pub struct PoolInfoResponse {
+    /// The pool information for the given pool identifier.
     pub pool_info: PoolInfo,
+    /// The total LP tokens in the pool.
     pub total_share: Coin,
 }
 
@@ -327,11 +371,17 @@ pub struct AssetDecimalsResponse {
 /// SimulationResponse returns swap simulation response
 #[cw_serde]
 pub struct SimulationResponse {
+    /// The return amount of the ask asset given the offer amount.
     pub return_amount: Uint128,
+    /// The spread amount of the swap.
     pub spread_amount: Uint128,
+    /// The swap fee amount of the swap.
     pub swap_fee_amount: Uint128,
+    /// The protocol fee amount of the swap.
     pub protocol_fee_amount: Uint128,
+    /// The burn fee amount of the swap.
     pub burn_fee_amount: Uint128,
+    /// The fee amount of the swap going to the osmosis community pool.
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
 }
@@ -339,35 +389,49 @@ pub struct SimulationResponse {
 /// ReverseSimulationResponse returns reverse swap simulation response
 #[cw_serde]
 pub struct ReverseSimulationResponse {
+    /// The amount of the offer asset needed to get the ask amount.
     pub offer_amount: Uint128,
+    /// The spread amount of the swap.
     pub spread_amount: Uint128,
+    /// The swap fee amount of the swap.
     pub swap_fee_amount: Uint128,
+    /// The protocol fee amount of the swap.
     pub protocol_fee_amount: Uint128,
+    /// The burn fee amount of the swap.
     pub burn_fee_amount: Uint128,
+    /// The fee amount of the swap going to the osmosis community pool.
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
 }
 
-/// Pool feature toggle
+/// Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.
 #[cw_serde]
 pub struct FeatureToggle {
+    /// Whether or not swaps are enabled
     pub withdrawals_enabled: bool,
+    /// Whether or not deposits are enabled
     pub deposits_enabled: bool,
+    /// Whether or not swaps are enabled
     pub swaps_enabled: bool,
 }
 
-// We define a custom struct for each query response
+/// The response for the `SimulateSwapOperations` query.
 #[cw_serde]
 pub struct SimulateSwapOperationsResponse {
+    /// The amount of the final token after the swap operations.
     pub amount: Uint128,
 }
 
+/// The response for the `ReverseSimulateSwapOperations` query.
 #[cw_serde]
 pub struct ReverseSimulateSwapOperationsResponse {
+    /// The amount of the initial token needed to get the final token after the swap operations.
     pub amount: Uint128,
 }
 
+/// The response for the `SwapRouteCreator` query.
 #[cw_serde]
 pub struct SwapRouteCreatorResponse {
+    /// The creator of the swap route.
     pub creator: String,
 }

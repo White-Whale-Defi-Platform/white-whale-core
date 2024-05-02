@@ -597,10 +597,6 @@ impl TestingSuite {
             self.app.wrap().query_wasm_smart(
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
-                    offer_asset: Coin {
-                        amount: Uint128::zero(),
-                        denom: offer_asset,
-                    },
                     ask_asset,
                     pool_identifier,
                 },
@@ -688,7 +684,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.pool_manager_addr,
-                &white_whale_std::pool_manager::QueryMsg::Config {},
+                &white_whale_std::pool_manager::QueryMsg::Config,
             )
             .unwrap()
     }
@@ -720,7 +716,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let swap_routes_response: StdResult<SwapRoutesResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::SwapRoutes {},
+            &white_whale_std::pool_manager::QueryMsg::SwapRoutes,
         );
 
         result(swap_routes_response);

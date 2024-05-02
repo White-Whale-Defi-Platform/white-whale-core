@@ -191,7 +191,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::Config => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::AssetDecimals {
             pool_identifier,
             denom,
@@ -210,13 +210,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::ReverseSimulation {
             ask_asset,
-            offer_asset,
             pool_identifier,
         } => Ok(to_json_binary(&queries::query_reverse_simulation(
             deps,
             env,
             ask_asset,
-            offer_asset,
             pool_identifier,
         )?)?),
         QueryMsg::SimulateSwapOperations {
@@ -241,7 +239,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             offer_asset_denom,
             ask_asset_denom,
         )?)?),
-        QueryMsg::SwapRoutes {} => Ok(to_json_binary(&queries::get_swap_routes(deps)?)?),
+        QueryMsg::SwapRoutes => Ok(to_json_binary(&queries::get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
         QueryMsg::Pool { pool_identifier } => {
             Ok(to_json_binary(&queries::get_pool(deps, pool_identifier)?)?)

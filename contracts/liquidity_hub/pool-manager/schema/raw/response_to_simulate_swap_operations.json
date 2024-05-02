@@ -1,13 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "SimulateSwapOperationsResponse",
+  "description": "The response for the `SimulateSwapOperations` query.",
   "type": "object",
   "required": [
     "amount"
   ],
   "properties": {
     "amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The amount of the final token after the swap operations.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     }
   },
   "additionalProperties": false,
