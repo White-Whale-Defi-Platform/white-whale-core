@@ -129,18 +129,33 @@ pub struct MigrateMsg {}
 #[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
+    //todo maybe to rename to CreatePool?
+    /// Creates a new pair.
     CreatePair {
+        /// The asset denoms for the pair.
         asset_denoms: Vec<String>,
+        /// The decimals for the given asset denoms, provided in the same order as `asset_denoms`.
         asset_decimals: Vec<u8>,
+        /// The fees for the pool.
         pool_fees: PoolFee,
+        /// The type of pair to create.
         pair_type: PairType,
+        /// The identifier for the pair.
         pair_identifier: Option<String>,
     },
     /// Provides liquidity to the pool
     ProvideLiquidity {
+        /// A percentage value representing the acceptable slippage for the operation.
+        /// When provided, if the slippage exceeds this value, the liquidity provision will not be
+        /// executed.
         slippage_tolerance: Option<Decimal>,
+        /// The maximum allowable spread between the bid and ask prices for the pair.
+        /// When provided, if the spread exceeds this value, the liquidity provision will not be
+        /// executed.
         max_spread: Option<Decimal>,
+        /// The receiver of the LP
         receiver: Option<String>,
+        /// The identifier for the pair to provide liquidity for.
         pair_identifier: String,
         /// The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed,
         /// the tokens will not be locked and the LP tokens will be returned to the user.
@@ -150,12 +165,17 @@ pub enum ExecuteMsg {
     },
     /// Swap an offer asset to the other
     Swap {
-        //todo remove offer_asset, take it from info.funds
-        offer_asset: Coin,
+        /// The return asset of the swap.
         ask_asset_denom: String,
+        /// The belief price of the swap.
         belief_price: Option<Decimal>,
+        /// The maximum spread to incur when performing the swap. If the spread exceeds this value,
+        /// the swap will not be executed.
         max_spread: Option<Decimal>,
-        to: Option<String>,
+        /// The recipient of the output tokens. If not provided, the tokens will be sent to the sender
+        /// of the message.
+        receiver: Option<String>,
+        /// The identifier for the pair to swap in.
         pair_identifier: String,
     },
     /// Withdraws liquidity from the pool.
@@ -179,20 +199,6 @@ pub enum ExecuteMsg {
         /// If left unspecified, there is no limit to what spread the transaction can incur.
         max_spread: Option<Decimal>,
     },
-    // /// Swap the offer to ask token. This message can only be called internally by the router contract.
-    // ExecuteSwapOperation {
-    //     operation: SwapOperation,
-    //     to: Option<String>,
-    //     max_spread: Option<Decimal>,
-    // },
-    // /// Checks if the swap amount exceeds the minimum_receive. This message can only be called
-    // /// internally by the router contract.
-    // AssertMinimumReceive {
-    //     asset_info: AssetInfo,
-    //     prev_balance: Uint128,
-    //     minimum_receive: Uint128,
-    //     receiver: String,
-    // },
     /// Adds swap routes to the router.
     AddSwapRoutes { swap_routes: Vec<SwapRoute> },
     /// Removes swap routes from the router.

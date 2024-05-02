@@ -7,7 +7,7 @@ use white_whale_std::whale_lair;
 
 use crate::{
     helpers::simulate_swap_operations,
-    state::{SwapOperations, MANAGER_CONFIG, SWAP_ROUTES},
+    state::{SwapOperations, CONFIG, SWAP_ROUTES},
     swap::perform_swap::perform_swap,
     ContractError,
 };
@@ -43,7 +43,7 @@ pub fn execute_swap_operations(
     to: Option<Addr>,
     max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
     if !config.feature_toggle.swaps_enabled {
         return Err(ContractError::OperationDisabled("swap".to_string()));

@@ -321,6 +321,7 @@ impl TestingSuite {
         unlocking_duration: Option<u64>,
         lock_position_identifier: Option<String>,
         max_spread: Option<Decimal>,
+        receiver: Option<String>,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -328,7 +329,7 @@ impl TestingSuite {
             pair_identifier,
             slippage_tolerance: None,
             max_spread,
-            receiver: None,
+            receiver,
             unlocking_duration,
             lock_position_identifier,
         };
@@ -346,21 +347,19 @@ impl TestingSuite {
     pub(crate) fn swap(
         &mut self,
         sender: Addr,
-        offer_asset: Coin,
         ask_asset_denom: String,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<String>,
+        receiver: Option<String>,
         pair_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
-            offer_asset,
             ask_asset_denom,
             belief_price,
             max_spread,
-            to,
+            receiver,
             pair_identifier,
         };
 

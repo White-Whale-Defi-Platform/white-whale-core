@@ -5,7 +5,7 @@ use white_whale_std::{fee::PoolFee, pool_network::asset::PairType, whale_lair::f
 
 use crate::state::{get_pair_by_identifier, PAIR_COUNTER};
 use crate::{
-    state::{Config, MANAGER_CONFIG, PAIRS},
+    state::{Config, CONFIG, PAIRS},
     ContractError,
 };
 
@@ -86,9 +86,9 @@ pub fn create_pair(
     pair_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
     // Load config for pool creation fee
-    let config: Config = MANAGER_CONFIG.load(deps.storage)?;
+    let config: Config = CONFIG.load(deps.storage)?;
 
-    // Check if fee was provided and is sufficientd
+    // Check if fee was provided and is sufficient
     if !config.pool_creation_fee.amount.is_zero() {
         // verify fee payment
         let amount = cw_utils::must_pay(&info, &config.pool_creation_fee.denom)?;

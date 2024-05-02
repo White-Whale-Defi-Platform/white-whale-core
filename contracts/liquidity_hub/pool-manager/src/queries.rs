@@ -8,7 +8,7 @@ use white_whale_std::pool_manager::{
 };
 use white_whale_std::pool_network::asset::PairType;
 
-use crate::state::{MANAGER_CONFIG, PAIRS};
+use crate::state::{CONFIG, PAIRS};
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
     state::get_pair_by_identifier,
@@ -18,7 +18,7 @@ use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
 
 /// Query the config of the contract.
 pub fn query_config(deps: Deps) -> Result<Config, ContractError> {
-    Ok(MANAGER_CONFIG.load(deps.storage)?)
+    Ok(CONFIG.load(deps.storage)?)
 }
 
 /// Query the native asset decimals

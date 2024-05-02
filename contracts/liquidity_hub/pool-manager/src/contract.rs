@@ -5,8 +5,8 @@ use crate::helpers::{
 use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
 use crate::router::commands::{add_swap_routes, remove_swap_routes};
 use crate::state::{
-    Config, SingleSideLiquidityProvisionBuffer, MANAGER_CONFIG, PAIR_COUNTER,
-    TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
+    Config, SingleSideLiquidityProvisionBuffer, CONFIG, PAIR_COUNTER,
+    SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER,
 };
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
@@ -44,7 +44,7 @@ pub fn instantiate(
             swaps_enabled: true,
         },
     };
-    MANAGER_CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config)?;
     // initialize vault counter
     PAIR_COUNTER.save(deps.storage, &0u64)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
@@ -63,12 +63,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                 offer_asset_half,
                 expected_ask_asset,
                 liquidity_provision_data,
-            } = TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.load(deps.storage)?;
+            } = SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.load(deps.storage)?;
 
             validate_asset_balance(&deps, &env, &expected_offer_asset_balance_in_contract)?;
             validate_asset_balance(&deps, &env, &expected_ask_asset_balance_in_contract)?;
 
-            TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.remove(deps.storage);
+            SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.remove(deps.storage);
 
             Ok(Response::default().add_message(wasm_execute(
                 env.contract.address.into_string(),
@@ -130,28 +130,22 @@ pub fn execute(
             lock_position_identifier,
         ),
         ExecuteMsg::Swap {
-            offer_asset,
             ask_asset_denom,
             belief_price,
             max_spread,
-            to,
+            receiver,
             pair_identifier,
-        } => {
-            let to_addr = to.map(|addr| deps.api.addr_validate(&addr)).transpose()?;
-
-            swap::commands::swap(
-                deps,
-                env,
-                info.clone(),
-                info.sender,
-                offer_asset,
-                ask_asset_denom,
-                belief_price,
-                max_spread,
-                to_addr,
-                pair_identifier,
-            )
-        }
+        } => swap::commands::swap(
+            deps,
+            env,
+            info.clone(),
+            info.sender,
+            ask_asset_denom,
+            belief_price,
+            max_spread,
+            receiver,
+            pair_identifier,
+        ),
         ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
             liquidity::commands::withdraw_liquidity(deps, env, info, pair_identifier)
         }
@@ -182,21 +176,6 @@ pub fn execute(
                 max_spread,
             )
         }
-        // ExecuteMsg::ExecuteSwapOperation {
-        //     operation,
-        //     to,
-        //     max_spread,
-        // } => {
-        //     let api = deps.api;
-        //     router::commands::execute_swap_operation(
-        //         deps,
-        //         env,
-        //         info,
-        //         operation,
-        //         optional_addr_validate(api, to)?.map(|v| v.to_string()),
-        //         max_spread,
-        //     )
-        // }
         ExecuteMsg::AddSwapRoutes { swap_routes } => {
             add_swap_routes(deps, info.sender, swap_routes)
         }

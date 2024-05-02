@@ -5,6 +5,7 @@ use cosmwasm_std::{
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
 use white_whale_std::coin::aggregate_coins;
+use white_whale_std::common::validate_addr_or_default;
 use white_whale_std::pool_manager::ExecuteMsg;
 use white_whale_std::pool_network::asset::PairType;
 use white_whale_std::pool_network::{
@@ -17,7 +18,7 @@ use crate::{
     state::get_pair_by_identifier,
 };
 use crate::{
-    state::{MANAGER_CONFIG, PAIRS},
+    state::{CONFIG, PAIRS},
     ContractError,
 };
 // After writing create_pair I see this can get quite verbose so attempting to
@@ -26,7 +27,8 @@ use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
 use crate::helpers::aggregate_outgoing_fees;
 use crate::queries::query_simulation;
 use crate::state::{
-    LiquidityProvisionData, SingleSideLiquidityProvisionBuffer, TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
+    LiquidityProvisionData, SingleSideLiquidityProvisionBuffer,
+    SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER,
 };
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
@@ -43,7 +45,7 @@ pub fn provide_liquidity(
     unlocking_duration: Option<u64>,
     lock_position_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the deposit feature is enabled
     ensure!(
         config.feature_toggle.deposits_enabled,
@@ -66,7 +68,10 @@ pub fn provide_liquidity(
         ContractError::AssetMismatch {}
     );
 
-    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
+    let receiver =
+        validate_addr_or_default(&deps.as_ref(), receiver, info.sender.clone()).to_string();
+
+    //let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     // check if the user is providing liquidity with a single asset
     let is_single_asset_provision = deposits.len() == 1usize;
 
@@ -121,7 +126,7 @@ pub fn provide_liquidity(
             StdError::generic_err("Spread limit exceeded")
         );
 
-        TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.save(
+        SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.save(
             deps.storage,
             &SingleSideLiquidityProvisionBuffer {
                 receiver,
@@ -147,11 +152,10 @@ pub fn provide_liquidity(
                 wasm_execute(
                     env.contract.address.into_string(),
                     &ExecuteMsg::Swap {
-                        offer_asset: swap_half.clone(),
                         ask_asset_denom: ask_denom,
                         belief_price: None,
                         max_spread,
-                        to: None,
+                        receiver: None,
                         pair_identifier,
                     },
                     vec![swap_half],
@@ -324,7 +328,7 @@ pub fn withdraw_liquidity(
     info: MessageInfo,
     pair_identifier: String,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the withdraw feature is enabled
     if !config.feature_toggle.withdrawals_enabled {
         return Err(ContractError::OperationDisabled(
