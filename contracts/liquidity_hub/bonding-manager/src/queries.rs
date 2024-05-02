@@ -182,6 +182,7 @@ pub(crate) fn query_weight(
             config.growth_rate,
             bond.timestamp,
         )?;
+        println!("bond: {:?}", bond);
 
         if !unique_denoms.contains(&bond.asset.denom) {
             unique_denoms.insert(bond.asset.denom.clone());
@@ -199,6 +200,7 @@ pub(crate) fn query_weight(
             .unwrap_or_else(|_| Some(GlobalIndex::default()))
             .ok_or_else(|| StdError::generic_err("Global index not found"))?
     };
+    println!("unique_denoms: {:?}", global_index);
 
     // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
@@ -208,6 +210,7 @@ pub(crate) fn query_weight(
         config.growth_rate,
         global_index.timestamp,
     )?;
+    println!("unique_denoms: {:?}", global_index);
 
     // Represents the share of the global weight that the address has
     let share = Decimal::from_ratio(total_bond_weight, global_index.weight);

@@ -62,6 +62,7 @@ fn test_fill_rewards_from_pool_manager() {
             },
         ],
         |result| {
+            println!("{:?}", result.as_ref().unwrap());
             // Ensure we got 999_000 in the response which is 1mil less the initial liquidity amount
             assert!(result.unwrap().events.iter().any(|event| {
                 event.attributes.iter().any(|attr| {
@@ -74,10 +75,12 @@ fn test_fill_rewards_from_pool_manager() {
         },
     );
 
+    println!("{:?}", robot.app.wrap().query_all_balances(creator.clone()));
+
     // Lets try to add a swap route
     let swap_route_1 = SwapRoute {
-        offer_asset_denom: "uwhale".to_string(),
-        ask_asset_denom: "uusd".to_string(),
+        offer_asset_denom: "uusdc".to_string(),
+        ask_asset_denom: "uwhale".to_string(),
         swap_operations: vec![white_whale_std::pool_manager::SwapOperation::WhaleSwap {
             token_in_denom: "uusdc".to_string(),
             token_out_denom: "uwhale".to_string(),
@@ -155,6 +158,17 @@ fn test_fill_rewards_from_pool_manager() {
         robot.bonding_manager_addr.clone(),
         |res| {
             assert_eq!(res, Uint128::from(3018u128));
+        },
+    );
+
+    robot.fill_rewards_lp(
+        creator.clone(),
+        vec![coin(
+            1000,
+            "factory/contract2/uwhale-uusdc.pool.whale-uusdc.uLP",
+        )],
+        |res| {
+            println!("{:?}", res.unwrap());
         },
     );
 }

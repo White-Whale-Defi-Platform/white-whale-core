@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, StdResult,
-    Timestamp, Uint64, WasmMsg,
+    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, ReplyOn,
+    StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
@@ -10,6 +10,7 @@ use white_whale_std::pool_manager::{
     PairInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
 
+use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
 use crate::queries::{get_claimable_epochs, get_current_epoch};
 use crate::state::CONFIG;
@@ -119,7 +120,7 @@ pub fn calculate_epoch(
 pub fn handle_lp_tokens(
     info: &MessageInfo,
     config: &white_whale_std::bonding_manager::Config,
-    messages: &mut Vec<CosmosMsg>,
+    submessages: &mut Vec<SubMsg>,
 ) -> Result<(), ContractError> {
     let lp_tokens: Vec<&Coin> = info
         .funds
@@ -128,32 +129,41 @@ pub fn handle_lp_tokens(
         .collect();
     for lp_token in lp_tokens {
         // LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        let pair_identifier = lp_token.denom.split(".pool.").collect::<Vec<&str>>()[1];
+        let pair_identifier = lp_token.denom.split(".pool.").collect::<Vec<&str>>()[1]
+            .split('.')
+            .collect::<Vec<&str>>()[0];
 
         // if LP Tokens ,verify and withdraw then swap to whale
         let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
             pair_identifier: pair_identifier.to_string(),
         };
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: config.pool_manager_addr.to_string(),
-            msg: to_json_binary(&lp_withdrawal_msg)?,
-            funds: vec![lp_token.clone()],
-        }));
+        // Add a submessage to withdraw the LP tokens
+        let lp_msg: SubMsg = SubMsg {
+            id: LP_WITHDRAWAL_REPLY_ID,
+            msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: config.pool_manager_addr.to_string(),
+                msg: to_json_binary(&lp_withdrawal_msg)?,
+                funds: vec![lp_token.clone()],
+            }),
+            gas_limit: None,
+            reply_on: ReplyOn::Success,
+        };
+
+        submessages.push(lp_msg);
     }
     Ok(())
 }
 
 // Used in FillRewards to search the funds for coins that are neither LP tokens nor whale and swap them to whale
 pub fn swap_coins_to_main_token(
-    info: MessageInfo,
+    coins: Vec<Coin>,
     deps: &DepsMut,
     config: white_whale_std::bonding_manager::Config,
     whale: &mut Coin,
     distribution_denom: &String,
     messages: &mut Vec<CosmosMsg>,
 ) -> Result<(), ContractError> {
-    let coins_to_swap: Vec<&Coin> = info
-        .funds
+    let coins_to_swap: Vec<&Coin> = coins
         .iter()
         .filter(|coin| {
             !coin.denom.contains(".pool.")
@@ -172,6 +182,13 @@ pub fn swap_coins_to_main_token(
             .querier
             .query_wasm_smart(config.pool_manager_addr.to_string(), &swap_route_query)?;
 
+        ensure!(
+            !swap_routes.swap_route.swap_operations.is_empty(),
+            ContractError::NoSwapRoute {
+                asset1: coin.denom.to_string(),
+                asset2: distribution_denom.to_string()
+            }
+        );
         // check if the pool has any assets, if not skip the swap
         // Note we are only checking the first operation here. Might be better to another loop to check all operations
         let pool_query = white_whale_std::pool_manager::QueryMsg::Pair {
@@ -182,10 +199,11 @@ pub fn swap_coins_to_main_token(
                 .unwrap()
                 .get_pool_identifer(),
         };
+        let mut skip_swap = false;
+        // Query for the pool to check if it has any assets
         let resp: PairInfoResponse = deps
             .querier
             .query_wasm_smart(config.pool_manager_addr.to_string(), &pool_query)?;
-        let mut skip_swap = false;
         // Check pair 'assets' and if either one has 0 amount then don't do swaps
         resp.pair_info.assets.iter().for_each(|asset| {
             if asset.amount.is_zero() {
@@ -204,12 +222,13 @@ pub fn swap_coins_to_main_token(
         whale.amount = whale.amount.checked_add(simulate.amount)?;
 
         if !skip_swap {
-            // 1% max spread for the swap
+            // Prepare a swap message, use the simulate amount as the minimum receive
+            // and 1% slippage to ensure we get at least what was simulated to be received
             let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
                 operations: swap_routes.swap_route.swap_operations.clone(),
                 minimum_receive: Some(simulate.amount),
                 to: None,
-                max_spread: Some(Decimal::percent(1)),
+                max_spread: Some(Decimal::percent(5)),
             };
             let binary_msg = to_json_binary(&msg)?;
             let wrapped_msg = WasmMsg::Execute {

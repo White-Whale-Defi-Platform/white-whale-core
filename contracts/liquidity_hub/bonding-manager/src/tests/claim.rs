@@ -249,4 +249,15 @@ fn test_claim_successfully() {
                 .any(|attr| attr.key == "amount" && attr.value == "390uwhale")
         }));
     });
+
+    robot.claim(another_sender, |res| {
+        let result = res.unwrap();
+        println!("{:?}", result);
+        assert!(result.events.iter().any(|event| {
+            event
+                .attributes
+                .iter()
+                .any(|attr| attr.key == "amount" && attr.value == "206uwhale")
+        }));
+    });
 }

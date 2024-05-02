@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, Timestamp, Uint128, Uint64,
+    StdError, StdResult, SubMsg, Timestamp, Uint128, Uint64,
 };
 use white_whale_std::pool_network::asset;
 
@@ -337,19 +337,23 @@ pub(crate) fn fill_rewards(
         let distribution_denom = config.distribution_denom.clone();
 
         let mut messages: Vec<CosmosMsg> = vec![];
+        let mut submessages: Vec<SubMsg> = vec![];
         // swap non-whale to whale
         // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
         let mut whale = info
             .funds
             .iter()
             .find(|coin| coin.denom.eq(distribution_denom.as_str()))
-            .unwrap()
+            .unwrap_or(&Coin {
+                denom: distribution_denom.clone(),
+                amount: Uint128::zero(),
+            })
             .to_owned();
         // Each of these helpers will add messages to the messages vector
         // and may increment the whale Coin above with the result of the swaps
-        helpers::handle_lp_tokens(&info, &config, &mut messages)?;
+        helpers::handle_lp_tokens(&info, &config, &mut submessages)?;
         helpers::swap_coins_to_main_token(
-            info,
+            info.funds.clone(),
             &deps,
             config,
             &mut whale,
@@ -372,6 +376,7 @@ pub(crate) fn fill_rewards(
         )?;
         Ok(Response::default()
             .add_messages(messages)
+            .add_submessages(submessages)
             .add_attributes(vec![("action", "fill_rewards".to_string())]))
     }
 }

@@ -1,4 +1,6 @@
-use cosmwasm_std::{entry_point, Addr};
+use std::str::FromStr;
+
+use cosmwasm_std::{entry_point, Addr, Coin, Order, Reply, Uint128};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale_std::pool_network::asset;
@@ -10,12 +12,14 @@ use white_whale_std::bonding_manager::{
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
 use crate::queries::get_expiring_epoch;
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, GLOBAL};
 use crate::{commands, queries};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-bonding_manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub const LP_WITHDRAWAL_REPLY_ID: u64 = 0;
 
 #[entry_point]
 pub fn instantiate(
@@ -115,8 +119,9 @@ pub fn execute(
             // Store epoch manager and verify the sender is him
             println!("New epoch created: {:?}", current_epoch);
             // let config = CONFIG.load(deps.storage)?;
-            // let global = GLOBAL.load(deps.storage)?;
+            let global = GLOBAL.load(deps.storage).unwrap_or_default();
 
+            // Review, what if current_epoch form the hook is actually next_epoch_id and then epoch - 1 would be previous one
             let new_epoch_id = current_epoch.id;
             let next_epoch_id = match new_epoch_id.checked_add(1u64) {
                 Some(next_epoch_id) => next_epoch_id,
@@ -130,6 +135,7 @@ pub fn execute(
                 &Epoch {
                     id: next_epoch_id.into(),
                     start_time: current_epoch.start_time.plus_days(1),
+                    global_index: global.clone(),
                     ..Epoch::default()
                 },
             )?;
@@ -144,6 +150,7 @@ pub fn execute(
                     &Epoch {
                         id: next_epoch_id.into(),
                         start_time: current_epoch.start_time,
+                        global_index: global.clone(),
                         ..Epoch::default()
                     },
                 )?;
@@ -170,6 +177,7 @@ pub fn execute(
                             amount_to_be_forwarded.clone(),
                         )?;
                         epoch.total = asset::aggregate_coins(epoch.total, amount_to_be_forwarded)?;
+
                         Ok(epoch)
                     },
                 )?;
@@ -237,6 +245,82 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             &deps.api.addr_validate(&addr)?,
         )?),
         QueryMsg::ClaimableEpochs {} => to_json_binary(&queries::get_claimable_epochs(deps)?),
+    }
+}
+
+// Reply entrypoint handling LP withdraws from fill_rewards
+#[entry_point]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    println!("Reply from fill_rewards: {:?}", msg.clone());
+    // Read the epoch sent by the fee collector through the ForwardFeesResponse
+    // let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
+    // let data = execute_contract_response
+    //     .data
+    //     .ok_or(ContractError::Unauthorized {})?;
+    match msg.id {
+        LP_WITHDRAWAL_REPLY_ID => {
+            let config = CONFIG.load(deps.storage)?;
+            let distribution_denom = config.distribution_denom.clone();
+            let mut messages = vec![];
+            let mut coins = Vec::new();
+            // Loop msg events to find the transfer event and the assets received
+            for event in msg.result.unwrap().events {
+                if event.ty == "transfer" {
+                    let attributes = event.attributes;
+                    for attr in attributes {
+                        if attr.key == "amount" {
+                            let amount_str = attr.value;
+                            let amounts: Vec<&str> = amount_str.split(',').collect();
+                            println!("Amounts: {:?}", amounts);
+                            for amount in amounts {
+                                // XXXXucoin is the format at this point, pass it to from_str to get the Coin struct
+                                coins.push(Coin::from_str(amount).unwrap());
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Search received coins funds for the distribution denom
+            let mut whale = coins
+                .iter()
+                .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+                .unwrap_or(&Coin {
+                    denom: config.distribution_denom.clone(),
+                    amount: Uint128::zero(),
+                })
+                .to_owned();
+            // Swap other coins to the distribution denom
+            helpers::swap_coins_to_main_token(
+                coins,
+                &deps,
+                config,
+                &mut whale,
+                &distribution_denom,
+                &mut messages,
+            )?;
+            // Finding the most recent EpochID
+            let next_epoch_id = match EPOCHS
+                .keys(deps.storage, None, None, Order::Descending)
+                .next()
+            {
+                Some(epoch_id) => epoch_id?,
+                None => return Err(ContractError::Unauthorized {}),
+            };
+            let epoch_to_log = EPOCHS.load(deps.storage, &next_epoch_id)?;
+            println!("Most recent epoch: {:?}", epoch_to_log);
+            EPOCHS.update(deps.storage, &next_epoch_id, |bucket| -> StdResult<_> {
+                let mut bucket = bucket.unwrap_or_default();
+                bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
+                bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
+                Ok(bucket)
+            })?;
+
+            Ok(Response::new()
+                .add_messages(messages)
+                .add_attribute("total_withdrawn", msg.id.to_string()))
+        }
+        _ => Err(ContractError::Unauthorized {}),
     }
 }
 

@@ -66,6 +66,9 @@ pub enum ContractError {
 
     #[error("Nothing to claim")]
     InvalidReward {},
+
+    #[error("No Swap Route found for assets {asset1} and {asset2}")]
+    NoSwapRoute { asset1: String, asset2: String },
 }
 
 impl From<semver::Error> for ContractError {

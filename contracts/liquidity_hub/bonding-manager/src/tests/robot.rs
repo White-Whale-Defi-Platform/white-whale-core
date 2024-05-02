@@ -28,7 +28,8 @@ pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
         crate::contract::instantiate,
         crate::contract::query,
     )
-    .with_migrate(crate::contract::migrate);
+    .with_migrate(crate::contract::migrate)
+    .with_reply(crate::contract::reply);
 
     Box::new(contract)
 }
@@ -666,6 +667,23 @@ impl TestingRobot {
         result(
             self.app
                 .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn fill_rewards_lp(
+        &mut self,
+        sender: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::bonding_manager::ExecuteMsg::FillRewardsCoin {};
+
+        result(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &funds),
         );
 
         self
