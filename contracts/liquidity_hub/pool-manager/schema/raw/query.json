@@ -27,13 +27,13 @@
           "type": "object",
           "required": [
             "denom",
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
             "denom": {
               "type": "string"
             },
-            "pair_identifier": {
+            "pool_identifier": {
               "type": "string"
             }
           },
@@ -53,13 +53,13 @@
           "type": "object",
           "required": [
             "offer_asset",
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
             "offer_asset": {
               "$ref": "#/definitions/Coin"
             },
-            "pair_identifier": {
+            "pool_identifier": {
               "type": "string"
             }
           },
@@ -80,7 +80,7 @@
           "required": [
             "ask_asset",
             "offer_asset",
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
             "ask_asset": {
@@ -89,7 +89,7 @@
             "offer_asset": {
               "$ref": "#/definitions/Coin"
             },
-            "pair_identifier": {
+            "pool_identifier": {
               "type": "string"
             }
           },
@@ -199,16 +199,16 @@
     {
       "type": "object",
       "required": [
-        "pair"
+        "pool"
       ],
       "properties": {
-        "pair": {
+        "pool": {
           "type": "object",
           "required": [
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
-            "pair_identifier": {
+            "pool_identifier": {
               "type": "string"
             }
           },

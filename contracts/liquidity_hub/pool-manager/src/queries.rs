@@ -3,16 +3,15 @@ use std::cmp::Ordering;
 use cosmwasm_std::{coin, Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
-    AssetDecimalsResponse, Config, PairInfoResponse, ReverseSimulationResponse,
+    AssetDecimalsResponse, Config, PoolInfoResponse, PoolType, ReverseSimulationResponse,
     SimulateSwapOperationsResponse, SimulationResponse, SwapOperation, SwapRoute,
     SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
-use white_whale_std::pool_network::asset::PairType;
 
-use crate::state::{CONFIG, PAIRS};
+use crate::state::{CONFIG, POOLS};
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
-    state::get_pair_by_identifier,
+    state::get_pool_by_identifier,
     ContractError,
 };
 use crate::{math::Decimal256Helper, state::SWAP_ROUTES};
@@ -25,20 +24,20 @@ pub fn query_config(deps: Deps) -> Result<Config, ContractError> {
 /// Query the native asset decimals
 pub fn query_asset_decimals(
     deps: Deps,
-    pair_identifier: String,
+    pool_identifier: String,
     denom: String,
 ) -> Result<AssetDecimalsResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
-    let decimal_index = pair_info
+    let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;
+    let decimal_index = pool_info
         .asset_denoms
         .iter()
         .position(|d| d.clone() == denom)
         .ok_or(ContractError::AssetMismatch)?;
 
     Ok(AssetDecimalsResponse {
-        pair_identifier,
+        pool_identifier,
         denom,
-        decimals: pair_info.asset_decimals[decimal_index],
+        decimals: pool_info.asset_decimals[decimal_index],
     })
 }
 
@@ -46,18 +45,18 @@ pub fn query_asset_decimals(
 pub fn query_simulation(
     deps: Deps,
     offer_asset: Coin,
-    pair_identifier: String,
+    pool_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
-    let pools = pair_info.assets.clone();
+    let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;
+    let pools = pool_info.assets.clone();
 
     // determine what's the offer and ask pool based on the offer_asset
     let offer_pool: Coin;
     let ask_pool: Coin;
     let offer_decimal: u8;
     let ask_decimal: u8;
-    let decimals = pair_info.asset_decimals.clone();
-    // We now have the pools and pair info; we can now calculate the swap
+    let decimals = pool_info.asset_decimals.clone();
+    // We now have the pools and pool info; we can now calculate the swap
     // Verify the pool
     if offer_asset.denom == pools[0].denom {
         offer_pool = pools[0].clone();
@@ -74,14 +73,14 @@ pub fn query_simulation(
         return Err(ContractError::AssetMismatch);
     }
 
-    let pool_fees = pair_info.pool_fees;
+    let pool_fees = pool_info.pool_fees;
 
     let swap_computation = helpers::compute_swap(
         offer_pool.amount,
         ask_pool.amount,
         offer_asset.amount,
         pool_fees,
-        &pair_info.pair_type,
+        &pool_info.pool_type,
         offer_decimal,
         ask_decimal,
     )?;
@@ -117,20 +116,20 @@ pub fn query_reverse_simulation(
     _env: Env,
     ask_asset: Coin,
     _offer_asset: Coin,
-    pair_identifier: String,
+    pool_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
-    let pair_info = get_pair_by_identifier(&deps, &pair_identifier)?;
-    let pools = pair_info.assets.clone();
+    let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;
+    let pools = pool_info.assets.clone();
 
-    let decimals = pair_info.asset_decimals.clone();
+    let decimals = pool_info.asset_decimals.clone();
     let offer_pool: Coin = pools[0].clone();
     let offer_decimal = decimals[0];
     let ask_pool: Coin = pools[1].clone();
     let ask_decimal = decimals[1];
-    let pool_fees = pair_info.pool_fees;
+    let pool_fees = pool_info.pool_fees;
 
-    match pair_info.pair_type {
-        PairType::ConstantProduct => {
+    match pool_info.pool_type {
+        PoolType::ConstantProduct => {
             let offer_amount_computation = helpers::compute_offer_amount(
                 offer_pool.amount,
                 ask_pool.amount,
@@ -161,7 +160,7 @@ pub fn query_reverse_simulation(
                 })
             }
         }
-        PairType::StableSwap { amp } => {
+        PoolType::StableSwap { amp } => {
             let offer_pool = Decimal256::decimal_with_precision(offer_pool.amount, offer_decimal)?;
             let ask_pool = Decimal256::decimal_with_precision(ask_pool.amount, ask_decimal)?;
 
@@ -241,7 +240,7 @@ pub fn query_reverse_simulation(
 
 // Router related queries, swap routes and SwapOperations
 // get_swap_routes which only takes deps: Deps as input
-// the function will read from SWAP_ROUTES and return all swpa routes in a vec
+// the function will read from SWAP_ROUTES and return all swap routes in a vec
 pub fn get_swap_routes(deps: Deps) -> Result<SwapRoutesResponse, ContractError> {
     let swap_routes: Vec<SwapRoute> = SWAP_ROUTES
         .range(deps.storage, None, None, Order::Ascending)
@@ -305,13 +304,13 @@ pub fn get_swap_route_creator(
     })
 }
 
-/// Gets the pair info for a given pair identifier. Returns a [PairInfoResponse].
-pub fn get_pair(deps: Deps, pair_identifier: String) -> Result<PairInfoResponse, ContractError> {
-    let pair = PAIRS.load(deps.storage, &pair_identifier)?;
-    let total_share = deps.querier.query_supply(pair.lp_denom)?;
+/// Gets the pool info for a given pool identifier. Returns a [PoolInfoResponse].
+pub fn get_pool(deps: Deps, pool_identifier: String) -> Result<PoolInfoResponse, ContractError> {
+    let pool = POOLS.load(deps.storage, &pool_identifier)?;
+    let total_share = deps.querier.query_supply(pool.lp_denom)?;
 
-    Ok(PairInfoResponse {
-        pair_info: PAIRS.load(deps.storage, &pair_identifier)?,
+    Ok(PoolInfoResponse {
+        pool_info: POOLS.load(deps.storage, &pool_identifier)?,
         total_share,
     })
 }

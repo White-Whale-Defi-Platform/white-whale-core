@@ -1,7 +1,8 @@
 use cosmwasm_std::{
-    attr, coin, wasm_execute, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo,
-    Response, Uint128,
+    attr, coin, ensure, wasm_execute, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut,
+    MessageInfo, Response, Uint128,
 };
+use white_whale_std::common::validate_addr_or_default;
 use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
 use white_whale_std::whale_lair;
 
@@ -40,14 +41,15 @@ pub fn execute_swap_operations(
     info: MessageInfo,
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
-    to: Option<Addr>,
+    receiver: Option<String>,
     max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
-    if !config.feature_toggle.swaps_enabled {
-        return Err(ContractError::OperationDisabled("swap".to_string()));
-    }
+    ensure!(
+        config.feature_toggle.swaps_enabled,
+        ContractError::OperationDisabled("swap".to_string())
+    );
 
     // ensure that there was at least one operation
     // and retrieve the output token info
@@ -69,7 +71,8 @@ pub fn execute_swap_operations(
     assert_operations(operations.clone())?;
 
     // we return the output to the sender if no alternative recipient was specified.
-    let to = to.unwrap_or(info.sender.clone());
+    let receiver =
+        validate_addr_or_default(&deps.as_ref(), receiver, info.sender.clone()).to_string();
 
     // perform each swap operation
     // we start off with the initial funds
@@ -146,17 +149,17 @@ pub fn execute_swap_operations(
     // send output to recipient
     Ok(Response::new()
         .add_message(BankMsg::Send {
-            to_address: to.to_string(),
+            to_address: receiver.clone(),
             amount: vec![coin(receiver_balance.u128(), target_asset_denom.clone())],
         })
         .add_messages(fee_messages)
         .add_attributes(vec![
-            attr("action", "execute_swap_operations"),
-            attr("sender", info.sender.as_str()),
-            attr("receiver", to.as_str()),
+            attr("action", "execute_swap_operations".to_string()),
+            attr("sender", info.sender.to_string()),
+            attr("receiver", receiver),
             attr("offer_info", offer_asset.denom),
-            attr("offer_amount", offer_asset.amount),
-            attr("return_denom", &target_asset_denom),
+            attr("offer_amount", offer_asset.amount.to_string()),
+            attr("return_denom", target_asset_denom),
             attr("return_amount", receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))

@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{fee::PoolFee, pool_network::asset::PairType};
+use crate::fee::PoolFee;
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Decimal, Uint128};
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
@@ -88,20 +88,38 @@ pub struct StableSwapParams {
     pub future_amp_block: String,
 }
 
-// Store PairInfo to N
-// We define a custom struct for which allows for dynamic but defined pairs
+// Store PoolInfo to N
+// We define a custom struct for which allows for dynamic but defined pools
 #[cw_serde]
-pub struct PairInfo {
+pub struct PoolInfo {
     pub asset_denoms: Vec<String>,
     pub lp_denom: String,
     pub asset_decimals: Vec<u8>,
     pub assets: Vec<Coin>,
-    pub pair_type: PairType,
+    pub pool_type: PoolType,
     pub pool_fees: PoolFee,
-    // TODO: Add stable swap params
-    // pub stable_swap_params: Option<StableSwapParams>
+    //pub stable_swap_params: Option<StableSwapParams>
 }
-impl PairInfo {}
+impl PoolInfo {}
+
+#[cw_serde]
+pub enum PoolType {
+    StableSwap {
+        /// The amount of amplification to perform on the constant product part of the swap formula.
+        amp: u64,
+    },
+    ConstantProduct,
+}
+
+impl PoolType {
+    /// Gets a string representation of the pair type
+    pub fn get_label(&self) -> &str {
+        match self {
+            PoolType::ConstantProduct => "ConstantProduct",
+            PoolType::StableSwap { .. } => "StableSwap",
+        }
+    }
+}
 
 #[cw_serde]
 pub struct Config {
@@ -129,19 +147,18 @@ pub struct MigrateMsg {}
 #[cw_ownable_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
-    //todo maybe to rename to CreatePool?
-    /// Creates a new pair.
-    CreatePair {
-        /// The asset denoms for the pair.
+    /// Creates a new pool.
+    CreatePool {
+        /// The asset denoms for the pool.
         asset_denoms: Vec<String>,
         /// The decimals for the given asset denoms, provided in the same order as `asset_denoms`.
         asset_decimals: Vec<u8>,
         /// The fees for the pool.
         pool_fees: PoolFee,
-        /// The type of pair to create.
-        pair_type: PairType,
-        /// The identifier for the pair.
-        pair_identifier: Option<String>,
+        /// The type of pool to create.
+        pool_type: PoolType,
+        /// The identifier for the pool.
+        pool_identifier: Option<String>,
     },
     /// Provides liquidity to the pool
     ProvideLiquidity {
@@ -149,14 +166,14 @@ pub enum ExecuteMsg {
         /// When provided, if the slippage exceeds this value, the liquidity provision will not be
         /// executed.
         slippage_tolerance: Option<Decimal>,
-        /// The maximum allowable spread between the bid and ask prices for the pair.
+        /// The maximum allowable spread between the bid and ask prices for the pool.
         /// When provided, if the spread exceeds this value, the liquidity provision will not be
         /// executed.
         max_spread: Option<Decimal>,
         /// The receiver of the LP
         receiver: Option<String>,
-        /// The identifier for the pair to provide liquidity for.
-        pair_identifier: String,
+        /// The identifier for the pool to provide liquidity for.
+        pool_identifier: String,
         /// The amount of time in seconds to unlock tokens if taking part on the incentives. If not passed,
         /// the tokens will not be locked and the LP tokens will be returned to the user.
         unlocking_duration: Option<u64>,
@@ -175,11 +192,11 @@ pub enum ExecuteMsg {
         /// The recipient of the output tokens. If not provided, the tokens will be sent to the sender
         /// of the message.
         receiver: Option<String>,
-        /// The identifier for the pair to swap in.
-        pair_identifier: String,
+        /// The identifier for the pool to swap in.
+        pool_identifier: String,
     },
     /// Withdraws liquidity from the pool.
-    WithdrawLiquidity { pair_identifier: String },
+    WithdrawLiquidity { pool_identifier: String },
     /// Execute multiple [`SwapOperations`] to allow for multi-hop swaps.
     ExecuteSwapOperations {
         /// The operations that should be performed in sequence.
@@ -193,7 +210,7 @@ pub enum ExecuteMsg {
         /// The (optional) recipient of the output tokens.
         ///
         /// If left unspecified, tokens will be sent to the sender of the message.
-        to: Option<String>,
+        receiver: Option<String>,
         /// The (optional) maximum spread to incur when performing any swap.
         ///
         /// If left unspecified, there is no limit to what spread the transaction can incur.
@@ -227,7 +244,7 @@ pub enum QueryMsg {
     /// Retrieves the decimals for the given asset.
     #[returns(AssetDecimalsResponse)]
     AssetDecimals {
-        pair_identifier: String,
+        pool_identifier: String,
         denom: String,
     },
 
@@ -235,7 +252,7 @@ pub enum QueryMsg {
     #[returns(SimulationResponse)]
     Simulation {
         offer_asset: Coin,
-        pair_identifier: String,
+        pool_identifier: String,
     },
     /// Simulates a reverse swap, i.e. given the ask asset, how much of the offer asset is needed to
     /// perform the swap.
@@ -243,7 +260,7 @@ pub enum QueryMsg {
     ReverseSimulation {
         ask_asset: Coin,
         offer_asset: Coin,
-        pair_identifier: String,
+        pool_identifier: String,
     },
 
     /// Gets the swap route for the given offer and ask assets.
@@ -270,8 +287,8 @@ pub enum QueryMsg {
         operations: Vec<SwapOperation>,
     },
 
-    #[returns(PairInfoResponse)]
-    Pair { pair_identifier: String },
+    #[returns(PoolInfoResponse)]
+    Pool { pool_identifier: String },
     /// Retrieves the creator of the swap routes that can then remove them.
     #[returns(SwapRouteCreatorResponse)]
     SwapRouteCreator {
@@ -291,17 +308,17 @@ pub struct SwapRoutesResponse {
 }
 
 #[cw_serde]
-pub struct PairInfoResponse {
-    pub pair_info: PairInfo,
+pub struct PoolInfoResponse {
+    pub pool_info: PoolInfo,
     pub total_share: Coin,
 }
 
 /// The response for the `AssetDecimals` query.
 #[cw_serde]
 pub struct AssetDecimalsResponse {
-    /// The pair identifier to do the query for.
-    pub pair_identifier: String,
-    /// The queried denom in the given pair_identifier.
+    /// The pool identifier to do the query for.
+    pub pool_identifier: String,
+    /// The queried denom in the given pool_identifier.
     pub denom: String,
     /// The decimals for the requested denom.
     pub decimals: u8,

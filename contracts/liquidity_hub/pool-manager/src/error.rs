@@ -52,10 +52,8 @@ pub enum ContractError {
         swap_amount: Uint128,
     },
 
-    #[error(
-        "The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault"
-    )]
-    PairExists {
+    #[error("The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a pool")]
+    PoolExists {
         asset_infos: String, //String representation of the asset infos
         identifier: String,
     },
@@ -75,8 +73,8 @@ pub enum ContractError {
     #[error("Cannot provide single-side liquidity when the pool is empty")]
     EmptyPoolForSingleSideLiquidityProvision,
 
-    #[error("Pair does not exist")]
-    UnExistingPair,
+    #[error("Pool does not exist")]
+    UnExistingPool,
 
     #[error("Operation disabled, {0}")]
     OperationDisabled(String),
@@ -147,8 +145,8 @@ pub enum ContractError {
         next_input: String,
     },
 
-    #[error("Invalid pair creation fee, expected {expected} got {amount}")]
-    InvalidPairCreationFee { amount: Uint128, expected: Uint128 },
+    #[error("Invalid pool creation fee, expected {expected} got {amount}")]
+    InvalidPoolCreationFee { amount: Uint128, expected: Uint128 },
 
     #[error("Funds for {denom} were missing when performing swap")]
     MissingNativeSwapFunds { denom: String },
