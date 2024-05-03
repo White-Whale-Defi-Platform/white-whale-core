@@ -1,13 +1,19 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ConfigResponse",
+  "description": "The response for the `Config` query.",
   "type": "object",
   "required": [
     "config"
   ],
   "properties": {
     "config": {
-      "$ref": "#/definitions/Config"
+      "description": "The contract configuration.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Config"
+        }
+      ]
     }
   },
   "additionalProperties": false,
@@ -32,6 +38,7 @@
       }
     },
     "Config": {
+      "description": "The contract configuration.",
       "type": "object",
       "required": [
         "bonding_manager_addr",
@@ -60,13 +67,18 @@
           ]
         },
         "pool_creation_fee": {
-          "$ref": "#/definitions/Coin"
+          "description": "How much it costs to create a pool. It helps prevent spamming of new pools.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Coin"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
     "FeatureToggle": {
-      "description": "Pool feature toggle",
+      "description": "Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.",
       "type": "object",
       "required": [
         "deposits_enabled",
@@ -75,12 +87,15 @@
       ],
       "properties": {
         "deposits_enabled": {
+          "description": "Whether or not deposits are enabled",
           "type": "boolean"
         },
         "swaps_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         },
         "withdrawals_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         }
       },

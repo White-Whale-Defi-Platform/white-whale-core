@@ -1,13 +1,14 @@
 use cosmwasm_std::{
-    attr, coin, to_json_binary, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo,
-    Response, Uint128, WasmMsg,
+    attr, coin, ensure, wasm_execute, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut,
+    MessageInfo, Response, Uint128,
 };
+use white_whale_std::common::validate_addr_or_default;
 use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
 use white_whale_std::whale_lair;
 
+use crate::queries::simulate_swap_operations;
 use crate::{
-    helpers::simulate_swap_operations,
-    state::{SwapOperations, MANAGER_CONFIG, SWAP_ROUTES},
+    state::{SwapOperations, CONFIG, SWAP_ROUTES},
     swap::perform_swap::perform_swap,
     ContractError,
 };
@@ -17,7 +18,7 @@ fn assert_operations(operations: Vec<SwapOperation>) -> Result<(), ContractError
     // check that the output of each swap is the input of the next swap
     let mut previous_output_info = operations
         .first()
-        .ok_or(ContractError::NoSwapOperationsProvided {})?
+        .ok_or(ContractError::NoSwapOperationsProvided)?
         .get_input_asset_info()
         .clone();
 
@@ -40,25 +41,26 @@ pub fn execute_swap_operations(
     info: MessageInfo,
     operations: Vec<SwapOperation>,
     minimum_receive: Option<Uint128>,
-    to: Option<Addr>,
+    receiver: Option<String>,
     max_spread: Option<Decimal>,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the swap feature is enabled
-    if !config.feature_toggle.swaps_enabled {
-        return Err(ContractError::OperationDisabled("swap".to_string()));
-    }
+    ensure!(
+        config.feature_toggle.swaps_enabled,
+        ContractError::OperationDisabled("swap".to_string())
+    );
 
     // ensure that there was at least one operation
     // and retrieve the output token info
     let target_asset_denom = operations
         .last()
-        .ok_or(ContractError::NoSwapOperationsProvided {})?
+        .ok_or(ContractError::NoSwapOperationsProvided)?
         .get_target_asset_info();
 
     let offer_asset_denom = operations
         .first()
-        .ok_or(ContractError::NoSwapOperationsProvided {})?
+        .ok_or(ContractError::NoSwapOperationsProvided)?
         .get_input_asset_info();
 
     let offer_asset = Coin {
@@ -69,7 +71,8 @@ pub fn execute_swap_operations(
     assert_operations(operations.clone())?;
 
     // we return the output to the sender if no alternative recipient was specified.
-    let to = to.unwrap_or(info.sender.clone());
+    let receiver =
+        validate_addr_or_default(&deps.as_ref(), receiver, info.sender.clone()).to_string();
 
     // perform each swap operation
     // we start off with the initial funds
@@ -83,7 +86,9 @@ pub fn execute_swap_operations(
     for operation in operations {
         match operation {
             SwapOperation::WhaleSwap {
-                pool_identifier, ..
+                token_out_denom,
+                pool_identifier,
+                ..
             } => {
                 // inside assert_operations() we have already checked that
                 // the output of each swap is the input of the next swap.
@@ -91,6 +96,7 @@ pub fn execute_swap_operations(
                 let swap_result = perform_swap(
                     deps.branch(),
                     previous_swap_output.clone(),
+                    token_out_denom,
                     pool_identifier,
                     None,
                     max_spread,
@@ -117,19 +123,14 @@ pub fn execute_swap_operations(
                     }));
                 }
                 if !swap_result.protocol_fee_asset.amount.is_zero() {
-                    fee_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                        contract_addr: config.bonding_manager_addr.to_string(),
-                        msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewardsCoin {})?,
-                        funds: vec![swap_result.protocol_fee_asset.clone()],
-                    }));
-                }
-
-                // todo remove, the swap_fee_asset stays in the pool
-                if !swap_result.swap_fee_asset.amount.is_zero() {
-                    fee_messages.push(CosmosMsg::Bank(BankMsg::Send {
-                        to_address: config.bonding_manager_addr.to_string(),
-                        amount: vec![swap_result.swap_fee_asset],
-                    }));
+                    fee_messages.push(
+                        wasm_execute(
+                            config.bonding_manager_addr.to_string(),
+                            &whale_lair::ExecuteMsg::FillRewardsCoin {},
+                            vec![swap_result.protocol_fee_asset.clone()],
+                        )?
+                        .into(),
+                    );
                 }
             }
         }
@@ -149,17 +150,17 @@ pub fn execute_swap_operations(
     // send output to recipient
     Ok(Response::new()
         .add_message(BankMsg::Send {
-            to_address: to.to_string(),
+            to_address: receiver.clone(),
             amount: vec![coin(receiver_balance.u128(), target_asset_denom.clone())],
         })
         .add_messages(fee_messages)
         .add_attributes(vec![
-            attr("action", "execute_swap_operations"),
-            attr("sender", info.sender.as_str()),
-            attr("receiver", to.as_str()),
+            attr("action", "execute_swap_operations".to_string()),
+            attr("sender", info.sender.to_string()),
+            attr("receiver", receiver),
             attr("offer_info", offer_asset.denom),
-            attr("offer_amount", offer_asset.amount),
-            attr("return_denom", &target_asset_denom),
+            attr("offer_amount", offer_asset.amount.to_string()),
+            attr("return_denom", target_asset_denom),
             attr("return_amount", receiver_balance.to_string()),
         ])
         .add_attributes(swap_attributes))
@@ -222,7 +223,7 @@ pub fn remove_swap_routes(
             // only contract owner or route creator can remove the swap route
             let creator = swap_route_key.load(deps.storage)?.creator;
             if !cw_ownable::is_owner(deps.storage, &sender)? && sender != creator {
-                return Err(ContractError::Unauthorized {});
+                return Err(ContractError::Unauthorized);
             }
             swap_route_key.remove(deps.storage);
             attributes.push(attr("swap_route", swap_route.clone().to_string()));

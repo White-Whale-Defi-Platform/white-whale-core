@@ -3,21 +3,23 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
+      "description": "Creates a new pool.",
       "type": "object",
       "required": [
-        "create_pair"
+        "create_pool"
       ],
       "properties": {
-        "create_pair": {
+        "create_pool": {
           "type": "object",
           "required": [
             "asset_decimals",
             "asset_denoms",
-            "pair_type",
-            "pool_fees"
+            "pool_fees",
+            "pool_type"
           ],
           "properties": {
             "asset_decimals": {
+              "description": "The decimals for the given asset denoms, provided in the same order as `asset_denoms`.",
               "type": "array",
               "items": {
                 "type": "integer",
@@ -26,22 +28,34 @@
               }
             },
             "asset_denoms": {
+              "description": "The asset denoms for the pool.",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
-            "pair_identifier": {
+            "pool_fees": {
+              "description": "The fees for the pool.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PoolFee"
+                }
+              ]
+            },
+            "pool_identifier": {
+              "description": "The identifier for the pool.",
               "type": [
                 "string",
                 "null"
               ]
             },
-            "pair_type": {
-              "$ref": "#/definitions/PairType"
-            },
-            "pool_fees": {
-              "$ref": "#/definitions/PoolFee"
+            "pool_type": {
+              "description": "The type of pool to create.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PoolType"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -59,7 +73,7 @@
         "provide_liquidity": {
           "type": "object",
           "required": [
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
             "lock_position_identifier": {
@@ -70,6 +84,7 @@
               ]
             },
             "max_spread": {
+              "description": "The maximum allowable spread between the bid and ask prices for the pool. When provided, if the spread exceeds this value, the liquidity provision will not be executed.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Decimal"
@@ -79,16 +94,19 @@
                 }
               ]
             },
-            "pair_identifier": {
+            "pool_identifier": {
+              "description": "The identifier for the pool to provide liquidity for.",
               "type": "string"
             },
             "receiver": {
+              "description": "The receiver of the LP",
               "type": [
                 "string",
                 "null"
               ]
             },
             "slippage_tolerance": {
+              "description": "A percentage value representing the acceptable slippage for the operation. When provided, if the slippage exceeds this value, the liquidity provision will not be executed.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Decimal"
@@ -124,14 +142,15 @@
           "type": "object",
           "required": [
             "ask_asset_denom",
-            "offer_asset",
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
             "ask_asset_denom": {
+              "description": "The return asset of the swap.",
               "type": "string"
             },
             "belief_price": {
+              "description": "The belief price of the swap.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Decimal"
@@ -142,6 +161,7 @@
               ]
             },
             "max_spread": {
+              "description": "The maximum spread to incur when performing the swap. If the spread exceeds this value, the swap will not be executed.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Decimal"
@@ -151,13 +171,12 @@
                 }
               ]
             },
-            "offer_asset": {
-              "$ref": "#/definitions/Coin"
-            },
-            "pair_identifier": {
+            "pool_identifier": {
+              "description": "The identifier for the pool to swap in.",
               "type": "string"
             },
-            "to": {
+            "receiver": {
+              "description": "The recipient of the output tokens. If not provided, the tokens will be sent to the sender of the message.",
               "type": [
                 "string",
                 "null"
@@ -179,10 +198,10 @@
         "withdraw_liquidity": {
           "type": "object",
           "required": [
-            "pair_identifier"
+            "pool_identifier"
           ],
           "properties": {
-            "pair_identifier": {
+            "pool_identifier": {
               "type": "string"
             }
           },
@@ -233,7 +252,7 @@
                 "$ref": "#/definitions/SwapOperation"
               }
             },
-            "to": {
+            "receiver": {
               "description": "The (optional) recipient of the output tokens.\n\nIf left unspecified, tokens will be sent to the sender of the message.",
               "type": [
                 "string",
@@ -474,7 +493,7 @@
       ]
     },
     "FeatureToggle": {
-      "description": "Pool feature toggle",
+      "description": "Pool feature toggle, can control whether swaps, deposits, and withdrawals are enabled.",
       "type": "object",
       "required": [
         "deposits_enabled",
@@ -483,12 +502,15 @@
       ],
       "properties": {
         "deposits_enabled": {
+          "description": "Whether or not deposits are enabled",
           "type": "boolean"
         },
         "swaps_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         },
         "withdrawals_enabled": {
+          "description": "Whether or not swaps are enabled",
           "type": "boolean"
         }
       },
@@ -505,40 +527,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "PairType": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "constant_product"
-          ]
-        },
-        {
-          "type": "object",
-          "required": [
-            "stable_swap"
-          ],
-          "properties": {
-            "stable_swap": {
-              "type": "object",
-              "required": [
-                "amp"
-              ],
-              "properties": {
-                "amp": {
-                  "description": "The amount of amplification to perform on the constant product part of the swap formula.",
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
     },
     "PoolFee": {
       "description": "Represents the fee structure for transactions within a pool.\n\n# Fields - `protocol_fee`: The fee percentage charged by the protocol on each transaction to support operational and developmental needs. - `swap_fee`: The fee percentage allocated to liquidity providers as a reward for supplying liquidity to the pool, incentivizing participation and ensuring pool health. - `burn_fee`: A fee percentage that is burned on each transaction, helping manage the token economy by reducing supply over time, potentially increasing token value. - `osmosis_fee` (optional): Specific to the Osmosis feature, this fee is charged on each transaction when the Osmosis feature is enabled, supporting specific ecosystem requirements. - `extra_fees`: A vector of custom fees allowing for extensible and adaptable fee structures to meet diverse and evolving needs. Validation ensures that the total of all fees does not exceed 100%, maintaining fairness and avoiding overcharging.\n\n# Features - `osmosis`: Enables the `osmosis_fee` field, integrating specific fee requirements for the Osmosis protocol within the pool's fee structure.",
@@ -584,9 +572,48 @@
       },
       "additionalProperties": false
     },
-    "SwapOperation": {
+    "PoolType": {
+      "description": "Possible pool types, it can be either a constant product (xyk) pool or a stable swap pool.",
       "oneOf": [
         {
+          "description": "A stable swap pool.",
+          "type": "object",
+          "required": [
+            "stable_swap"
+          ],
+          "properties": {
+            "stable_swap": {
+              "type": "object",
+              "required": [
+                "amp"
+              ],
+              "properties": {
+                "amp": {
+                  "description": "The amount of amplification to perform on the constant product part of the swap formula.",
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "xyk pool",
+          "type": "string",
+          "enum": [
+            "constant_product"
+          ]
+        }
+      ]
+    },
+    "SwapOperation": {
+      "description": "The type of swap operation to perform.",
+      "oneOf": [
+        {
+          "description": "A swap operation that uses the WhaleSwap router.",
           "type": "object",
           "required": [
             "whale_swap"
@@ -601,12 +628,15 @@
               ],
               "properties": {
                 "pool_identifier": {
+                  "description": "The identifier of the pool to use for the swap.",
                   "type": "string"
                 },
                 "token_in_denom": {
+                  "description": "The token denom to swap in.",
                   "type": "string"
                 },
                 "token_out_denom": {
+                  "description": "The token denom returning from the swap.",
                   "type": "string"
                 }
               },
@@ -618,6 +648,7 @@
       ]
     },
     "SwapRoute": {
+      "description": "The swap route structure",
       "type": "object",
       "required": [
         "ask_asset_denom",
@@ -626,12 +657,15 @@
       ],
       "properties": {
         "ask_asset_denom": {
+          "description": "The ask asset denom, i.e. the asset that is being received.",
           "type": "string"
         },
         "offer_asset_denom": {
+          "description": "The offer asset denom, i.e. the asset that is being swapped.",
           "type": "string"
         },
         "swap_operations": {
+          "description": "The swap operations to perform to get from offer asset to ask asset.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/SwapOperation"

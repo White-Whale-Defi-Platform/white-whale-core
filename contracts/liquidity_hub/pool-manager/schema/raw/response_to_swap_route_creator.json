@@ -1,12 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "SwapRouteCreatorResponse",
+  "description": "The response for the `SwapRouteCreator` query.",
   "type": "object",
   "required": [
     "creator"
   ],
   "properties": {
     "creator": {
+      "description": "The creator of the swap route.",
       "type": "string"
     }
   },

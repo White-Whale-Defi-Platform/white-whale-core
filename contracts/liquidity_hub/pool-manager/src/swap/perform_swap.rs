@@ -1,11 +1,12 @@
 use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
 
-use white_whale_std::pool_manager::PairInfo;
+use white_whale_std::pool_manager::PoolInfo;
 use white_whale_std::pool_network::swap::assert_max_spread;
 
+use crate::helpers::{aggregate_outgoing_fees, get_asset_indexes_in_pool};
 use crate::{
     helpers,
-    state::{get_pair_by_identifier, PAIRS},
+    state::{get_pool_by_identifier, POOLS},
     ContractError,
 };
 
@@ -22,14 +23,14 @@ pub struct SwapResult {
     /// The osmosis fee of `return_asset` associated with this swap transaction.
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_asset: Coin,
-    /// The pair that was traded.
-    pub pair_info: PairInfo,
+    /// The pool that was traded.
+    pub pool_info: PoolInfo,
     /// The amount of spread that occurred during the swap from the original exchange rate.
     pub spread_amount: Uint128,
 }
 
 /// Attempts to perform a swap from `offer_asset` to the relevant opposing
-/// asset in the pair identified by `pair_identifier`.
+/// asset in the pool identified by `pool_identifier`.
 ///
 /// Assumes that `offer_asset` is a **native token**.
 ///
@@ -39,52 +40,35 @@ pub struct SwapResult {
 pub fn perform_swap(
     deps: DepsMut,
     offer_asset: Coin,
-    pair_identifier: String,
+    ask_asset_denom: String,
+    pool_identifier: String,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
 ) -> Result<SwapResult, ContractError> {
-    let mut pair_info = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
-    let pools = &pair_info.assets;
+    let mut pool_info = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
 
-    // compute the offer and ask pool
-    let offer_pool: Coin;
-    let ask_pool: Coin;
-    let offer_decimal: u8;
-    let ask_decimal: u8;
-    let decimals = &pair_info.asset_decimals;
+    let (
+        offer_asset_in_pool,
+        ask_asset_in_pool,
+        offer_index,
+        ask_index,
+        offer_decimal,
+        ask_decimal,
+    ) = get_asset_indexes_in_pool(&pool_info, offer_asset.denom, ask_asset_denom)?;
 
-    // calculate the swap
-    // first, set relevant variables
-    if offer_asset.denom == pools[0].denom {
-        offer_pool = pools[0].clone();
-        ask_pool = pools[1].clone();
-        offer_decimal = decimals[0];
-        ask_decimal = decimals[1];
-    } else if offer_asset.denom == pools[1].denom {
-        offer_pool = pools[1].clone();
-        ask_pool = pools[0].clone();
-
-        offer_decimal = decimals[1];
-        ask_decimal = decimals[0];
-    } else {
-        return Err(ContractError::AssetMismatch {});
-    }
-
-    let offer_amount = offer_asset.amount;
-    let pool_fees = pair_info.pool_fees.clone();
-
+    // compute the swap
     let swap_computation = helpers::compute_swap(
-        offer_pool.amount,
-        ask_pool.amount,
-        offer_amount,
-        pool_fees,
-        &pair_info.pair_type,
+        offer_asset_in_pool.amount,
+        ask_asset_in_pool.amount,
+        offer_asset.amount,
+        pool_info.pool_fees.clone(),
+        &pool_info.pool_type,
         offer_decimal,
         ask_decimal,
     )?;
 
     let return_asset = Coin {
-        denom: ask_pool.denom.clone(),
+        denom: ask_asset_in_pool.denom.clone(),
         amount: swap_computation.return_amount,
     };
 
@@ -97,35 +81,37 @@ pub fn perform_swap(
         return_asset.amount,
         swap_computation.spread_amount,
     )?;
-    // State changes to the pairs balances
-    // Deduct the return amount from the pool and add the offer amount to the pool
-    if offer_asset.denom == pools[0].denom {
-        pair_info.assets[0].amount += offer_amount;
-        pair_info.assets[1].amount -= swap_computation.return_amount;
-        pair_info.assets[1].amount -= swap_computation.protocol_fee_amount;
-        pair_info.assets[1].amount -= swap_computation.burn_fee_amount;
-    } else {
-        pair_info.assets[1].amount += offer_amount;
-        pair_info.assets[0].amount -= swap_computation.return_amount;
-        pair_info.assets[0].amount -= swap_computation.protocol_fee_amount;
-        pair_info.assets[0].amount -= swap_computation.burn_fee_amount;
+
+    // State changes to the pools balances
+    {
+        // add the offer amount to the pool
+        pool_info.assets[offer_index].amount = pool_info.assets[offer_index]
+            .amount
+            .checked_add(offer_asset.amount)?;
+
+        // Deduct the return amount and fees from the pool
+        let outgoing_fees = aggregate_outgoing_fees(&swap_computation.to_simulation_response())?;
+
+        pool_info.assets[ask_index].amount = pool_info.assets[ask_index]
+            .amount
+            .checked_sub(return_asset.amount)?
+            .checked_sub(outgoing_fees)?;
+
+        POOLS.save(deps.storage, &pool_identifier, &pool_info)?;
     }
 
-    PAIRS.save(deps.storage, &pair_identifier, &pair_info)?;
-
-    // TODO: Might be handy to make the below fees into a helper method
     let burn_fee_asset = Coin {
-        denom: ask_pool.denom.clone(),
+        denom: ask_asset_in_pool.denom.clone(),
         amount: swap_computation.burn_fee_amount,
     };
     let protocol_fee_asset = Coin {
-        denom: ask_pool.denom.clone(),
+        denom: ask_asset_in_pool.denom.clone(),
         amount: swap_computation.protocol_fee_amount,
     };
 
     #[allow(clippy::redundant_clone)]
     let swap_fee_asset = Coin {
-        denom: ask_pool.denom.clone(),
+        denom: ask_asset_in_pool.denom.clone(),
         amount: swap_computation.swap_fee_amount,
     };
 
@@ -136,7 +122,7 @@ pub fn perform_swap(
             swap_fee_asset,
             burn_fee_asset,
             protocol_fee_asset,
-            pair_info,
+            pool_info,
             spread_amount: swap_computation.spread_amount,
         })
     }
@@ -144,7 +130,7 @@ pub fn perform_swap(
     #[cfg(feature = "osmosis")]
     {
         let osmosis_fee_asset = Coin {
-            denom: ask_pool.denom,
+            denom: ask_asset_in_pool.denom,
             amount: swap_computation.swap_fee_amount,
         };
 
@@ -154,7 +140,7 @@ pub fn perform_swap(
             burn_fee_asset,
             protocol_fee_asset,
             osmosis_fee_asset,
-            pair_info,
+            pool_info,
             spread_amount: swap_computation.spread_amount,
         })
     }

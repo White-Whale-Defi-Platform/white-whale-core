@@ -39,7 +39,7 @@ fn test_fill_rewards_from_pool_manager() {
             creator.clone(),
             asset_infos.clone(),
             pool_fees.clone(),
-            white_whale_std::pool_network::asset::PairType::ConstantProduct,
+            white_whale_std::pool_manager::PoolType::ConstantProduct,
             Some("whale-uusdc".to_string()),
             vec![coin(1000, "uwhale")],
             |result| {
@@ -123,7 +123,7 @@ fn test_fill_rewards_from_pool_manager() {
         creator.clone(),
         asset_infos.clone(),
         pool_fees.clone(),
-        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        white_whale_std::pool_manager::PoolType::ConstantProduct,
         Some("whale-uusdc-second".to_string()),
         vec![coin(1000, "uwhale")],
         |result| {
@@ -145,7 +145,7 @@ fn test_fill_rewards_from_pool_manager() {
         creator.clone(),
         asset_infos,
         pool_fees,
-        white_whale_std::pool_network::asset::PairType::ConstantProduct,
+        white_whale_std::pool_manager::PoolType::ConstantProduct,
         Some("whale-uusdc-third".to_string()),
         vec![coin(1000, "uwhale")],
         |result| {

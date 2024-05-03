@@ -5,8 +5,8 @@ use cosmwasm_std::{
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
 use white_whale_std::coin::aggregate_coins;
-use white_whale_std::pool_manager::ExecuteMsg;
-use white_whale_std::pool_network::asset::PairType;
+use white_whale_std::common::validate_addr_or_default;
+use white_whale_std::pool_manager::{ExecuteMsg, PoolType};
 use white_whale_std::pool_network::{
     asset::{get_total_share, MINIMUM_LIQUIDITY_AMOUNT},
     U256,
@@ -14,19 +14,20 @@ use white_whale_std::pool_network::{
 
 use crate::{
     helpers::{self},
-    state::get_pair_by_identifier,
+    state::get_pool_by_identifier,
 };
 use crate::{
-    state::{MANAGER_CONFIG, PAIRS},
+    state::{CONFIG, POOLS},
     ContractError,
 };
-// After writing create_pair I see this can get quite verbose so attempting to
+// After writing create_pool I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
 use crate::helpers::aggregate_outgoing_fees;
 use crate::queries::query_simulation;
 use crate::state::{
-    LiquidityProvisionData, SingleSideLiquidityProvisionBuffer, TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
+    LiquidityProvisionData, SingleSideLiquidityProvisionBuffer,
+    SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER,
 };
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
@@ -39,21 +40,21 @@ pub fn provide_liquidity(
     slippage_tolerance: Option<Decimal>,
     max_spread: Option<Decimal>,
     receiver: Option<String>,
-    pair_identifier: String,
+    pool_identifier: String,
     unlocking_duration: Option<u64>,
     lock_position_identifier: Option<String>,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the deposit feature is enabled
     ensure!(
         config.feature_toggle.deposits_enabled,
         ContractError::OperationDisabled("provide_liquidity".to_string())
     );
 
-    // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
+    // Get the pool by the pool_identifier
+    let mut pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
 
-    let mut pool_assets = pair.assets.clone();
+    let mut pool_assets = pool.assets.clone();
     let deposits = aggregate_coins(info.funds.clone())?;
 
     ensure!(!deposits.is_empty(), ContractError::EmptyAssets);
@@ -63,10 +64,13 @@ pub fn provide_liquidity(
         deposits.iter().all(|asset| pool_assets
             .iter()
             .any(|pool_asset| pool_asset.denom == asset.denom)),
-        ContractError::AssetMismatch {}
+        ContractError::AssetMismatch
     );
 
-    let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
+    let receiver =
+        validate_addr_or_default(&deps.as_ref(), receiver, info.sender.clone()).to_string();
+
+    //let receiver = receiver.unwrap_or_else(|| info.sender.to_string());
     // check if the user is providing liquidity with a single asset
     let is_single_asset_provision = deposits.len() == 1usize;
 
@@ -76,7 +80,20 @@ pub fn provide_liquidity(
             ContractError::EmptyPoolForSingleSideLiquidityProvision
         );
 
+        // can't provide single side liquidity on a pool with more than 2 assets
+        ensure!(
+            pool_assets.len() == 2,
+            ContractError::InvalidPoolAssetsForSingleSideLiquidityProvision
+        );
+
         let deposit = deposits[0].clone();
+
+        let ask_asset_denom = pool_assets
+            .iter()
+            .find(|pool_asset| pool_asset.denom != deposit.denom)
+            .ok_or(ContractError::AssetMismatch)?
+            .denom
+            .clone();
 
         // swap half of the deposit asset for the other asset in the pool
         let swap_half = Coin {
@@ -84,13 +101,17 @@ pub fn provide_liquidity(
             amount: deposit.amount.checked_div_floor((2u64, 1u64))?,
         };
 
-        let swap_simulation_response =
-            query_simulation(deps.as_ref(), swap_half.clone(), pair_identifier.clone())?;
+        let swap_simulation_response = query_simulation(
+            deps.as_ref(),
+            swap_half.clone(),
+            ask_asset_denom,
+            pool_identifier.clone(),
+        )?;
 
         let ask_denom = pool_assets
             .iter()
             .find(|pool_asset| pool_asset.denom != deposit.denom)
-            .ok_or(ContractError::AssetMismatch {})?
+            .ok_or(ContractError::AssetMismatch)?
             .denom
             .clone();
 
@@ -118,10 +139,10 @@ pub fn provide_liquidity(
         // subtracting the fees.
         ensure!(
             !expected_ask_asset_balance_in_contract.amount.is_zero(),
-            StdError::generic_err("Spread limit exceeded")
+            ContractError::MaxSpreadAssertion
         );
 
-        TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.save(
+        SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.save(
             deps.storage,
             &SingleSideLiquidityProvisionBuffer {
                 receiver,
@@ -135,7 +156,7 @@ pub fn provide_liquidity(
                 liquidity_provision_data: LiquidityProvisionData {
                     max_spread,
                     slippage_tolerance,
-                    pair_identifier: pair_identifier.clone(),
+                    pool_identifier: pool_identifier.clone(),
                     unlocking_duration,
                     lock_position_identifier,
                 },
@@ -147,12 +168,11 @@ pub fn provide_liquidity(
                 wasm_execute(
                     env.contract.address.into_string(),
                     &ExecuteMsg::Swap {
-                        offer_asset: swap_half.clone(),
                         ask_asset_denom: ask_denom,
                         belief_price: None,
                         max_spread,
-                        to: None,
-                        pair_identifier,
+                        receiver: None,
+                        pool_identifier,
                     },
                     vec![swap_half],
                 )?,
@@ -166,7 +186,7 @@ pub fn provide_liquidity(
             let pool_asset_index = pool_assets
                 .iter()
                 .position(|pool_asset| &pool_asset.denom == asset_denom)
-                .ok_or(ContractError::AssetMismatch {})?;
+                .ok_or(ContractError::AssetMismatch)?;
 
             // Increment the pool asset amount by the amount sent
             pool_assets[pool_asset_index].amount = pool_assets[pool_asset_index]
@@ -177,25 +197,27 @@ pub fn provide_liquidity(
         // After totting up the pool assets we need to check if any of them are zero.
         // The very first deposit cannot be done with a single asset
         if pool_assets.iter().any(|deposit| deposit.amount.is_zero()) {
-            return Err(ContractError::InvalidZeroAmount {});
+            return Err(ContractError::InvalidZeroAmount);
         }
 
         let mut messages: Vec<CosmosMsg> = vec![];
 
-        let liquidity_token = pair.lp_denom.clone();
+        let liquidity_token = pool.lp_denom.clone();
 
         // Compute share and other logic based on the number of assets
         let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
 
-        let share = match &pair.pair_type {
-            PairType::ConstantProduct => {
+        let share = match &pool.pool_type {
+            PoolType::ConstantProduct => {
                 if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
                     let share = Uint128::new(
                         (U256::from(pool_assets[0].amount.u128())
                             .checked_mul(U256::from(pool_assets[1].amount.u128()))
-                            .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+                            .ok_or::<ContractError>(
+                                ContractError::LiquidityShareComputationFailed,
+                            ))?
                         .integer_sqrt()
                         .as_u128(),
                     )
@@ -245,7 +267,7 @@ pub fn provide_liquidity(
                         &slippage_tolerance,
                         &deposits_as,
                         &pools_as,
-                        pair.pair_type.clone(),
+                        pool.pool_type.clone(),
                         amount,
                         total_share,
                     )?;
@@ -253,7 +275,7 @@ pub fn provide_liquidity(
                     amount
                 }
             }
-            PairType::StableSwap { amp: _ } => {
+            PoolType::StableSwap { amp: _ } => {
                 // TODO: Handle stableswap
 
                 Uint128::one()
@@ -295,9 +317,9 @@ pub fn provide_liquidity(
             )?);
         }
 
-        pair.assets = pool_assets.clone();
+        pool.assets = pool_assets.clone();
 
-        PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+        POOLS.save(deps.storage, &pool_identifier, &pool)?;
 
         Ok(Response::new().add_messages(messages).add_attributes(vec![
             ("action", "provide_liquidity"),
@@ -322,9 +344,9 @@ pub fn withdraw_liquidity(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    pair_identifier: String,
+    pool_identifier: String,
 ) -> Result<Response, ContractError> {
-    let config = MANAGER_CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
     // check if the withdraw feature is enabled
     if !config.feature_toggle.withdrawals_enabled {
         return Err(ContractError::OperationDisabled(
@@ -332,9 +354,9 @@ pub fn withdraw_liquidity(
         ));
     }
 
-    // Get the pair by the pair_identifier
-    let mut pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
-    let liquidity_token = pair.lp_denom.clone();
+    // Get the pool by the pool_identifier
+    let mut pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
+    let liquidity_token = pool.lp_denom.clone();
     // Verify that the LP token was sent
     let amount = cw_utils::must_pay(&info, &liquidity_token)?;
 
@@ -348,7 +370,7 @@ pub fn withdraw_liquidity(
     ensure!(share_ratio <= Decimal::one(), ContractError::InvalidLpShare);
 
     // Use the ratio to calculate the amount of each pool asset to refund
-    let refund_assets: Vec<Coin> = pair
+    let refund_assets: Vec<Coin> = pool
         .assets
         .iter()
         .map(|pool_asset| {
@@ -367,12 +389,12 @@ pub fn withdraw_liquidity(
         amount: refund_assets.clone(),
     }));
 
-    // Deduct balances on pair_info by the amount of each refund asset
-    for (i, pool_asset) in pair.assets.iter_mut().enumerate() {
+    // Deduct balances on pool_info by the amount of each refund asset
+    for (i, pool_asset) in pool.assets.iter_mut().enumerate() {
         pool_asset.amount = pool_asset.amount.checked_sub(refund_assets[i].amount)?;
     }
 
-    PAIRS.save(deps.storage, &pair_identifier, &pair)?;
+    POOLS.save(deps.storage, &pool_identifier, &pool)?;
 
     // Burn the LP tokens
     messages.push(white_whale_std::lp_common::burn_lp_asset_msg(

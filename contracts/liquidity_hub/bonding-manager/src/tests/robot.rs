@@ -20,6 +20,7 @@ use white_whale_std::bonding_manager::{
 };
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
+use white_whale_std::pool_manager::PoolType;
 use white_whale_std::pool_network::asset::PairType;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
@@ -619,12 +620,12 @@ impl TestingRobot {
     pub(crate) fn provide_liquidity(
         &mut self,
         sender: Addr,
-        pair_identifier: String,
+        pool_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
-            pair_identifier,
+            pool_identifier,
             slippage_tolerance: None,
             receiver: None,
             lock_position_identifier: None,
@@ -644,22 +645,21 @@ impl TestingRobot {
     pub(crate) fn swap(
         &mut self,
         sender: Addr,
-        offer_asset: Coin,
+        _offer_asset: Coin,
         ask_asset_denom: String,
         belief_price: Option<Decimal>,
         max_spread: Option<Decimal>,
-        to: Option<String>,
-        pair_identifier: String,
+        receiver: Option<String>,
+        pool_identifier: String,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
-            offer_asset,
             ask_asset_denom,
             belief_price,
             max_spread,
-            to,
-            pair_identifier,
+            receiver,
+            pool_identifier,
         };
 
         result(
@@ -710,16 +710,16 @@ impl TestingRobot {
         sender: Addr,
         asset_denoms: Vec<String>,
         pool_fees: PoolFee,
-        pair_type: PairType,
-        pair_identifier: Option<String>,
+        pool_type: PoolType,
+        pool_identifier: Option<String>,
         pair_creation_fee_funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePair {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePool {
             asset_denoms,
             pool_fees,
-            pair_type,
-            pair_identifier,
+            pool_type,
+            pool_identifier,
             asset_decimals: vec![6, 6],
         };
 

@@ -1,17 +1,13 @@
 use crate::error::ContractError;
-use crate::helpers::{
-    reverse_simulate_swap_operations, simulate_swap_operations, validate_asset_balance,
-};
-use crate::queries::{get_pair, get_swap_route, get_swap_route_creator, get_swap_routes};
-use crate::router::commands::{add_swap_routes, remove_swap_routes};
+use crate::helpers::validate_asset_balance;
 use crate::state::{
-    Config, SingleSideLiquidityProvisionBuffer, MANAGER_CONFIG, PAIR_COUNTER,
-    TMP_SINGLE_SIDE_LIQUIDITY_PROVISION,
+    Config, SingleSideLiquidityProvisionBuffer, CONFIG, POOL_COUNTER,
+    SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER,
 };
 use crate::{liquidity, manager, queries, router, swap};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{
-    entry_point, to_json_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response,
 };
 use cosmwasm_std::{wasm_execute, Reply, StdError};
 use cw2::set_contract_version;
@@ -44,9 +40,9 @@ pub fn instantiate(
             swaps_enabled: true,
         },
     };
-    MANAGER_CONFIG.save(deps.storage, &config)?;
+    CONFIG.save(deps.storage, &config)?;
     // initialize vault counter
-    PAIR_COUNTER.save(deps.storage, &0u64)?;
+    POOL_COUNTER.save(deps.storage, &0u64)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
     Ok(Response::default())
@@ -63,12 +59,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                 offer_asset_half,
                 expected_ask_asset,
                 liquidity_provision_data,
-            } = TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.load(deps.storage)?;
+            } = SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.load(deps.storage)?;
 
             validate_asset_balance(&deps, &env, &expected_offer_asset_balance_in_contract)?;
             validate_asset_balance(&deps, &env, &expected_ask_asset_balance_in_contract)?;
 
-            TMP_SINGLE_SIDE_LIQUIDITY_PROVISION.remove(deps.storage);
+            SINGLE_SIDE_LIQUIDITY_PROVISION_BUFFER.remove(deps.storage);
 
             Ok(Response::default().add_message(wasm_execute(
                 env.contract.address.into_string(),
@@ -76,7 +72,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     slippage_tolerance: liquidity_provision_data.slippage_tolerance,
                     max_spread: liquidity_provision_data.max_spread,
                     receiver: Some(receiver),
-                    pair_identifier: liquidity_provision_data.pair_identifier,
+                    pool_identifier: liquidity_provision_data.pool_identifier,
                     unlocking_duration: liquidity_provision_data.unlocking_duration,
                     lock_position_identifier: liquidity_provision_data.lock_position_identifier,
                 },
@@ -95,27 +91,27 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreatePair {
+        ExecuteMsg::CreatePool {
             asset_denoms,
             asset_decimals,
             pool_fees,
-            pair_type,
-            pair_identifier,
-        } => manager::commands::create_pair(
+            pool_type,
+            pool_identifier,
+        } => manager::commands::create_pool(
             deps,
             env,
             info,
             asset_denoms,
             asset_decimals,
             pool_fees,
-            pair_type,
-            pair_identifier,
+            pool_type,
+            pool_identifier,
         ),
         ExecuteMsg::ProvideLiquidity {
             max_spread,
             slippage_tolerance,
             receiver,
-            pair_identifier,
+            pool_identifier,
             unlocking_duration,
             lock_position_identifier,
         } => liquidity::commands::provide_liquidity(
@@ -125,35 +121,28 @@ pub fn execute(
             slippage_tolerance,
             max_spread,
             receiver,
-            pair_identifier,
+            pool_identifier,
             unlocking_duration,
             lock_position_identifier,
         ),
         ExecuteMsg::Swap {
-            offer_asset,
             ask_asset_denom,
             belief_price,
             max_spread,
-            to,
-            pair_identifier,
-        } => {
-            let to_addr = to.map(|addr| deps.api.addr_validate(&addr)).transpose()?;
-
-            swap::commands::swap(
-                deps,
-                env,
-                info.clone(),
-                info.sender,
-                offer_asset,
-                ask_asset_denom,
-                belief_price,
-                max_spread,
-                to_addr,
-                pair_identifier,
-            )
-        }
-        ExecuteMsg::WithdrawLiquidity { pair_identifier } => {
-            liquidity::commands::withdraw_liquidity(deps, env, info, pair_identifier)
+            receiver,
+            pool_identifier,
+        } => swap::commands::swap(
+            deps,
+            info.clone(),
+            info.sender,
+            ask_asset_denom,
+            belief_price,
+            max_spread,
+            receiver,
+            pool_identifier,
+        ),
+        ExecuteMsg::WithdrawLiquidity { pool_identifier } => {
+            liquidity::commands::withdraw_liquidity(deps, env, info, pool_identifier)
         }
         ExecuteMsg::UpdateOwnership(action) => {
             Ok(
@@ -169,39 +158,21 @@ pub fn execute(
         ExecuteMsg::ExecuteSwapOperations {
             operations,
             minimum_receive,
-            to,
+            receiver,
             max_spread,
-        } => {
-            let api = deps.api;
-            router::commands::execute_swap_operations(
-                deps,
-                info,
-                operations,
-                minimum_receive,
-                optional_addr_validate(api, to)?,
-                max_spread,
-            )
-        }
-        // ExecuteMsg::ExecuteSwapOperation {
-        //     operation,
-        //     to,
-        //     max_spread,
-        // } => {
-        //     let api = deps.api;
-        //     router::commands::execute_swap_operation(
-        //         deps,
-        //         env,
-        //         info,
-        //         operation,
-        //         optional_addr_validate(api, to)?.map(|v| v.to_string()),
-        //         max_spread,
-        //     )
-        // }
+        } => router::commands::execute_swap_operations(
+            deps,
+            info,
+            operations,
+            minimum_receive,
+            receiver,
+            max_spread,
+        ),
         ExecuteMsg::AddSwapRoutes { swap_routes } => {
-            add_swap_routes(deps, info.sender, swap_routes)
+            router::commands::add_swap_routes(deps, info.sender, swap_routes)
         }
         ExecuteMsg::RemoveSwapRoutes { swap_routes } => {
-            remove_swap_routes(deps, info.sender, swap_routes)
+            router::commands::remove_swap_routes(deps, info.sender, swap_routes)
         }
         ExecuteMsg::UpdateConfig {
             whale_lair_addr,
@@ -217,57 +188,42 @@ pub fn execute(
     }
 }
 
-//todo remove. solution: just embed the content of the function where it's used
-// Came from router can probably go
-#[allow(dead_code)]
-fn optional_addr_validate(
-    api: &dyn Api,
-    addr: Option<String>,
-) -> Result<Option<Addr>, ContractError> {
-    let addr = if let Some(addr) = addr {
-        Some(api.addr_validate(&addr)?)
-    } else {
-        None
-    };
-
-    Ok(addr)
-}
-
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::Config => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::AssetDecimals {
-            pair_identifier,
+            pool_identifier,
             denom,
         } => Ok(to_json_binary(&queries::query_asset_decimals(
             deps,
-            pair_identifier,
+            pool_identifier,
             denom,
         )?)?),
         QueryMsg::Simulation {
             offer_asset,
-            pair_identifier,
+            ask_asset_denom,
+            pool_identifier,
         } => Ok(to_json_binary(&queries::query_simulation(
             deps,
             offer_asset,
-            pair_identifier,
+            ask_asset_denom,
+            pool_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {
             ask_asset,
-            offer_asset,
-            pair_identifier,
+            offer_asset_denom,
+            pool_identifier,
         } => Ok(to_json_binary(&queries::query_reverse_simulation(
             deps,
-            env,
             ask_asset,
-            offer_asset,
-            pair_identifier,
+            offer_asset_denom,
+            pool_identifier,
         )?)?),
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
-        } => Ok(to_json_binary(&simulate_swap_operations(
+        } => Ok(to_json_binary(&queries::simulate_swap_operations(
             deps,
             offer_amount,
             operations,
@@ -275,26 +231,26 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
             operations,
-        } => Ok(to_json_binary(&reverse_simulate_swap_operations(
+        } => Ok(to_json_binary(&queries::reverse_simulate_swap_operations(
             deps, ask_amount, operations,
         )?)?),
         QueryMsg::SwapRoute {
             offer_asset_denom,
             ask_asset_denom,
-        } => Ok(to_json_binary(&get_swap_route(
+        } => Ok(to_json_binary(&queries::get_swap_route(
             deps,
             offer_asset_denom,
             ask_asset_denom,
         )?)?),
-        QueryMsg::SwapRoutes {} => Ok(to_json_binary(&get_swap_routes(deps)?)?),
+        QueryMsg::SwapRoutes => Ok(to_json_binary(&queries::get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-        QueryMsg::Pair { pair_identifier } => {
-            Ok(to_json_binary(&get_pair(deps, pair_identifier)?)?)
+        QueryMsg::Pool { pool_identifier } => {
+            Ok(to_json_binary(&queries::get_pool(deps, pool_identifier)?)?)
         }
         QueryMsg::SwapRouteCreator {
             offer_asset_denom,
             ask_asset_denom,
-        } => Ok(to_json_binary(&get_swap_route_creator(
+        } => Ok(to_json_binary(&queries::get_swap_route_creator(
             deps,
             offer_asset_denom,
             ask_asset_denom,
@@ -323,6 +279,3 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     Ok(Response::default())
 }
-
-#[cfg(test)]
-mod tests {}

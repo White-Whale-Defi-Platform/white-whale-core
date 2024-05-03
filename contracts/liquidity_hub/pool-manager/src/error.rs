@@ -32,11 +32,11 @@ pub enum ContractError {
     SemVer(String),
 
     #[error("Unauthorized")]
-    Unauthorized {},
+    Unauthorized,
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("The provided assets are both the same")]
-    SameAsset {},
+    SameAsset,
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -52,10 +52,8 @@ pub enum ContractError {
         swap_amount: Uint128,
     },
 
-    #[error(
-        "The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a vault"
-    )]
-    PairExists {
+    #[error("The asset \"{asset_infos}\" with the identifier \"{identifier}\" already has a pool")]
+    PoolExists {
         asset_infos: String, //String representation of the asset infos
         identifier: String,
     },
@@ -75,53 +73,47 @@ pub enum ContractError {
     #[error("Cannot provide single-side liquidity when the pool is empty")]
     EmptyPoolForSingleSideLiquidityProvision,
 
-    #[error("Pair does not exist")]
-    UnExistingPair {},
+    #[error("Cannot provide single-side liquidity on a pool with more than 2 assets")]
+    InvalidPoolAssetsForSingleSideLiquidityProvision,
+
+    #[error("Pool does not exist")]
+    UnExistingPool,
 
     #[error("Operation disabled, {0}")]
     OperationDisabled(String),
 
     #[error("Invalid zero amount")]
-    InvalidZeroAmount {},
+    InvalidZeroAmount,
 
     #[error("Initial liquidity amount must be over {0}")]
     InvalidInitialLiquidityAmount(Uint128),
 
     #[error("Failed to compute the LP share with the given deposit")]
-    LiquidityShareComputation {},
+    LiquidityShareComputationFailed,
 
     #[error("The amount of LP shares to withdraw is invalid")]
     InvalidLpShare,
 
     #[error("Spread limit exceeded")]
-    MaxSpreadAssertion {},
+    MaxSpreadAssertion,
 
     #[error("Slippage tolerance exceeded")]
-    MaxSlippageAssertion {},
+    MaxSlippageAssertion,
 
     #[error("The asset doesn't match the assets stored in contract")]
-    AssetMismatch {},
-
-    #[error("Too small offer amount")]
-    TooSmallOfferAmount {},
+    AssetMismatch,
 
     #[error("Failed to converge when performing newtons method")]
-    ConvergeError {},
+    ConvergeError,
 
     #[error("An conversion overflow occurred when attempting to swap an asset")]
-    SwapOverflowError {},
+    SwapOverflowError,
 
     #[error("An overflow occurred when attempting to construct a decimal")]
-    DecimalOverflow {},
-
-    #[error("A balance greater than zero is required by the factory to verify the asset")]
-    InvalidVerificationBalance {},
-
-    #[error("Burn fee is not allowed when using factory tokens")]
-    TokenFactoryAssetBurnDisabled {},
+    DecimalOverflow,
 
     #[error("The token factory feature is not enabled")]
-    TokenFactoryNotEnabled {},
+    TokenFactoryNotEnabled,
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
@@ -148,7 +140,7 @@ pub enum ContractError {
     },
 
     #[error("Must provide swap operations to execute")]
-    NoSwapOperationsProvided {},
+    NoSwapOperationsProvided,
 
     #[error("Attempt to perform non-consecutive swap operation from previous output of {previous_output} to next input of {next_input}")]
     NonConsecutiveSwapOperations {
@@ -156,11 +148,8 @@ pub enum ContractError {
         next_input: String,
     },
 
-    #[error("Invalid pair creation fee, expected {expected} got {amount}")]
-    InvalidPairCreationFee {
-        amount: cosmwasm_std::Uint128,
-        expected: cosmwasm_std::Uint128,
-    },
+    #[error("Invalid pool creation fee, expected {expected} got {amount}")]
+    InvalidPoolCreationFee { amount: Uint128, expected: Uint128 },
 
     #[error("Funds for {denom} were missing when performing swap")]
     MissingNativeSwapFunds { denom: String },

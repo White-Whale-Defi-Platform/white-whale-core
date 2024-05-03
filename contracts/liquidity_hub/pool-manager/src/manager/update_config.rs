@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin, DepsMut, MessageInfo, Response};
 use white_whale_std::pool_manager::{Config, FeatureToggle};
 
-use crate::{state::MANAGER_CONFIG, ContractError};
+use crate::{state::CONFIG, ContractError};
 
 pub fn update_config(
     deps: DepsMut,
@@ -13,7 +13,7 @@ pub fn update_config(
     // permission check
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-    MANAGER_CONFIG.update(deps.storage, |mut config| {
+    CONFIG.update(deps.storage, |mut config| {
         if let Some(whale_lair_addr) = whale_lair_addr {
             let whale_lair_addr = deps.api.addr_validate(&whale_lair_addr)?;
             config.bonding_manager_addr = whale_lair_addr;

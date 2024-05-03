@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Storage};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Storage};
 use cw_ownable::{Action, OwnershipError};
 use cw_storage_plus::Item;
 
@@ -30,4 +30,17 @@ pub fn update_ownership(
             .add_attribute("action", "update_ownership")
             .add_attributes(ownership.into_attributes())
     })
+}
+
+/// Validates a [String] address or returns the default address if the validation fails.
+pub fn validate_addr_or_default(deps: &Deps, unvalidated: Option<String>, default: Addr) -> Addr {
+    unvalidated
+        .map_or_else(
+            || Some(default.clone()),
+            |recv| match deps.api.addr_validate(&recv) {
+                Ok(validated) => Some(validated),
+                Err(_) => None,
+            },
+        )
+        .unwrap_or(default)
 }

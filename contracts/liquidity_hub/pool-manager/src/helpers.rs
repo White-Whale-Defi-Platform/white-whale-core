@@ -2,26 +2,22 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    coin, ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult,
-    Storage, Uint128, Uint256,
+    ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult, Storage,
+    Uint128, Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::{
-    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
-};
-use white_whale_std::pool_network::asset::{Asset, AssetInfo, PairType};
+use white_whale_std::pool_manager::{PoolInfo, PoolType, SimulationResponse};
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
 use crate::math::Decimal256Helper;
-use crate::queries::query_simulation;
-
-pub const INSTANTIATE_REPLY_ID: u64 = 1;
 
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
 
-// the number of pools in the pair
+// todo isn't this for the 3pool? shouldn't it be 3
+// the number of assets in the pool
 const N_COINS: Uint256 = Uint256::from_u128(2);
 
 fn calculate_stableswap_d(
@@ -81,7 +77,7 @@ fn calculate_stableswap_d(
 
     // completed iterations
     // but we never approximated correctly
-    Err(ContractError::ConvergeError {})
+    Err(ContractError::ConvergeError)
 }
 
 /// Determines the direction of `offer_pool` -> `ask_pool`.
@@ -132,26 +128,23 @@ pub fn calculate_stableswap_y(
 
         if y >= previous_y {
             if y.checked_sub(previous_y)? <= Uint256::one() {
-                return y
-                    .try_into()
-                    .map_err(|_| ContractError::SwapOverflowError {});
+                return y.try_into().map_err(|_| ContractError::SwapOverflowError);
             }
         } else if y < previous_y && previous_y.checked_sub(y)? <= Uint256::one() {
-            return y
-                .try_into()
-                .map_err(|_| ContractError::SwapOverflowError {});
+            return y.try_into().map_err(|_| ContractError::SwapOverflowError);
         }
     }
 
-    Err(ContractError::ConvergeError {})
+    Err(ContractError::ConvergeError)
 }
 
+/// computes a swap
 pub fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
     offer_amount: Uint128,
     pool_fees: PoolFee,
-    swap_type: &PairType,
+    swap_type: &PoolType,
     offer_precision: u8,
     ask_precision: u8,
 ) -> Result<SwapComputation, ContractError> {
@@ -160,7 +153,7 @@ pub fn compute_swap(
     let offer_amount: Uint256 = offer_amount.into();
 
     match swap_type {
-        PairType::ConstantProduct => {
+        PoolType::ConstantProduct => {
             // offer => ask
             // ask_amount = (ask_pool * offer_amount / (offer_pool + offer_amount)) - swap_fee - protocol_fee - burn_fee
             let return_amount: Uint256 = Uint256::one()
@@ -169,73 +162,16 @@ pub fn compute_swap(
             // calculate spread, swap and protocol fees
             let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
             let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
-            let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
-            let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
-            let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-            //todo compute the extra fees
-            //let extra_fees_amount: Uint256 = pool_fees.extra_fees.compute(return_amount);
+            let fees_computation = compute_fees(pool_fees, return_amount)?;
 
-            // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
-            #[cfg(not(feature = "osmosis"))]
-            {
-                let return_amount: Uint256 = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                })
-            }
-
-            #[cfg(feature = "osmosis")]
-            {
-                let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
-
-                let return_amount: Uint256 = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?
-                    .checked_sub(osmosis_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    osmosis_fee_amount: osmosis_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                })
-            }
+            Ok(get_swap_computation(
+                return_amount,
+                spread_amount,
+                fees_computation,
+            )?)
         }
-        PairType::StableSwap { amp } => {
+        PoolType::StableSwap { amp } => {
             let offer_pool = Decimal256::decimal_with_precision(offer_pool, offer_precision)?;
             let ask_pool = Decimal256::decimal_with_precision(ask_pool, ask_precision)?;
             let offer_amount = Decimal256::decimal_with_precision(offer_amount, offer_precision)?;
@@ -259,70 +195,148 @@ pub fn compute_swap(
                 .to_uint256_with_precision(u32::from(ask_precision))?
                 .saturating_sub(return_amount);
 
-            // subtract fees from return_amount
-            let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
-            let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
-            let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
+            let fees_computation = compute_fees(pool_fees, return_amount)?;
 
-            #[cfg(not(feature = "osmosis"))]
-            {
-                let return_amount = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                })
-            }
-
-            #[cfg(feature = "osmosis")]
-            {
-                let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
-
-                let return_amount = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?
-                    .checked_sub(osmosis_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                    osmosis_fee_amount: osmosis_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError {})?,
-                })
-            }
+            Ok(get_swap_computation(
+                return_amount,
+                spread_amount,
+                fees_computation,
+            )?)
         }
     }
+}
+
+/// Computes the pool fees for a given (return) amount
+fn compute_fees(pool_fees: PoolFee, amount: Uint256) -> Result<FeesComputation, ContractError> {
+    let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(amount);
+    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(amount);
+    let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(amount);
+
+    let extra_fees_amount: Uint256 = if !pool_fees.extra_fees.is_empty() {
+        let mut extra_fees_amount: Uint256 = Uint256::zero();
+
+        for extra_fee in pool_fees.extra_fees {
+            extra_fees_amount = extra_fees_amount.checked_add(extra_fee.compute(amount))?;
+        }
+
+        extra_fees_amount
+    } else {
+        Uint256::zero()
+    };
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(FeesComputation {
+            swap_fee_amount,
+            protocol_fee_amount,
+            burn_fee_amount,
+            extra_fees_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(amount);
+
+        Ok(FeesComputation {
+            swap_fee_amount,
+            protocol_fee_amount,
+            burn_fee_amount,
+            extra_fees_amount,
+            osmosis_fee_amount,
+        })
+    }
+}
+
+/// Builds the swap computation struct, subtracting the fees from the return amount.
+fn get_swap_computation(
+    return_amount: Uint256,
+    spread_amount: Uint256,
+    fees_computation: FeesComputation,
+) -> Result<SwapComputation, ContractError> {
+    #[cfg(not(feature = "osmosis"))]
+    {
+        let return_amount = return_amount
+            .checked_sub(fees_computation.swap_fee_amount)?
+            .checked_sub(fees_computation.protocol_fee_amount)?
+            .checked_sub(fees_computation.burn_fee_amount)?
+            .checked_sub(fees_computation.extra_fees_amount)?;
+
+        Ok(SwapComputation {
+            return_amount: return_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            spread_amount: spread_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            swap_fee_amount: fees_computation
+                .swap_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            protocol_fee_amount: fees_computation
+                .protocol_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            burn_fee_amount: fees_computation
+                .burn_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            extra_fees_amount: fees_computation
+                .extra_fees_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let return_amount = return_amount
+            .checked_sub(fees_computation.swap_fee_amount)?
+            .checked_sub(fees_computation.protocol_fee_amount)?
+            .checked_sub(fees_computation.burn_fee_amount)?
+            .checked_sub(fees_computation.extra_fees_amount)?
+            .checked_sub(fees_computation.osmosis_fee_amount)?;
+
+        Ok(SwapComputation {
+            return_amount: return_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            spread_amount: spread_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            swap_fee_amount: fees_computation
+                .swap_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            protocol_fee_amount: fees_computation
+                .protocol_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            burn_fee_amount: fees_computation
+                .burn_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            extra_fees_amount: fees_computation
+                .extra_fees_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            osmosis_fee_amount: fees_computation
+                .osmosis_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+        })
+    }
+}
+
+/// Represents the swap computation values
+#[cw_serde]
+pub struct FeesComputation {
+    pub swap_fee_amount: Uint256,
+    pub protocol_fee_amount: Uint256,
+    pub burn_fee_amount: Uint256,
+    pub extra_fees_amount: Uint256,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint256,
 }
 
 /// Represents the swap computation values
@@ -333,18 +347,49 @@ pub struct SwapComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    pub extra_fees_amount: Uint128,
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
 }
 
+impl SwapComputation {
+    /// Converts the SwapComputation struct to a SimulationResponse struct
+    pub fn to_simulation_response(&self) -> SimulationResponse {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            SimulationResponse {
+                return_amount: self.return_amount,
+                spread_amount: self.spread_amount,
+                swap_fee_amount: self.swap_fee_amount,
+                protocol_fee_amount: self.protocol_fee_amount,
+                burn_fee_amount: self.burn_fee_amount,
+                extra_fees_amount: self.extra_fees_amount,
+            }
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            SimulationResponse {
+                return_amount: self.return_amount,
+                spread_amount: self.spread_amount,
+                swap_fee_amount: self.swap_fee_amount,
+                protocol_fee_amount: self.protocol_fee_amount,
+                burn_fee_amount: self.burn_fee_amount,
+                osmosis_fee_amount: self.osmosis_fee_amount,
+                extra_fees_amount: self.extra_fees_amount,
+            }
+        }
+    }
+}
+
 pub fn compute_offer_amount(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
+    offer_asset_in_pool: Uint128,
+    ask_asset_in_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
 ) -> StdResult<OfferAmountComputation> {
-    let offer_pool: Uint256 = offer_pool.into();
-    let ask_pool: Uint256 = ask_pool.into();
+    let offer_asset_in_pool: Uint256 = offer_asset_in_pool.into();
+    let ask_asset_in_pool: Uint256 = ask_asset_in_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
 
     // ask => offer
@@ -370,17 +415,17 @@ pub fn compute_offer_amount(
     let one_minus_commission = Decimal256::one() - fees;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
-    let cp: Uint256 = offer_pool * ask_pool;
+    let cp: Uint256 = offer_asset_in_pool * ask_asset_in_pool;
     let offer_amount: Uint256 = Uint256::one()
         .multiply_ratio(
             cp,
-            ask_pool.checked_sub(ask_amount * inv_one_minus_commission)?,
+            ask_asset_in_pool.checked_sub(ask_amount * inv_one_minus_commission)?,
         )
-        .checked_sub(offer_pool)?;
+        .checked_sub(offer_asset_in_pool)?;
 
     let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
     let before_spread_deduction: Uint256 =
-        offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
+        offer_amount * Decimal256::from_ratio(ask_asset_in_pool, offer_asset_in_pool);
 
     let spread_amount = before_spread_deduction.saturating_sub(before_commission_deduction);
 
@@ -431,7 +476,7 @@ pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Uint128; 2],
     pools: &[Coin; 2],
-    pair_type: PairType,
+    pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,
 ) -> Result<(), ContractError> {
@@ -446,8 +491,8 @@ pub fn assert_slippage_tolerance(
         let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
-        match pair_type {
-            PairType::StableSwap { .. } => {
+        match pool_type {
+            PoolType::StableSwap { .. } => {
                 let pools_total = pools[0].checked_add(pools[1])?;
                 let deposits_total = deposits[0].checked_add(deposits[1])?;
 
@@ -458,17 +503,17 @@ pub fn assert_slippage_tolerance(
                 // slippage when adding liquidity. Due to the math behind the stableswap, the amp factor
                 // needs to be in as well, much like when swaps are done
                 if pool_ratio * one_minus_slippage_tolerance > deposit_ratio {
-                    return Err(ContractError::MaxSlippageAssertion {});
+                    return Err(ContractError::MaxSlippageAssertion);
                 }
             }
-            PairType::ConstantProduct => {
+            PoolType::ConstantProduct => {
                 if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
                     > Decimal256::from_ratio(pools[0], pools[1])
                     || Decimal256::from_ratio(deposits[1], deposits[0])
                         * one_minus_slippage_tolerance
                         > Decimal256::from_ratio(pools[1], pools[0])
                 {
-                    return Err(ContractError::MaxSlippageAssertion {});
+                    return Err(ContractError::MaxSlippageAssertion);
                 }
             }
         }
@@ -500,12 +545,12 @@ pub fn instantiate_fees(
     storage: &mut dyn Storage,
     asset_info_0: AssetInfo,
     asset_info_1: AssetInfo,
-    pair_key: &Vec<u8>,
-    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], std::vec::Vec<Asset>>,
+    pool_key: &Vec<u8>,
+    fee_storage_item: cw_storage_plus::Map<'static, &'static [u8], Vec<Asset>>,
 ) -> StdResult<()> {
     fee_storage_item.save(
         storage,
-        pair_key,
+        pool_key,
         &vec![
             Asset {
                 info: asset_info_0,
@@ -528,72 +573,10 @@ pub fn assert_admin(deps: Deps, env: &Env, sender: &Addr) -> Result<(), Contract
         .query_wasm_contract_info(env.contract.address.clone())?;
     if let Some(admin) = contract_info.admin {
         if sender != deps.api.addr_validate(admin.as_str())? {
-            return Err(ContractError::Unauthorized {});
+            return Err(ContractError::Unauthorized);
         }
     }
     Ok(())
-}
-
-/// This function iterates over the swap operations, simulates each swap
-/// to get the final amount after all the swaps.
-pub fn simulate_swap_operations(
-    deps: Deps,
-    offer_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
-
-    let mut amount = offer_amount;
-
-    for operation in operations.into_iter() {
-        match operation {
-            SwapOperation::WhaleSwap {
-                token_in_denom,
-                token_out_denom: _,
-                pool_identifier,
-            } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
-                amount = res.return_amount;
-            }
-        }
-    }
-
-    Ok(SimulateSwapOperationsResponse { amount })
-}
-
-/// This function iterates over the swap operations in the reverse order,
-/// simulates each swap to get the final amount after all the swaps.
-pub fn reverse_simulate_swap_operations(
-    deps: Deps,
-    ask_amount: Uint128,
-    operations: Vec<SwapOperation>,
-) -> Result<SimulateSwapOperationsResponse, ContractError> {
-    let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided {});
-    }
-
-    let mut amount = ask_amount;
-
-    for operation in operations.into_iter().rev() {
-        match operation {
-            SwapOperation::WhaleSwap {
-                token_in_denom: _,
-                token_out_denom,
-                pool_identifier,
-            } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
-                amount = res.return_amount;
-            }
-        }
-    }
-
-    Ok(SimulateSwapOperationsResponse { amount })
 }
 
 /// Validates the amounts after a single side liquidity provision swap are correct.
@@ -640,4 +623,42 @@ pub fn aggregate_outgoing_fees(
     };
 
     Ok(fees)
+}
+
+/// Gets the offer and ask asset indexes in a pool, together with their decimals.
+pub fn get_asset_indexes_in_pool(
+    pool_info: &PoolInfo,
+    offer_asset_denom: String,
+    ask_asset_denom: String,
+) -> Result<(Coin, Coin, usize, usize, u8, u8), ContractError> {
+    // Find the index of the offer and ask asset in the pools
+    let offer_index = pool_info
+        .assets
+        .iter()
+        .position(|pool| offer_asset_denom == pool.denom)
+        .ok_or(ContractError::AssetMismatch)?;
+    let ask_index = pool_info
+        .assets
+        .iter()
+        .position(|pool| ask_asset_denom == pool.denom)
+        .ok_or(ContractError::AssetMismatch)?;
+
+    // make sure it's not the same asset
+    ensure!(offer_index != ask_index, ContractError::AssetMismatch);
+
+    let decimals = &pool_info.asset_decimals;
+
+    let offer_asset_in_pool = pool_info.assets[offer_index].clone();
+    let ask_asset_in_pool = pool_info.assets[ask_index].clone();
+    let offer_decimal = decimals[offer_index];
+    let ask_decimal = decimals[ask_index];
+
+    Ok((
+        offer_asset_in_pool,
+        ask_asset_in_pool,
+        offer_index,
+        ask_index,
+        offer_decimal,
+        ask_decimal,
+    ))
 }
