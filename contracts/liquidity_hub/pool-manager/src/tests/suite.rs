@@ -571,12 +571,14 @@ impl TestingSuite {
         &mut self,
         pool_identifier: String,
         offer_asset: Coin,
+        ask_asset_denom: String,
         result: impl Fn(StdResult<SimulationResponse>),
     ) -> &mut Self {
         let pool_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
             &white_whale_std::pool_manager::QueryMsg::Simulation {
                 offer_asset,
+                ask_asset_denom,
                 pool_identifier,
             },
         );
@@ -590,6 +592,7 @@ impl TestingSuite {
         &mut self,
         pool_identifier: String,
         ask_asset: Coin,
+        offer_asset_denom: String,
         result: impl Fn(StdResult<ReverseSimulationResponse>),
     ) -> &mut Self {
         let pool_info_response: StdResult<ReverseSimulationResponse> =
@@ -597,6 +600,7 @@ impl TestingSuite {
                 &self.pool_manager_addr,
                 &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
                     ask_asset,
+                    offer_asset_denom,
                     pool_identifier,
                 },
             );

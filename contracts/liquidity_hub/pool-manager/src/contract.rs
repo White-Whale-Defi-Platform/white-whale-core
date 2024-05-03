@@ -189,7 +189,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::AssetDecimals {
@@ -202,19 +202,22 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         )?)?),
         QueryMsg::Simulation {
             offer_asset,
+            ask_asset_denom,
             pool_identifier,
         } => Ok(to_json_binary(&queries::query_simulation(
             deps,
             offer_asset,
+            ask_asset_denom,
             pool_identifier,
         )?)?),
         QueryMsg::ReverseSimulation {
             ask_asset,
+            offer_asset_denom,
             pool_identifier,
         } => Ok(to_json_binary(&queries::query_reverse_simulation(
             deps,
-            env,
             ask_asset,
+            offer_asset_denom,
             pool_identifier,
         )?)?),
         QueryMsg::SimulateSwapOperations {

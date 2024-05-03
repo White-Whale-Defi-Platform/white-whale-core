@@ -80,7 +80,20 @@ pub fn provide_liquidity(
             ContractError::EmptyPoolForSingleSideLiquidityProvision
         );
 
+        // can't provide single side liquidity on a pool with more than 2 assets
+        ensure!(
+            pool_assets.len() == 2,
+            ContractError::InvalidPoolAssetsForSingleSideLiquidityProvision
+        );
+
         let deposit = deposits[0].clone();
+
+        let ask_asset_denom = pool_assets
+            .iter()
+            .find(|pool_asset| pool_asset.denom != deposit.denom)
+            .ok_or(ContractError::AssetMismatch)?
+            .denom
+            .clone();
 
         // swap half of the deposit asset for the other asset in the pool
         let swap_half = Coin {
@@ -88,8 +101,12 @@ pub fn provide_liquidity(
             amount: deposit.amount.checked_div_floor((2u64, 1u64))?,
         };
 
-        let swap_simulation_response =
-            query_simulation(deps.as_ref(), swap_half.clone(), pool_identifier.clone())?;
+        let swap_simulation_response = query_simulation(
+            deps.as_ref(),
+            swap_half.clone(),
+            ask_asset_denom,
+            pool_identifier.clone(),
+        )?;
 
         let ask_denom = pool_assets
             .iter()

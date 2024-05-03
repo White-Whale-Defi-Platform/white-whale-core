@@ -73,6 +73,9 @@ pub enum ContractError {
     #[error("Cannot provide single-side liquidity when the pool is empty")]
     EmptyPoolForSingleSideLiquidityProvision,
 
+    #[error("Cannot provide single-side liquidity on a pool with more than 2 assets")]
+    InvalidPoolAssetsForSingleSideLiquidityProvision,
+
     #[error("Pool does not exist")]
     UnExistingPool,
 

@@ -280,6 +280,8 @@ pub enum QueryMsg {
     Simulation {
         /// The offer asset to swap.
         offer_asset: Coin,
+        /// The ask asset denom to get.
+        ask_asset_denom: String,
         /// The pool identifier to swap in.
         pool_identifier: String,
     },
@@ -289,6 +291,8 @@ pub enum QueryMsg {
     ReverseSimulation {
         /// The ask asset to get after the swap.
         ask_asset: Coin,
+        /// The offer asset denom to input.
+        offer_asset_denom: String,
         /// The pool identifier to swap in.
         pool_identifier: String,
     },

@@ -7,7 +7,7 @@ use cosmwasm_std::{
 };
 
 use white_whale_std::fee::PoolFee;
-use white_whale_std::pool_manager::{PoolType, SimulationResponse};
+use white_whale_std::pool_manager::{PoolInfo, PoolType, SimulationResponse};
 use white_whale_std::pool_network::asset::{Asset, AssetInfo};
 
 use crate::error::ContractError;
@@ -383,13 +383,13 @@ impl SwapComputation {
 }
 
 pub fn compute_offer_amount(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
+    offer_asset_in_pool: Uint128,
+    ask_asset_in_pool: Uint128,
     ask_amount: Uint128,
     pool_fees: PoolFee,
 ) -> StdResult<OfferAmountComputation> {
-    let offer_pool: Uint256 = offer_pool.into();
-    let ask_pool: Uint256 = ask_pool.into();
+    let offer_asset_in_pool: Uint256 = offer_asset_in_pool.into();
+    let ask_asset_in_pool: Uint256 = ask_asset_in_pool.into();
     let ask_amount: Uint256 = ask_amount.into();
 
     // ask => offer
@@ -415,17 +415,17 @@ pub fn compute_offer_amount(
     let one_minus_commission = Decimal256::one() - fees;
     let inv_one_minus_commission = Decimal256::one() / one_minus_commission;
 
-    let cp: Uint256 = offer_pool * ask_pool;
+    let cp: Uint256 = offer_asset_in_pool * ask_asset_in_pool;
     let offer_amount: Uint256 = Uint256::one()
         .multiply_ratio(
             cp,
-            ask_pool.checked_sub(ask_amount * inv_one_minus_commission)?,
+            ask_asset_in_pool.checked_sub(ask_amount * inv_one_minus_commission)?,
         )
-        .checked_sub(offer_pool)?;
+        .checked_sub(offer_asset_in_pool)?;
 
     let before_commission_deduction: Uint256 = ask_amount * inv_one_minus_commission;
     let before_spread_deduction: Uint256 =
-        offer_amount * Decimal256::from_ratio(ask_pool, offer_pool);
+        offer_amount * Decimal256::from_ratio(ask_asset_in_pool, offer_asset_in_pool);
 
     let spread_amount = before_spread_deduction.saturating_sub(before_commission_deduction);
 
@@ -623,4 +623,42 @@ pub fn aggregate_outgoing_fees(
     };
 
     Ok(fees)
+}
+
+/// Gets the offer and ask asset indexes in a pool, together with their decimals.
+pub fn get_asset_indexes_in_pool(
+    pool_info: &PoolInfo,
+    offer_asset_denom: String,
+    ask_asset_denom: String,
+) -> Result<(Coin, Coin, usize, usize, u8, u8), ContractError> {
+    // Find the index of the offer and ask asset in the pools
+    let offer_index = pool_info
+        .assets
+        .iter()
+        .position(|pool| offer_asset_denom == pool.denom)
+        .ok_or(ContractError::AssetMismatch)?;
+    let ask_index = pool_info
+        .assets
+        .iter()
+        .position(|pool| ask_asset_denom == pool.denom)
+        .ok_or(ContractError::AssetMismatch)?;
+
+    // make sure it's not the same asset
+    ensure!(offer_index != ask_index, ContractError::AssetMismatch);
+
+    let decimals = &pool_info.asset_decimals;
+
+    let offer_asset_in_pool = pool_info.assets[offer_index].clone();
+    let ask_asset_in_pool = pool_info.assets[ask_index].clone();
+    let offer_decimal = decimals[offer_index];
+    let ask_decimal = decimals[ask_index];
+
+    Ok((
+        offer_asset_in_pool,
+        ask_asset_in_pool,
+        offer_index,
+        ask_index,
+        offer_decimal,
+        ask_decimal,
+    ))
 }

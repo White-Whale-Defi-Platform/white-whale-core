@@ -5,6 +5,7 @@
   "type": "object",
   "required": [
     "burn_fee_amount",
+    "extra_fees_amount",
     "protocol_fee_amount",
     "return_amount",
     "spread_amount",
@@ -13,6 +14,14 @@
   "properties": {
     "burn_fee_amount": {
       "description": "The burn fee amount of the swap.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
+    },
+    "extra_fees_amount": {
+      "description": "The extra fees amount of the swap.",
       "allOf": [
         {
           "$ref": "#/definitions/Uint128"

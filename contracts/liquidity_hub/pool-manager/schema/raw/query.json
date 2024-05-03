@@ -47,10 +47,15 @@
         "simulation": {
           "type": "object",
           "required": [
+            "ask_asset_denom",
             "offer_asset",
             "pool_identifier"
           ],
           "properties": {
+            "ask_asset_denom": {
+              "description": "The ask asset denom to get.",
+              "type": "string"
+            },
             "offer_asset": {
               "description": "The offer asset to swap.",
               "allOf": [

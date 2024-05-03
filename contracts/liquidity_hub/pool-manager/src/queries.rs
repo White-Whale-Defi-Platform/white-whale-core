@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{coin, Coin, Decimal256, Deps, Env, Fraction, Order, StdResult, Uint128};
+use cosmwasm_std::{coin, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128};
 
 use white_whale_std::pool_manager::{
     AssetDecimalsResponse, Config, PoolInfoResponse, PoolType, ReverseSimulationResponse,
@@ -8,6 +8,7 @@ use white_whale_std::pool_manager::{
     SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
 
+use crate::helpers::get_asset_indexes_in_pool;
 use crate::state::{CONFIG, POOLS};
 use crate::{
     helpers::{self, calculate_stableswap_y, StableSwapDirection},
@@ -45,41 +46,19 @@ pub fn query_asset_decimals(
 pub fn query_simulation(
     deps: Deps,
     offer_asset: Coin,
+    ask_asset_denom: String,
     pool_identifier: String,
 ) -> Result<SimulationResponse, ContractError> {
     let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;
-    let pools = pool_info.assets.clone();
 
-    // determine what's the offer and ask pool based on the offer_asset
-    let offer_pool: Coin;
-    let ask_pool: Coin;
-    let offer_decimal: u8;
-    let ask_decimal: u8;
-    let decimals = pool_info.asset_decimals.clone();
-    // We now have the pools and pool info; we can now calculate the swap
-    // Verify the pool
-    if offer_asset.denom == pools[0].denom {
-        offer_pool = pools[0].clone();
-        ask_pool = pools[1].clone();
-        offer_decimal = decimals[0];
-        ask_decimal = decimals[1];
-    } else if offer_asset.denom == pools[1].denom {
-        offer_pool = pools[1].clone();
-        ask_pool = pools[0].clone();
-
-        offer_decimal = decimals[1];
-        ask_decimal = decimals[0];
-    } else {
-        return Err(ContractError::AssetMismatch);
-    }
-
-    let pool_fees = pool_info.pool_fees;
+    let (offer_asset_in_pool, ask_asset_in_pool, _, _, offer_decimal, ask_decimal) =
+        get_asset_indexes_in_pool(&pool_info, offer_asset.denom, ask_asset_denom)?;
 
     let swap_computation = helpers::compute_swap(
-        offer_pool.amount,
-        ask_pool.amount,
+        offer_asset_in_pool.amount,
+        ask_asset_in_pool.amount,
         offer_asset.amount,
-        pool_fees,
+        pool_info.pool_fees,
         &pool_info.pool_type,
         offer_decimal,
         ask_decimal,
@@ -115,25 +94,23 @@ pub fn query_simulation(
 /// the number of target tokens.
 pub fn query_reverse_simulation(
     deps: Deps,
-    _env: Env,
     ask_asset: Coin,
+    offer_asset_denom: String,
     pool_identifier: String,
 ) -> Result<ReverseSimulationResponse, ContractError> {
     let pool_info = get_pool_by_identifier(&deps, &pool_identifier)?;
-    let pools = pool_info.assets.clone();
 
-    let decimals = pool_info.asset_decimals.clone();
-    let offer_pool: Coin = pools[0].clone();
-    let offer_decimal = decimals[0];
-    let ask_pool: Coin = pools[1].clone();
-    let ask_decimal = decimals[1];
+    let (offer_asset_in_pool, ask_asset_in_pool, _, _, offer_decimal, ask_decimal) =
+        get_asset_indexes_in_pool(&pool_info, offer_asset_denom, ask_asset.denom)?;
+
     let pool_fees = pool_info.pool_fees;
 
+    //todo clean this up
     match pool_info.pool_type {
         PoolType::ConstantProduct => {
             let offer_amount_computation = helpers::compute_offer_amount(
-                offer_pool.amount,
-                ask_pool.amount,
+                offer_asset_in_pool.amount,
+                ask_asset_in_pool.amount,
                 ask_asset.amount,
                 pool_fees,
             )?;
@@ -162,8 +139,10 @@ pub fn query_reverse_simulation(
             }
         }
         PoolType::StableSwap { amp } => {
-            let offer_pool = Decimal256::decimal_with_precision(offer_pool.amount, offer_decimal)?;
-            let ask_pool = Decimal256::decimal_with_precision(ask_pool.amount, ask_decimal)?;
+            let offer_pool =
+                Decimal256::decimal_with_precision(offer_asset_in_pool.amount, offer_decimal)?;
+            let ask_pool =
+                Decimal256::decimal_with_precision(ask_asset_in_pool.amount, ask_decimal)?;
 
             let before_fees = (Decimal256::one()
                 .checked_sub(pool_fees.protocol_fee.to_decimal_256())?
@@ -334,11 +313,15 @@ pub fn simulate_swap_operations(
         match operation {
             SwapOperation::WhaleSwap {
                 token_in_denom,
-                token_out_denom: _,
+                token_out_denom,
                 pool_identifier,
             } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_in_denom), pool_identifier)?;
+                let res = query_simulation(
+                    deps,
+                    coin(amount.u128(), token_in_denom),
+                    token_out_denom,
+                    pool_identifier,
+                )?;
                 amount = res.return_amount;
             }
         }
@@ -364,12 +347,16 @@ pub fn reverse_simulate_swap_operations(
     for operation in operations.into_iter().rev() {
         match operation {
             SwapOperation::WhaleSwap {
-                token_in_denom: _,
+                token_in_denom,
                 token_out_denom,
                 pool_identifier,
             } => {
-                let res =
-                    query_simulation(deps, coin(amount.u128(), token_out_denom), pool_identifier)?;
+                let res = query_simulation(
+                    deps,
+                    coin(amount.u128(), token_out_denom),
+                    token_in_denom,
+                    pool_identifier,
+                )?;
                 amount = res.return_amount;
             }
         }

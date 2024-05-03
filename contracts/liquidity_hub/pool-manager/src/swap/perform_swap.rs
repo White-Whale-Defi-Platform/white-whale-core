@@ -1,9 +1,9 @@
-use cosmwasm_std::{ensure, Coin, Decimal, DepsMut, Uint128};
+use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
 
 use white_whale_std::pool_manager::PoolInfo;
 use white_whale_std::pool_network::swap::assert_max_spread;
 
-use crate::helpers::aggregate_outgoing_fees;
+use crate::helpers::{aggregate_outgoing_fees, get_asset_indexes_in_pool};
 use crate::{
     helpers,
     state::{get_pool_by_identifier, POOLS},
@@ -46,37 +46,22 @@ pub fn perform_swap(
     max_spread: Option<Decimal>,
 ) -> Result<SwapResult, ContractError> {
     let mut pool_info = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
-    let pools = &pool_info.assets;
 
-    // Find the index of the offer and ask asset in the pools
-    let offer_index = pools
-        .iter()
-        .position(|pool| offer_asset.denom == pool.denom)
-        .ok_or(ContractError::AssetMismatch)?;
-    let ask_index = pools
-        .iter()
-        .position(|pool| ask_asset_denom == pool.denom)
-        .ok_or(ContractError::AssetMismatch)?;
-
-    // make sure it's not the same asset
-    ensure!(offer_index != ask_index, ContractError::AssetMismatch);
-
-    let decimals = &pool_info.asset_decimals;
-
-    let offer_asset_in_pool = pools[offer_index].clone();
-    let ask_asset_in_pool = pools[ask_index].clone();
-    let offer_decimal = decimals[offer_index];
-    let ask_decimal = decimals[ask_index];
-
-    let offer_amount = offer_asset.amount;
-    let pool_fees = pool_info.pool_fees.clone();
+    let (
+        offer_asset_in_pool,
+        ask_asset_in_pool,
+        offer_index,
+        ask_index,
+        offer_decimal,
+        ask_decimal,
+    ) = get_asset_indexes_in_pool(&pool_info, offer_asset.denom, ask_asset_denom)?;
 
     // compute the swap
     let swap_computation = helpers::compute_swap(
         offer_asset_in_pool.amount,
         ask_asset_in_pool.amount,
-        offer_amount,
-        pool_fees,
+        offer_asset.amount,
+        pool_info.pool_fees.clone(),
         &pool_info.pool_type,
         offer_decimal,
         ask_decimal,
@@ -102,7 +87,7 @@ pub fn perform_swap(
         // add the offer amount to the pool
         pool_info.assets[offer_index].amount = pool_info.assets[offer_index]
             .amount
-            .checked_add(offer_amount)?;
+            .checked_add(offer_asset.amount)?;
 
         // Deduct the return amount and fees from the pool
         let outgoing_fees = aggregate_outgoing_fees(&swap_computation.to_simulation_response())?;
