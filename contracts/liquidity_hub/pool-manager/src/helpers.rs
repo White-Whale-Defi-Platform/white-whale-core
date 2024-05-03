@@ -138,6 +138,7 @@ pub fn calculate_stableswap_y(
     Err(ContractError::ConvergeError)
 }
 
+/// computes a swap
 pub fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
@@ -161,71 +162,14 @@ pub fn compute_swap(
             // calculate spread, swap and protocol fees
             let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
             let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
-            let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
-            let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
-            let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
 
-            //todo compute the extra fees
-            //let extra_fees_amount: Uint256 = pool_fees.extra_fees.compute(return_amount);
+            let fees_computation = compute_fees(pool_fees, return_amount)?;
 
-            // swap and protocol fee will be absorbed by the pool. Burn fee amount will be burned on a subsequent msg.
-            #[cfg(not(feature = "osmosis"))]
-            {
-                let return_amount: Uint256 = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                })
-            }
-
-            #[cfg(feature = "osmosis")]
-            {
-                let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
-
-                let return_amount: Uint256 = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?
-                    .checked_sub(osmosis_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    osmosis_fee_amount: osmosis_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                })
-            }
+            Ok(get_swap_computation(
+                return_amount,
+                spread_amount,
+                fees_computation,
+            )?)
         }
         PoolType::StableSwap { amp } => {
             let offer_pool = Decimal256::decimal_with_precision(offer_pool, offer_precision)?;
@@ -251,70 +195,148 @@ pub fn compute_swap(
                 .to_uint256_with_precision(u32::from(ask_precision))?
                 .saturating_sub(return_amount);
 
-            // subtract fees from return_amount
-            let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(return_amount);
-            let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(return_amount);
-            let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(return_amount);
+            let fees_computation = compute_fees(pool_fees, return_amount)?;
 
-            #[cfg(not(feature = "osmosis"))]
-            {
-                let return_amount = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                })
-            }
-
-            #[cfg(feature = "osmosis")]
-            {
-                let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(return_amount);
-
-                let return_amount = return_amount
-                    .checked_sub(swap_fee_amount)?
-                    .checked_sub(protocol_fee_amount)?
-                    .checked_sub(burn_fee_amount)?
-                    .checked_sub(osmosis_fee_amount)?;
-
-                Ok(SwapComputation {
-                    return_amount: return_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    spread_amount: spread_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    swap_fee_amount: swap_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    protocol_fee_amount: protocol_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    burn_fee_amount: burn_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                    osmosis_fee_amount: osmosis_fee_amount
-                        .try_into()
-                        .map_err(|_| ContractError::SwapOverflowError)?,
-                })
-            }
+            Ok(get_swap_computation(
+                return_amount,
+                spread_amount,
+                fees_computation,
+            )?)
         }
     }
+}
+
+/// Computes the pool fees for a given (return) amount
+fn compute_fees(pool_fees: PoolFee, amount: Uint256) -> Result<FeesComputation, ContractError> {
+    let swap_fee_amount: Uint256 = pool_fees.swap_fee.compute(amount);
+    let protocol_fee_amount: Uint256 = pool_fees.protocol_fee.compute(amount);
+    let burn_fee_amount: Uint256 = pool_fees.burn_fee.compute(amount);
+
+    let extra_fees_amount: Uint256 = if !pool_fees.extra_fees.is_empty() {
+        let mut extra_fees_amount: Uint256 = Uint256::zero();
+
+        for extra_fee in pool_fees.extra_fees {
+            extra_fees_amount = extra_fees_amount.checked_add(extra_fee.compute(amount))?;
+        }
+
+        extra_fees_amount
+    } else {
+        Uint256::zero()
+    };
+
+    #[cfg(not(feature = "osmosis"))]
+    {
+        Ok(FeesComputation {
+            swap_fee_amount,
+            protocol_fee_amount,
+            burn_fee_amount,
+            extra_fees_amount,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let osmosis_fee_amount: Uint256 = pool_fees.osmosis_fee.compute(amount);
+
+        Ok(FeesComputation {
+            swap_fee_amount,
+            protocol_fee_amount,
+            burn_fee_amount,
+            extra_fees_amount,
+            osmosis_fee_amount,
+        })
+    }
+}
+
+/// Builds the swap computation struct, subtracting the fees from the return amount.
+fn get_swap_computation(
+    return_amount: Uint256,
+    spread_amount: Uint256,
+    fees_computation: FeesComputation,
+) -> Result<SwapComputation, ContractError> {
+    #[cfg(not(feature = "osmosis"))]
+    {
+        let return_amount = return_amount
+            .checked_sub(fees_computation.swap_fee_amount)?
+            .checked_sub(fees_computation.protocol_fee_amount)?
+            .checked_sub(fees_computation.burn_fee_amount)?
+            .checked_sub(fees_computation.extra_fees_amount)?;
+
+        Ok(SwapComputation {
+            return_amount: return_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            spread_amount: spread_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            swap_fee_amount: fees_computation
+                .swap_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            protocol_fee_amount: fees_computation
+                .protocol_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            burn_fee_amount: fees_computation
+                .burn_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            extra_fees_amount: fees_computation
+                .extra_fees_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+        })
+    }
+
+    #[cfg(feature = "osmosis")]
+    {
+        let return_amount = return_amount
+            .checked_sub(fees_computation.swap_fee_amount)?
+            .checked_sub(fees_computation.protocol_fee_amount)?
+            .checked_sub(fees_computation.burn_fee_amount)?
+            .checked_sub(fees_computation.extra_fees_amount)?
+            .checked_sub(fees_computation.osmosis_fee_amount)?;
+
+        Ok(SwapComputation {
+            return_amount: return_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            spread_amount: spread_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            swap_fee_amount: fees_computation
+                .swap_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            protocol_fee_amount: fees_computation
+                .protocol_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            burn_fee_amount: fees_computation
+                .burn_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            extra_fees_amount: fees_computation
+                .extra_fees_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+            osmosis_fee_amount: fees_computation
+                .osmosis_fee_amount
+                .try_into()
+                .map_err(|_| ContractError::SwapOverflowError)?,
+        })
+    }
+}
+
+/// Represents the swap computation values
+#[cw_serde]
+pub struct FeesComputation {
+    pub swap_fee_amount: Uint256,
+    pub protocol_fee_amount: Uint256,
+    pub burn_fee_amount: Uint256,
+    pub extra_fees_amount: Uint256,
+    #[cfg(feature = "osmosis")]
+    pub osmosis_fee_amount: Uint256,
 }
 
 /// Represents the swap computation values
@@ -325,8 +347,39 @@ pub struct SwapComputation {
     pub swap_fee_amount: Uint128,
     pub protocol_fee_amount: Uint128,
     pub burn_fee_amount: Uint128,
+    pub extra_fees_amount: Uint128,
     #[cfg(feature = "osmosis")]
     pub osmosis_fee_amount: Uint128,
+}
+
+impl SwapComputation {
+    /// Converts the SwapComputation struct to a SimulationResponse struct
+    pub fn to_simulation_response(&self) -> SimulationResponse {
+        #[cfg(not(feature = "osmosis"))]
+        {
+            SimulationResponse {
+                return_amount: self.return_amount,
+                spread_amount: self.spread_amount,
+                swap_fee_amount: self.swap_fee_amount,
+                protocol_fee_amount: self.protocol_fee_amount,
+                burn_fee_amount: self.burn_fee_amount,
+                extra_fees_amount: self.extra_fees_amount,
+            }
+        }
+
+        #[cfg(feature = "osmosis")]
+        {
+            SimulationResponse {
+                return_amount: self.return_amount,
+                spread_amount: self.spread_amount,
+                swap_fee_amount: self.swap_fee_amount,
+                protocol_fee_amount: self.protocol_fee_amount,
+                burn_fee_amount: self.burn_fee_amount,
+                osmosis_fee_amount: self.osmosis_fee_amount,
+                extra_fees_amount: self.extra_fees_amount,
+            }
+        }
+    }
 }
 
 pub fn compute_offer_amount(

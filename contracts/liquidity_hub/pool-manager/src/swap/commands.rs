@@ -35,7 +35,7 @@ pub fn swap(
     // verify that the assets sent match the ones from the pool
     let pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
     ensure!(
-        vec![ask_asset_denom, offer_asset.denom.clone()]
+        vec![ask_asset_denom.clone(), offer_asset.denom.clone()]
             .iter()
             .all(|asset| pool
                 .assets
@@ -48,6 +48,7 @@ pub fn swap(
     let swap_result = perform_swap(
         deps.branch(),
         offer_asset.clone(),
+        ask_asset_denom,
         pool_identifier,
         belief_price,
         max_spread,
@@ -83,6 +84,8 @@ pub fn swap(
             .into(),
         );
     }
+
+    println!("messages: {:?}", messages);
 
     Ok(Response::new().add_messages(messages).add_attributes(vec![
         ("action", "swap".to_string()),

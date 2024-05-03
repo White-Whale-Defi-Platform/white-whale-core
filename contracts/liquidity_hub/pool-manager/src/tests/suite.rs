@@ -589,7 +589,6 @@ impl TestingSuite {
     pub(crate) fn query_reverse_simulation(
         &mut self,
         pool_identifier: String,
-        offer_asset: String,
         ask_asset: Coin,
         result: impl Fn(StdResult<ReverseSimulationResponse>),
     ) -> &mut Self {

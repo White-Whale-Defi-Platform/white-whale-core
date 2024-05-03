@@ -86,7 +86,9 @@ pub fn execute_swap_operations(
     for operation in operations {
         match operation {
             SwapOperation::WhaleSwap {
-                pool_identifier, ..
+                token_out_denom,
+                pool_identifier,
+                ..
             } => {
                 // inside assert_operations() we have already checked that
                 // the output of each swap is the input of the next swap.
@@ -94,6 +96,7 @@ pub fn execute_swap_operations(
                 let swap_result = perform_swap(
                     deps.branch(),
                     previous_swap_output.clone(),
+                    token_out_denom,
                     pool_identifier,
                     None,
                     max_spread,

@@ -93,6 +93,7 @@ pub fn query_simulation(
             swap_fee_amount: swap_computation.swap_fee_amount,
             protocol_fee_amount: swap_computation.protocol_fee_amount,
             burn_fee_amount: swap_computation.burn_fee_amount,
+            extra_fees_amount: swap_computation.extra_fees_amount,
         })
     }
 
@@ -104,6 +105,7 @@ pub fn query_simulation(
             swap_fee_amount: swap_computation.swap_fee_amount,
             protocol_fee_amount: swap_computation.protocol_fee_amount,
             burn_fee_amount: swap_computation.burn_fee_amount,
+            extra_fees_amount: swap_computation.extra_fees_amount,
             osmosis_fee_amount: swap_computation.osmosis_fee_amount,
         })
     }

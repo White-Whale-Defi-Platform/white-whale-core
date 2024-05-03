@@ -1797,6 +1797,7 @@ mod swapping {
     use std::cell::RefCell;
 
     use cosmwasm_std::assert_approx_eq;
+
     use white_whale_std::pool_manager::PoolType;
 
     use super::*;
@@ -1903,7 +1904,7 @@ mod swapping {
                     response.total_share,
                     Coin {
                         denom: response.pool_info.lp_denom,
-                        amount: Uint128::from(1_000_000u128)
+                        amount: Uint128::from(1_000_000u128),
                     }
                 );
             });
@@ -1971,7 +1972,6 @@ mod swapping {
         let simulated_offer_amount = RefCell::new(Uint128::zero());
         suite.query_reverse_simulation(
             "whale-uluna".to_string(),
-            "uluna".to_string(),
             Coin {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
@@ -2164,7 +2164,6 @@ mod swapping {
         let simulated_offer_amount = RefCell::new(Uint128::zero());
         suite.query_reverse_simulation(
             "whale-uluna".to_string(),
-            "uluna".to_string(),
             Coin {
                 denom: "uwhale".to_string(),
                 amount: Uint128::from(1000u128),
@@ -2958,7 +2957,7 @@ mod provide_liquidity {
                 creator.clone(),
                 "whale-uluna".to_string(),
                 None,
-                None,None,
+                None, None,
                 None,
                 vec![],
                 |result| {
@@ -2974,7 +2973,7 @@ mod provide_liquidity {
                 creator.clone(),
                 "whale-uluna".to_string(),
                 None,
-                None,None,
+                None, None,
                 None,
                 vec![Coin {
                     denom: "uosmo".to_string(),
@@ -2993,7 +2992,7 @@ mod provide_liquidity {
                 creator.clone(),
                 "whale-uluna".to_string(),
                 None,
-                None,None,
+                None, None,
                 None,
                 vec![Coin {
                     denom: "uwhale".to_string(),
@@ -3483,5 +3482,675 @@ mod provide_liquidity {
                     result.unwrap();
                 },
             );
+    }
+}
+
+mod multiple_pools {
+    use cosmwasm_std::{coin, Coin, Decimal, Uint128};
+
+    use white_whale_std::fee::{Fee, PoolFee};
+    use white_whale_std::pool_manager::{PoolInfo, PoolType};
+
+    use crate::tests::suite::TestingSuite;
+    use crate::ContractError;
+
+    #[cfg(not(feature = "osmosis"))]
+    #[test]
+    fn provide_liquidity_to_multiple_pools_check_fees() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_000u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_000u128, "uosmo".to_string()),
+            coin(1_000_000_000u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let other = suite.senders[1].clone();
+
+        // Asset denoms with uwhale and uluna
+        let asset_denoms_1 = vec!["uwhale".to_string(), "uluna".to_string()];
+        let asset_denoms_2 = vec!["uluna".to_string(), "uusd".to_string()];
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees_1 = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::percent(10),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(7),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(3),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees_2 = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::percent(15),
+            },
+            burn_fee: Fee {
+                share: Decimal::percent(5),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create pools
+        suite
+            .instantiate_default()
+            .create_pool(
+                creator.clone(),
+                asset_denoms_1.clone(),
+                vec![6u8, 6u8],
+                pool_fees_1.clone(),
+                PoolType::ConstantProduct,
+                Some("whale-uluna-pool-1".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pool(
+                creator.clone(),
+                asset_denoms_1,
+                vec![6u8, 6u8],
+                pool_fees_2.clone(),
+                PoolType::ConstantProduct,
+                Some("whale-uluna-pool-2".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .create_pool(
+                creator.clone(),
+                asset_denoms_2,
+                vec![6u8, 6u8],
+                pool_fees_1.clone(),
+                PoolType::ConstantProduct,
+                Some("uluna-uusd-pool-1".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
+
+        let pool_manager_addr = suite.pool_manager_addr.clone();
+        let bonding_manager_addr = suite.bonding_manager_addr.clone();
+
+        // let's provide liquidity with two assets
+        suite
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna".to_string(),
+                None,
+                None,
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                    match err {
+                        ContractError::UnExistingPool => {}
+                        _ => panic!("Wrong error type, should return ContractError::UnExistingPool"),
+                    }
+                },
+            )
+            .provide_liquidity(
+                creator.clone(),
+                "whale-uluna-pool-1".to_string(),
+                None,
+                None,
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                other.clone(),
+                "whale-uluna-pool-2".to_string(),
+                None,
+                None,
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .provide_liquidity(
+                other.clone(),
+                "uluna-uusd-pool-1".to_string(),
+                None,
+                None,
+                None,
+                None,
+                vec![
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                    Coin {
+                        denom: "uusd".to_string(),
+                        amount: Uint128::from(1_000_000u128),
+                    },
+                ],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_all_balances(pool_manager_addr.to_string(), |result| {
+                let balances = result.unwrap();
+                assert_eq!(
+                    balances,
+                    vec![
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "uluna".to_string(),
+                            amount: Uint128::from(3_000_000u128),
+                        },
+                        Coin {
+                            denom: "uusd".to_string(),
+                            amount: Uint128::from(1_000_000u128),
+                        },
+                        Coin {
+                            denom: "uwhale".to_string(),
+                            amount: Uint128::from(2_000_000u128),
+                        },
+                    ]
+                );
+            });
+
+        // let's do swaps in whale-uluna-pool-1 and verify the fees are channeled correctly
+        suite
+            .swap(
+                creator.clone(),
+                "uluna".to_string(),
+                None,
+                None,
+                None,
+                "whale-uluna-pool-1".to_string(),
+                vec![coin(1000u128, "uwhale".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 1000 uwhale
+                // fees:
+                // swap -> 69 (~7%)
+                // protocol -> 99 (~10%)
+                // burn ->  29 (~3%)
+                // total_fees = 197, of which 69 stay in the pool (for LPs).
+                // Going out of the pool is 99 (bonding manager) + 29 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(1001000, "uwhale"), coin(999070, "uluna")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_1.clone(),
+                });
+            })
+        ;
+
+        // verify the fees went to the bonding manager
+        suite.query_balance(
+            bonding_manager_addr.clone().to_string(),
+            "uluna",
+            |result| {
+                assert_eq!(result.unwrap(), coin(99, "uluna"));
+            },
+        )
+            .swap(
+                creator.clone(),
+                "uwhale".to_string(),
+                None,
+                None,
+                None,
+                "whale-uluna-pool-1".to_string(),
+                vec![coin(2_000u128, "uluna".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 2000 uluna
+                // fees:
+                // swap -> 139 (~7%)
+                // protocol -> 199 (~10%)
+                // burn ->  59 (~3%)
+                // total_fees = 397, of which 139 stay in the pool (for LPs).
+                // Going out of the pool is 199 (bonding manager) + 59 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_1.clone(),
+                });
+            })
+        ;
+
+        suite
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uwhale",
+                |result| {
+                    assert_eq!(result.unwrap(), coin(199, "uwhale"));
+                },
+            )
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uluna",
+                |result| {
+                    assert_eq!(result.unwrap(), coin(99, "uluna"));
+                },
+            );
+
+        // let's do swaps in whale-uluna-pool-2 and verify the fees are channeled correctly
+        suite
+            .swap(
+                creator.clone(),
+                "uluna".to_string(),
+                None,
+                None,
+                None,
+                "whale-uluna-pool-2".to_string(),
+                vec![coin(1000u128, "uwhale".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 1000 uwhale
+                // fees:
+                // swap -> 149 (~15%)
+                // protocol -> 0 (0%)
+                // burn ->  49 (~5%)
+                // total_fees = 198, of which 149 stay in the pool (for LPs).
+                // Going out of the pool is 49 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(1001000, "uwhale"), coin(999_150, "uluna")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_2.clone(),
+                });
+            })
+        ;
+
+        suite
+            .swap(
+                creator.clone(),
+                "uwhale".to_string(),
+                None,
+                None,
+                None,
+                "whale-uluna-pool-2".to_string(),
+                vec![coin(2_000u128, "uluna".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 2000 uluna
+                // fees:
+                // swap -> 299 (~15%)
+                // protocol -> 0 (0%)
+                // burn ->  99 (~5%)
+                // total_fees = 398, of which 299 stay in the pool (for LPs).
+                // Going out of the pool is 99 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(999_300, "uwhale"), coin(1_001_150, "uluna")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_2.clone(),
+                });
+            });
+
+        suite
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uwhale",
+                |result| {
+                    // no additional funds were sent to the bonding manager
+                    assert_eq!(result.unwrap(), coin(199, "uwhale"));
+                },
+            )
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uluna",
+                |result| {
+                    // no additional funds were sent to the bonding manager
+                    assert_eq!(result.unwrap(), coin(99, "uluna"));
+                },
+            );
+
+        // let's do swaps in uluna-uusd-pool-1 and verify the fees are channeled correctly
+        suite
+            .swap(
+                creator.clone(),
+                "uusd".to_string(),
+                None,
+                None,
+                None,
+                "uluna-uusd-pool-1".to_string(),
+                vec![coin(3000u128, "uluna".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 3000 uluna
+                // fees:
+                // swap -> 209 (~7%)
+                // protocol -> 299 (~10%)
+                // burn ->  89 (~3%)
+                // total_fees = 597, of which 209 stay in the pool (for LPs).
+                // Going out of the pool is 299 (bonding manager) + 89 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(1003000, "uluna"), coin(997_218, "uusd")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_1.clone(),
+                });
+            })
+        ;
+
+        suite.query_balance(bonding_manager_addr.clone().to_string(), "uusd", |result| {
+            // 3000 of pool creation fees + 299 from the previous swap
+            assert_eq!(result.unwrap(), coin(3299, "uusd"));
+        });
+
+        suite
+            .swap(
+                creator.clone(),
+                "uluna".to_string(),
+                None,
+                None,
+                None,
+                "uluna-uusd-pool-1".to_string(),
+                vec![coin(1_500u128, "uusd".to_string())],
+                |result| {
+                    result.unwrap();
+                },
+            )
+            .query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // swapped 1500 uusd
+                // fees:
+                // swap -> 105 (~7%)
+                // protocol -> 150 (~10%)
+                // burn ->  45 (~3%)
+                // total_fees = 300, of which 105 stay in the pool (for LPs).
+                // Going out of the pool is 150 (bonding manager) + 45 (burned)
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(1_001_599, "uluna"), coin(998_718, "uusd")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_1.clone(),
+                });
+            })
+        ;
+
+        suite
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uwhale",
+                |result| {
+                    // no additional funds were sent to the bonding manager
+                    assert_eq!(result.unwrap(), coin(199, "uwhale"));
+                },
+            )
+            .query_balance(
+                bonding_manager_addr.clone().to_string(),
+                "uluna",
+                |result| {
+                    // 99 + 150
+                    assert_eq!(result.unwrap(), coin(249, "uluna"));
+                },
+            ).query_balance(
+            bonding_manager_addr.clone().to_string(),
+            "uusd",
+            |result| {
+                // 99 + 150
+                assert_eq!(result.unwrap(), coin(3299, "uusd"));
+            },
+        )
+            .query_all_balances(
+                pool_manager_addr.clone().to_string(),
+                |result| {
+                    let balances = result.unwrap();
+                    assert_eq!(balances, vec![
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            amount: Uint128::from(1_000u128),
+                        },
+                        Coin {
+                            denom: "uluna".to_string(),
+                            amount: Uint128::from(3_003_819u128),
+                        },
+                        Coin {
+                            denom: "uusd".to_string(),
+                            amount: Uint128::from(998_718u128),
+                        },
+                        Coin {
+                            denom: "uwhale".to_string(),
+                            amount: Uint128::from(1_998_440u128),
+                        },
+                    ]);
+                },
+            );
+
+        // swap via the router now
+        let swap_operations = vec![
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                token_in_denom: "uwhale".to_string(),
+                token_out_denom: "uluna".to_string(),
+                pool_identifier: "whale-uluna-pool-2".to_string(),
+            },
+            white_whale_std::pool_manager::SwapOperation::WhaleSwap {
+                token_in_denom: "uluna".to_string(),
+                token_out_denom: "uusd".to_string(),
+                pool_identifier: "uluna-uusd-pool-1".to_string(),
+            },
+        ];
+
+        suite.execute_swap_operations(
+            creator.clone(),
+            swap_operations,
+            None,
+            None,
+            None,
+            vec![coin(5_000u128, "uwhale".to_string())],
+            |result| {
+                result.unwrap();
+            },
+        ).query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+            let response = result.unwrap();
+            let pool_info = response.pool_info;
+
+            // this should have not changed since last time, since we didn't touch this pool
+            assert_eq!(pool_info, PoolInfo {
+                asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                asset_decimals: vec![6u8, 6u8],
+                assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
+                pool_type: PoolType::ConstantProduct,
+                pool_fees: pool_fees_1.clone(),
+            });
+        })
+            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+                let response = result.unwrap();
+                let pool_info = response.pool_info;
+
+                // the swap above was:
+                // SwapComputation { return_amount: Uint128(3988),
+                // spread_amount: Uint128(25), swap_fee_amount: Uint128(747),
+                // protocol_fee_amount: Uint128(0), burn_fee_amount: Uint128(249) }
+
+                assert_eq!(pool_info, PoolInfo {
+                    asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    asset_decimals: vec![6u8, 6u8],
+                    assets: vec![coin(1_004_300, "uwhale"), coin(996_913, "uluna")],
+                    pool_type: PoolType::ConstantProduct,
+                    pool_fees: pool_fees_2.clone(),
+                });
+            }).query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+            let response = result.unwrap();
+            let pool_info = response.pool_info;
+
+            // the swap above was:
+            // SwapComputation { return_amount: Uint128(3169),
+            // spread_amount: Uint128(16), swap_fee_amount: Uint128(277),
+            // protocol_fee_amount: Uint128(396), burn_fee_amount: Uint128(118) }
+
+            assert_eq!(pool_info, PoolInfo {
+                asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
+                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                asset_decimals: vec![6u8, 6u8],
+                assets: vec![coin(1_005_587, "uluna"), coin(995_035, "uusd")],
+                pool_type: PoolType::ConstantProduct,
+                pool_fees: pool_fees_1.clone(),
+            });
+        });
+
+        suite.query_all_balances(
+            bonding_manager_addr.clone().to_string(),
+            |result| {
+                let balances = result.unwrap();
+                assert_eq!(balances, vec![
+                    // the whale-uluna-pool-2 doesn't have protocol fees, hence no luna was accrued
+                    // in the last swap
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(249u128),
+                    },
+                    Coin {
+                        denom: "uusd".to_string(),
+                        amount: Uint128::from(3_695u128),
+                    },
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(199u128),
+                    },
+                ]);
+            },
+        ).query_all_balances(
+            pool_manager_addr.clone().to_string(),
+            |result| {
+                let balances = result.unwrap();
+                assert_eq!(balances, vec![
+                    Coin {
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                        amount: Uint128::from(1_000u128),
+                    },
+                    Coin {
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                        amount: Uint128::from(1_000u128),
+                    },
+                    Coin {
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                        amount: Uint128::from(1_000u128),
+                    },
+                    Coin {
+                        denom: "uluna".to_string(),
+                        amount: Uint128::from(3_003_570u128),
+                    },
+                    Coin {
+                        denom: "uusd".to_string(),
+                        amount: Uint128::from(995_035u128),
+                    },
+                    Coin {
+                        denom: "uwhale".to_string(),
+                        amount: Uint128::from(2_003_440u128),
+                    },
+                ]);
+            },
+        );
     }
 }
