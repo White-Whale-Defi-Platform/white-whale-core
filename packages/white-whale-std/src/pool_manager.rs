@@ -34,6 +34,14 @@ impl SwapOperation {
             } => token_out_denom.clone(),
         }
     }
+
+    pub fn get_pool_identifer(&self) -> String {
+        match self {
+            SwapOperation::WhaleSwap {
+                pool_identifier, ..
+            } => pool_identifier.clone(),
+        }
+    }
 }
 
 impl fmt::Display for SwapOperation {

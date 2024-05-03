@@ -126,9 +126,7 @@ pub fn execute_swap_operations(
                     fee_messages.push(
                         wasm_execute(
                             config.bonding_manager_addr.to_string(),
-                            &whale_lair::ExecuteMsg::FillRewards {
-                                assets: vec![swap_result.protocol_fee_asset.clone()],
-                            },
+                            &whale_lair::ExecuteMsg::FillRewardsCoin {},
                             vec![swap_result.protocol_fee_asset.clone()],
                         )?
                         .into(),

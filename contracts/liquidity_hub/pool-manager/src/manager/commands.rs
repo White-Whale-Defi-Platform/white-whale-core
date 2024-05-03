@@ -1,7 +1,8 @@
 use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
-use white_whale_std::{fee::PoolFee, whale_lair::fill_rewards_msg};
+
+use white_whale_std::fee::PoolFee;
 
 use crate::state::{get_pool_by_identifier, POOL_COUNTER};
 use crate::{
@@ -11,6 +12,7 @@ use crate::{
 
 use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_manager::{PoolInfo, PoolType};
+use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
@@ -107,7 +109,7 @@ pub fn create_pool(
     let creation_fee = vec![config.pool_creation_fee];
 
     // send pool creation fee to whale lair i.e the new fee_collector
-    messages.push(fill_rewards_msg(
+    messages.push(fill_rewards_msg_coin(
         config.bonding_manager_addr.into_string(),
         creation_fee,
     )?);

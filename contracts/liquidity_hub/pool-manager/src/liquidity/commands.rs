@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    coin, coins, ensure, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo,
-    Response, StdError, SubMsg,
+    coin, coins, ensure, to_json_binary, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env,
+    MessageInfo, Response, StdError, SubMsg,
 };
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
@@ -402,11 +402,13 @@ pub fn withdraw_liquidity(
         env.contract.address,
         amount,
     )?);
-
     // update pool info
-    Ok(Response::new().add_messages(messages).add_attributes(vec![
-        ("action", "withdraw_liquidity"),
-        ("sender", info.sender.as_str()),
-        ("withdrawn_share", &amount.to_string()),
-    ]))
+    Ok(Response::new()
+        .add_messages(messages)
+        .set_data(to_json_binary(&refund_assets)?)
+        .add_attributes(vec![
+            ("action", "withdraw_liquidity"),
+            ("sender", info.sender.as_str()),
+            ("withdrawn_share", &amount.to_string()),
+        ]))
 }
