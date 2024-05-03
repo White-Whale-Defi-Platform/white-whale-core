@@ -41,7 +41,7 @@ pub fn swap(
     // verify that the assets sent match the ones from the pool
     let pair = get_pair_by_identifier(&deps.as_ref(), &pair_identifier)?;
     ensure!(
-        vec![ask_asset_denom, offer_asset.denom.clone()]
+        [ask_asset_denom, offer_asset.denom.clone()]
             .iter()
             .all(|asset| pair
                 .assets
@@ -80,9 +80,7 @@ pub fn swap(
     if !swap_result.protocol_fee_asset.amount.is_zero() {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: config.bonding_manager_addr.to_string(),
-            msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewards {
-                assets: vec![swap_result.protocol_fee_asset.clone()],
-            })?,
+            msg: to_json_binary(&whale_lair::ExecuteMsg::FillRewardsCoin {})?,
             funds: vec![swap_result.protocol_fee_asset.clone()],
         }));
     }

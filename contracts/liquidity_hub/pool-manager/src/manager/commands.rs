@@ -1,7 +1,9 @@
 use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
-use white_whale_std::{fee::PoolFee, pool_network::asset::PairType, whale_lair::fill_rewards_msg};
+use white_whale_std::{
+    fee::PoolFee, pool_network::asset::PairType, whale_lair::fill_rewards_msg_coin,
+};
 
 use crate::state::{get_pair_by_identifier, PAIR_COUNTER};
 use crate::{
@@ -107,7 +109,7 @@ pub fn create_pair(
     let creation_fee = vec![config.pool_creation_fee];
 
     // send pair creation fee to whale lair i.e the new fee_collector
-    messages.push(fill_rewards_msg(
+    messages.push(fill_rewards_msg_coin(
         config.bonding_manager_addr.into_string(),
         creation_fee,
     )?);
@@ -173,14 +175,14 @@ pub fn create_pair(
 
     attributes.push(attr("lp_asset", lp_asset));
 
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
-    {
-        return Err(ContractError::TokenFactoryNotEnabled {});
-    }
+    // #[cfg(all(
+    //     not(feature = "token_factory"),
+    //     not(feature = "osmosis_token_factory"),
+    //     not(feature = "injective")
+    // ))]
+    // {
+    //     return Err(ContractError::TokenFactoryNotEnabled {});
+    // }
 
     messages.push(white_whale_std::tokenfactory::create_denom::create_denom(
         env.contract.address,

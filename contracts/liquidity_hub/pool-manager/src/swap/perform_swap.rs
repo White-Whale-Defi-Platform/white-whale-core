@@ -97,7 +97,6 @@ pub fn perform_swap(
         return_asset.amount,
         swap_computation.spread_amount,
     )?;
-
     // State changes to the pairs balances
     // Deduct the return amount from the pool and add the offer amount to the pool
     if offer_asset.denom == pools[0].denom {

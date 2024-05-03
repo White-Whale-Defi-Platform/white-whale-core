@@ -100,6 +100,25 @@ pub fn is_factory_token(denom: &str) -> bool {
 
     true
 }
+/// Verifies if the given denom is a factory token or not.
+/// A factory token has the following structure: factory/{creating contract address}/{Subdenom}
+/// Subdenom can be of length at most 44 characters, in [0-9a-zA-Z./].
+pub fn is_native_lp_token(denom: &str) -> bool {
+    let split: Vec<&str> = denom.splitn(3, '/').collect();
+
+    if split.len() < 3 && split[0] != FACTORY_PREFIX {
+        return false;
+    }
+
+    if split.len() > 3 {
+        let merged = split[3..].join("/");
+        if merged.len() > FACTORY_SUBDENOM_SIZE {
+            return false;
+        }
+    }
+
+    true
+}
 
 /// Gets the subdenom of a factory token. To be called after [is_factory_token] has been successful.
 pub fn get_factory_token_subdenom(denom: &str) -> StdResult<&str> {
@@ -140,7 +159,23 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
 }
 
 //todo test these functions in isolation
+// move to ww package
+pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
+    let mut updated_coins = coins.to_vec();
 
+    for coin in to_deduct {
+        if let Some(existing_coin) = updated_coins.iter_mut().find(|c| c.denom == coin.denom) {
+            existing_coin.amount = existing_coin.amount.checked_sub(coin.amount)?;
+        } else {
+            return Err(StdError::generic_err(format!(
+                "Error: Cannot deduct {} {}. Coin not found.",
+                coin.amount, coin.denom
+            )));
+        }
+    }
+
+    Ok(updated_coins)
+}
 /// Aggregates coins from two vectors, summing up the amounts of coins that are the same.
 pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut aggregation_map: HashMap<String, Uint128> = HashMap::new();

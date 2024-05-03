@@ -11,6 +11,7 @@ members = [
   "contracts/liquidity_hub/pool-manager",
   "contracts/liquidity_hub/epoch-manager",
   "contracts/liquidity_hub/vault-manager",
+  "contracts/liquidity_hub/bonding-manager",
   "contracts/liquidity_hub/incentive-manager",
   "xtask",
 ]
@@ -61,13 +62,14 @@ test-case = { version = "3.3.1" }
 
 # contracts
 whale-lair = { path = "./contracts/liquidity_hub/whale_lair" }
+epoch-manager = { path = "./contracts/liquidity_hub/epoch-manager" }
+pool-manager = { path = "./contracts/liquidity_hub/pool-manager" }
 fee_collector = { path = "./contracts/liquidity_hub/fee_collector" }
 fee_distributor = { path = "./contracts/liquidity_hub/fee_distributor" }
 fee-distributor-mock = { path = "./contracts/liquidity_hub/fee-distributor-mock" }
 incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_factory" }
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
-epoch-manager = { path = "./contracts/liquidity_hub/epoch-manager" }
 incentive-manager = { path = "./contracts/liquidity_hub/incentive-manager" }
 
 [workspace.metadata.dylint]

@@ -59,6 +59,7 @@ pub mod tasks {
         }
 
         let mut schemas = HashMap::from([
+            generate_schema!("bonding-manager", bonding_manager),
             generate_schema!("epoch-manager", epoch_manager::epoch_manager),
             generate_schema!("fee_collector", fee_collector),
             generate_schema!("fee_distributor", fee_distributor),

@@ -567,6 +567,24 @@ pub fn aggregate_assets(assets: Vec<Asset>, other_assets: Vec<Asset>) -> StdResu
     Ok(aggregated_assets)
 }
 
+/// Aggregates assets from two vectors, summing up the amounts of assets that are the same.
+pub fn aggregate_coins(coins: Vec<Coin>, other_coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
+    let mut aggregated_coins: Vec<Coin> = Vec::with_capacity(coins.len() + other_coins.len());
+    for coin in coins {
+        aggregated_coins.push(coin.clone());
+    }
+
+    for coin in other_coins {
+        if let Some(existing_coin) = aggregated_coins.iter_mut().find(|c| c.denom == coin.denom) {
+            existing_coin.amount = existing_coin.amount.checked_add(coin.amount)?;
+        } else {
+            aggregated_coins.push(coin.clone());
+        }
+    }
+
+    Ok(aggregated_coins)
+}
+
 /// Deducts assets from two vectors, subtracting the amounts of assets that are the same.
 pub fn deduct_assets(assets: Vec<Asset>, to_deduct: Vec<Asset>) -> StdResult<Vec<Asset>> {
     let mut updated_assets = assets.to_vec();
