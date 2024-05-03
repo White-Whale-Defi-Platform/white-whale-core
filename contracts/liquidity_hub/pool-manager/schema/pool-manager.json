@@ -833,6 +833,7 @@
             "type": "object",
             "required": [
               "ask_asset",
+              "offer_asset_denom",
               "pool_identifier"
             ],
             "properties": {
@@ -843,6 +844,10 @@
                     "$ref": "#/definitions/Coin"
                   }
                 ]
+              },
+              "offer_asset_denom": {
+                "description": "The offer asset denom to input.",
+                "type": "string"
               },
               "pool_identifier": {
                 "description": "The pool identifier to swap in.",
