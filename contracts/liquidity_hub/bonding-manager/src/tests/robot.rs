@@ -197,8 +197,7 @@ impl TestingRobot {
 
         println!("hook_registration_msg: {:?}", resp);
         // self.fast_forward(10);
-        let new_epoch_msg =
-            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
+        let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
         self.app
             .execute_contract(
                 self.sender.clone(),
@@ -328,8 +327,7 @@ impl TestingRobot {
     }
 
     pub(crate) fn create_new_epoch(&mut self) -> &mut Self {
-        let new_epoch_msg =
-            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
+        let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
         self.app
             .execute_contract(
                 self.sender.clone(),

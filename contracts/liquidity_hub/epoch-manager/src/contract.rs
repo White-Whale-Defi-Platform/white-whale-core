@@ -35,11 +35,7 @@ pub fn instantiate(
     }
 
     ADMIN.set(deps.branch(), Some(info.sender))?;
-    EPOCHS.save(
-        deps.storage,
-        &msg.start_epoch.id.to_be_bytes(),
-        &msg.start_epoch,
-    )?;
+    EPOCHS.save(deps.storage, msg.start_epoch.id, &msg.start_epoch)?;
 
     CONFIG.save(
         deps.storage,
@@ -69,7 +65,7 @@ pub fn execute(
         ExecuteMsg::RemoveHook { contract_addr } => {
             commands::remove_hook(deps, info, api, &contract_addr)
         }
-        ExecuteMsg::CreateEpoch {} => commands::create_epoch(deps, env, info),
+        ExecuteMsg::CreateEpoch => commands::create_epoch(deps, env, info),
         ExecuteMsg::UpdateConfig {
             owner,
             epoch_config,

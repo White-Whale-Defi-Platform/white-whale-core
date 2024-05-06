@@ -122,35 +122,10 @@
       "additionalProperties": false
     },
     {
-      "description": "V2 MESSAGES Fills the whale lair with new rewards.",
-      "type": "object",
-      "required": [
-        "fill_rewards"
-      ],
-      "properties": {
-        "fill_rewards": {
-          "type": "object",
-          "required": [
-            "assets"
-          ],
-          "properties": {
-            "assets": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
       "description": "Fills the whale lair with new rewards.",
       "type": "string",
       "enum": [
-        "fill_rewards_coin"
+        "fill_rewards"
       ]
     },
     {
