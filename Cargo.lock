@@ -952,6 +952,7 @@ name = "pool-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bonding-manager",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",

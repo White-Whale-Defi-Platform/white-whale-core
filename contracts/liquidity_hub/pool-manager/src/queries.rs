@@ -250,7 +250,6 @@ pub fn get_swap_route(
     ask_asset_denom: String,
 ) -> Result<SwapRouteResponse, ContractError> {
     let swap_route_key = SWAP_ROUTES.key((&offer_asset_denom, &ask_asset_denom));
-
     let swap_operations =
         swap_route_key
             .load(deps.storage)

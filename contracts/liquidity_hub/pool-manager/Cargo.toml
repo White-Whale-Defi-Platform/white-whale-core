@@ -57,6 +57,7 @@ whale-lair.workspace = true
 incentive-manager.workspace = true
 epoch-manager.workspace = true
 white-whale-testing.workspace = true
+bonding-manager.workspace = true
 proptest = "1.0.0"
 rand = "0.8.4"
 stable-swap-sim = { path = "./sim", version = "^0.1" }

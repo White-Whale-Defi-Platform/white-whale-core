@@ -2,9 +2,9 @@ use cosmwasm_std::{
     ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
     StdError, StdResult, SubMsg, Timestamp, Uint128, Uint64,
 };
-use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::Bond;
+use white_whale_std::pool_network::asset;
 
 use crate::helpers::validate_growth_rate;
 use crate::queries::{get_current_epoch, query_claimable, query_weight, MAX_PAGE_LIMIT};
@@ -325,63 +325,71 @@ pub fn claim(deps: DepsMut, _env: Env, info: MessageInfo) -> Result<Response, Co
 
 pub(crate) fn fill_rewards(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
+    // Finding the most recent EpochID
+    let most_recent_epoch_id = match EPOCHS
+        .keys(deps.storage, None, None, Order::Descending)
+        .next()
     {
-        // Finding the most recent EpochID
-        let most_recent_epoch_id = match EPOCHS
-            .keys(deps.storage, None, None, Order::Descending)
-            .next()
-        {
-            Some(epoch_id) => epoch_id?,
-            None => return Err(ContractError::Unauthorized {}),
-        };
+        Some(epoch_id) => epoch_id?,
+        None => return Err(ContractError::Unauthorized {}),
+    };
 
-        let config = CONFIG.load(deps.storage)?;
-        let distribution_denom = config.distribution_denom.clone();
+    let config = CONFIG.load(deps.storage)?;
+    let distribution_denom = config.distribution_denom.clone();
 
-        let mut messages: Vec<CosmosMsg> = vec![];
-        let mut submessages: Vec<SubMsg> = vec![];
-        // swap non-whale to whale
-        // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
-        let mut whale = info
-            .funds
-            .iter()
-            .find(|coin| coin.denom.eq(distribution_denom.as_str()))
-            .unwrap_or(&Coin {
-                denom: distribution_denom.clone(),
-                amount: Uint128::zero(),
-            })
-            .to_owned();
-        // Each of these helpers will add messages to the messages vector
-        // and may increment the whale Coin above with the result of the swaps
-        helpers::handle_lp_tokens(&info, &config, &mut submessages)?;
-        helpers::swap_coins_to_main_token(
-            info.funds.clone(),
-            &deps,
-            config,
-            &mut whale,
-            &distribution_denom,
-            &mut messages,
-        )?;
-        // Add the whale to the funds, the whale figure now should be the result
-        // of all the LP token withdrawals and swaps
-        // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
-        // If this became an issue would could look at replys instead of the query
-        EPOCHS.update(
-            deps.storage,
-            &most_recent_epoch_id,
-            |bucket| -> StdResult<_> {
-                let mut bucket = bucket.unwrap_or_default();
-                bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
-                bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
-                Ok(bucket)
-            },
-        )?;
-        Ok(Response::default()
-            .add_messages(messages)
-            .add_submessages(submessages)
-            .add_attributes(vec![("action", "fill_rewards".to_string())]))
-    }
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut submessages: Vec<SubMsg> = vec![];
+    // swap non-whale to whale
+    // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
+    let mut whale = info
+        .funds
+        .iter()
+        .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+        .unwrap_or(&Coin {
+            denom: distribution_denom.clone(),
+            amount: Uint128::zero(),
+        })
+        .to_owned();
+
+    // coins that are laying in the contract and have not been swapped before for lack of swap routes
+    let remanent_coins = deps
+        .querier
+        .query_all_balances(env.contract.address)?
+        .into_iter()
+        .filter(|coin| coin.denom.ne(distribution_denom.as_str()))
+        .collect::<Vec<Coin>>();
+
+    println!("remanent_coins: {:?}", remanent_coins);
+    // Each of these helpers will add messages to the messages vector
+    // and may increment the whale Coin above with the result of the swaps
+    helpers::handle_lp_tokens(&info, &config, &mut submessages)?;
+    helpers::swap_coins_to_main_token(
+        remanent_coins,
+        &deps,
+        config,
+        &mut whale,
+        &distribution_denom,
+        &mut messages,
+    )?;
+    // Add the whale to the funds, the whale figure now should be the result
+    // of all the LP token withdrawals and swaps
+    // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
+    // If this became an issue would could look at replys instead of the query
+    EPOCHS.update(
+        deps.storage,
+        &most_recent_epoch_id,
+        |bucket| -> StdResult<_> {
+            let mut bucket = bucket.unwrap_or_default();
+            bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
+            bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
+            Ok(bucket)
+        },
+    )?;
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_submessages(submessages)
+        .add_attributes(vec![("action", "fill_rewards".to_string())]))
 }

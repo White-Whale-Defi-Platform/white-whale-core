@@ -63,18 +63,24 @@ fn deposit_and_withdraw_sanity_check() {
     };
 
     // Create a pool
-    suite.instantiate_default().create_pool(
-        creator.clone(),
-        asset_denoms,
-        vec![6u8, 6u8],
-        pool_fees,
-        PoolType::ConstantProduct,
-        Some("whale-uluna".to_string()),
-        vec![coin(1000, "uusd")],
-        |result| {
+    suite
+        .instantiate_default()
+        .add_one_day()
+        .create_new_epoch(|result| {
             result.unwrap();
-        },
-    );
+        })
+        .create_pool(
+            creator.clone(),
+            asset_denoms,
+            vec![6u8, 6u8],
+            pool_fees,
+            PoolType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
 
     let contract_addr = suite.pool_manager_addr.clone();
     let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
@@ -217,21 +223,27 @@ mod pool_creation_failures {
             },
             extra_fees: vec![],
         };
-        // Create a poo
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            None,
-            vec![coin(90, "uusd")],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        // Create a pool
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                None,
+                vec![coin(90, "uusd")],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
                 match err {
                     ContractError::InvalidPoolCreationFee { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    _ => panic!("Wrong error type, should return ContractError::InvalidPoolCreationFee"),
                 }
             },
         );
@@ -285,6 +297,10 @@ mod pool_creation_failures {
         // Create a poo
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 asset_infos.clone(),
@@ -371,6 +387,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -565,6 +585,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -709,6 +733,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -869,6 +897,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1098,6 +1130,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1265,6 +1301,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1431,6 +1471,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1629,6 +1673,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1849,18 +1897,24 @@ mod swapping {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Query pool info to ensure the query is working fine
         suite.query_pool_info("whale-uluna".to_string(), |result| {
@@ -2070,18 +2124,24 @@ mod swapping {
         };
 
         // Create a stableswap pool with amp = 100
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::StableSwap { amp: 100 },
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::StableSwap { amp: 100 },
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Lets try to add liquidity
         suite.provide_liquidity(
@@ -2264,18 +2324,24 @@ mod swapping {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Lets try to add liquidity, 1000 of each token.
         suite.provide_liquidity(
@@ -2554,18 +2620,24 @@ mod locking_lp {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let incentive_manager_addr = suite.incentive_manager_addr.clone();
@@ -2629,7 +2701,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "1".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2681,7 +2753,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 2);
             assert_eq!(positions[0], Position {
                 identifier: "1".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2689,7 +2761,7 @@ mod locking_lp {
             });
             assert_eq!(positions[1], Position {
                 identifier: "2".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_000_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_000_000u128) },
                 unlocking_duration: 200_000,
                 open: true,
                 expiring_at: None,
@@ -2744,18 +2816,24 @@ mod locking_lp {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let incentive_manager_addr = suite.incentive_manager_addr.clone();
@@ -2819,7 +2897,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "incentive_identifier".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2872,7 +2950,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "incentive_identifier".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2941,18 +3019,24 @@ mod provide_liquidity {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
@@ -3390,18 +3474,24 @@ mod provide_liquidity {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
 
@@ -4041,6 +4131,10 @@ mod multiple_pools {
         // Create pools
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 asset_denoms_1.clone(),
@@ -4177,15 +4271,15 @@ mod multiple_pools {
                     balances,
                     vec![
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
@@ -4232,7 +4326,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1001000, "uwhale"), coin(999070, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4275,7 +4369,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4328,7 +4422,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1001000, "uwhale"), coin(999_150, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4364,7 +4458,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(999_300, "uwhale"), coin(1_001_150, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4418,7 +4512,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1003000, "uluna"), coin(997_218, "uusd")],
                     pool_type: PoolType::ConstantProduct,
@@ -4459,7 +4553,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1_001_599, "uluna"), coin(998_718, "uusd")],
                     pool_type: PoolType::ConstantProduct,
@@ -4498,15 +4592,15 @@ mod multiple_pools {
                     let balances = result.unwrap();
                     assert_eq!(balances, vec![
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
@@ -4556,7 +4650,7 @@ mod multiple_pools {
             // this should have not changed since last time, since we didn't touch this pool
             assert_eq!(pool_info, PoolInfo {
                 asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
                 assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
                 pool_type: PoolType::ConstantProduct,
@@ -4574,7 +4668,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1_004_300, "uwhale"), coin(996_913, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4591,7 +4685,7 @@ mod multiple_pools {
 
             assert_eq!(pool_info, PoolInfo {
                 asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
                 assets: vec![coin(1_005_587, "uluna"), coin(995_035, "uusd")],
                 pool_type: PoolType::ConstantProduct,
@@ -4626,15 +4720,15 @@ mod multiple_pools {
                 let balances = result.unwrap();
                 assert_eq!(balances, vec![
                     Coin {
-                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {
-                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {
-                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {
