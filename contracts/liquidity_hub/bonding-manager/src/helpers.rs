@@ -3,7 +3,7 @@ use cosmwasm_std::{
     StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
+use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Config, EpochResponse};
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 use white_whale_std::pool_manager::{
@@ -157,7 +157,7 @@ pub fn handle_lp_tokens(
 pub fn swap_coins_to_main_token(
     coins: Vec<Coin>,
     deps: &DepsMut,
-    config: white_whale_std::bonding_manager::Config,
+    config: Config,
     whale: &mut Coin,
     distribution_denom: &String,
     messages: &mut Vec<CosmosMsg>,
@@ -171,23 +171,32 @@ pub fn swap_coins_to_main_token(
         })
         .collect();
     for coin in coins_to_swap {
+        println!("Swapping {} to {}", coin.denom, distribution_denom);
+
         let swap_route_query = white_whale_std::pool_manager::QueryMsg::SwapRoute {
             offer_asset_denom: coin.denom.to_string(),
             ask_asset_denom: distribution_denom.to_string(),
         };
 
+        println!("he");
         // Query for the routes and pool
-        let swap_routes: SwapRouteResponse = deps
+        let swap_routes_response: StdResult<SwapRouteResponse> = deps
             .querier
-            .query_wasm_smart(config.pool_manager_addr.to_string(), &swap_route_query)?;
+            .query_wasm_smart(config.pool_manager_addr.to_string(), &swap_route_query);
 
-        ensure!(
-            !swap_routes.swap_route.swap_operations.is_empty(),
-            ContractError::NoSwapRoute {
-                asset1: coin.denom.to_string(),
-                asset2: distribution_denom.to_string()
-            }
-        );
+        println!("swap_routes_response: {:?}", swap_routes_response);
+        let swap_routes = match swap_routes_response {
+            Ok(swap_routes) => swap_routes,
+            // no routes, skip
+            Err(_) => continue,
+        };
+
+        // sanity check
+        if swap_routes.swap_route.swap_operations.is_empty() {
+            // skip swap if there's not swap route for it
+            continue;
+        }
+
         // check if the pool has any assets, if not skip the swap
         // Note we are only checking the first operation here. Might be better to another loop to check all operations
         let pool_query = white_whale_std::pool_manager::QueryMsg::Pool {

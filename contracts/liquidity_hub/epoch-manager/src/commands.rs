@@ -51,7 +51,6 @@ pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     {
         return Err(ContractError::CurrentEpochNotExpired);
     }
-    println!("Creating new epoch");
     current_epoch.id = current_epoch
         .id
         .checked_add(1u64)

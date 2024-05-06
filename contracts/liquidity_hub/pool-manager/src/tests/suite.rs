@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use white_whale_std::pool_manager::{
     Config, FeatureToggle, PoolInfoResponse, ReverseSimulateSwapOperationsResponse,
     ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
-    SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
+    SwapRoute, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
 use white_whale_std::pool_manager::{InstantiateMsg, PoolType};
 
@@ -18,7 +18,6 @@ use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig};
 use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::PositionsResponse;
 use white_whale_std::lp_common::LP_SYMBOL;
-use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
@@ -35,11 +34,12 @@ fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
 /// Creates the whale lair contract
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
-        whale_lair::contract::execute,
-        whale_lair::contract::instantiate,
-        whale_lair::contract::query,
+        bonding_manager::contract::execute,
+        bonding_manager::contract::instantiate,
+        bonding_manager::contract::query,
     )
-    .with_migrate(whale_lair::contract::migrate);
+    .with_reply(bonding_manager::contract::reply)
+    .with_migrate(bonding_manager::contract::migrate);
 
     Box::new(contract)
 }
@@ -100,6 +100,13 @@ impl TestingSuite {
     pub(crate) fn set_time(&mut self, timestamp: Timestamp) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = timestamp;
+        self.app.set_block(block_info);
+
+        self
+    }
+    pub(crate) fn add_one_day(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_days(1);
         self.app.set_block(block_info);
 
         self
@@ -174,9 +181,31 @@ impl TestingSuite {
                 &msg,
                 &[],
                 "mock pool manager",
-                Some(creator.into_string()),
+                Some(creator.clone().into_string()),
             )
             .unwrap();
+
+        let bonding_manager_addr = self.bonding_manager_addr.clone();
+
+        if !bonding_manager_addr.into_string().is_empty() {
+            let pool_manager_addr = self.pool_manager_addr.clone();
+
+            let msg = white_whale_std::bonding_manager::ExecuteMsg::UpdateConfig {
+                owner: None,
+                pool_manager_addr: Some(pool_manager_addr.into_string()),
+                unbonding_period: None,
+                growth_rate: None,
+            };
+
+            self.app
+                .execute_contract(
+                    creator.clone(),
+                    self.bonding_manager_addr.clone(),
+                    &msg,
+                    &[],
+                )
+                .unwrap();
+        }
 
         self
     }
@@ -186,6 +215,8 @@ impl TestingSuite {
         self.create_bonding_manager();
         self.create_epoch_manager();
         self.create_incentive_manager();
+        self.add_hook(self.incentive_manager_addr.clone());
+        self.add_hook(self.bonding_manager_addr.clone());
 
         // 25 April 2024 15:00:00 UTC
         let timestamp = Timestamp::from_seconds(1714057200);
@@ -200,19 +231,12 @@ impl TestingSuite {
     fn create_bonding_manager(&mut self) {
         let bonding_manager_id = self.app.store_code(bonding_manager_contract());
 
-        // create whale lair
-        // todo replace with bonding manager InstantiateMsg
-        let msg = white_whale_std::whale_lair::InstantiateMsg {
+        let msg = white_whale_std::bonding_manager::InstantiateMsg {
+            distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(86400u64),
             growth_rate: Decimal::one(),
-            bonding_assets: vec![
-                AssetInfo::NativeToken {
-                    denom: "bWHALE".to_string(),
-                },
-                AssetInfo::NativeToken {
-                    denom: "ampWHALE".to_string(),
-                },
-            ],
+            bonding_assets: vec!["bWHALE".to_string(), "ampWHALE".to_string()],
+            grace_period: Default::default(),
         };
 
         let creator = self.creator().clone();
@@ -257,6 +281,21 @@ impl TestingSuite {
             )
             .unwrap();
     }
+
+    fn add_hook(&mut self, contract: Addr) {
+        let epoch_manager_id = self.app.store_code(epoch_manager_contract());
+
+        let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
+            contract_addr: contract.to_string(),
+        };
+
+        let creator = self.creator().clone();
+
+        self.app
+            .execute_contract(creator, self.epoch_manager_addr.clone(), &msg, &[])
+            .unwrap();
+    }
+
     fn create_incentive_manager(&mut self) {
         let incentive_manager_id = self.app.store_code(incentive_manager_contract());
 
@@ -478,9 +517,61 @@ impl TestingSuite {
     pub(crate) fn add_swap_routes(
         &mut self,
         sender: Addr,
-        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        swap_routes: Vec<SwapRoute>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
+
+    /// Adds swap routes to the pool manager contract.
+    #[track_caller]
+    pub(crate) fn add_swap_routes_default(
+        &mut self,
+        sender: Addr,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let swap_routes = vec![
+            SwapRoute {
+                offer_asset_denom: "uluna".to_string(),
+                ask_asset_denom: "uwhale".to_string(),
+                swap_operations: vec![
+                    SwapOperation::WhaleSwap {
+                        token_in_denom: "uwhale".to_string(),
+                        token_out_denom: "uluna".to_string(),
+                        pool_identifier: "whale-uluna".to_string(),
+                    },
+                    SwapOperation::WhaleSwap {
+                        token_in_denom: "uluna".to_string(),
+                        token_out_denom: "uusd".to_string(),
+                        pool_identifier: "uluna-uusd".to_string(),
+                    },
+                ],
+            },
+            SwapRoute {
+                offer_asset_denom: "uwhale".to_string(),
+                ask_asset_denom: "uusd".to_string(),
+                swap_operations: vec![
+                    SwapOperation::WhaleSwap {
+                        token_in_denom: "uwhale".to_string(),
+                        token_out_denom: "uluna".to_string(),
+                        pool_identifier: "whale-uluna".to_string(),
+                    },
+                    SwapOperation::WhaleSwap {
+                        token_in_denom: "uluna".to_string(),
+                        token_out_denom: "uusd".to_string(),
+                        pool_identifier: "uluna-uusd".to_string(),
+                    },
+                ],
+            },
+        ];
+
         result(self.app.execute_contract(
             sender,
             self.pool_manager_addr.clone(),
@@ -496,13 +587,31 @@ impl TestingSuite {
     pub(crate) fn remove_swap_routes(
         &mut self,
         sender: Addr,
-        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        swap_routes: Vec<SwapRoute>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         result(self.app.execute_contract(
             sender,
             self.pool_manager_addr.clone(),
             &white_whale_std::pool_manager::ExecuteMsg::RemoveSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
+
+    /// Creates a new epoch.
+    #[track_caller]
+    pub(crate) fn create_new_epoch(
+        &mut self,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let user = self.creator();
+
+        result(self.app.execute_contract(
+            user,
+            self.epoch_manager_addr.clone(),
+            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
             &[],
         ));
 

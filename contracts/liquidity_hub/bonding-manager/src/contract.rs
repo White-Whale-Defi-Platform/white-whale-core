@@ -107,6 +107,7 @@ pub fn execute(
         ExecuteMsg::FillRewards => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),
         ExecuteMsg::EpochChangedHook { current_epoch } => {
+            println!("EpochChangedHook: {:?}", current_epoch);
             // Epoch has been updated, update rewards bucket
             // and forward the expiring epoch
             // Store epoch manager and verify the sender is him
@@ -149,6 +150,17 @@ pub fn execute(
                     ..Epoch::default()
                 },
             )?;
+
+            let all_epochs: Vec<Epoch> = EPOCHS
+                .range(deps.storage, None, None, Order::Descending)
+                .map(|item| {
+                    let (_, epoch) = item?;
+                    Ok(epoch)
+                })
+                .collect::<StdResult<Vec<Epoch>>>()?;
+
+            println!("EPOCHS: {:?}", all_epochs);
+
             // // Return early if the epoch is the first one
             // if new_epoch_id == 1 {
             //     // Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
@@ -294,7 +306,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             // Search received coins funds for the distribution denom
             let mut whale = coins
                 .iter()
-                .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+                .find(|coin| coin.denom.ne(distribution_denom.as_str()))
                 .unwrap_or(&Coin {
                     denom: config.distribution_denom.clone(),
                     amount: Uint128::zero(),
