@@ -26,8 +26,8 @@ publish = false
 authors = ["White Whale Defi"]
 
 [workspace.dependencies]
-cosmwasm-schema = { version = "1.5.3" }
-cosmwasm-std = { version = "1.1.4", features = [
+cosmwasm-schema = { version = "1.5.4" }
+cosmwasm-std = { version = "1.5.4", features = [
   "iterator",
   "cosmwasm_1_2",
   "stargate",
