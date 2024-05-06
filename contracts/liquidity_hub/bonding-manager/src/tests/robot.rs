@@ -21,7 +21,6 @@ use white_whale_std::bonding_manager::{
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
 use white_whale_std::pool_manager::PoolType;
-use white_whale_std::pool_network::asset::PairType;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -36,11 +35,13 @@ pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
 }
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new_with_empty(
+    let contract = ContractWrapper::new(
         pool_manager::contract::execute,
         pool_manager::contract::instantiate,
         pool_manager::contract::query,
-    );
+    )
+    .with_migrate(pool_manager::contract::migrate)
+    .with_reply(pool_manager::contract::reply);
 
     Box::new(contract)
 }
@@ -694,12 +695,12 @@ impl TestingRobot {
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::bonding_manager::ExecuteMsg::FillRewardsCoin {};
-
-        result(
-            self.app
-                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &funds),
-        );
+        result(self.app.execute_contract(
+            sender,
+            self.bonding_manager_addr.clone(),
+            &ExecuteMsg::FillRewards,
+            &funds,
+        ));
 
         self
     }

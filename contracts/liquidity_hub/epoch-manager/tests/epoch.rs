@@ -2,7 +2,6 @@ use cosmwasm_std::from_json;
 use cosmwasm_std::testing::{mock_env, mock_info};
 
 use epoch_manager::contract::{execute, query};
-use epoch_manager::ContractError;
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochResponse, ExecuteMsg, QueryMsg};
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
 use white_whale_std::pool_network::mock_querier::mock_dependencies;

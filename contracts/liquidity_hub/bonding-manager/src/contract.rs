@@ -104,8 +104,7 @@ pub fn execute(
             unbonding_period,
             growth_rate,
         ),
-        ExecuteMsg::FillRewards { .. } => commands::fill_rewards(deps, env, info),
-        ExecuteMsg::FillRewardsCoin => commands::fill_rewards(deps, env, info),
+        ExecuteMsg::FillRewards => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim { .. } => commands::claim(deps, env, info),
         ExecuteMsg::EpochChangedHook { current_epoch } => {
             // Epoch has been updated, update rewards bucket

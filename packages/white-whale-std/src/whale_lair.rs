@@ -1,8 +1,6 @@
-use crate::pool_network::asset::{Asset, AssetInfo, ToCoins};
+use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{
-    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
-};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Uint64};
 
 #[cw_serde]
 pub struct Config {
@@ -83,12 +81,9 @@ pub enum ExecuteMsg {
         fee_distributor_addr: Option<String>,
     },
 
-    /// V2 MESSAGES
-
+    //todo remove when the tests are using the bonding-manager instead of whale-lair
     /// Fills the whale lair with new rewards.
-    FillRewards { assets: Vec<Asset> },
-    /// Fills the whale lair with new rewards.
-    FillRewardsCoin,
+    FillRewards,
 }
 
 #[cw_serde]
@@ -166,23 +161,4 @@ pub struct BondingWeightResponse {
     pub global_weight: Uint128,
     pub share: Decimal,
     pub timestamp: Timestamp,
-}
-
-/// Creates a message to fill rewards on the whale lair contract.
-pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Asset>) -> StdResult<CosmosMsg> {
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr,
-        msg: to_json_binary(&ExecuteMsg::FillRewards {
-            assets: assets.clone(),
-        })?,
-        funds: assets.to_coins()?,
-    }))
-}
-
-pub fn fill_rewards_msg_coin(contract_addr: String, rewards: Vec<Coin>) -> StdResult<CosmosMsg> {
-    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr,
-        msg: to_json_binary(&ExecuteMsg::FillRewardsCoin)?,
-        funds: rewards,
-    }))
 }
