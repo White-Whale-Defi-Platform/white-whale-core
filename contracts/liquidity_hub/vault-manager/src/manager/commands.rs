@@ -5,7 +5,6 @@ use cosmwasm_std::{
 use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::tokenfactory;
 use white_whale_std::vault_manager::{Vault, VaultFee};
-use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
 use crate::state::{get_vault_by_identifier, CONFIG, VAULTS, VAULT_COUNTER};
 use crate::ContractError;
@@ -40,7 +39,7 @@ pub fn create_vault(
     );
 
     // send protocol fee to whale lair
-    messages.push(fill_rewards_msg_coin(
+    messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
         config.whale_lair_addr.into_string(),
         creation_fee,
     )?);

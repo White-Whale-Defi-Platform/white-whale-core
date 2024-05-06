@@ -245,7 +245,7 @@ pub(crate) fn withdraw_position(
         let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
 
         // send penalty to whale lair for distribution
-        messages.push(white_whale_std::whale_lair::fill_rewards_msg_coin(
+        messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
             whale_lair_addr.into_string(),
             vec![penalty],
         )?);

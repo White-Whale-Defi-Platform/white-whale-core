@@ -1,7 +1,4 @@
-use crate::{
-    epoch_manager::epoch_manager::Epoch as EpochV2,
-    pool_network::asset::{Asset, ToCoins},
-};
+use crate::epoch_manager::epoch_manager::Epoch as EpochV2;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
@@ -120,14 +117,8 @@ pub enum ExecuteMsg {
     },
     Claim {},
 
-    /// V2 MESSAGES
-
     /// Fills the whale lair with new rewards.
-    FillRewards {
-        assets: Vec<Coin>,
-    },
-    /// Fills the whale lair with new rewards.
-    FillRewardsCoin,
+    FillRewards,
 
     /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
     EpochChangedHook {
@@ -221,13 +212,11 @@ pub struct BondingWeightResponse {
 }
 
 /// Creates a message to fill rewards on the whale lair contract.
-pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Asset>) -> StdResult<CosmosMsg> {
+pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Coin>) -> StdResult<CosmosMsg> {
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr,
-        msg: to_json_binary(&ExecuteMsg::FillRewards {
-            assets: assets.to_coins()?,
-        })?,
-        funds: assets.to_coins()?,
+        msg: to_json_binary(&ExecuteMsg::FillRewards)?,
+        funds: assets,
     }))
 }
 

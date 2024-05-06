@@ -1,14 +1,11 @@
 use crate::{state::CONFIG, ContractError};
-use cosmwasm_std::{
-    ensure, wasm_execute, Addr, BankMsg, CosmosMsg, DepsMut, MessageInfo, Response,
-};
+use cosmwasm_std::{ensure, Addr, BankMsg, CosmosMsg, DepsMut, MessageInfo, Response};
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
 use crate::state::get_pool_by_identifier;
 use cosmwasm_std::Decimal;
 use white_whale_std::common::validate_addr_or_default;
-use white_whale_std::whale_lair;
 
 use super::perform_swap::perform_swap;
 
@@ -73,14 +70,10 @@ pub fn swap(
     }
 
     if !swap_result.protocol_fee_asset.amount.is_zero() {
-        messages.push(
-            wasm_execute(
-                config.bonding_manager_addr.to_string(),
-                &whale_lair::ExecuteMsg::FillRewardsCoin {},
-                vec![swap_result.protocol_fee_asset.clone()],
-            )?
-            .into(),
-        );
+        messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
+            config.bonding_manager_addr.to_string(),
+            vec![swap_result.protocol_fee_asset.clone()],
+        )?);
     }
 
     println!("messages: {:?}", messages);
