@@ -18,7 +18,7 @@ const NEWTON_ITERATIONS: u64 = 32;
 
 // todo isn't this for the 3pool? shouldn't it be 3
 // the number of assets in the pool
-const N_COINS: Uint256 = Uint256::from_u128(2);
+pub const N_COINS: u8 = 3;
 
 fn calculate_stableswap_d(
     offer_pool: Decimal256,
@@ -26,7 +26,7 @@ fn calculate_stableswap_d(
     amp: &u64,
     precision: u8,
 ) -> Result<Decimal256, ContractError> {
-    let n_coins = Decimal256::from_ratio(N_COINS, Uint256::from_u128(1));
+    let n_coins = Decimal256::from_ratio(Uint256::from(N_COINS), Uint256::from_u128(1));
 
     let sum_pools = offer_pool.checked_add(ask_pool)?;
     if sum_pools.is_zero() {
@@ -35,7 +35,10 @@ fn calculate_stableswap_d(
     }
 
     // ann = amp * n_coins
-    let ann = Decimal256::from_ratio(Uint256::from_u128((*amp).into()).checked_mul(N_COINS)?, 1u8);
+    let ann = Decimal256::from_ratio(
+        Uint256::from_u128((*amp).into()).checked_mul(Uint256::from(N_COINS))?,
+        1u8,
+    );
 
     // perform Newton-Raphson method
     let mut current_d = sum_pools;
@@ -99,7 +102,7 @@ pub fn calculate_stableswap_y(
     ask_precision: u8,
     direction: StableSwapDirection,
 ) -> Result<Uint128, ContractError> {
-    let ann = Uint256::from_u128((*amp).into()).checked_mul(N_COINS)?;
+    let ann = Uint256::from_u128((*amp).into()).checked_mul(Uint256::from(N_COINS))?;
 
     let d = calculate_stableswap_d(offer_pool, ask_pool, amp, ask_precision)?
         .to_uint256_with_precision(u32::from(ask_precision))?;
@@ -111,8 +114,8 @@ pub fn calculate_stableswap_y(
     .to_uint256_with_precision(u32::from(ask_precision))?;
 
     let c = d
-        .checked_multiply_ratio(d, pool_sum.checked_mul(N_COINS)?)?
-        .checked_multiply_ratio(d, ann.checked_mul(N_COINS)?)?;
+        .checked_multiply_ratio(d, pool_sum.checked_mul(Uint256::from(N_COINS))?)?
+        .checked_multiply_ratio(d, ann.checked_mul(Uint256::from(N_COINS))?)?;
 
     let b = pool_sum.checked_add(d.checked_div(ann)?)?;
 
@@ -474,8 +477,8 @@ pub struct OfferAmountComputation {
 
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
-    deposits: &[Uint128; 2],
-    pools: &[Coin; 2],
+    deposits: &Vec<Coin>,
+    pools: &Vec<Coin>,
     pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,
@@ -487,7 +490,7 @@ pub fn assert_slippage_tolerance(
         }
 
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].into(), deposits[1].into()];
+        let deposits: [Uint256; 2] = [deposits[0].amount.into(), deposits[1].amount.into()];
         let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
@@ -661,4 +664,128 @@ pub fn get_asset_indexes_in_pool(
         offer_decimal,
         ask_decimal,
     ))
+}
+
+// TODO: handle unwraps properly
+#[allow(clippy::unwrap_used)]
+pub fn compute_d(
+    amp_factor: &u64,
+    amount_a: Uint128,
+    amount_b: Uint128,
+    amount_c: Uint128,
+) -> Option<Uint256> {
+    let sum_x = amount_a
+        .checked_add(amount_b.checked_add(amount_c).unwrap())
+        .unwrap(); // sum(x_i), a.k.a S
+    if sum_x == Uint128::zero() {
+        Some(Uint256::zero())
+    } else {
+        let amount_a_times_coins = amount_a.checked_mul(N_COINS.into()).unwrap();
+        let amount_b_times_coins = amount_b.checked_mul(N_COINS.into()).unwrap();
+        let amount_c_times_coins = amount_c.checked_mul(N_COINS.into()).unwrap();
+
+        // Newton's method to approximate D
+        let mut d_prev: Uint256;
+        let mut d: Uint256 = sum_x.into();
+        for _ in 0..256 {
+            let mut d_prod = d;
+            d_prod = d_prod
+                .checked_mul(d)
+                .unwrap()
+                .checked_div(amount_a_times_coins.into())
+                .unwrap();
+            d_prod = d_prod
+                .checked_mul(d)
+                .unwrap()
+                .checked_div(amount_b_times_coins.into())
+                .unwrap();
+            d_prod = d_prod
+                .checked_mul(d)
+                .unwrap()
+                .checked_div(amount_c_times_coins.into())
+                .unwrap();
+            d_prev = d;
+            d = compute_next_d(amp_factor, d, d_prod, sum_x).unwrap();
+            // Equality with the precision of 1
+            if d > d_prev {
+                if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
+                    break;
+                }
+            } else if d_prev.checked_sub(d).unwrap() <= Uint256::one() {
+                break;
+            }
+        }
+
+        Some(d)
+    }
+}
+
+// TODO: handle unwraps properly
+#[allow(clippy::unwrap_used)]
+fn compute_next_d(
+    amp_factor: &u64,
+    d_init: Uint256,
+    d_prod: Uint256,
+    sum_x: Uint128,
+) -> Option<Uint256> {
+    let ann = amp_factor.checked_mul(N_COINS.into())?;
+    let leverage = Uint256::from(sum_x).checked_mul(ann.into()).unwrap();
+    // d = (ann * sum_x + d_prod * n_coins) * d / ((ann - 1) * d + (n_coins + 1) * d_prod)
+    let numerator = d_init
+        .checked_mul(
+            d_prod
+                .checked_mul(N_COINS.into())
+                .unwrap()
+                .checked_add(leverage)
+                .unwrap(),
+        )
+        .unwrap();
+    let denominator = d_init
+        .checked_mul(ann.checked_sub(1)?.into())
+        .unwrap()
+        .checked_add(
+            d_prod
+                .checked_mul((N_COINS.checked_add(1)?).into())
+                .unwrap(),
+        )
+        .unwrap();
+    Some(numerator.checked_div(denominator).unwrap())
+}
+
+/// Computes the amount of pool tokens to mint after a deposit.
+#[allow(clippy::unwrap_used, clippy::too_many_arguments)]
+pub fn compute_mint_amount_for_deposit(
+    amp_factor: &u64,
+    deposit_amount_a: Uint128,
+    deposit_amount_b: Uint128,
+    deposit_amount_c: Uint128,
+    swap_amount_a: Uint128,
+    swap_amount_b: Uint128,
+    swap_amount_c: Uint128,
+    pool_token_supply: Uint128,
+) -> Option<Uint128> {
+    // Initial invariant
+    let d_0 = compute_d(amp_factor, swap_amount_a, swap_amount_b, swap_amount_c)?;
+    let new_balances = [
+        swap_amount_a.checked_add(deposit_amount_a).unwrap(),
+        swap_amount_b.checked_add(deposit_amount_b).unwrap(),
+        swap_amount_c.checked_add(deposit_amount_c).unwrap(),
+    ];
+    // Invariant after change
+    let d_1 = compute_d(
+        amp_factor,
+        new_balances[0],
+        new_balances[1],
+        new_balances[2],
+    )?;
+    if d_1 <= d_0 {
+        None
+    } else {
+        let amount = Uint256::from(pool_token_supply)
+            .checked_mul(d_1.checked_sub(d_0).unwrap())
+            .unwrap()
+            .checked_div(d_0)
+            .unwrap();
+        Some(Uint128::try_from(amount).unwrap())
+    }
 }

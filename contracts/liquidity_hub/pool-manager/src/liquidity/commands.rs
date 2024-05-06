@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     coin, coins, ensure, to_json_binary, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env,
-    MessageInfo, Response, StdError, SubMsg,
+    MessageInfo, Response, SubMsg,
 };
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
@@ -23,7 +23,7 @@ use crate::{
 // After writing create_pool I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
-use crate::helpers::aggregate_outgoing_fees;
+use crate::helpers::{aggregate_outgoing_fees, compute_d, compute_mint_amount_for_deposit};
 use crate::queries::query_simulation;
 use crate::state::{
     LiquidityProvisionData, SingleSideLiquidityProvisionBuffer,
@@ -251,22 +251,11 @@ pub fn provide_liquidity(
                             .multiply_ratio(total_share, pool_assets[1].amount),
                     );
 
-                    let deposits_as: [Uint128; 2] = deposits
-                        .iter()
-                        .map(|coin| coin.amount)
-                        .collect::<Vec<_>>()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-                    let pools_as: [Coin; 2] = pool_assets
-                        .to_vec()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-
                     // assert slippage tolerance
                     helpers::assert_slippage_tolerance(
                         &slippage_tolerance,
-                        &deposits_as,
-                        &pools_as,
+                        &deposits,
+                        &pool_assets,
                         pool.pool_type.clone(),
                         amount,
                         total_share,
@@ -275,10 +264,67 @@ pub fn provide_liquidity(
                     amount
                 }
             }
-            PoolType::StableSwap { amp: _ } => {
+            PoolType::StableSwap { amp: amp_factor } => {
                 // TODO: Handle stableswap
 
-                Uint128::one()
+                let share = if total_share == Uint128::zero() {
+                    // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                    // depositor preventing small liquidity providers from joining the pool
+                    let min_lp_token_amount = MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8);
+                    let share = Uint128::try_from(
+                        compute_d(
+                            amp_factor,
+                            deposits[0].amount,
+                            deposits[1].amount,
+                            deposits[2].amount,
+                        )
+                        .unwrap(),
+                    )?
+                    .checked_sub(min_lp_token_amount)
+                    .map_err(|_| {
+                        ContractError::InvalidInitialLiquidityAmount(min_lp_token_amount)
+                    })?;
+
+                    // TODO: is this needed? I see it below after locking logic
+                    // messages.append(&mut mint_lp_token_msg(
+                    //     liquidity_token.clone(),
+                    //     env.contract.address.to_string(),
+                    //     env.contract.address.to_string(),
+                    //     min_lp_token_amount,
+                    // )?);
+
+                    // share should be above zero after subtracting the min_lp_token_amount
+                    if share.is_zero() {
+                        return Err(ContractError::InvalidInitialLiquidityAmount(
+                            min_lp_token_amount,
+                        ));
+                    }
+
+                    share
+                } else {
+                    let amount = compute_mint_amount_for_deposit(
+                        amp_factor,
+                        deposits[0].amount,
+                        deposits[1].amount,
+                        deposits[2].amount,
+                        pool_assets[0].amount,
+                        pool_assets[1].amount,
+                        pool_assets[2].amount,
+                        total_share,
+                    )
+                    .unwrap();
+                    // assert slippage tolerance
+                    helpers::assert_slippage_tolerance(
+                        &slippage_tolerance,
+                        &deposits,
+                        &pool_assets,
+                        pool.pool_type.clone(),
+                        amount,
+                        total_share,
+                    )?;
+                    amount
+                };
+                share
             }
         };
 

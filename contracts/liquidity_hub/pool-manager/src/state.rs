@@ -95,3 +95,12 @@ pub const SWAP_ROUTES: Map<(&str, &str), SwapOperations> = Map::new("swap_routes
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const POOL_COUNTER: Item<u64> = Item::new("pool_count");
+
+pub const STABLE_SWAP_PARAMS: Item<StableSwapParams> = Item::new("stable_swap_params");
+#[cw_serde]
+pub struct StableSwapParams {
+    pub initial_amp: u64,
+    pub future_amp: u64,
+    pub initial_amp_block: u64,
+    pub future_amp_block: u64,
+}
