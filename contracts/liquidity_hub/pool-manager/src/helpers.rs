@@ -477,8 +477,8 @@ pub struct OfferAmountComputation {
 
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
-    deposits: &Vec<Coin>,
-    pools: &Vec<Coin>,
+    deposits: &[Coin],
+    pools: &[Coin],
     pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,

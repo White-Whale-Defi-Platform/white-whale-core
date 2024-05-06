@@ -267,7 +267,7 @@ pub fn provide_liquidity(
             PoolType::StableSwap { amp: amp_factor } => {
                 // TODO: Handle stableswap
 
-                let share = if total_share == Uint128::zero() {
+                if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
                     let min_lp_token_amount = MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8);
@@ -323,8 +323,7 @@ pub fn provide_liquidity(
                         total_share,
                     )?;
                     amount
-                };
-                share
+                }
             }
         };
 
