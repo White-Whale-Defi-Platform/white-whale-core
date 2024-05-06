@@ -33,7 +33,7 @@ pub(crate) fn query_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
 /// Queries the current epoch. Returns an [EpochResponse].
 pub(crate) fn query_epoch(deps: Deps, id: u64) -> StdResult<EpochResponse> {
     let epoch = EPOCHS
-        .may_load(deps.storage, &id.to_be_bytes())?
+        .may_load(deps.storage, id)?
         .ok_or_else(|| StdError::generic_err(format!("No epoch found with id {}", id)))?;
     Ok(epoch.to_epoch_response())
 }

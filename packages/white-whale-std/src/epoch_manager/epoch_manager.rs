@@ -14,7 +14,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    CreateEpoch {},
+    CreateEpoch,
     AddHook {
         contract_addr: String,
     },
