@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cosmwasm_std::{Coin, StdError, StdResult, Uint128};
+use cosmwasm_std::{BankMsg, Coin, CosmosMsg, StdError, StdResult, Uint128};
 
 #[cfg(feature = "injective")]
 pub const PEGGY_PREFIX: &str = "peggy";
@@ -196,4 +196,9 @@ pub fn aggregate_coins(coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
     }
 
     Ok(aggregated_coins)
+}
+
+/// Creates a CosmosMsg::Bank::BankMsg::Burn message with the given coin.
+pub fn burn_coin_msg(coin: Coin) -> CosmosMsg {
+    CosmosMsg::Bank(BankMsg::Burn { amount: vec![coin] })
 }
