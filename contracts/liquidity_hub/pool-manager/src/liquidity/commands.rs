@@ -265,8 +265,6 @@ pub fn provide_liquidity(
                 }
             }
             PoolType::StableSwap { amp: amp_factor } => {
-                // TODO: Handle stableswap
-
                 if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
@@ -293,7 +291,6 @@ pub fn provide_liquidity(
                         total_share,
                     )
                     .unwrap();
-                    // assert slippage tolerance
                     helpers::assert_slippage_tolerance(
                         &slippage_tolerance,
                         &deposits,
