@@ -2023,6 +2023,8 @@ mod swapping {
         );
     }
 
+    // TODO: make sure stableswap test works when pool has ONLY 2 assets
+
     #[test]
     fn basic_swapping_test_stable_swap() {
         let mut suite = TestingSuite::default_with_balances(vec![
@@ -3767,8 +3769,6 @@ mod provide_liquidity {
                 "uusd".to_string(),
             )],
             |result| {
-                // Find the key with 'offer_amount' and the key with 'return_amount'
-                // Ensure that the offer amount is 1000 and the return amount is greater than 0
                 let mut return_amount = String::new();
                 let mut offer_amount = String::new();
 
@@ -3790,6 +3790,198 @@ mod provide_liquidity {
                 );
 
                 assert_approx_eq!(1000u128, return_amount.parse::<u128>().unwrap(), "0.003");
+            },
+        );
+    }
+
+    // This test is to ensure that the edge case of providing liquidity with 3 assets
+    #[test]
+    fn provide_liquidity_stable_swap_edge_case() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and uluna
+
+        let asset_infos = vec![
+            "uwhale".to_string(),
+            "uluna".to_string(),
+            "uusd".to_string(),
+        ];
+
+        // Protocol fee is 0.01% and swap fee is 0.02% and burn fee is 0%
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 10_000_u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            swap_fee: Fee {
+                share: Decimal::from_ratio(1u128, 100_00u128),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::from_ratio(1u128, 1000u128),
+            },
+            extra_fees: vec![],
+        };
+
+        // Create a pool with 3 assets
+        suite.instantiate_default().create_pool(
+            creator.clone(),
+            asset_infos,
+            vec![6u8, 6u8, 6u8],
+            pool_fees,
+            PoolType::StableSwap { amp: 100 },
+            Some("whale-uluna-uusd".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
+
+        // Adding liquidity with less than the minimum liquidity amount should fail
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna-uusd".to_string(),
+            None,
+            None,
+            None,
+            None,
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                },
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                },
+            ],
+            |result| {
+                assert_eq!(
+                    result.unwrap_err().downcast_ref::<ContractError>(),
+                    Some(&ContractError::InvalidInitialLiquidityAmount(
+                        MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u128)
+                    ))
+                );
+            },
+        );
+
+        // Lets try to add liquidity with the correct amount (1_000_000 of each asset)
+        suite.provide_liquidity(
+            creator.clone(),
+            "whale-uluna-uusd".to_string(),
+            None,
+            None,
+            None,
+            None,
+            vec![
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Coin {
+                    denom: "uluna".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+                Coin {
+                    denom: "uusd".to_string(),
+                    amount: Uint128::from(1_000_000u128),
+                },
+            ],
+            |result| {
+                // Ensure we got 999000 in the response which is 1mil less the initial liquidity amount
+                for event in result.unwrap().events {
+                    for attribute in event.attributes {
+                        if attribute.key == "share" {
+                            assert_approx_eq!(
+                                attribute.value.parse::<u128>().unwrap(),
+                                1_000_000u128 * 3,
+                                "0.002"
+                            );
+                        }
+                    }
+                }
+            },
+        );
+
+        let simulated_return_amount = RefCell::new(Uint128::zero());
+        suite.query_simulation(
+            "whale-uluna-uusd".to_string(),
+            Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::from(1_000u128),
+            },
+            "uluna".to_string(),
+            |result| {
+                *simulated_return_amount.borrow_mut() = result.unwrap().return_amount;
+            },
+        );
+
+        // Now lets try a swap
+        suite.swap(
+            creator.clone(),
+            "uluna".to_string(),
+            None,
+            None,
+            None,
+            "whale-uluna-uusd".to_string(),
+            vec![coin(1_000u128, "uwhale".to_string())],
+            |result| {
+                // Find the key with 'offer_amount' and the key with 'return_amount'
+                // Ensure that the offer amount is 1000 and the return amount is greater than 0
+                let mut return_amount = String::new();
+                let mut offer_amount = String::new();
+
+                for event in result.unwrap().events {
+                    if event.ty == "wasm" {
+                        for attribute in event.attributes {
+                            match attribute.key.as_str() {
+                                "return_amount" => return_amount = attribute.value,
+                                "offer_amount" => offer_amount = attribute.value,
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                // Because the Pool was created and 1_000_000 of each token has been provided as liquidity
+                // Assuming no fees we should expect a small swap of 1000 to result in not too much slippage
+                // Expect 1000 give or take 0.002 difference
+                // Once fees are added and being deducted properly only the "0.002" should be changed.
+                assert_approx_eq!(
+                    offer_amount.parse::<u128>().unwrap(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
+                assert_approx_eq!(
+                    simulated_return_amount.borrow().u128(),
+                    return_amount.parse::<u128>().unwrap(),
+                    "0.002"
+                );
             },
         );
     }

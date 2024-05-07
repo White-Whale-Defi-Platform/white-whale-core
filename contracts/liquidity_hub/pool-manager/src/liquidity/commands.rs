@@ -271,27 +271,11 @@ pub fn provide_liquidity(
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
                     let min_lp_token_amount = MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u8);
-                    let share = Uint128::try_from(
-                        compute_d(
-                            amp_factor,
-                            deposits[0].amount,
-                            deposits[1].amount,
-                            deposits[2].amount,
-                        )
-                        .unwrap(),
-                    )?
-                    .checked_sub(min_lp_token_amount)
-                    .map_err(|_| {
-                        ContractError::InvalidInitialLiquidityAmount(min_lp_token_amount)
-                    })?;
-
-                    // TODO: is this needed? I see it below after locking logic
-                    // messages.append(&mut mint_lp_token_msg(
-                    //     liquidity_token.clone(),
-                    //     env.contract.address.to_string(),
-                    //     env.contract.address.to_string(),
-                    //     min_lp_token_amount,
-                    // )?);
+                    let share = Uint128::try_from(compute_d(amp_factor, &deposits).unwrap())?
+                        .checked_sub(min_lp_token_amount)
+                        .map_err(|_| {
+                            ContractError::InvalidInitialLiquidityAmount(min_lp_token_amount)
+                        })?;
 
                     // share should be above zero after subtracting the min_lp_token_amount
                     if share.is_zero() {
@@ -304,12 +288,8 @@ pub fn provide_liquidity(
                 } else {
                     let amount = compute_mint_amount_for_deposit(
                         amp_factor,
-                        deposits[0].amount,
-                        deposits[1].amount,
-                        deposits[2].amount,
-                        pool_assets[0].amount,
-                        pool_assets[1].amount,
-                        pool_assets[2].amount,
+                        &deposits,
+                        &pool_assets,
                         total_share,
                     )
                     .unwrap();

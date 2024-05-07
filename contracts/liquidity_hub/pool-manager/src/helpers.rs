@@ -668,54 +668,47 @@ pub fn get_asset_indexes_in_pool(
 
 // TODO: handle unwraps properly
 #[allow(clippy::unwrap_used)]
-pub fn compute_d(
-    amp_factor: &u64,
-    amount_a: Uint128,
-    amount_b: Uint128,
-    amount_c: Uint128,
-) -> Option<Uint256> {
-    let sum_x = amount_a
-        .checked_add(amount_b.checked_add(amount_c).unwrap())
-        .unwrap(); // sum(x_i), a.k.a S
+pub fn compute_d(amp_factor: &u64, deposits: &Vec<Coin>) -> Option<Uint256> {
+    let n_coins = Uint128::from(deposits.len() as u128);
+
+    // sum(x_i), a.k.a S
+    let sum_x = deposits
+        .iter()
+        .fold(Uint128::zero(), |acc, x| acc.checked_add(x.amount).unwrap())
+        .clone();
+
     if sum_x == Uint128::zero() {
         Some(Uint256::zero())
     } else {
-        let amount_a_times_coins = amount_a.checked_mul(N_COINS.into()).unwrap();
-        let amount_b_times_coins = amount_b.checked_mul(N_COINS.into()).unwrap();
-        let amount_c_times_coins = amount_c.checked_mul(N_COINS.into()).unwrap();
+        // do as below but for a generic number of assets
+        let amount_times_coins: Vec<Uint128> = deposits
+            .into_iter()
+            .map(|coin| coin.amount.checked_mul(n_coins).unwrap())
+            .collect();
 
         // Newton's method to approximate D
         let mut d_prev: Uint256;
         let mut d: Uint256 = sum_x.into();
-        for _ in 0..256 {
-            let mut d_prod = d;
-            d_prod = d_prod
-                .checked_mul(d)
-                .unwrap()
-                .checked_div(amount_a_times_coins.into())
-                .unwrap();
-            d_prod = d_prod
-                .checked_mul(d)
-                .unwrap()
-                .checked_div(amount_b_times_coins.into())
-                .unwrap();
-            d_prod = d_prod
-                .checked_mul(d)
-                .unwrap()
-                .checked_div(amount_c_times_coins.into())
-                .unwrap();
-            d_prev = d;
-            d = compute_next_d(amp_factor, d, d_prod, sum_x).unwrap();
-            // Equality with the precision of 1
-            if d > d_prev {
-                if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
+        for amount in amount_times_coins.into_iter() {
+            for _ in 0..256 {
+                let mut d_prod = d;
+                d_prod = d_prod
+                    .checked_mul(d)
+                    .unwrap()
+                    .checked_div(amount.into())
+                    .unwrap();
+                d_prev = d;
+                d = compute_next_d(amp_factor, d, d_prod, sum_x).unwrap();
+                // Equality with the precision of 1
+                if d > d_prev {
+                    if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
+                        break;
+                    }
+                } else if d_prev.checked_sub(d).unwrap() <= Uint256::one() {
                     break;
                 }
-            } else if d_prev.checked_sub(d).unwrap() <= Uint256::one() {
-                break;
             }
         }
-
         Some(d)
     }
 }
@@ -756,28 +749,28 @@ fn compute_next_d(
 #[allow(clippy::unwrap_used, clippy::too_many_arguments)]
 pub fn compute_mint_amount_for_deposit(
     amp_factor: &u64,
-    deposit_amount_a: Uint128,
-    deposit_amount_b: Uint128,
-    deposit_amount_c: Uint128,
-    swap_amount_a: Uint128,
-    swap_amount_b: Uint128,
-    swap_amount_c: Uint128,
+    deposits: &Vec<Coin>,
+    pool_assets: &Vec<Coin>,
     pool_token_supply: Uint128,
 ) -> Option<Uint128> {
     // Initial invariant
-    let d_0 = compute_d(amp_factor, swap_amount_a, swap_amount_b, swap_amount_c)?;
-    let new_balances = [
-        swap_amount_a.checked_add(deposit_amount_a).unwrap(),
-        swap_amount_b.checked_add(deposit_amount_b).unwrap(),
-        swap_amount_c.checked_add(deposit_amount_c).unwrap(),
-    ];
+    let d_0 = compute_d(amp_factor, deposits)?;
+
+    let new_balances: Vec<Coin> = pool_assets
+        .iter()
+        .enumerate()
+        .map(|(i, pool_asset)| {
+            let deposit_amount = deposits[i].amount;
+            let new_amount = pool_asset.amount.checked_add(deposit_amount).unwrap();
+            Coin {
+                denom: pool_asset.denom.clone(),
+                amount: new_amount,
+            }
+        })
+        .collect();
+
     // Invariant after change
-    let d_1 = compute_d(
-        amp_factor,
-        new_balances[0],
-        new_balances[1],
-        new_balances[2],
-    )?;
+    let d_1 = compute_d(amp_factor, &new_balances)?;
     if d_1 <= d_0 {
         None
     } else {
