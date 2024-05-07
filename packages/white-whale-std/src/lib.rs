@@ -1,6 +1,6 @@
-pub mod common;
-
+pub mod bonding_manager;
 pub mod coin;
+pub mod common;
 pub mod constants;
 pub mod epoch_manager;
 pub mod fee;
@@ -12,14 +12,6 @@ pub mod migrate_guards;
 pub mod pool_manager;
 pub mod pool_network;
 pub mod token_factory;
-
-pub mod bonding_manager;
-
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
 pub mod tokenfactory;
 pub mod traits;
 pub mod vault_manager;
