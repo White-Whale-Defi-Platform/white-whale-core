@@ -674,15 +674,14 @@ pub fn compute_d(amp_factor: &u64, deposits: &Vec<Coin>) -> Option<Uint256> {
     // sum(x_i), a.k.a S
     let sum_x = deposits
         .iter()
-        .fold(Uint128::zero(), |acc, x| acc.checked_add(x.amount).unwrap())
-        .clone();
+        .fold(Uint128::zero(), |acc, x| acc.checked_add(x.amount).unwrap());
 
     if sum_x == Uint128::zero() {
         Some(Uint256::zero())
     } else {
         // do as below but for a generic number of assets
         let amount_times_coins: Vec<Uint128> = deposits
-            .into_iter()
+            .iter()
             .map(|coin| coin.amount.checked_mul(n_coins).unwrap())
             .collect();
 
@@ -750,7 +749,7 @@ fn compute_next_d(
 pub fn compute_mint_amount_for_deposit(
     amp_factor: &u64,
     deposits: &Vec<Coin>,
-    pool_assets: &Vec<Coin>,
+    pool_assets: &[Coin],
     pool_token_supply: Uint128,
 ) -> Option<Uint128> {
     // Initial invariant
