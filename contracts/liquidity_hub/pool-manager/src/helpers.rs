@@ -697,7 +697,7 @@ pub fn compute_d(amp_factor: &u64, deposits: &Vec<Coin>) -> Option<Uint256> {
                     .checked_div(amount.into())
                     .unwrap();
                 d_prev = d;
-                d = compute_next_d(amp_factor, d, d_prod, sum_x).unwrap();
+                d = compute_next_d(amp_factor, d, d_prod, sum_x, n_coins).unwrap();
                 // Equality with the precision of 1
                 if d > d_prev {
                     if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
@@ -719,14 +719,15 @@ fn compute_next_d(
     d_init: Uint256,
     d_prod: Uint256,
     sum_x: Uint128,
+    n_coins: Uint128,
 ) -> Option<Uint256> {
-    let ann = amp_factor.checked_mul(N_COINS.into())?;
+    let ann = amp_factor.checked_mul(n_coins.u128() as u64)?;
     let leverage = Uint256::from(sum_x).checked_mul(ann.into()).unwrap();
     // d = (ann * sum_x + d_prod * n_coins) * d / ((ann - 1) * d + (n_coins + 1) * d_prod)
     let numerator = d_init
         .checked_mul(
             d_prod
-                .checked_mul(N_COINS.into())
+                .checked_mul(n_coins.into())
                 .unwrap()
                 .checked_add(leverage)
                 .unwrap(),
@@ -737,7 +738,7 @@ fn compute_next_d(
         .unwrap()
         .checked_add(
             d_prod
-                .checked_mul((N_COINS.checked_add(1)?).into())
+                .checked_mul((n_coins.checked_add(1u128.into()).unwrap()).into())
                 .unwrap(),
         )
         .unwrap();
