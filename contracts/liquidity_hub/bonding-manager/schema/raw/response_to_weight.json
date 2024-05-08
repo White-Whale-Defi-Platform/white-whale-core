@@ -12,19 +12,40 @@
   ],
   "properties": {
     "address": {
+      "description": "The weight of the address.",
       "type": "string"
     },
     "global_weight": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The global weight of the contract.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "share": {
-      "$ref": "#/definitions/Decimal"
+      "description": "The share the address has of the rewards at the particular timestamp.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Decimal"
+        }
+      ]
     },
     "timestamp": {
-      "$ref": "#/definitions/Timestamp"
+      "description": "The timestamp at which the weight was calculated.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Timestamp"
+        }
+      ]
     },
     "weight": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The weight of the address at the given timestamp.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     }
   },
   "additionalProperties": false,

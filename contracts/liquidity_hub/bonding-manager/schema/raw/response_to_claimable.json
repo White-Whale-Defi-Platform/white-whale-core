@@ -7,6 +7,7 @@
   ],
   "properties": {
     "epochs": {
+      "description": "The epochs that can be claimed by the address.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Epoch"

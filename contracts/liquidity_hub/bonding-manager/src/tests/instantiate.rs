@@ -1,6 +1,8 @@
 use cosmwasm_std::{Addr, Decimal, Uint64};
 
+use crate::state::BONDING_ASSETS_LIMIT;
 use crate::tests::robot::TestingRobot;
+use crate::ContractError;
 use white_whale_std::bonding_manager::Config;
 
 #[test]
@@ -15,7 +17,7 @@ fn test_instantiate_successfully() {
             &vec![],
         )
         .assert_config(Config {
-            owner: Addr::unchecked("owner"),
+            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000u64),
@@ -40,12 +42,10 @@ fn test_instantiate_unsuccessfully() {
         ],
         &vec![],
         |error| {
-            println!("1 --{error:?}");
-            println!("2 --{:?}", error.root_cause());
-            //println!("3 --{:?}", error.root_cause().downcast_ref::<ContractError>());
-            // assert_eq!(
-            //     error.root_cause().downcast_ref::<ContractError>().unwrap(),
-            //     &ContractError::InvalidBondingAssetsLimit(BONDING_ASSETS_LIMIT, 3));
+            assert_eq!(
+                error.root_cause().downcast_ref::<ContractError>().unwrap(),
+                &ContractError::InvalidBondingAssetsLimit(BONDING_ASSETS_LIMIT, 3)
+            );
         },
     );
 }

@@ -114,6 +114,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
+ "cw-ownable",
  "cw-storage-plus",
  "cw-utils",
  "cw2",

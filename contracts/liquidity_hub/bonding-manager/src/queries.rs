@@ -2,8 +2,8 @@ use std::collections::{HashSet, VecDeque};
 use white_whale_std::epoch_manager::epoch_manager::ConfigResponse;
 
 use cosmwasm_std::{
-    to_json_binary, Addr, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp,
-    Uint128, Uint64, WasmQuery,
+    to_json_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
+    Uint64, WasmQuery,
 };
 use cw_storage_plus::Bound;
 
@@ -11,7 +11,7 @@ use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
     WithdrawableResponse,
 };
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch, EpochResponse};
+use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
 use white_whale_std::epoch_manager::epoch_manager::QueryMsg;
 
 use crate::helpers;
@@ -24,53 +24,62 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
     CONFIG.load(deps.storage)
 }
 
-/// Queries the current bonded amount of the given address.
-pub(crate) fn query_bonded(deps: Deps, address: String) -> StdResult<BondedResponse> {
-    let address = deps.api.addr_validate(&address)?;
+/// Queries the current bonded amount of the given address. If no address is provided, returns
+/// the global bonded amount.
+pub(crate) fn query_bonded(deps: Deps, address: Option<String>) -> StdResult<BondedResponse> {
+    let (total_bonded, bonded_assets, first_bonded_epoch_id) = if let Some(address) = address {
+        let address = deps.api.addr_validate(&address)?;
 
-    let bonds: Vec<Bond> = BOND
-        .prefix(&address)
-        .range(deps.storage, None, None, Order::Ascending)
-        .take(BONDING_ASSETS_LIMIT)
-        .map(|item| {
-            let (_, bond) = item?;
-            Ok(bond)
-        })
-        .collect::<StdResult<Vec<Bond>>>()?;
+        let bonds: Vec<Bond> = BOND
+            .prefix(&address)
+            .range(deps.storage, None, None, Order::Ascending)
+            .take(BONDING_ASSETS_LIMIT)
+            .map(|item| {
+                let (_, bond) = item?;
+                Ok(bond)
+            })
+            .collect::<StdResult<Vec<Bond>>>()?;
 
-    // if it doesn't have bonded, return empty response
-    if bonds.is_empty() {
-        return Ok(BondedResponse {
-            total_bonded: Uint128::zero(),
-            bonded_assets: vec![],
-            first_bonded_epoch_id: Uint64::zero(),
-        });
-    }
-
-    let mut total_bonded = Uint128::zero();
-    let mut bonded_assets = vec![];
-
-    let mut first_bond_timestamp = Timestamp::from_seconds(16725229261u64);
-
-    for bond in bonds {
-        if bond.timestamp.seconds() < first_bond_timestamp.seconds() {
-            first_bond_timestamp = bond.timestamp;
+        // if it doesn't have bonded, return empty response
+        if bonds.is_empty() {
+            return Ok(BondedResponse {
+                total_bonded: Uint128::zero(),
+                bonded_assets: vec![],
+                first_bonded_epoch_id: Some(Uint64::zero()),
+            });
         }
 
-        total_bonded = total_bonded.checked_add(bond.asset.amount)?;
-        bonded_assets.push(bond.asset);
-    }
-    // TODO: This is hardcoded, either we add to config the address of epoch manager and query
-    // or we store the genesis epoch itself in the bonding manager
-    // Query epoch manager for EpochConfig
-    let epoch_config: ConfigResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: "contract0".to_string(),
-            msg: to_json_binary(&QueryMsg::Config {})?,
-        }))?;
+        let mut total_bonded = Uint128::zero();
+        let mut bonded_assets = vec![];
 
-    let first_bonded_epoch_id =
-        helpers::calculate_epoch(epoch_config.epoch_config, first_bond_timestamp)?;
+        // 1 January 2500
+        let mut first_bond_timestamp = Timestamp::from_seconds(16725229261u64);
+
+        for bond in bonds {
+            if bond.timestamp.seconds() < first_bond_timestamp.seconds() {
+                first_bond_timestamp = bond.timestamp;
+            }
+
+            total_bonded = total_bonded.checked_add(bond.asset.amount)?;
+            bonded_assets.push(bond.asset);
+        }
+
+        let config = CONFIG.load(deps.storage)?;
+        // Query epoch manager for EpochConfig
+        let epoch_config: ConfigResponse =
+            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                contract_addr: config.epoch_manager_addr.to_string(),
+                msg: to_json_binary(&QueryMsg::Config {})?,
+            }))?;
+
+        let first_bonded_epoch_id =
+            helpers::calculate_epoch(epoch_config.epoch_config, first_bond_timestamp)?;
+
+        (total_bonded, bonded_assets, Some(first_bonded_epoch_id))
+    } else {
+        let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+        (global_index.bonded_amount, global_index.bonded_assets, None)
+    };
 
     Ok(BondedResponse {
         total_bonded,
@@ -188,6 +197,7 @@ pub(crate) fn query_weight(
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
     }
 
+    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     let mut global_index = if let Some(global_index) = global_index {
         global_index
     } else {
@@ -197,7 +207,6 @@ pub(crate) fn query_weight(
             .ok_or_else(|| StdError::generic_err("Global index not found"))?
     };
 
-    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     global_index.weight = get_weight(
         timestamp,
         global_index.weight,
@@ -208,7 +217,11 @@ pub(crate) fn query_weight(
 
     // Represents the share of the global weight that the address has
     // If global_index.weight is zero no one has bonded yet so the share is
-    let share = Decimal::from_ratio(total_bond_weight, global_index.weight);
+    let share = if global_index.weight.is_zero() {
+        Decimal::zero()
+    } else {
+        Decimal::from_ratio(total_bond_weight, global_index.weight)
+    };
 
     Ok(BondingWeightResponse {
         address: address.to_string(),
@@ -219,34 +232,10 @@ pub(crate) fn query_weight(
     })
 }
 
-/// Queries the total amount of assets that have been bonded to the contract.
-pub fn query_total_bonded(deps: Deps) -> StdResult<BondedResponse> {
-    let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-    Ok(BondedResponse {
-        total_bonded: global_index.bonded_amount,
-        bonded_assets: global_index.bonded_assets,
-        first_bonded_epoch_id: Default::default(), //ignore this parameter here
-    })
-}
-
 /// Queries the global index
 pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     Ok(global_index)
-}
-
-/// Returns the current epoch, which is the last on the EPOCHS map.
-pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
-    let option = EPOCHS
-        .range(deps.storage, None, None, Order::Descending)
-        .next();
-
-    let epoch = match option {
-        Some(Ok((_, epoch))) => epoch,
-        _ => Epoch::default(),
-    };
-
-    Ok(EpochResponse { epoch })
 }
 
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
@@ -254,25 +243,20 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
 pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
     let config = CONFIG.load(deps.storage)?;
     // Adding 1 because we store the future epoch in the map also, so grace_period + 1
-    let grace_period = config.grace_period.u64() + 1;
+    let grace_period_plus_future_epoch = config.grace_period.u64() + 1u64;
     // Take grace_period + 1 and then slice last one off
-    let mut epochs = EPOCHS
+    let epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period as usize)
+        .take(grace_period_plus_future_epoch as usize)
         .map(|item| {
             let (_, epoch) = item?;
             Ok(epoch)
         })
-        .collect::<StdResult<VecDeque<Epoch>>>()?;
-
-    if epochs.len() > 1 {
-        // First the future epoch from stack
-        epochs.pop_front();
-    }
+        .collect::<StdResult<Vec<Epoch>>>()?;
 
     // if the epochs vector's length is the same as the grace period it means there is one epoch that
     // is expiring once the new one is created i.e. the last epoch in the vector
-    if epochs.len() == config.grace_period.u64() as usize {
+    if epochs.len() == grace_period_plus_future_epoch as usize {
         let expiring_epoch: Epoch = epochs.into_iter().last().unwrap_or_default();
         Ok(Some(expiring_epoch))
     } else {
@@ -298,44 +282,63 @@ pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
         })
         .collect::<StdResult<VecDeque<Epoch>>>()?;
 
-    if epochs.len() > 1 {
-        // First the future epoch from stack
-        epochs.pop_front();
-    }
+    println!("epochs: {:?}", epochs);
+
+    // Remove the upcoming epoch from stack
+    epochs.pop_front();
     epochs.retain(|epoch| !epoch.available.is_empty());
+
+    println!("epochs: {:?}", epochs);
 
     Ok(ClaimableEpochsResponse {
         epochs: epochs.into(),
     })
 }
 
-/// Returns the epochs that can be claimed by the given address.
-pub fn query_claimable(deps: Deps, address: &Addr) -> StdResult<ClaimableEpochsResponse> {
+/// Returns the epochs that can be claimed by the given address. If no address is provided,
+/// returns all possible epochs stored in the contract that can potentially be claimed.
+pub fn query_claimable(deps: Deps, address: Option<String>) -> StdResult<ClaimableEpochsResponse> {
     let mut claimable_epochs = get_claimable_epochs(deps)?.epochs;
-    let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, address)?;
 
-    // filter out epochs that have already been claimed by the user
-    if let Some(last_claimed_epoch) = last_claimed_epoch {
-        claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
-    } else {
-        // if the user doesn't have any last_claimed_epoch two things might be happening:
-        // 1- the user has never bonded before
-        // 2- the user has bonded, but never claimed any rewards so far
+    // if an address is provided, filter what's claimable for that address
+    if let Some(address) = address {
+        let address = deps.api.addr_validate(&address)?;
 
-        let bonded_response: BondedResponse = query_bonded(deps, address.to_string())?;
+        let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;
 
-        if bonded_response.bonded_assets.is_empty() {
-            // the user has never bonded before, therefore it shouldn't be able to claim anything
-            claimable_epochs.clear();
+        // filter out epochs that have already been claimed by the user
+        if let Some(last_claimed_epoch) = last_claimed_epoch {
+            claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
         } else {
-            // the user has bonded, but never claimed any rewards so far
-            claimable_epochs.retain(|epoch| epoch.id > bonded_response.first_bonded_epoch_id);
-        }
-    };
-    // filter out epochs that have no available fees. This would only happen in case the grace period
-    // gets increased after epochs have expired, which would lead to make them available for claiming
-    // again without any available rewards, as those were forwarded to newer epochs.
-    claimable_epochs.retain(|epoch| !epoch.available.is_empty());
+            // if the user doesn't have any last_claimed_epoch two things might be happening:
+            // 1- the user has never bonded before
+            // 2- the user has bonded, but never claimed any rewards so far
+
+            let bonded_response: BondedResponse = query_bonded(deps, Some(address.into_string()))?;
+            println!("bonded_responsebonded_response: {:?}", bonded_response);
+            if bonded_response.bonded_assets.is_empty() {
+                // the user has never bonded before, therefore it shouldn't be able to claim anything
+                claimable_epochs.clear();
+            } else {
+                // the user has bonded, but never claimed any rewards so far. The first_bonded_epoch_id
+                // value should always be Some here, as `query_bonded` will always return Some.
+                match bonded_response.first_bonded_epoch_id {
+                    Some(first_bonded_epoch_id) => {
+                        // keep all epochs that are newer than the first bonded epoch
+                        claimable_epochs.retain(|epoch| epoch.id > first_bonded_epoch_id);
+                    }
+                    None => {
+                        // for sanity, it should never happen
+                        claimable_epochs.clear();
+                    }
+                }
+            }
+        };
+        // filter out epochs that have no available fees. This would only happen in case the grace period
+        // gets increased after epochs have expired, which would lead to make them available for claiming
+        // again without any available rewards, as those were forwarded to newer epochs.
+        claimable_epochs.retain(|epoch| !epoch.available.is_empty());
+    }
 
     Ok(ClaimableEpochsResponse {
         epochs: claimable_epochs,

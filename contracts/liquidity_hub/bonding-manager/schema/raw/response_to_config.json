@@ -5,9 +5,9 @@
   "required": [
     "bonding_assets",
     "distribution_denom",
+    "epoch_manager_addr",
     "grace_period",
     "growth_rate",
-    "owner",
     "pool_manager_addr",
     "unbonding_period"
   ],
@@ -22,6 +22,14 @@
     "distribution_denom": {
       "description": "Distribution denom for the rewards",
       "type": "string"
+    },
+    "epoch_manager_addr": {
+      "description": "Epoch Manager contract address",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Addr"
+        }
+      ]
     },
     "grace_period": {
       "description": "The duration of the grace period in epochs, i.e. how many expired epochs can be claimed",
@@ -39,14 +47,6 @@
         }
       ]
     },
-    "owner": {
-      "description": "Owner of the contract.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/Addr"
-        }
-      ]
-    },
     "pool_manager_addr": {
       "description": "Pool Manager contract address for swapping",
       "allOf": [
@@ -56,7 +56,7 @@
       ]
     },
     "unbonding_period": {
-      "description": "Unbonding period in nanoseconds.",
+      "description": "Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can be withdrawn",
       "allOf": [
         {
           "$ref": "#/definitions/Uint64"

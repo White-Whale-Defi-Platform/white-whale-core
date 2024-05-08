@@ -33,6 +33,9 @@ pub enum ContractError {
     #[error("The current epoch epoch has not expired yet.")]
     CurrentEpochNotExpired,
 
+    #[error("The genesis epoch has not started yet.")]
+    GenesisEpochHasNotStarted,
+
     #[error("start_time must be in the future.")]
     InvalidStartTime,
 

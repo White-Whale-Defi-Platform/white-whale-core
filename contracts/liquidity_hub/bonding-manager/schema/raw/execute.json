@@ -4,17 +4,10 @@
   "oneOf": [
     {
       "description": "Bonds the specified [Asset].",
-      "type": "object",
-      "required": [
+      "type": "string",
+      "enum": [
         "bond"
-      ],
-      "properties": {
-        "bond": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+      ]
     },
     {
       "description": "Unbonds the specified [Asset].",
@@ -30,7 +23,12 @@
           ],
           "properties": {
             "asset": {
-              "$ref": "#/definitions/Coin"
+              "description": "The asset to unbond.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Coin"
+                }
+              ]
             }
           },
           "additionalProperties": false
@@ -52,6 +50,7 @@
           ],
           "properties": {
             "denom": {
+              "description": "The denom to withdraw.",
               "type": "string"
             }
           },
@@ -71,6 +70,7 @@
           "type": "object",
           "properties": {
             "growth_rate": {
+              "description": "The new growth rate.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Decimal"
@@ -80,19 +80,15 @@
                 }
               ]
             },
-            "owner": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "pool_manager_addr": {
+              "description": "The new pool manager address.",
               "type": [
                 "string",
                 "null"
               ]
             },
             "unbonding_period": {
+              "description": "The unbonding period.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Uint64"
@@ -109,27 +105,21 @@
       "additionalProperties": false
     },
     {
-      "type": "object",
-      "required": [
+      "description": "Claims the available rewards",
+      "type": "string",
+      "enum": [
         "claim"
-      ],
-      "properties": {
-        "claim": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+      ]
     },
     {
-      "description": "Fills the whale lair with new rewards.",
+      "description": "Fills the contract with new rewards.",
       "type": "string",
       "enum": [
         "fill_rewards"
       ]
     },
     {
-      "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
+      "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
       "type": "object",
       "required": [
         "epoch_changed_hook"
@@ -142,16 +132,85 @@
           ],
           "properties": {
             "current_epoch": {
-              "$ref": "#/definitions/Epoch"
+              "description": "The current epoch, the one that was newly created.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Epoch"
+                }
+              ]
             }
           },
           "additionalProperties": false
         }
       },
       "additionalProperties": false
+    },
+    {
+      "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
+      "type": "object",
+      "required": [
+        "update_ownership"
+      ],
+      "properties": {
+        "update_ownership": {
+          "$ref": "#/definitions/Action"
+        }
+      },
+      "additionalProperties": false
     }
   ],
   "definitions": {
+    "Action": {
+      "description": "Actions that can be taken to alter the contract's ownership",
+      "oneOf": [
+        {
+          "description": "Propose to transfer the contract's ownership to another account, optionally with an expiry time.\n\nCan only be called by the contract's current owner.\n\nAny existing pending ownership transfer is overwritten.",
+          "type": "object",
+          "required": [
+            "transfer_ownership"
+          ],
+          "properties": {
+            "transfer_ownership": {
+              "type": "object",
+              "required": [
+                "new_owner"
+              ],
+              "properties": {
+                "expiry": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/Expiration"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "new_owner": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Accept the pending ownership transfer.\n\nCan only be called by the pending owner.",
+          "type": "string",
+          "enum": [
+            "accept_ownership"
+          ]
+        },
+        {
+          "description": "Give up the contract's ownership and the possibility of appointing a new owner.\n\nCan only be invoked by the contract's current owner.\n\nAny existing pending ownership transfer is canceled.",
+          "type": "string",
+          "enum": [
+            "renounce_ownership"
+          ]
+        }
+      ]
+    },
     "Coin": {
       "type": "object",
       "required": [
@@ -188,6 +247,53 @@
         }
       },
       "additionalProperties": false
+    },
+    "Expiration": {
+      "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+      "oneOf": [
+        {
+          "description": "AtHeight will expire when `env.block.height` >= height",
+          "type": "object",
+          "required": [
+            "at_height"
+          ],
+          "properties": {
+            "at_height": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "AtTime will expire when `env.block.time` >= time",
+          "type": "object",
+          "required": [
+            "at_time"
+          ],
+          "properties": {
+            "at_time": {
+              "$ref": "#/definitions/Timestamp"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Never will never expire. Used to express the empty variant",
+          "type": "object",
+          "required": [
+            "never"
+          ],
+          "properties": {
+            "never": {
+              "type": "object",
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "Timestamp": {
       "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",

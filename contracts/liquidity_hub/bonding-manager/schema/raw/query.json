@@ -4,17 +4,10 @@
   "oneOf": [
     {
       "description": "Returns the [Config] of te contract.",
-      "type": "object",
-      "required": [
+      "type": "string",
+      "enum": [
         "config"
-      ],
-      "properties": {
-        "config": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+      ]
     },
     {
       "description": "Returns the amount of assets that have been bonded by the specified address.",
@@ -25,12 +18,13 @@
       "properties": {
         "bonded": {
           "type": "object",
-          "required": [
-            "address"
-          ],
           "properties": {
             "address": {
-              "type": "string"
+              "description": "The address to check for bonded assets. If none is provided, all bonded assets in the contract are returned.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
@@ -53,12 +47,15 @@
           ],
           "properties": {
             "address": {
+              "description": "The address to check for unbonding assets.",
               "type": "string"
             },
             "denom": {
+              "description": "The denom to check for unbonding assets.",
               "type": "string"
             },
             "limit": {
+              "description": "The maximum amount of unbonding assets to return.",
               "type": [
                 "integer",
                 "null"
@@ -67,6 +64,7 @@
               "minimum": 0.0
             },
             "start_after": {
+              "description": "The amount of unbonding assets to skip. Allows pagination.",
               "type": [
                 "integer",
                 "null"
@@ -95,9 +93,11 @@
           ],
           "properties": {
             "address": {
+              "description": "The address to check for withdrawable assets.",
               "type": "string"
             },
             "denom": {
+              "description": "The denom to check for withdrawable assets.",
               "type": "string"
             }
           },
@@ -120,9 +120,11 @@
           ],
           "properties": {
             "address": {
+              "description": "The address to check for weight.",
               "type": "string"
             },
             "global_index": {
+              "description": "The global index to check for weight. If none is provided, the current global index is used.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/GlobalIndex"
@@ -133,6 +135,7 @@
               ]
             },
             "timestamp": {
+              "description": "The timestamp to check for weight. If none is provided, the current block time is used.",
               "anyOf": [
                 {
                   "$ref": "#/definitions/Timestamp"
@@ -149,46 +152,11 @@
       "additionalProperties": false
     },
     {
-      "description": "Returns the total amount of assets that have been bonded to the contract.",
-      "type": "object",
-      "required": [
-        "total_bonded"
-      ],
-      "properties": {
-        "total_bonded": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
       "description": "Returns the global index of the contract.",
-      "type": "object",
-      "required": [
+      "type": "string",
+      "enum": [
         "global_index"
-      ],
-      "properties": {
-        "global_index": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "description": "Returns the [Epoch]s that can be claimed.",
-      "type": "object",
-      "required": [
-        "claimable_epochs"
-      ],
-      "properties": {
-        "claimable_epochs": {
-          "type": "object",
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+      ]
     },
     {
       "description": "Returns the [Epoch]s that can be claimed by an address.",
@@ -199,14 +167,29 @@
       "properties": {
         "claimable": {
           "type": "object",
-          "required": [
-            "addr"
-          ],
           "properties": {
-            "addr": {
-              "type": "string"
+            "address": {
+              "description": "The address to check for claimable epochs. If none is provided, all possible epochs stored in the contract that can potentially be claimed are returned.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "Query the contract's ownership information",
+      "type": "object",
+      "required": [
+        "ownership"
+      ],
+      "properties": {
+        "ownership": {
+          "type": "object",
           "additionalProperties": false
         }
       },
