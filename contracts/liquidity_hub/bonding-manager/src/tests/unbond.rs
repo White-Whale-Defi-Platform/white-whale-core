@@ -4,12 +4,12 @@ use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, UnbondingResponse,
 };
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 
 #[test]
 #[track_caller]
 fn test_unbond_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
 
@@ -160,7 +160,7 @@ fn test_unbond_successfully() {
 
 #[test]
 fn test_unbond_all_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
 
     robot
@@ -200,7 +200,7 @@ fn test_unbond_all_successfully() {
 #[test]
 #[track_caller]
 fn test_unbonding_query_pagination() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
 
     robot
@@ -378,7 +378,7 @@ fn test_unbonding_query_pagination() {
 
 #[test]
 fn test_unbond_unsuccessfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
 
     robot

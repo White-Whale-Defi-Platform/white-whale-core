@@ -69,6 +69,13 @@
         "update_config": {
           "type": "object",
           "properties": {
+            "epoch_manager_addr": {
+              "description": "The new epoch manager address.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "growth_rate": {
               "description": "The new growth rate.",
               "anyOf": [

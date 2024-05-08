@@ -118,6 +118,8 @@ pub enum ExecuteMsg {
     },
     /// Updates the [Config] of the contract.
     UpdateConfig {
+        /// The new epoch manager address.
+        epoch_manager_addr: Option<String>,
         /// The new pool manager address.
         pool_manager_addr: Option<String>,
         /// The unbonding period.

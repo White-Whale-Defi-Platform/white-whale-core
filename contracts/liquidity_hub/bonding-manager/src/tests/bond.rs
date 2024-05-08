@@ -2,13 +2,13 @@ use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128};
 
 use white_whale_std::bonding_manager::{BondedResponse, BondingWeightResponse};
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 
 use super::test_helpers::get_epochs;
 
 #[test]
 fn test_bond_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
     get_epochs();

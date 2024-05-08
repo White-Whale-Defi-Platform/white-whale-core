@@ -179,6 +179,7 @@ pub(crate) fn withdraw(
 pub(crate) fn update_config(
     deps: DepsMut,
     info: MessageInfo,
+    epoch_manager_addr: Option<String>,
     pool_manager_addr: Option<String>,
     unbonding_period: Option<Uint64>,
     growth_rate: Option<Decimal>,
@@ -187,6 +188,10 @@ pub(crate) fn update_config(
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let mut config = CONFIG.load(deps.storage)?;
+
+    if let Some(epoch_manager_addr) = epoch_manager_addr {
+        config.epoch_manager_addr = deps.api.addr_validate(&epoch_manager_addr)?;
+    }
 
     if let Some(pool_manager_addr) = pool_manager_addr {
         config.pool_manager_addr = deps.api.addr_validate(&pool_manager_addr)?;
@@ -206,6 +211,7 @@ pub(crate) fn update_config(
     Ok(Response::default().add_attributes(vec![
         ("action", "update_config".to_string()),
         ("pool_manager_addr", config.pool_manager_addr.to_string()),
+        ("epoch_manager_addr", config.epoch_manager_addr.to_string()),
         ("unbonding_period", config.unbonding_period.to_string()),
         ("growth_rate", config.growth_rate.to_string()),
     ]))

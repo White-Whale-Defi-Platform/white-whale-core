@@ -5,12 +5,12 @@ use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::pool_manager::SwapRoute;
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 use crate::tests::test_helpers;
 
 #[test]
 fn test_fill_rewards_from_pool_manager() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let creator = robot.sender.clone();
 
     let asset_denoms = vec!["uwhale".to_string(), "uusdc".to_string()];

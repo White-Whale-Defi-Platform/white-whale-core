@@ -76,12 +76,20 @@ pub fn execute(
             commands::withdraw(deps, env.block.time, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
+            epoch_manager_addr: epock_manager_addr,
             pool_manager_addr,
             unbonding_period,
             growth_rate,
         } => {
             cw_utils::nonpayable(&info)?;
-            commands::update_config(deps, info, pool_manager_addr, unbonding_period, growth_rate)
+            commands::update_config(
+                deps,
+                info,
+                epock_manager_addr,
+                pool_manager_addr,
+                unbonding_period,
+                growth_rate,
+            )
         }
         ExecuteMsg::FillRewards => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim => commands::claim(deps, info),
