@@ -12,7 +12,7 @@ fn test_update_config_successfully() {
     robot
         .instantiate_default()
         .assert_config(Config {
-            owner: Addr::unchecked("owner"),
+            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
@@ -66,7 +66,7 @@ fn test_update_config_unsuccessfully() {
     robot
         .instantiate_default()
         .assert_config(Config {
-            owner: Addr::unchecked("owner"),
+            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
@@ -92,7 +92,7 @@ fn test_update_config_unsuccessfully() {
             },
         )
         .assert_config(Config {
-            owner: Addr::unchecked("owner"),
+            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
@@ -118,7 +118,7 @@ fn test_update_config_unsuccessfully() {
             },
         )
         .assert_config(Config {
-            owner: Addr::unchecked("owner"),
+            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),

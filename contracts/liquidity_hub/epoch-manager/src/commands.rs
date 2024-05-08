@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Response, SubMsg};
+use cosmwasm_std::{ensure, Api, DepsMut, Env, MessageInfo, Response, SubMsg};
 
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
@@ -35,11 +35,16 @@ pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     println!("Creating new epoch");
 
     println!("Current epoch: {:?}", current_epoch);
+    println!("env.block.time: {:?}", env.block.time.seconds());
+    println!("x: {:?}", current_epoch.start_time.seconds());
     println!(
-        "env
-        .block
-        .time: {:?}",
-        env.block.time
+        "config.epoch_config.duration.u64(): {:?}",
+        config.epoch_config.duration.u64()
+    );
+
+    ensure!(
+        env.block.time >= current_epoch.start_time,
+        ContractError::GenesisEpochHasNotStarted
     );
 
     if env
@@ -51,6 +56,7 @@ pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
     {
         return Err(ContractError::CurrentEpochNotExpired);
     }
+
     current_epoch.id = current_epoch
         .id
         .checked_add(1u64)

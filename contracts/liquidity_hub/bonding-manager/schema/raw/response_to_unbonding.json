@@ -9,9 +9,15 @@
   ],
   "properties": {
     "total_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The total amount of unbonded tokens by the address.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     },
     "unbonding_requests": {
+      "description": "The total amount of unbonded assets by the address.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Bond"

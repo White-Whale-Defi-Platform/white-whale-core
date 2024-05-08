@@ -1,6 +1,6 @@
 use cosmwasm_std::{Deps, StdError, StdResult, Timestamp};
 
-use crate::constants::DAY_SECONDS;
+use crate::constants::DAY_IN_SECONDS;
 use crate::epoch_manager::epoch_manager::{Epoch, EpochResponse, QueryMsg};
 
 /// Queries the current epoch from the epoch manager contract
@@ -17,7 +17,7 @@ pub fn validate_epoch(epoch: &Epoch, current_time: Timestamp) -> StdResult<()> {
     if current_time
         .minus_seconds(epoch.start_time.seconds())
         .seconds()
-        < DAY_SECONDS
+        < DAY_IN_SECONDS
     {
         return Err(StdError::generic_err(
             "Current epoch has expired, please wait for the next epoch to start.",

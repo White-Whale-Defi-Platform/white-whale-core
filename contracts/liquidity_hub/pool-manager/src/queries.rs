@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{coin, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128, Uint256};
+use cosmwasm_std::{coin, ensure, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128, Uint256};
 
 use white_whale_std::pool_manager::{
     AssetDecimalsResponse, Config, PoolInfoResponse, PoolType, ReverseSimulationResponse,
@@ -304,9 +304,7 @@ pub fn simulate_swap_operations(
     operations: Vec<SwapOperation>,
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let operations_len = operations.len();
-    if operations_len == 0 {
-        return Err(ContractError::NoSwapOperationsProvided);
-    }
+    ensure!(operations_len > 0, ContractError::NoSwapOperationsProvided);
 
     let mut amount = offer_amount;
 

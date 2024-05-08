@@ -1,7 +1,7 @@
 use anyhow::Error;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{
-    coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint128, Uint64,
+    coin, from_json, Addr, Binary, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint128, Uint64,
 };
 // use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{
@@ -84,7 +84,7 @@ pub struct TestingRobot {
 /// instantiate / execute messages
 impl TestingRobot {
     pub(crate) fn default() -> Self {
-        let sender = Addr::unchecked("owner");
+        let sender = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
         let another_sender = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
         let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
 
@@ -196,16 +196,6 @@ impl TestingRobot {
             .unwrap();
 
         println!("hook_registration_msg: {:?}", resp);
-        // self.fast_forward(10);
-        let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
-        self.app
-            .execute_contract(
-                self.sender.clone(),
-                epoch_manager_addr.clone(),
-                &new_epoch_msg,
-                &[],
-            )
-            .unwrap();
 
         let msg = white_whale_std::pool_manager::InstantiateMsg {
             bonding_manager_addr: bonding_manager_addr.clone().to_string(),
@@ -240,6 +230,7 @@ impl TestingRobot {
         self.app
             .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
             .unwrap();
+
         self.bonding_manager_addr = bonding_manager_addr;
         self.pool_manager_addr = pool_manager_addr;
         self.epoch_manager_addr = epoch_manager_addr;
@@ -387,20 +378,6 @@ impl TestingRobot {
                 )
                 .unwrap();
         }
-        CONFIG
-            .save(
-                &mut self.owned_deps.storage,
-                &Config {
-                    distribution_denom: "uwhale".to_string(),
-                    unbonding_period: Uint64::new(1_000_000_000_000u64),
-                    growth_rate: Decimal::one(),
-                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
-                    grace_period: Uint64::new(21),
-                    owner: Addr::unchecked("owner"),
-                    pool_manager_addr: Addr::unchecked("pool_manager"),
-                },
-            )
-            .unwrap();
 
         self
     }
@@ -427,7 +404,7 @@ fn instantiate_contract(
         robot.sender.clone(),
         &msg,
         funds,
-        "White Whale Lair".to_string(),
+        "Bonding Manager".to_string(),
         Some(robot.sender.clone().to_string()),
     )
 }
@@ -478,27 +455,24 @@ impl TestingRobot {
         address: Option<Addr>,
         response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
     ) -> &mut Self {
-        let query_res = if let Some(address) = address {
-            query(
-                self.owned_deps.as_ref(),
-                self.env.clone(),
-                QueryMsg::Claimable {
-                    addr: address.to_string(),
-                },
-            )
-            .unwrap()
+        let query_res: ClaimableEpochsResponse = if let Some(address) = address {
+            self.app
+                .wrap()
+                .query_wasm_smart(
+                    &self.bonding_manager_addr,
+                    &QueryMsg::Claimable {
+                        addr: address.to_string(),
+                    },
+                )
+                .unwrap()
         } else {
-            query(
-                self.owned_deps.as_ref(),
-                self.env.clone(),
-                QueryMsg::ClaimableEpochs {},
-            )
-            .unwrap()
+            self.app
+                .wrap()
+                .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::ClaimableEpochs {})
+                .unwrap()
         };
 
-        let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
-
-        response(Ok((self, res.epochs)));
+        response(Ok((self, query_res.epochs)));
 
         self
     }
@@ -727,6 +701,23 @@ impl TestingRobot {
             self.pool_manager_addr.clone(),
             &msg,
             &pair_creation_fee_funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn create_epoch(
+        &mut self,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let sender = self.another_sender.clone();
+
+        result(self.app.execute_contract(
+            sender,
+            self.epoch_manager_addr.clone(),
+            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
+            &[],
         ));
 
         self

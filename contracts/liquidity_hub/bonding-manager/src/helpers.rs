@@ -3,23 +3,24 @@ use cosmwasm_std::{
     StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Config, EpochResponse};
-use white_whale_std::constants::LP_SYMBOL;
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Config};
+use white_whale_std::constants::{DAY_IN_SECONDS, LP_SYMBOL};
+use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, EpochResponse};
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
 
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
-use crate::queries::{get_claimable_epochs, get_current_epoch};
+use crate::queries::query_claimable;
 use crate::state::CONFIG;
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
-    if growth_rate > Decimal::percent(100) {
-        return Err(ContractError::InvalidGrowthRate {});
-    }
+    ensure!(
+        growth_rate <= Decimal::percent(100),
+        ContractError::InvalidGrowthRate
+    );
     Ok(())
 }
 
@@ -52,41 +53,46 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 }
 
 /// if user has unclaimed rewards, fail with an exception prompting them to claim
-pub fn validate_claimed(deps: &DepsMut, _info: &MessageInfo) -> Result<(), ContractError> {
+pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
-    let claimable_rewards: ClaimableEpochsResponse = get_claimable_epochs(deps.as_ref()).unwrap();
-    // If epochs is greater than none
-    if !claimable_rewards.epochs.is_empty() {
-        return Err(ContractError::UnclaimedRewards {});
-    }
+    let claimable_rewards: ClaimableEpochsResponse =
+        query_claimable(deps.as_ref(), Some(info.sender.to_string())).unwrap();
+    // ensure the user has nothing to claim
+    ensure!(
+        claimable_rewards.epochs.is_empty(),
+        ContractError::UnclaimedRewards
+    );
 
     Ok(())
 }
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
-/// global_index timestamp issues when querying the weight.
 pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
-    let epoch_response: EpochResponse = get_current_epoch(deps.as_ref()).unwrap();
+    let config = CONFIG.load(deps.storage)?;
+    let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
+        config.epoch_manager_addr.to_string(),
+        &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+    )?;
 
     let current_epoch = epoch_response.epoch;
-    let current_time = env.block.time.seconds();
-    const DAY_IN_SECONDS: u64 = 86_400u64;
-
     // Check if the current time is more than a day after the epoch start time
-    // to avoid potential overflow
-    if current_epoch.id != Uint64::zero() {
+    if current_epoch.id != 0u64 {
+        let current_time = env.block.time.seconds();
+
         let start_time_seconds = current_epoch
             .start_time
             .seconds()
             .checked_add(DAY_IN_SECONDS);
+
         match start_time_seconds {
             Some(start_time_plus_day) => {
-                if current_time > start_time_plus_day {
-                    return Err(ContractError::NewEpochNotCreatedYet {});
-                }
+                ensure!(
+                    current_time <= start_time_plus_day,
+                    ContractError::NewEpochNotCreatedYet
+                );
             }
-            None => return Err(ContractError::Unauthorized {}),
+            None => return Err(ContractError::Unauthorized),
         }
     }
 
@@ -107,6 +113,7 @@ pub fn calculate_epoch(
 
     let elapsed_time =
         Uint64::new(timestamp.nanos()).checked_sub(genesis_epoch_config.genesis_epoch)?;
+
     let epoch = elapsed_time
         .checked_div(epoch_duration)?
         .checked_add(Uint64::one())?;
@@ -117,20 +124,23 @@ pub fn calculate_epoch(
 // Used in FillRewards to search the funds for LP tokens and withdraw them
 // If we do get some LP tokens to withdraw they could be swapped to whale in the reply
 pub fn handle_lp_tokens(
-    info: &MessageInfo,
-    config: &white_whale_std::bonding_manager::Config,
+    funds: &Vec<Coin>,
+    config: &Config,
     submessages: &mut Vec<SubMsg>,
 ) -> Result<(), ContractError> {
-    let lp_tokens: Vec<&Coin> = info
-        .funds
+    println!("funds: {:?}", funds);
+    let lp_tokens: Vec<&Coin> = funds
         .iter()
         .filter(|coin| coin.denom.contains(".pool.") | coin.denom.contains(LP_SYMBOL))
         .collect();
+
+    println!("lp_tokens: {:?}", lp_tokens);
+
     for lp_token in lp_tokens {
-        // LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        let pool_identifier = lp_token.denom.split(".pool.").collect::<Vec<&str>>()[1]
-            .split('.')
-            .collect::<Vec<&str>>()[0];
+        let pool_identifier =
+            extract_pool_identifier(&lp_token.denom).ok_or(ContractError::AssetMismatch)?;
+
+        println!("pool_identifier: {:?}", pool_identifier);
 
         // if LP Tokens ,verify and withdraw then swap to whale
         let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
@@ -153,12 +163,31 @@ pub fn handle_lp_tokens(
     Ok(())
 }
 
-// Used in FillRewards to search the funds for coins that are neither LP tokens nor whale and swap them to whale
+/// Extracts the pool identifier from an LP token denom.
+/// LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the
+/// identifier and not the LP SYMBOL. The identifier can contain dots, slashes, etc.
+fn extract_pool_identifier(lp_token_denom: &str) -> Option<&str> {
+    // Split the string at ".pool." to isolate the part after ".pool."
+    let parts: Vec<&str> = lp_token_denom.splitn(2, ".pool.").collect();
+    if parts.len() < 2 {
+        return None;
+    }
+
+    // Split by the last dot to isolate the identifier from "{LP_SYMBOL}"
+    let after_pool = parts[1];
+    let last_dot_pos = after_pool.rfind('.').unwrap_or(after_pool.len());
+
+    // Take everything before the last dot to get the identifier
+    Some(&after_pool[..last_dot_pos])
+}
+
+// Used in FillRewards to search the funds for coins that are neither LP tokens nor the distribution_denom
+// and swap them to distribution_denom
 pub fn swap_coins_to_main_token(
     coins: Vec<Coin>,
     deps: &DepsMut,
     config: Config,
-    whale: &mut Coin,
+    to_be_distribution_asset: &mut Coin,
     distribution_denom: &String,
     messages: &mut Vec<CosmosMsg>,
 ) -> Result<(), ContractError> {
@@ -198,7 +227,8 @@ pub fn swap_coins_to_main_token(
         }
 
         // check if the pool has any assets, if not skip the swap
-        // Note we are only checking the first operation here. Might be better to another loop to check all operations
+        // Note we are only checking the first operation here.
+        // Might be better to another loop to check all operations
         let pool_query = white_whale_std::pool_manager::QueryMsg::Pool {
             pool_identifier: swap_routes
                 .swap_route
@@ -219,32 +249,36 @@ pub fn swap_coins_to_main_token(
             }
         });
 
-        let simulate: SimulateSwapOperationsResponse = deps.querier.query_wasm_smart(
-            config.pool_manager_addr.to_string(),
-            &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
-                offer_amount: coin.amount,
-                operations: swap_routes.swap_route.swap_operations.clone(),
-            },
-        )?;
-        // Add the simulate amount received to the whale amount, if the swap fails this should also be rolled back
-        whale.amount = whale.amount.checked_add(simulate.amount)?;
+        let simulate_swap_operations_response: SimulateSwapOperationsResponse =
+            deps.querier.query_wasm_smart(
+                config.pool_manager_addr.to_string(),
+                &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
+                    offer_amount: coin.amount,
+                    operations: swap_routes.swap_route.swap_operations.clone(),
+                },
+            )?;
+        // Add the simulate amount received to the distribution_denom amount, if the swap fails this should
+        // also be rolled back
+        to_be_distribution_asset.amount = to_be_distribution_asset
+            .amount
+            .checked_add(simulate_swap_operations_response.amount)?;
 
         if !skip_swap {
             // Prepare a swap message, use the simulate amount as the minimum receive
             // and 1% slippage to ensure we get at least what was simulated to be received
-            let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
-                operations: swap_routes.swap_route.swap_operations.clone(),
-                minimum_receive: Some(simulate.amount),
-                receiver: None,
-                max_spread: Some(Decimal::percent(5)),
-            };
-            let binary_msg = to_json_binary(&msg)?;
-            let wrapped_msg = WasmMsg::Execute {
+            let swap_msg = WasmMsg::Execute {
                 contract_addr: config.pool_manager_addr.to_string(),
-                msg: binary_msg,
+                msg: to_json_binary(
+                    &white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
+                        operations: swap_routes.swap_route.swap_operations.clone(),
+                        minimum_receive: Some(simulate_swap_operations_response.amount),
+                        receiver: None,
+                        max_spread: Some(Decimal::percent(5)),
+                    },
+                )?,
                 funds: vec![coin.clone()],
             };
-            messages.push(wrapped_msg.into());
+            messages.push(swap_msg.into());
         }
     }
     Ok(())

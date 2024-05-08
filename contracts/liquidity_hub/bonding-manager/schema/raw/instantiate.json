@@ -5,6 +5,7 @@
   "required": [
     "bonding_assets",
     "distribution_denom",
+    "epoch_manager_addr",
     "grace_period",
     "growth_rate",
     "unbonding_period"
@@ -19,6 +20,10 @@
     },
     "distribution_denom": {
       "description": "Denom to be swapped to and rewarded",
+      "type": "string"
+    },
+    "epoch_manager_addr": {
+      "description": "The epoch manager contract",
       "type": "string"
     },
     "grace_period": {
@@ -38,7 +43,7 @@
       ]
     },
     "unbonding_period": {
-      "description": "Unbonding period in nanoseconds.",
+      "description": "Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can be withdrawn",
       "allOf": [
         {
           "$ref": "#/definitions/Uint64"

@@ -112,9 +112,6 @@ pub enum ContractError {
     #[error("An overflow occurred when attempting to construct a decimal")]
     DecimalOverflow,
 
-    #[error("The token factory feature is not enabled")]
-    TokenFactoryNotEnabled,
-
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
