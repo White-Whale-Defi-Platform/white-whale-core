@@ -11,7 +11,6 @@ use cw_multi_test::{
 use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
-use crate::contract::query;
 use crate::state::{CONFIG, EPOCHS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
@@ -70,7 +69,7 @@ type OsmosisTokenFactoryApp = App<
     GovFailingModule,
     StargateMock,
 >;
-pub struct TestingRobot {
+pub struct TestingSuite {
     pub app: OsmosisTokenFactoryApp,
     pub sender: Addr,
     pub another_sender: Addr,
@@ -82,7 +81,7 @@ pub struct TestingRobot {
 }
 
 /// instantiate / execute messages
-impl TestingRobot {
+impl TestingSuite {
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
         let another_sender = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
@@ -151,10 +150,7 @@ impl TestingRobot {
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let epoch_manager_id = self.app.store_code(epoch_manager_contract());
-        println!(
-            "epoch_manager_id: {}",
-            self.app.block_info().time.minus_seconds(10).nanos()
-        );
+        println!("epoch_manager_id: {}", self.app.block_info().time.nanos());
         let epoch_manager_addr = self
             .app
             .instantiate_contract(
@@ -163,11 +159,11 @@ impl TestingRobot {
                 &white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
                     start_epoch: EpochV2 {
                         id: 0,
-                        start_time: self.app.block_info().time.plus_seconds(10),
+                        start_time: self.app.block_info().time,
                     },
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: self.app.block_info().time.plus_seconds(10).nanos().into(), // March 14, 2023 2:00:00 PM
+                        genesis_epoch: self.app.block_info().time.nanos().into(),
                     },
                 },
                 &[],
@@ -195,8 +191,6 @@ impl TestingRobot {
             )
             .unwrap();
 
-        println!("hook_registration_msg: {:?}", resp);
-
         let msg = white_whale_std::pool_manager::InstantiateMsg {
             bonding_manager_addr: bonding_manager_addr.clone().to_string(),
             incentive_manager_addr: bonding_manager_addr.clone().to_string(),
@@ -222,9 +216,9 @@ impl TestingRobot {
             )
             .unwrap();
         let msg = ExecuteMsg::UpdateConfig {
+            epoch_manager_addr: Some(epoch_manager_addr.clone().to_string()),
             pool_manager_addr: Some(pool_manager_addr.clone().to_string()),
             growth_rate: None,
-            owner: None,
             unbonding_period: None,
         };
         self.app
@@ -349,12 +343,13 @@ impl TestingRobot {
         sender: Addr,
         owner: Option<String>,
         pool_manager_addr: Option<String>,
+        epoch_manager_addr: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
-            owner,
+            epoch_manager_addr,
             pool_manager_addr,
             unbonding_period,
             growth_rate,
@@ -384,7 +379,7 @@ impl TestingRobot {
 }
 
 fn instantiate_contract(
-    robot: &mut TestingRobot,
+    robot: &mut TestingSuite,
     unbonding_period: Uint64,
     growth_rate: Decimal,
     bonding_assets: Vec<String>,
@@ -396,6 +391,7 @@ fn instantiate_contract(
         growth_rate,
         bonding_assets,
         grace_period: Uint64::new(21),
+        epoch_manager_addr: "".to_string(),
     };
 
     let bonding_manager_id = robot.app.store_code(bonding_manager_contract());
@@ -410,7 +406,7 @@ fn instantiate_contract(
 }
 
 /// queries
-impl TestingRobot {
+impl TestingSuite {
     pub(crate) fn query_config(
         &mut self,
         response: impl Fn(StdResult<(&mut Self, Config)>),
@@ -455,53 +451,17 @@ impl TestingRobot {
         address: Option<Addr>,
         response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
     ) -> &mut Self {
-        let query_res: ClaimableEpochsResponse = if let Some(address) = address {
-            self.app
-                .wrap()
-                .query_wasm_smart(
-                    &self.bonding_manager_addr,
-                    &QueryMsg::Claimable {
-                        addr: address.to_string(),
-                    },
-                )
-                .unwrap()
+        let address = if let Some(address) = address {
+            Some(address.to_string())
         } else {
-            self.app
-                .wrap()
-                .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::ClaimableEpochs {})
-                .unwrap()
+            None
         };
 
-        response(Ok((self, query_res.epochs)));
-
-        self
-    }
-
-    pub(crate) fn query_claimable_epochs_live(
-        &mut self,
-        address: Option<Addr>,
-        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
-    ) -> &mut Self {
-        let query_res = if let Some(address) = address {
-            let bonded_response: ClaimableEpochsResponse = self
-                .app
-                .wrap()
-                .query_wasm_smart(
-                    &self.bonding_manager_addr,
-                    &QueryMsg::Claimable {
-                        addr: address.to_string(),
-                    },
-                )
-                .unwrap();
-            bonded_response
-        } else {
-            let bonded_response: ClaimableEpochsResponse = self
-                .app
-                .wrap()
-                .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::ClaimableEpochs {})
-                .unwrap();
-            bonded_response
-        };
+        let query_res: ClaimableEpochsResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Claimable { address })
+            .unwrap();
 
         response(Ok((self, query_res.epochs)));
 
@@ -510,7 +470,7 @@ impl TestingRobot {
 
     pub(crate) fn query_bonded(
         &mut self,
-        address: String,
+        address: Option<String>,
         response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
     ) -> &mut Self {
         let bonded_response: BondedResponse = self
@@ -568,21 +528,6 @@ impl TestingRobot {
         println!("withdrawable_response: {:?}", withdrawable_response);
 
         response(Ok((self, withdrawable_response)));
-
-        self
-    }
-
-    pub(crate) fn query_total_bonded(
-        &mut self,
-        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
-    ) -> &mut Self {
-        let bonded_response: BondedResponse = self
-            .app
-            .wrap()
-            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::TotalBonded {})
-            .unwrap();
-
-        response(Ok((self, bonded_response)));
 
         self
     }
@@ -725,7 +670,7 @@ impl TestingRobot {
 }
 
 /// assertions
-impl TestingRobot {
+impl TestingSuite {
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {
             let config = res.unwrap().1;
@@ -740,7 +685,7 @@ impl TestingRobot {
         address: String,
         expected: BondedResponse,
     ) -> &mut Self {
-        self.query_bonded(address, |res| {
+        self.query_bonded(Some(address), |res| {
             let bonded_response = res.unwrap().1;
             assert_eq!(bonded_response, expected);
         })

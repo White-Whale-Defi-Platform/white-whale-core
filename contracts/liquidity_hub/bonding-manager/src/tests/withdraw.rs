@@ -2,11 +2,11 @@ use cosmwasm_std::{coins, Coin, Event, Uint128};
 
 use white_whale_std::bonding_manager::WithdrawableResponse;
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 
 #[test]
 fn test_withdraw_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
 
@@ -64,7 +64,7 @@ fn test_withdraw_successfully() {
 
 #[test]
 fn test_withdraw_unsuccessfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
 

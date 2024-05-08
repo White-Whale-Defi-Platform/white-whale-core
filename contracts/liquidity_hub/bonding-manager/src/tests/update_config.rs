@@ -2,11 +2,11 @@ use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 
 use white_whale_std::bonding_manager::Config;
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 
 #[test]
 fn test_update_config_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let owner = robot.sender.clone();
 
     robot
@@ -61,7 +61,7 @@ fn test_update_config_successfully() {
 
 #[test]
 fn test_update_config_unsuccessfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
 
     robot
         .instantiate_default()

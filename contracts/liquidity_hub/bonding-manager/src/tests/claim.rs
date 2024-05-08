@@ -4,7 +4,7 @@ use cosmwasm_std::{coin, Uint64};
 use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
-use crate::tests::robot::TestingRobot;
+use crate::tests::suite::TestingSuite;
 use crate::tests::test_helpers;
 use cosmwasm_std::{coins, Coin, Decimal, Timestamp, Uint128};
 
@@ -15,7 +15,7 @@ use super::test_helpers::get_epochs;
 
 #[test]
 fn test_claimable_epochs() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let grace_period = Uint64::new(21);
     let creator = robot.sender.clone();
 
@@ -171,7 +171,7 @@ fn test_claimable_epochs() {
 
 #[test]
 fn test_claim_successfully() {
-    let mut robot = TestingRobot::default();
+    let mut robot = TestingSuite::default();
     let sender = robot.sender.clone();
     let another_sender = robot.another_sender.clone();
     let asset_infos = vec!["uwhale".to_string(), "uusdc".to_string()];
