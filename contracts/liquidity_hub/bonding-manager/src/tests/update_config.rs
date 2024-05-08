@@ -1,5 +1,6 @@
 use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
 
+use crate::ContractError;
 use white_whale_std::bonding_manager::Config;
 
 use crate::tests::suite::TestingSuite;
@@ -12,14 +13,15 @@ fn test_update_config_successfully() {
     robot
         .instantiate_default()
         .assert_config(Config {
-            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
+            epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
             grace_period: Uint64::new(21u64),
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
+        .assert_owner("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3".to_string())
         .update_config(
             owner.clone(),
             None,
@@ -32,8 +34,8 @@ fn test_update_config_successfully() {
             |_res| {},
         )
         .assert_config(Config {
-            owner: owner.clone(),
             pool_manager_addr: Addr::unchecked("contract2"),
+            epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
@@ -42,15 +44,15 @@ fn test_update_config_successfully() {
         })
         .update_config(
             owner,
-            Some("new_owner".to_string()),
-            None,
+            Some("contract5".to_string()),
+            Some("contract6".to_string()),
             None,
             Some(Decimal::one()),
             |_res| {},
         )
         .assert_config(Config {
-            owner: Addr::unchecked("new_owner"),
-            pool_manager_addr: Addr::unchecked("contract2"),
+            pool_manager_addr: Addr::unchecked("contract6"),
+            epoch_manager_addr: Addr::unchecked("contract5"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(500u64),
             growth_rate: Decimal::one(),
@@ -62,12 +64,13 @@ fn test_update_config_successfully() {
 #[test]
 fn test_update_config_unsuccessfully() {
     let mut robot = TestingSuite::default();
+    let owner = robot.sender.clone();
 
     robot
         .instantiate_default()
         .assert_config(Config {
-            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
+            epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
@@ -83,17 +86,19 @@ fn test_update_config_unsuccessfully() {
                 Uint128::new(1u128),
                 Uint128::new(2u128),
             )),
-            |_res| {
-                //println!("{:?}", res.unwrap_err().root_cause());
-                // assert_eq!(
-                //     res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(),
-                //     &ContractError::Unauthorized {}
-                // );
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::OwnershipError { .. } => {}
+                    _ => {
+                        panic!("Wrong error type, should return ContractError::OwnershipError")
+                    }
+                }
             },
         )
         .assert_config(Config {
-            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
+            epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),
@@ -101,7 +106,7 @@ fn test_update_config_unsuccessfully() {
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
-            Addr::unchecked("owner"),
+            owner,
             None,
             None,
             Some(Uint64::new(500u64)),
@@ -109,17 +114,19 @@ fn test_update_config_unsuccessfully() {
                 Uint128::new(2u128),
                 Uint128::new(1u128),
             )),
-            |_res| {
-                //println!("{:?}", res.unwrap_err().root_cause());
-                // assert_eq!(
-                //     res.unwrap_err().root_cause().downcast_ref::<ContractError>().unwrap(),
-                //     &ContractError::Unauthorized {}
-                // );
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                match err {
+                    ContractError::InvalidGrowthRate { .. } => {}
+                    _ => {
+                        panic!("Wrong error type, should return ContractError::InvalidGrowthRate")
+                    }
+                }
             },
         )
         .assert_config(Config {
-            owner: Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3"),
             pool_manager_addr: Addr::unchecked("contract2"),
+            epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
             unbonding_period: Uint64::new(1_000_000_000_000u64),
             growth_rate: Decimal::one(),

@@ -76,7 +76,7 @@ pub fn execute(
             commands::withdraw(deps, env.block.time, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
-            epoch_manager_addr: epock_manager_addr,
+            epoch_manager_addr,
             pool_manager_addr,
             unbonding_period,
             growth_rate,
@@ -85,7 +85,7 @@ pub fn execute(
             commands::update_config(
                 deps,
                 info,
-                epock_manager_addr,
+                epoch_manager_addr,
                 pool_manager_addr,
                 unbonding_period,
                 growth_rate,

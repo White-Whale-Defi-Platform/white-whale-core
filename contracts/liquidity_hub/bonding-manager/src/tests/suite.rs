@@ -341,9 +341,8 @@ impl TestingSuite {
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
-        owner: Option<String>,
-        pool_manager_addr: Option<String>,
         epoch_manager_addr: Option<String>,
+        pool_manager_addr: Option<String>,
         unbonding_period: Option<Uint64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -418,6 +417,21 @@ impl TestingSuite {
             .unwrap();
 
         response(Ok((self, config)));
+
+        self
+    }
+
+    pub(crate) fn query_owner(
+        &mut self,
+        response: impl Fn(StdResult<(&mut Self, String)>),
+    ) -> &mut Self {
+        let ownership: cw_ownable::Ownership<String> = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Ownership {})
+            .unwrap();
+
+        response(Ok((self, ownership.owner.unwrap())));
 
         self
     }
@@ -675,6 +689,15 @@ impl TestingSuite {
         self.query_config(|res| {
             let config = res.unwrap().1;
             assert_eq!(config, expected);
+        });
+
+        self
+    }
+
+    pub(crate) fn assert_owner(&mut self, expected: String) -> &mut Self {
+        self.query_owner(|res| {
+            let owner = res.unwrap().1;
+            assert_eq!(owner, expected);
         });
 
         self
