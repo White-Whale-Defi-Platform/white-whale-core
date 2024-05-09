@@ -8,7 +8,7 @@ use white_whale_std::pool_network::asset;
 
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, EPOCHS};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, REWARD_BUCKETS};
 use crate::{commands, queries};
 
 // version info for migration info
@@ -197,7 +197,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             // distribution_denom, update the upcoming epoch with the new funds
             if to_be_distribution_asset.denom == distribution_denom {
                 // Finding the upcoming EpochID
-                let upcoming_epoch_id = match EPOCHS
+                let upcoming_epoch_id = match REWARD_BUCKETS
                     .keys(deps.storage, None, None, Order::Descending)
                     .next()
                 {
@@ -205,18 +205,22 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                     None => return Err(ContractError::Unauthorized),
                 };
 
-                EPOCHS.update(deps.storage, &upcoming_epoch_id, |epoch| -> StdResult<_> {
-                    let mut upcoming_epoch = epoch.unwrap_or_default();
-                    upcoming_epoch.available = asset::aggregate_coins(
-                        upcoming_epoch.available,
-                        vec![to_be_distribution_asset.clone()],
-                    )?;
-                    upcoming_epoch.total = asset::aggregate_coins(
-                        upcoming_epoch.total,
-                        vec![to_be_distribution_asset.clone()],
-                    )?;
-                    Ok(upcoming_epoch)
-                })?;
+                REWARD_BUCKETS.update(
+                    deps.storage,
+                    upcoming_epoch_id,
+                    |epoch| -> StdResult<_> {
+                        let mut upcoming_epoch = epoch.unwrap_or_default();
+                        upcoming_epoch.available = asset::aggregate_coins(
+                            upcoming_epoch.available,
+                            vec![to_be_distribution_asset.clone()],
+                        )?;
+                        upcoming_epoch.total = asset::aggregate_coins(
+                            upcoming_epoch.total,
+                            vec![to_be_distribution_asset.clone()],
+                        )?;
+                        Ok(upcoming_epoch)
+                    },
+                )?;
             }
 
             Ok(Response::new()

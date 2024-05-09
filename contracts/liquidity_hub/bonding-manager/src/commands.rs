@@ -3,14 +3,15 @@ use cosmwasm_std::{
     StdError, StdResult, SubMsg, Uint128, Uint64,
 };
 
-use white_whale_std::bonding_manager::{Bond, Epoch, GlobalIndex};
+use white_whale_std::bonding_manager::{Bond, GlobalIndex, RewardBucket};
+use white_whale_std::epoch_manager::epoch_manager::Epoch;
 use white_whale_std::pool_network::asset;
 
 use crate::helpers::validate_growth_rate;
-use crate::queries::{get_expiring_epoch, query_claimable, query_weight, MAX_PAGE_LIMIT};
+use crate::queries::{get_expiring_reward_bucket, query_claimable, query_weight, MAX_PAGE_LIMIT};
 use crate::state::{
-    update_global_weight, update_local_weight, BOND, CONFIG, EPOCHS, GLOBAL, LAST_CLAIMED_EPOCH,
-    UNBOND,
+    update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH,
+    REWARD_BUCKETS, UNBOND,
 };
 use crate::{helpers, ContractError};
 
@@ -22,7 +23,7 @@ pub(crate) fn bond(
     asset: Coin,
 ) -> Result<Response, ContractError> {
     println!("bonding");
-    helpers::validate_epochs(&deps)?;
+    helpers::validate_buckets(&deps)?;
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     println!("bonding 2");
@@ -49,8 +50,7 @@ pub(crate) fn bond(
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
-    bond = update_local_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
-    BOND.save(deps.storage, (&info.sender, &asset.denom), &bond)?;
+    update_local_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
@@ -59,9 +59,7 @@ pub(crate) fn bond(
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
         asset::aggregate_coins(global_index.bonded_assets, vec![asset.clone()])?;
-    global_index = update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
-
-    GLOBAL.save(deps.storage, &global_index)?;
+    update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "bond".to_string()),
@@ -243,24 +241,24 @@ pub(crate) fn update_config(
 
 /// Claims pending rewards for the sender.
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    let claimable_epochs_for_user =
-        query_claimable(deps.as_ref(), Some(info.sender.to_string()))?.epochs;
+    let claimable_reward_buckets_for_user =
+        query_claimable(deps.as_ref(), Some(info.sender.to_string()))?.reward_buckets;
     ensure!(
-        !claimable_epochs_for_user.is_empty(),
+        !claimable_reward_buckets_for_user.is_empty(),
         ContractError::NothingToClaim
     );
 
-    let mut claimable_fees = vec![];
+    let mut claimable_rewards = vec![];
     let mut attributes = vec![];
-    for mut epoch in claimable_epochs_for_user.clone() {
+    for mut reward_bucket in claimable_reward_buckets_for_user.clone() {
         let bonding_weight_response_for_epoch = query_weight(
             deps.as_ref(),
-            epoch.id,
+            reward_bucket.id,
             info.sender.to_string(),
-            Some(epoch.global_index.clone()),
+            Some(reward_bucket.global_index.clone()),
         )?;
 
-        // if the user has no share in the epoch, skip it
+        // if the user has no share in the bucket, skip it
         if bonding_weight_response_for_epoch.share.is_zero() {
             continue;
         };
@@ -271,20 +269,20 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
             ContractError::InvalidShare
         );
 
-        for fee in epoch.total.iter() {
-            let reward = fee.amount * bonding_weight_response_for_epoch.share;
+        for reward in reward_bucket.total.iter() {
+            let user_reward = reward.amount * bonding_weight_response_for_epoch.share;
 
             // make sure the reward is sound
-            let reward_validation: Result<(), StdError> = epoch
+            let reward_validation: Result<(), StdError> = reward_bucket
                 .available
                 .iter()
-                .find(|available_fee| available_fee.denom == fee.denom)
+                .find(|available_fee| available_fee.denom == reward.denom)
                 .map(|available_fee| {
-                    if reward > available_fee.amount {
+                    if user_reward > available_fee.amount {
                         attributes.push((
                             "error",
                             ContractError::InvalidReward {
-                                reward,
+                                reward: user_reward,
                                 available: available_fee.amount,
                             }
                             .to_string(),
@@ -294,45 +292,45 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 })
                 .ok_or(StdError::generic_err("Invalid fee"))?;
 
-            // if the reward is invalid, skip the epoch
+            // if the reward is invalid, skip the bucket
             match reward_validation {
                 Ok(_) => {}
                 Err(_) => continue,
             }
 
-            let denom = &fee.denom;
-            // add the reward to the claimable fees
-            claimable_fees = asset::aggregate_coins(
-                claimable_fees,
+            let denom = &reward.denom;
+            // add the reward
+            claimable_rewards = asset::aggregate_coins(
+                claimable_rewards,
                 vec![Coin {
                     denom: denom.to_string(),
-                    amount: reward,
+                    amount: user_reward,
                 }],
             )?;
 
-            // modify the epoch to reflect the new available and claimed amount
-            for available_fee in epoch.available.iter_mut() {
-                if available_fee.denom == fee.denom {
-                    available_fee.amount = available_fee.amount.saturating_sub(reward);
+            // modify the bucket to reflect the new available and claimed amount
+            for available_fee in reward_bucket.available.iter_mut() {
+                if available_fee.denom == reward.denom {
+                    available_fee.amount = available_fee.amount.saturating_sub(user_reward);
                 }
             }
 
-            if epoch.claimed.is_empty() {
-                epoch.claimed = vec![Coin {
+            if reward_bucket.claimed.is_empty() {
+                reward_bucket.claimed = vec![Coin {
                     denom: denom.to_string(),
-                    amount: reward,
+                    amount: user_reward,
                 }];
             } else {
-                for claimed_fee in epoch.claimed.iter_mut() {
-                    if claimed_fee.denom == fee.denom {
-                        claimed_fee.amount = claimed_fee.amount.checked_add(reward)?;
+                for claimed_reward in reward_bucket.claimed.iter_mut() {
+                    if claimed_reward.denom == reward.denom {
+                        claimed_reward.amount = claimed_reward.amount.checked_add(user_reward)?;
                     }
 
                     // sanity check, should never happen
-                    for total_fee in epoch.total.iter() {
-                        if total_fee.denom == claimed_fee.denom {
+                    for total_reward in reward_bucket.total.iter() {
+                        if total_reward.denom == claimed_reward.denom {
                             ensure!(
-                                claimed_fee.amount <= total_fee.amount,
+                                claimed_reward.amount <= total_reward.amount,
                                 ContractError::InvalidShare
                             );
                         }
@@ -340,20 +338,24 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                 }
             }
 
-            EPOCHS.save(deps.storage, &epoch.id.to_be_bytes(), &epoch)?;
+            REWARD_BUCKETS.save(deps.storage, reward_bucket.id, &reward_bucket)?;
         }
     }
 
-    // update the last claimed epoch for the user. it's the first epoch in the list since it's sorted
+    // update the last claimed epoch for the user. it's in the first bucket on the list since it's sorted
     // in descending order
-    LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &claimable_epochs_for_user[0].id)?;
+    LAST_CLAIMED_EPOCH.save(
+        deps.storage,
+        &info.sender,
+        &claimable_reward_buckets_for_user[0].id,
+    )?;
 
     Ok(Response::default()
         .add_attributes(vec![("action", "claim".to_string())])
         .add_attributes(attributes)
         .add_message(CosmosMsg::Bank(BankMsg::Send {
             to_address: info.sender.to_string(),
-            amount: claimable_fees,
+            amount: claimable_rewards,
         })))
 }
 
@@ -364,17 +366,17 @@ pub(crate) fn fill_rewards(
 ) -> Result<Response, ContractError> {
     println!(
         "EPOCHS: {:?}",
-        EPOCHS
+        REWARD_BUCKETS
             .keys(deps.storage, None, None, Order::Descending)
             .collect::<Vec<_>>()
     );
 
-    // Finding the most recent EpochID
-    let upcoming_epoch_id = match EPOCHS
+    // Finding the most recent bucket
+    let upcoming_bucket_id = match REWARD_BUCKETS
         .keys(deps.storage, None, None, Order::Descending)
         .next()
     {
-        Some(epoch_id) => epoch_id?,
+        Some(bucket_id) => bucket_id?,
         None => return Err(ContractError::Unauthorized),
     };
 
@@ -422,7 +424,7 @@ pub(crate) fn fill_rewards(
     // of all the LP token withdrawals and swaps
     // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
     // If this became an issue would could look at replys instead of the query
-    EPOCHS.update(deps.storage, &upcoming_epoch_id, |bucket| -> StdResult<_> {
+    REWARD_BUCKETS.update(deps.storage, upcoming_bucket_id, |bucket| -> StdResult<_> {
         let mut bucket = bucket.unwrap_or_default();
         bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
         bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
@@ -437,13 +439,12 @@ pub(crate) fn fill_rewards(
 pub(crate) fn on_epoch_created(
     deps: DepsMut,
     info: MessageInfo,
-    current_epoch: white_whale_std::epoch_manager::epoch_manager::Epoch,
+    current_epoch: Epoch,
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
     println!("EpochChangedHook: {:?}", current_epoch);
-    // A new epoch has been created, update rewards bucket and forward the expiring epoch
-    // Store epoch and verify the sender is the epoch manager
+    // A new epoch has been created, update rewards bucket and forward the expiring bucket
     let config = CONFIG.load(deps.storage)?;
     ensure!(
         info.sender == config.epoch_manager_addr,
@@ -458,89 +459,81 @@ pub(crate) fn on_epoch_created(
             ..Default::default()
         };
         GLOBAL.save(deps.storage, &initial_global_index)?;
-        EPOCHS.save(
+        REWARD_BUCKETS.save(
             deps.storage,
-            &current_epoch.id.to_be_bytes(),
-            &Epoch {
+            current_epoch.id,
+            &RewardBucket {
                 id: current_epoch.id,
-                start_time: current_epoch.start_time,
+                epoch_start_time: current_epoch.start_time,
                 global_index: initial_global_index,
-                ..Epoch::default()
+                ..RewardBucket::default()
             },
         )?;
     }
 
     let global = GLOBAL.load(deps.storage)?;
 
-    // update the global index for the current epoch, take the current snapshot of the global index
-    EPOCHS.update(
+    // update the global index for the current bucket, take the current snapshot of the global index
+    REWARD_BUCKETS.update(
         deps.storage,
-        &current_epoch.id.to_be_bytes(),
-        |epoch| -> StdResult<_> {
-            let mut epoch = epoch.unwrap_or_default();
-            epoch.global_index = global;
-            Ok(epoch)
+        current_epoch.id,
+        |reward_bucket| -> StdResult<_> {
+            let mut reward_bucket = reward_bucket.unwrap_or_default();
+            reward_bucket.global_index = global;
+            Ok(reward_bucket)
         },
     )?;
 
     // todo to delete once the testing is done
-    let all_epochs: Vec<Epoch> = EPOCHS
+    let all_buckets: Vec<RewardBucket> = REWARD_BUCKETS
         .range(deps.storage, None, None, Order::Descending)
         .map(|item| {
-            let (_, epoch) = item?;
-            Ok(epoch)
+            let (_, bucket) = item?;
+            Ok(bucket)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<Vec<RewardBucket>>>()?;
 
-    println!("EPOCHS: {:?}", all_epochs);
+    println!("EPOCHS: {:?}", all_buckets);
 
-    // forward fees from the expiring epoch to the new one.
-    let mut expiring_epoch = get_expiring_epoch(deps.as_ref())?;
-    if let Some(expiring_epoch) = expiring_epoch.as_mut() {
-        // Load all the available assets from the expiring epoch
-        let amount_to_be_forwarded = EPOCHS
-            .load(deps.storage, &expiring_epoch.id.to_be_bytes())?
+    // forward fees from the expiring bucket to the new one.
+    let mut expiring_reward_bucket = get_expiring_reward_bucket(deps.as_ref())?;
+    if let Some(expiring_bucket) = expiring_reward_bucket.as_mut() {
+        // Load all the available assets from the expiring bucket
+        let amount_to_be_forwarded = REWARD_BUCKETS
+            .load(deps.storage, expiring_bucket.id)?
             .available;
-        EPOCHS.update(
-            deps.storage,
-            &current_epoch.id.to_be_bytes(),
-            |epoch| -> StdResult<_> {
-                let mut epoch = epoch.unwrap_or_default();
-                epoch.available =
-                    asset::aggregate_coins(epoch.available, amount_to_be_forwarded.clone())?;
-                epoch.total = asset::aggregate_coins(epoch.total, amount_to_be_forwarded)?;
+        REWARD_BUCKETS.update(deps.storage, current_epoch.id, |bucket| -> StdResult<_> {
+            let mut bucket = bucket.unwrap_or_default();
+            bucket.available =
+                asset::aggregate_coins(bucket.available, amount_to_be_forwarded.clone())?;
+            bucket.total = asset::aggregate_coins(bucket.total, amount_to_be_forwarded)?;
 
-                Ok(epoch)
-            },
-        )?;
-        // Set the available assets for the expiring epoch to an empty vec now that they have been
+            Ok(bucket)
+        })?;
+        // Set the available assets for the expiring bucket to an empty vec now that they have been
         // forwarded
-        EPOCHS.update(
-            deps.storage,
-            &expiring_epoch.id.to_be_bytes(),
-            |epoch| -> StdResult<_> {
-                let mut epoch = epoch.unwrap_or_default();
-                epoch.available = vec![];
-                Ok(epoch)
-            },
-        )?;
+        REWARD_BUCKETS.update(deps.storage, expiring_bucket.id, |bucket| -> StdResult<_> {
+            let mut bucket = bucket.unwrap_or_default();
+            bucket.available = vec![];
+            Ok(bucket)
+        })?;
     }
 
     // Create a new bucket for the rewards flowing from this time on, i.e. to be distributed in
-    // the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+    // the next epoch. Also, forwards the expiring bucket (only 21 bucket are live at a given moment)
     let next_epoch_id = Uint64::new(current_epoch.id)
         .checked_add(Uint64::one())?
         .u64();
-    EPOCHS.save(
+    REWARD_BUCKETS.save(
         deps.storage,
-        &next_epoch_id.to_be_bytes(),
-        &Epoch {
+        next_epoch_id,
+        &RewardBucket {
             id: next_epoch_id,
-            start_time: current_epoch.start_time.plus_days(1),
+            epoch_start_time: current_epoch.start_time.plus_days(1),
             // this global index is to be updated the next time this hook is called, as this future epoch
             // will become the current one
             global_index: Default::default(),
-            ..Epoch::default()
+            ..RewardBucket::default()
         },
     )?;
 

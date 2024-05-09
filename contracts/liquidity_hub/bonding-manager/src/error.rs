@@ -69,7 +69,7 @@ pub enum ContractError {
     InvalidShare,
 
     #[error(
-        "Invalid reward amount. Reward: {reward}, but only {available} available in the epoch."
+        "Invalid reward amount. Reward: {reward}, but only {available} available in the reward bucket."
     )]
     InvalidReward { reward: Uint128, available: Uint128 },
 }

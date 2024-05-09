@@ -1,4 +1,4 @@
-use crate::epoch_manager::epoch_manager::Epoch as EpochV2;
+use crate::epoch_manager::epoch_manager::Epoch;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
@@ -22,25 +22,26 @@ pub struct Config {
     pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
     pub bonding_assets: Vec<String>,
-    /// Grace period the maximum age of a epoch bucket before it's considered expired and fees
+    /// Grace period the maximum age of a reward bucket before it's considered expired and fees
     /// are forwarded from it
     pub grace_period: u64,
 }
 
 #[cw_serde]
 #[derive(Default)]
-pub struct Epoch {
-    // Epoch identifier
+pub struct RewardBucket {
+    // id of the reward bucket. Matches the epoch id it's associated with
     pub id: u64,
     // Epoch start time
-    pub start_time: Timestamp,
-    // Initial fees to be distributed in this epoch.
+    pub epoch_start_time: Timestamp,
+    // Initial fees to be distributed in this reward bucket.
     pub total: Vec<Coin>,
-    // Fees left to be claimed on this epoch. These available fees are forwarded when the epoch expires.
+    // Fees left to be claimed on this reward bucket. These available fees are forwarded when the
+    // reward bucket expires.
     pub available: Vec<Coin>,
-    // Fees that were claimed on this epoch. For keeping record on the total fees claimed.
+    // Fees that were claimed on this reward bucket. For keeping record on the total fees claimed.
     pub claimed: Vec<Coin>,
-    // Global index taken at the time of Epoch Creation
+    // Global index snapshot taken at the time of reward bucket creation
     pub global_index: GlobalIndex,
 }
 
@@ -94,7 +95,7 @@ pub struct InstantiateMsg {
     pub growth_rate: Decimal,
     /// [String] denoms of the assets that can be bonded.
     pub bonding_assets: Vec<String>,
-    /// Grace period the maximum age of a epoch bucket before it's considered expired and fees
+    /// Grace period the maximum age of a reward bucket before it's considered expired and fees
     /// are forwarded from it
     pub grace_period: u64,
     /// The epoch manager contract
@@ -103,7 +104,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub struct EpochChangedHookMsg {
-    pub current_epoch: EpochV2,
+    pub current_epoch: Epoch,
 }
 
 #[cw_ownable_execute]
@@ -138,11 +139,12 @@ pub enum ExecuteMsg {
     /// Fills the contract with new rewards.
     FillRewards,
 
-    /// Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in
-    /// the upcoming epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
+    /// Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from
+    /// this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring
+    /// reward bucket (only 21 of them are live at a given moment)
     EpochChangedHook {
         /// The current epoch, the one that was newly created.
-        current_epoch: EpochV2,
+        current_epoch: Epoch,
     },
 }
 
@@ -201,11 +203,11 @@ pub enum QueryMsg {
     #[returns(GlobalIndex)]
     GlobalIndex,
 
-    /// Returns the [Epoch]s that can be claimed by an address.
-    #[returns(ClaimableEpochsResponse)]
+    /// Returns the [RewardBucket]s that can be claimed by an address.
+    #[returns(ClaimableRewardBucketsResponse)]
     Claimable {
-        /// The address to check for claimable epochs. If none is provided, all possible epochs
-        /// stored in the contract that can potentially be claimed are returned.
+        /// The address to check for claimable reward buckets. If none is provided, all possible
+        /// reward buckets stored in the contract that can potentially be claimed are returned.
         address: Option<String>,
     },
 }
@@ -267,7 +269,7 @@ pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Coin>) -> StdResult<C
 }
 
 #[cw_serde]
-pub struct ClaimableEpochsResponse {
-    /// The epochs that can be claimed by the address.
-    pub epochs: Vec<Epoch>,
+pub struct ClaimableRewardBucketsResponse {
+    /// The reward buckets that can be claimed by the address.
+    pub reward_buckets: Vec<RewardBucket>,
 }

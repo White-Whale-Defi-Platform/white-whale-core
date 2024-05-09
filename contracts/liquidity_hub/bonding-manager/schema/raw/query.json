@@ -157,7 +157,7 @@
       ]
     },
     {
-      "description": "Returns the [Epoch]s that can be claimed by an address.",
+      "description": "Returns the [RewardBucket]s that can be claimed by an address.",
       "type": "object",
       "required": [
         "claimable"
@@ -167,7 +167,7 @@
           "type": "object",
           "properties": {
             "address": {
-              "description": "The address to check for claimable epochs. If none is provided, all possible epochs stored in the contract that can potentially be claimed are returned.",
+              "description": "The address to check for claimable reward buckets. If none is provided, all possible reward buckets stored in the contract that can potentially be claimed are returned.",
               "type": [
                 "string",
                 "null"
