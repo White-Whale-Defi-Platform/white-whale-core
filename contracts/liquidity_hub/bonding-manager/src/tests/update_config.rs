@@ -7,10 +7,10 @@ use crate::tests::suite::TestingSuite;
 
 #[test]
 fn test_update_config_successfully() {
-    let mut robot = TestingSuite::default();
-    let owner = robot.sender.clone();
+    let mut suite = TestingSuite::default();
+    let owner = suite.sender.clone();
 
-    robot
+    suite
         .instantiate_default()
         .assert_config(Config {
             pool_manager_addr: Addr::unchecked("contract2"),
@@ -63,10 +63,10 @@ fn test_update_config_successfully() {
 
 #[test]
 fn test_update_config_unsuccessfully() {
-    let mut robot = TestingSuite::default();
-    let owner = robot.sender.clone();
+    let mut suite = TestingSuite::default();
+    let owner = suite.sender.clone();
 
-    robot
+    suite
         .instantiate_default()
         .assert_config(Config {
             pool_manager_addr: Addr::unchecked("contract2"),

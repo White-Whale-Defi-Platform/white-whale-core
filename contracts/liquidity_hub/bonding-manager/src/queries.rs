@@ -1,10 +1,6 @@
 use std::collections::{HashSet, VecDeque};
-use white_whale_std::epoch_manager::epoch_manager::ConfigResponse;
 
-use cosmwasm_std::{
-    to_json_binary, Decimal, Deps, Order, QueryRequest, StdError, StdResult, Timestamp, Uint128,
-    Uint64, WasmQuery,
-};
+use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128, Uint64};
 use cw_storage_plus::Bound;
 
 use white_whale_std::bonding_manager::{
@@ -12,9 +8,7 @@ use white_whale_std::bonding_manager::{
     WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
-use white_whale_std::epoch_manager::epoch_manager::QueryMsg;
 
-use crate::helpers;
 use crate::state::{
     get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, GLOBAL, LAST_CLAIMED_EPOCH, UNBOND,
 };
@@ -43,37 +37,24 @@ pub(crate) fn query_bonded(deps: Deps, address: Option<String>) -> StdResult<Bon
         // if it doesn't have bonded, return empty response
         if bonds.is_empty() {
             return Ok(BondedResponse {
-                total_bonded: Uint128::zero(),
-                bonded_assets: vec![],
-                first_bonded_epoch_id: Some(Uint64::zero()),
+                total_bonded: Default::default(),
+                bonded_assets: Default::default(),
+                first_bonded_epoch_id: Default::default(),
             });
         }
 
         let mut total_bonded = Uint128::zero();
         let mut bonded_assets = vec![];
-
-        // 1 January 2500
-        let mut first_bond_timestamp = Timestamp::from_seconds(16725229261u64);
+        let mut first_bonded_epoch_id = Uint64::MAX;
 
         for bond in bonds {
-            if bond.timestamp.seconds() < first_bond_timestamp.seconds() {
-                first_bond_timestamp = bond.timestamp;
+            if bond.created_at_epoch < first_bonded_epoch_id {
+                first_bonded_epoch_id = bond.created_at_epoch;
             }
 
             total_bonded = total_bonded.checked_add(bond.asset.amount)?;
             bonded_assets.push(bond.asset);
         }
-
-        let config = CONFIG.load(deps.storage)?;
-        // Query epoch manager for EpochConfig
-        let epoch_config: ConfigResponse =
-            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: config.epoch_manager_addr.to_string(),
-                msg: to_json_binary(&QueryMsg::Config {})?,
-            }))?;
-
-        let first_bonded_epoch_id =
-            helpers::calculate_epoch(epoch_config.epoch_config, first_bond_timestamp)?;
 
         (total_bonded, bonded_assets, Some(first_bonded_epoch_id))
     } else {

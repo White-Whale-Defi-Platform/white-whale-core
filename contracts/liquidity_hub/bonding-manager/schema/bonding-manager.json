@@ -1158,6 +1158,7 @@
           "type": "object",
           "required": [
             "asset",
+            "created_at_epoch",
             "timestamp",
             "weight"
           ],
@@ -1167,6 +1168,14 @@
               "allOf": [
                 {
                   "$ref": "#/definitions/Coin"
+                }
+              ]
+            },
+            "created_at_epoch": {
+              "description": "The epoch id at which the Bond was created.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Uint64"
                 }
               ]
             },

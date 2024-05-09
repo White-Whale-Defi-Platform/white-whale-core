@@ -47,6 +47,8 @@ pub struct Epoch {
 pub struct Bond {
     /// The amount of bonded tokens.
     pub asset: Coin,
+    /// The epoch id at which the Bond was created.
+    pub created_at_epoch: Uint64,
     /// The timestamp at which the bond was done.
     pub timestamp: Timestamp,
     /// The weight of the bond at the given block height.
@@ -60,6 +62,7 @@ impl Default for Bond {
                 denom: String::new(),
                 amount: Uint128::zero(),
             },
+            created_at_epoch: Default::default(),
             timestamp: Timestamp::default(),
             weight: Uint128::zero(),
         }

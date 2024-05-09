@@ -8,9 +8,9 @@ use crate::ContractError;
 
 #[test]
 fn test_instantiate_successfully() {
-    let mut robot = TestingSuite::default();
+    let mut suite = TestingSuite::default();
 
-    robot
+    suite
         .instantiate(
             Uint64::new(1_000u64),
             Decimal::one(),
@@ -30,10 +30,10 @@ fn test_instantiate_successfully() {
 
 #[test]
 fn test_instantiate_unsuccessfully() {
-    let mut robot = TestingSuite::default();
+    let mut suite = TestingSuite::default();
 
     // over bonding assets limit
-    robot
+    suite
         .instantiate_err(
             Uint64::new(1_000u64),
             Decimal::one(),
