@@ -23,9 +23,18 @@ pub(crate) fn bond(
     asset: Coin,
 ) -> Result<Response, ContractError> {
     println!("bonding");
+    helpers::validate_epochs(&deps)?;
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps, &env)?;
     println!("bonding 2");
+
+    let config = CONFIG.load(deps.storage)?;
+    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        )?;
+
     let mut bond = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -34,6 +43,7 @@ pub(crate) fn bond(
                 amount: Uint128::zero(),
                 ..asset.clone()
             },
+            created_at_epoch: Uint64::new(current_epoch.epoch.id),
             ..Bond::default()
         });
 
@@ -97,6 +107,14 @@ pub(crate) fn unbond(
         } else {
             BOND.save(deps.storage, (&info.sender, &asset.denom), &unbond)?;
         }
+
+        let config = CONFIG.load(deps.storage)?;
+        let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+            deps.querier.query_wasm_smart(
+                config.epoch_manager_addr,
+                &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+            )?;
+
         // record the unbonding
         UNBOND.save(
             deps.storage,
@@ -105,6 +123,7 @@ pub(crate) fn unbond(
                 asset: asset.clone(),
                 weight: Uint128::zero(),
                 timestamp,
+                created_at_epoch: Uint64::new(current_epoch.epoch.id),
             },
         )?;
         // update global values
@@ -149,7 +168,6 @@ pub(crate) fn withdraw(
     for unbonding in unbondings {
         let (ts, bond) = unbonding;
         if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
-            // TODO: Clean up the bond asset
             let denom = bond.asset.denom;
 
             refund_amount = refund_amount.checked_add(bond.asset.amount)?;

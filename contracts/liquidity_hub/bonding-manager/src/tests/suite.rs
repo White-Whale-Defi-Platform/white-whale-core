@@ -133,9 +133,17 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn add_one_day(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_days(1);
+        self.app.set_block(block_info);
+
+        self
+    }
+
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
-            Uint64::new(1_000_000_000_000u64),
+            Uint64::new(86_400_000000000u64),
             Decimal::one(),
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
@@ -439,7 +447,6 @@ impl TestingSuite {
     pub(crate) fn query_weight(
         &mut self,
         address: String,
-
         response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
     ) -> &mut Self {
         let bonding_weight_response: BondingWeightResponse = self

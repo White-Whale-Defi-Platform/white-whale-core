@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, ReplyOn,
+    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, ReplyOn,
     StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
@@ -13,7 +13,7 @@ use white_whale_std::pool_manager::{
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
 use crate::queries::query_claimable;
-use crate::state::CONFIG;
+use crate::state::{CONFIG, EPOCHS};
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
@@ -99,6 +99,7 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(
     Ok(())
 }
 
+//todo remove
 /// Calculates the epoch id for any given timestamp based on the genesis epoch configuration.
 pub fn calculate_epoch(
     genesis_epoch_config: EpochConfig,
@@ -281,6 +282,18 @@ pub fn swap_coins_to_main_token(
             messages.push(swap_msg.into());
         }
     }
+    Ok(())
+}
+
+/// Validates that there are epochs in the state. If there are none, it means the system has just
+/// been started and the epoch manager has still not created any epochs yet.
+pub(crate) fn validate_epochs(deps: &DepsMut) -> Result<(), ContractError> {
+    let epochs = EPOCHS
+        .keys(deps.storage, None, None, Order::Descending)
+        .collect::<StdResult<Vec<_>>>()?;
+
+    ensure!(!epochs.is_empty(), ContractError::Unauthorized);
+
     Ok(())
 }
 
