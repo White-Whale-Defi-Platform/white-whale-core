@@ -31,7 +31,7 @@
         "type": "string"
       },
       "grace_period": {
-        "description": "Grace period the maximum age of a epoch bucket before it's considered expired and fees are forwarded from it",
+        "description": "Grace period the maximum age of a reward bucket before it's considered expired and fees are forwarded from it",
         "type": "integer",
         "format": "uint64",
         "minimum": 0.0
@@ -185,7 +185,7 @@
         ]
       },
       {
-        "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
+        "description": "Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring reward bucket (only 21 of them are live at a given moment)",
         "type": "object",
         "required": [
           "epoch_changed_hook"
@@ -538,7 +538,7 @@
         ]
       },
       {
-        "description": "Returns the [Epoch]s that can be claimed by an address.",
+        "description": "Returns the [RewardBucket]s that can be claimed by an address.",
         "type": "object",
         "required": [
           "claimable"
@@ -548,7 +548,7 @@
             "type": "object",
             "properties": {
               "address": {
-                "description": "The address to check for claimable epochs. If none is provided, all possible epochs stored in the contract that can potentially be claimed are returned.",
+                "description": "The address to check for claimable reward buckets. If none is provided, all possible reward buckets stored in the contract that can potentially be claimed are returned.",
                 "type": [
                   "string",
                   "null"
@@ -706,17 +706,17 @@
     },
     "claimable": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ClaimableEpochsResponse",
+      "title": "ClaimableRewardBucketsResponse",
       "type": "object",
       "required": [
-        "epochs"
+        "reward_buckets"
       ],
       "properties": {
-        "epochs": {
-          "description": "The epochs that can be claimed by the address.",
+        "reward_buckets": {
+          "description": "The reward buckets that can be claimed by the address.",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Epoch"
+            "$ref": "#/definitions/RewardBucket"
           }
         }
       },
@@ -736,49 +736,6 @@
               "type": "string"
             }
           }
-        },
-        "Epoch": {
-          "type": "object",
-          "required": [
-            "available",
-            "claimed",
-            "global_index",
-            "id",
-            "start_time",
-            "total"
-          ],
-          "properties": {
-            "available": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            },
-            "claimed": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            },
-            "global_index": {
-              "$ref": "#/definitions/GlobalIndex"
-            },
-            "id": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
-            },
-            "start_time": {
-              "$ref": "#/definitions/Timestamp"
-            },
-            "total": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            }
-          },
-          "additionalProperties": false
         },
         "GlobalIndex": {
           "type": "object",
@@ -817,6 +774,49 @@
                   "$ref": "#/definitions/Uint128"
                 }
               ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "RewardBucket": {
+          "type": "object",
+          "required": [
+            "available",
+            "claimed",
+            "epoch_start_time",
+            "global_index",
+            "id",
+            "total"
+          ],
+          "properties": {
+            "available": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "claimed": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
+            },
+            "epoch_start_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
+            "global_index": {
+              "$ref": "#/definitions/GlobalIndex"
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "total": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Coin"
+              }
             }
           },
           "additionalProperties": false
@@ -873,7 +873,7 @@
           ]
         },
         "grace_period": {
-          "description": "Grace period the maximum age of a epoch bucket before it's considered expired and fees are forwarded from it",
+          "description": "Grace period the maximum age of a reward bucket before it's considered expired and fees are forwarded from it",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0

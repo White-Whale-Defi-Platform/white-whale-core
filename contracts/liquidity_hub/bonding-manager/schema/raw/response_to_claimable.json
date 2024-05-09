@@ -1,16 +1,16 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ClaimableEpochsResponse",
+  "title": "ClaimableRewardBucketsResponse",
   "type": "object",
   "required": [
-    "epochs"
+    "reward_buckets"
   ],
   "properties": {
-    "epochs": {
-      "description": "The epochs that can be claimed by the address.",
+    "reward_buckets": {
+      "description": "The reward buckets that can be claimed by the address.",
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Epoch"
+        "$ref": "#/definitions/RewardBucket"
       }
     }
   },
@@ -30,49 +30,6 @@
           "type": "string"
         }
       }
-    },
-    "Epoch": {
-      "type": "object",
-      "required": [
-        "available",
-        "claimed",
-        "global_index",
-        "id",
-        "start_time",
-        "total"
-      ],
-      "properties": {
-        "available": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Coin"
-          }
-        },
-        "claimed": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Coin"
-          }
-        },
-        "global_index": {
-          "$ref": "#/definitions/GlobalIndex"
-        },
-        "id": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0.0
-        },
-        "start_time": {
-          "$ref": "#/definitions/Timestamp"
-        },
-        "total": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Coin"
-          }
-        }
-      },
-      "additionalProperties": false
     },
     "GlobalIndex": {
       "type": "object",
@@ -111,6 +68,49 @@
               "$ref": "#/definitions/Uint128"
             }
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RewardBucket": {
+      "type": "object",
+      "required": [
+        "available",
+        "claimed",
+        "epoch_start_time",
+        "global_index",
+        "id",
+        "total"
+      ],
+      "properties": {
+        "available": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Coin"
+          }
+        },
+        "claimed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Coin"
+          }
+        },
+        "epoch_start_time": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "global_index": {
+          "$ref": "#/definitions/GlobalIndex"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "total": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Coin"
+          }
         }
       },
       "additionalProperties": false

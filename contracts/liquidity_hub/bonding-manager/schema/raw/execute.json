@@ -124,7 +124,7 @@
       ]
     },
     {
-      "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
+      "description": "Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring reward bucket (only 21 of them are live at a given moment)",
       "type": "object",
       "required": [
         "epoch_changed_hook"

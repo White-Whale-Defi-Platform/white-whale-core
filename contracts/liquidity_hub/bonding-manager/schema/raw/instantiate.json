@@ -27,7 +27,7 @@
       "type": "string"
     },
     "grace_period": {
-      "description": "Grace period the maximum age of a epoch bucket before it's considered expired and fees are forwarded from it",
+      "description": "Grace period the maximum age of a reward bucket before it's considered expired and fees are forwarded from it",
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

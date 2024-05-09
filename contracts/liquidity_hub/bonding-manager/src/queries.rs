@@ -8,10 +8,11 @@ use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
     WithdrawableResponse,
 };
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
+use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 
 use crate::state::{
-    get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, EPOCHS, GLOBAL, LAST_CLAIMED_EPOCH, UNBOND,
+    get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS,
+    UNBOND,
 };
 
 /// Queries the current configuration of the contract.
@@ -225,71 +226,74 @@ pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
     Ok(global_index)
 }
 
-/// Returns the epoch that is falling out the grace period, which is the one expiring after creating
-/// a new epoch is created.
-pub fn get_expiring_epoch(deps: Deps) -> Result<Option<Epoch>, ContractError> {
+/// Returns the reward bucket that is falling out the grace period, which is the one expiring
+/// after creating a new epoch is created.
+pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    // Adding 1 because we store the future epoch in the map also, so grace_period + 1
-    let grace_period_plus_future_epoch = Uint64::new(config.grace_period)
+    // Adding 1 because we store the future bucket in the map also, so grace_period + 1
+    let grace_period_plus_future_bucket = Uint64::new(config.grace_period)
         .checked_add(Uint64::one())?
         .u64();
     // Take grace_period + 1 and then slice last one off
-    let epochs = EPOCHS
+    let buckets = REWARD_BUCKETS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period_plus_future_epoch as usize)
+        .take(grace_period_plus_future_bucket as usize)
         .map(|item| {
-            let (_, epoch) = item?;
-            Ok(epoch)
+            let (_, bucket) = item?;
+            Ok(bucket)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<Vec<RewardBucket>>>()?;
 
-    // if the epochs vector's length is the same as the grace period it means there is one epoch that
-    // is expiring once the new one is created i.e. the last epoch in the vector
-    if epochs.len() == grace_period_plus_future_epoch as usize {
-        let expiring_epoch: Epoch = epochs.into_iter().last().unwrap_or_default();
-        Ok(Some(expiring_epoch))
+    // if the buckets vector's length is the same as the grace period it means there is one bucket that
+    // is expiring once the new one is created i.e. the last bucket in the vector
+    if buckets.len() == grace_period_plus_future_bucket as usize {
+        let expiring_reward_bucket: RewardBucket = buckets.into_iter().last().unwrap_or_default();
+        Ok(Some(expiring_reward_bucket))
     } else {
         // nothing is expiring yet
         Ok(None)
     }
 }
 
-/// Returns the epochs that are within the grace period, i.e. the ones which fees can still be claimed.
-/// The result is ordered by epoch id, descending. Thus, the first element is the current epoch.
-pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
+/// Returns the buckets that are within the grace period, i.e. the ones which fees can still be claimed.
+/// The result is ordered by bucket id, descending. Thus, the first element is the current bucket.
+pub fn get_claimable_reward_buckets(deps: Deps) -> StdResult<ClaimableRewardBucketsResponse> {
     let config = CONFIG.load(deps.storage)?;
-    // Adding 1 because we store the future epoch in the map also, so grace_period + 1
+    // Adding 1 because we store the future reward bucket in the map also, so grace_period + 1
     let grace_period = Uint64::new(config.grace_period)
         .checked_add(Uint64::one())?
         .u64();
     // Take grace_period + 1 and then slice last one off
-    let mut epochs = EPOCHS
+    let mut reward_buckets = REWARD_BUCKETS
         .range(deps.storage, None, None, Order::Descending)
         .take(grace_period as usize)
         .map(|item| {
-            let (_, epoch) = item?;
+            let (_, bucket) = item?;
 
-            Ok(epoch)
+            Ok(bucket)
         })
-        .collect::<StdResult<VecDeque<Epoch>>>()?;
+        .collect::<StdResult<VecDeque<RewardBucket>>>()?;
 
-    println!("epochs: {:?}", epochs);
+    println!("reward_buckets: {:?}", reward_buckets);
 
-    // Remove the upcoming epoch from stack
-    epochs.pop_front();
-    epochs.retain(|epoch| !epoch.available.is_empty());
+    // Remove the upcoming bucket from stack
+    reward_buckets.pop_front();
+    reward_buckets.retain(|bucket| !bucket.available.is_empty());
 
-    println!("epochs: {:?}", epochs);
+    println!("reward_buckets: {:?}", reward_buckets);
 
-    Ok(ClaimableEpochsResponse {
-        epochs: epochs.into(),
+    Ok(ClaimableRewardBucketsResponse {
+        reward_buckets: reward_buckets.into(),
     })
 }
 
-/// Returns the epochs that can be claimed by the given address. If no address is provided,
-/// returns all possible epochs stored in the contract that can potentially be claimed.
-pub fn query_claimable(deps: Deps, address: Option<String>) -> StdResult<ClaimableEpochsResponse> {
-    let mut claimable_epochs = get_claimable_epochs(deps)?.epochs;
+/// Returns the reward buckets that can be claimed by the given address. If no address is provided,
+/// returns all possible buckets stored in the contract that can potentially be claimed.
+pub fn query_claimable(
+    deps: Deps,
+    address: Option<String>,
+) -> StdResult<ClaimableRewardBucketsResponse> {
+    let mut claimable_reward_buckets = get_claimable_reward_buckets(deps)?.reward_buckets;
 
     // if an address is provided, filter what's claimable for that address
     if let Some(address) = address {
@@ -297,9 +301,9 @@ pub fn query_claimable(deps: Deps, address: Option<String>) -> StdResult<Claimab
 
         let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;
 
-        // filter out epochs that have already been claimed by the user
+        // filter out buckets that have already been claimed by the user
         if let Some(last_claimed_epoch) = last_claimed_epoch {
-            claimable_epochs.retain(|epoch| epoch.id > last_claimed_epoch);
+            claimable_reward_buckets.retain(|bucket| bucket.id > last_claimed_epoch);
         } else {
             // if the user doesn't have any last_claimed_epoch two things might be happening:
             // 1- the user has never bonded before
@@ -309,29 +313,29 @@ pub fn query_claimable(deps: Deps, address: Option<String>) -> StdResult<Claimab
             println!("bonded_responsebonded_response: {:?}", bonded_response);
             if bonded_response.bonded_assets.is_empty() {
                 // the user has never bonded before, therefore it shouldn't be able to claim anything
-                claimable_epochs.clear();
+                claimable_reward_buckets.clear();
             } else {
                 // the user has bonded, but never claimed any rewards so far. The first_bonded_epoch_id
                 // value should always be Some here, as `query_bonded` will always return Some.
                 match bonded_response.first_bonded_epoch_id {
                     Some(first_bonded_epoch_id) => {
-                        // keep all epochs that are newer than the first bonded epoch
-                        claimable_epochs.retain(|epoch| epoch.id > first_bonded_epoch_id);
+                        // keep all buckets that are newer than the first bonded epoch
+                        claimable_reward_buckets.retain(|bucket| bucket.id > first_bonded_epoch_id);
                     }
                     None => {
                         // for sanity, it should never happen
-                        claimable_epochs.clear();
+                        claimable_reward_buckets.clear();
                     }
                 }
             }
         };
-        // filter out epochs that have no available fees. This would only happen in case the grace period
-        // gets increased after epochs have expired, which would lead to make them available for claiming
-        // again without any available rewards, as those were forwarded to newer epochs.
-        claimable_epochs.retain(|epoch| !epoch.available.is_empty());
+        // filter out buckets that have no available fees. This would only happen in case the grace period
+        // gets increased after buckets have expired, which would lead to make them available for claiming
+        // again without any available rewards, as those were forwarded to newer buckets.
+        claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
 
-    Ok(ClaimableEpochsResponse {
-        epochs: claimable_epochs,
+    Ok(ClaimableRewardBucketsResponse {
+        reward_buckets: claimable_reward_buckets,
     })
 }

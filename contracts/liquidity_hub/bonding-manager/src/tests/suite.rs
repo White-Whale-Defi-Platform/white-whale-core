@@ -11,13 +11,13 @@ use cw_multi_test::{
 use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
-use crate::state::{CONFIG, EPOCHS};
+use crate::state::{CONFIG, REWARD_BUCKETS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
+use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
 use white_whale_std::pool_manager::PoolType;
 
@@ -370,9 +370,9 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn add_epochs_to_state(&mut self, epochs: Vec<Epoch>) -> &mut Self {
+    pub(crate) fn add_epochs_to_state(&mut self, epochs: Vec<RewardBucket>) -> &mut Self {
         for epoch in epochs {
-            EPOCHS
+            REWARD_BUCKETS
                 .save(
                     &mut self.owned_deps.storage,
                     &epoch.id.to_be_bytes(),
@@ -470,7 +470,7 @@ impl TestingSuite {
     pub(crate) fn query_claimable_epochs(
         &mut self,
         address: Option<Addr>,
-        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
+        response: impl Fn(StdResult<(&mut Self, Vec<RewardBucket>)>),
     ) -> &mut Self {
         let address = if let Some(address) = address {
             Some(address.to_string())
@@ -478,13 +478,13 @@ impl TestingSuite {
             None
         };
 
-        let query_res: ClaimableEpochsResponse = self
+        let query_res: ClaimableRewardBucketsResponse = self
             .app
             .wrap()
             .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Claimable { address })
             .unwrap();
 
-        response(Ok((self, query_res.epochs)));
+        response(Ok((self, query_res.reward_buckets)));
 
         self
     }

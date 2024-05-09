@@ -1,11 +1,11 @@
 use cosmwasm_std::{
     ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, ReplyOn,
-    StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
+    StdResult, SubMsg, WasmMsg,
 };
 use cw_utils::PaymentError;
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Config};
+use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, Config};
 use white_whale_std::constants::{DAY_IN_SECONDS, LP_SYMBOL};
-use white_whale_std::epoch_manager::epoch_manager::{EpochConfig, EpochResponse};
+use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
@@ -13,7 +13,7 @@ use white_whale_std::pool_manager::{
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
 use crate::queries::query_claimable;
-use crate::state::{CONFIG, EPOCHS};
+use crate::state::{CONFIG, REWARD_BUCKETS};
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
@@ -55,11 +55,11 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 /// if user has unclaimed rewards, fail with an exception prompting them to claim
 pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
-    let claimable_rewards: ClaimableEpochsResponse =
+    let claimable_rewards: ClaimableRewardBucketsResponse =
         query_claimable(deps.as_ref(), Some(info.sender.to_string())).unwrap();
     // ensure the user has nothing to claim
     ensure!(
-        claimable_rewards.epochs.is_empty(),
+        claimable_rewards.reward_buckets.is_empty(),
         ContractError::UnclaimedRewards
     );
 
@@ -97,29 +97,6 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(
     }
 
     Ok(())
-}
-
-//todo remove
-/// Calculates the epoch id for any given timestamp based on the genesis epoch configuration.
-pub fn calculate_epoch(
-    genesis_epoch_config: EpochConfig,
-    timestamp: Timestamp,
-) -> StdResult<Uint64> {
-    let epoch_duration: Uint64 = genesis_epoch_config.duration;
-
-    // if this is true, it means the epoch is before the genesis epoch. In that case return Epoch 0.
-    if Uint64::new(timestamp.nanos()) < genesis_epoch_config.genesis_epoch {
-        return Ok(Uint64::zero());
-    }
-
-    let elapsed_time =
-        Uint64::new(timestamp.nanos()).checked_sub(genesis_epoch_config.genesis_epoch)?;
-
-    let epoch = elapsed_time
-        .checked_div(epoch_duration)?
-        .checked_add(Uint64::one())?;
-
-    Ok(epoch)
 }
 
 // Used in FillRewards to search the funds for LP tokens and withdraw them
@@ -285,67 +262,14 @@ pub fn swap_coins_to_main_token(
     Ok(())
 }
 
-/// Validates that there are epochs in the state. If there are none, it means the system has just
+/// Validates that there are reward buckets in the state. If there are none, it means the system has just
 /// been started and the epoch manager has still not created any epochs yet.
-pub(crate) fn validate_epochs(deps: &DepsMut) -> Result<(), ContractError> {
-    let epochs = EPOCHS
+pub(crate) fn validate_buckets(deps: &DepsMut) -> Result<(), ContractError> {
+    let reward_buckets = REWARD_BUCKETS
         .keys(deps.storage, None, None, Order::Descending)
         .collect::<StdResult<Vec<_>>>()?;
 
-    ensure!(!epochs.is_empty(), ContractError::Unauthorized);
+    ensure!(!reward_buckets.is_empty(), ContractError::Unauthorized);
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calculate_epoch() {
-        let genesis_epoch = EpochConfig {
-            duration: Uint64::from(86400000000000u64), // 1 day in nanoseconds
-            genesis_epoch: Uint64::from(1683212400000000000u64), // May 4th 2023 15:00:00
-        };
-
-        // First bond timestamp equals genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683212400000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
-
-        // First bond timestamp is one day after genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683309600000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(2u64));
-
-        // First bond timestamp is three days after genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683471600000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(4u64));
-
-        // First bond timestamp is before genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683212300000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::zero());
-
-        // First bond timestamp is within the same epoch as genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683223200000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
-
-        // First bond timestamp is at the end of the genesis epoch, but not exactly (so it's still not epoch 2)
-        let first_bond_timestamp = Timestamp::from_nanos(1683298799999999999u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
-
-        // First bond timestamp is exactly one nanosecond after the end of an epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683298800000000001u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(2u64));
-
-        // First bond timestamp is June 13th 2023 10:56:53
-        let first_bond_timestamp = Timestamp::from_nanos(1686653813000000000u64);
-        let epoch = calculate_epoch(genesis_epoch, first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(40u64));
-    }
 }

@@ -1,7 +1,7 @@
 use crate::ContractError;
 use cosmwasm_std::{Addr, Decimal, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
-use white_whale_std::bonding_manager::{Bond, Config, Epoch, GlobalIndex};
+use white_whale_std::bonding_manager::{Bond, Config, GlobalIndex, RewardBucket};
 
 type Denom = str;
 
@@ -11,7 +11,7 @@ pub const BOND: Map<(&Addr, &Denom), Bond> = Map::new("bond");
 pub const UNBOND: Map<(&Addr, &Denom, u64), Bond> = Map::new("unbond");
 pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, u64> = Map::new("last_claimed_epoch");
-pub const EPOCHS: Map<&[u8], Epoch> = Map::new("epochs");
+pub const REWARD_BUCKETS: Map<u64, RewardBucket> = Map::new("reward_buckets");
 
 /// Updates the local weight of the given address.
 pub fn update_local_weight(
@@ -31,11 +31,7 @@ pub fn update_local_weight(
     )?;
 
     bond.updated_last = current_epoch_id;
-
-    let denom: &String = &bond.asset.denom;
-
-    //todo remove? done outside of this function. Or remove outside
-    BOND.save(deps.storage, (&address, denom), &bond)?;
+    BOND.save(deps.storage, (&address, &bond.asset.denom), &bond)?;
 
     Ok(bond)
 }
@@ -57,8 +53,6 @@ pub fn update_global_weight(
     )?;
 
     global_index.last_updated = current_epoch_id;
-
-    //todo remove? done outside of this function. Or remove outside
     GLOBAL.save(deps.storage, &global_index)?;
 
     Ok(global_index)
@@ -87,18 +81,18 @@ pub fn get_weight(
 
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
 /// a new epoch is created.
-pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
+pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<RewardBucket>> {
     let grace_period = CONFIG.load(deps.storage)?.grace_period;
 
     // last epochs within the grace period
-    let epochs = EPOCHS
+    let epochs = REWARD_BUCKETS
         .range(deps.storage, None, None, Order::Descending)
         .take(grace_period as usize)
         .map(|item| {
             let (_, epoch) = item?;
             Ok(epoch)
         })
-        .collect::<StdResult<Vec<Epoch>>>()?;
+        .collect::<StdResult<Vec<RewardBucket>>>()?;
 
     // if the epochs vector's length is the same as the grace period it means there is one epoch that
     // is expiring once the new one is created i.e. the last epoch in the vector
