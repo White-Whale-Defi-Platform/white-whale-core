@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, SubMsg, Timestamp, Uint128, Uint64,
+    StdError, StdResult, SubMsg, Uint128, Uint64,
 };
 
 use white_whale_std::bonding_manager::{Bond, Epoch, GlobalIndex};
@@ -17,7 +17,6 @@ use crate::{helpers, ContractError};
 /// Bonds the provided asset.
 pub(crate) fn bond(
     mut deps: DepsMut,
-    timestamp: Timestamp,
     info: MessageInfo,
     env: Env,
     asset: Coin,
@@ -43,14 +42,14 @@ pub(crate) fn bond(
                 amount: Uint128::zero(),
                 ..asset.clone()
             },
-            created_at_epoch: Uint64::new(current_epoch.epoch.id),
+            created_at_epoch: current_epoch.epoch.id,
             ..Bond::default()
         });
 
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
-    bond = update_local_weight(&mut deps, info.sender.clone(), timestamp, bond)?;
+    bond = update_local_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
     BOND.save(deps.storage, (&info.sender, &asset.denom), &bond)?;
 
     // update global values
@@ -60,7 +59,7 @@ pub(crate) fn bond(
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
         asset::aggregate_coins(global_index.bonded_assets, vec![asset.clone()])?;
-    global_index = update_global_weight(&mut deps, timestamp, global_index)?;
+    global_index = update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
 
     GLOBAL.save(deps.storage, &global_index)?;
 
@@ -74,7 +73,6 @@ pub(crate) fn bond(
 /// Unbonds the provided amount of tokens
 pub(crate) fn unbond(
     mut deps: DepsMut,
-    timestamp: Timestamp,
     info: MessageInfo,
     env: Env,
     asset: Coin,
@@ -96,8 +94,20 @@ pub(crate) fn unbond(
             ContractError::InsufficientBond
         );
 
+        let config = CONFIG.load(deps.storage)?;
+        let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+            deps.querier.query_wasm_smart(
+                config.epoch_manager_addr,
+                &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+            )?;
+
         // update local values, decrease the bond
-        unbond = update_local_weight(&mut deps, info.sender.clone(), timestamp, unbond.clone())?;
+        unbond = update_local_weight(
+            &mut deps,
+            info.sender.clone(),
+            current_epoch.epoch.id,
+            unbond.clone(),
+        )?;
         let weight_slash = unbond.weight * Decimal::from_ratio(asset.amount, unbond.asset.amount);
         unbond.weight = unbond.weight.saturating_sub(weight_slash);
         unbond.asset.amount = unbond.asset.amount.saturating_sub(asset.amount);
@@ -108,27 +118,20 @@ pub(crate) fn unbond(
             BOND.save(deps.storage, (&info.sender, &asset.denom), &unbond)?;
         }
 
-        let config = CONFIG.load(deps.storage)?;
-        let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
-            deps.querier.query_wasm_smart(
-                config.epoch_manager_addr,
-                &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
-            )?;
-
         // record the unbonding
         UNBOND.save(
             deps.storage,
-            (&info.sender, &asset.denom, timestamp.nanos()),
+            (&info.sender, &asset.denom, env.block.time.nanos()),
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),
-                timestamp,
-                created_at_epoch: Uint64::new(current_epoch.epoch.id),
+                updated_last: current_epoch.epoch.id,
+                created_at_epoch: current_epoch.epoch.id,
             },
         )?;
         // update global values
         let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-        global_index = update_global_weight(&mut deps, timestamp, global_index)?;
+        global_index = update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
         global_index.bonded_amount = global_index.bonded_amount.saturating_sub(asset.amount);
         global_index.bonded_assets =
             white_whale_std::coin::deduct_coins(global_index.bonded_assets, vec![asset.clone()])?;
@@ -149,25 +152,28 @@ pub(crate) fn unbond(
 /// Withdraws the rewards for the provided address
 pub(crate) fn withdraw(
     deps: DepsMut,
-    timestamp: Timestamp,
     address: Addr,
     denom: String,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-
     let unbondings: Vec<(u64, Bond)> = UNBOND
         .prefix((&address, &denom))
         .range(deps.storage, None, None, Order::Ascending)
         .take(MAX_PAGE_LIMIT as usize)
         .collect::<StdResult<Vec<(u64, Bond)>>>()?;
 
-    let mut refund_amount = Uint128::zero();
-
     ensure!(!unbondings.is_empty(), ContractError::NothingToWithdraw);
 
+    let config = CONFIG.load(deps.storage)?;
+    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        )?;
+
+    let mut refund_amount = Uint128::zero();
     for unbonding in unbondings {
         let (ts, bond) = unbonding;
-        if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
+        if current_epoch.epoch.id.saturating_sub(bond.created_at_epoch) >= config.unbonding_period {
             let denom = bond.asset.denom;
 
             refund_amount = refund_amount.checked_add(bond.asset.amount)?;
@@ -199,7 +205,7 @@ pub(crate) fn update_config(
     info: MessageInfo,
     epoch_manager_addr: Option<String>,
     pool_manager_addr: Option<String>,
-    unbonding_period: Option<Uint64>,
+    unbonding_period: Option<u64>,
     growth_rate: Option<Decimal>,
 ) -> Result<Response, ContractError> {
     // check the owner is the one who sent the message
@@ -249,7 +255,7 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
     for mut epoch in claimable_epochs_for_user.clone() {
         let bonding_weight_response_for_epoch = query_weight(
             deps.as_ref(),
-            epoch.start_time,
+            epoch.id,
             info.sender.to_string(),
             Some(epoch.global_index.clone()),
         )?;
@@ -430,7 +436,6 @@ pub(crate) fn fill_rewards(
 
 pub(crate) fn on_epoch_created(
     deps: DepsMut,
-    env: Env,
     info: MessageInfo,
     current_epoch: white_whale_std::epoch_manager::epoch_manager::Epoch,
 ) -> Result<Response, ContractError> {
@@ -449,7 +454,7 @@ pub(crate) fn on_epoch_created(
     // This happens only on the very first epoch where Global has not been initialised yet
     if global.is_none() {
         let initial_global_index = GlobalIndex {
-            timestamp: env.block.time,
+            last_updated: current_epoch.id,
             ..Default::default()
         };
         GLOBAL.save(deps.storage, &initial_global_index)?;
@@ -457,7 +462,7 @@ pub(crate) fn on_epoch_created(
             deps.storage,
             &current_epoch.id.to_be_bytes(),
             &Epoch {
-                id: current_epoch.id.into(),
+                id: current_epoch.id,
                 start_time: current_epoch.start_time,
                 global_index: initial_global_index,
                 ..Epoch::default()
@@ -523,10 +528,12 @@ pub(crate) fn on_epoch_created(
 
     // Create a new bucket for the rewards flowing from this time on, i.e. to be distributed in
     // the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)
-    let next_epoch_id = Uint64::new(current_epoch.id).checked_add(Uint64::one())?;
+    let next_epoch_id = Uint64::new(current_epoch.id)
+        .checked_add(Uint64::one())?
+        .u64();
     EPOCHS.save(
         deps.storage,
-        &next_epoch_id.u64().to_be_bytes(),
+        &next_epoch_id.to_be_bytes(),
         &Epoch {
             id: next_epoch_id,
             start_time: current_epoch.start_time.plus_days(1),

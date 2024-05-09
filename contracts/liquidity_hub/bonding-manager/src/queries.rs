@@ -1,8 +1,9 @@
 use std::collections::{HashSet, VecDeque};
 
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128, Uint64};
 use cw_storage_plus::Bound;
 
+use crate::ContractError;
 use white_whale_std::bonding_manager::{
     Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
     WithdrawableResponse,
@@ -45,7 +46,7 @@ pub(crate) fn query_bonded(deps: Deps, address: Option<String>) -> StdResult<Bon
 
         let mut total_bonded = Uint128::zero();
         let mut bonded_assets = vec![];
-        let mut first_bonded_epoch_id = Uint64::MAX;
+        let mut first_bonded_epoch_id = u64::MAX;
 
         for bond in bonds {
             if bond.created_at_epoch < first_bonded_epoch_id {
@@ -116,20 +117,25 @@ fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
 /// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
     deps: Deps,
-    timestamp: Timestamp,
     address: String,
     denom: String,
 ) -> StdResult<WithdrawableResponse> {
-    let config = CONFIG.load(deps.storage)?;
     let unbonding: StdResult<Vec<_>> = UNBOND
         .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
         .range(deps.storage, None, None, Order::Ascending)
         .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
+    let config = CONFIG.load(deps.storage)?;
+    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        )?;
+
     let mut withdrawable_amount = Uint128::zero();
     for (_, bond) in unbonding? {
-        if timestamp.minus_nanos(config.unbonding_period.u64()) >= bond.timestamp {
+        if current_epoch.epoch.id.saturating_sub(bond.created_at_epoch) >= config.unbonding_period {
             withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
     }
@@ -142,7 +148,7 @@ pub(crate) fn query_withdrawable(
 /// Queries the current weight of the given address.
 pub(crate) fn query_weight(
     deps: Deps,
-    timestamp: Timestamp,
+    epoch_id: u64,
     address: String,
     global_index: Option<GlobalIndex>,
 ) -> StdResult<BondingWeightResponse> {
@@ -163,11 +169,11 @@ pub(crate) fn query_weight(
 
     for (_, mut bond) in bonds? {
         bond.weight = get_weight(
-            timestamp,
+            epoch_id,
             bond.weight,
             bond.asset.amount,
             config.growth_rate,
-            bond.timestamp,
+            bond.updated_last,
         )?;
 
         if !unique_denoms.contains(&bond.asset.denom) {
@@ -189,11 +195,11 @@ pub(crate) fn query_weight(
     };
 
     global_index.weight = get_weight(
-        timestamp,
+        epoch_id,
         global_index.weight,
         global_index.bonded_amount,
         config.growth_rate,
-        global_index.timestamp,
+        global_index.last_updated,
     )?;
 
     // Represents the share of the global weight that the address has
@@ -209,7 +215,7 @@ pub(crate) fn query_weight(
         weight: total_bond_weight,
         global_weight: global_index.weight,
         share,
-        timestamp,
+        epoch_id,
     })
 }
 
@@ -221,10 +227,12 @@ pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
 
 /// Returns the epoch that is falling out the grace period, which is the one expiring after creating
 /// a new epoch is created.
-pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
+pub fn get_expiring_epoch(deps: Deps) -> Result<Option<Epoch>, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     // Adding 1 because we store the future epoch in the map also, so grace_period + 1
-    let grace_period_plus_future_epoch = config.grace_period.u64() + 1u64;
+    let grace_period_plus_future_epoch = Uint64::new(config.grace_period)
+        .checked_add(Uint64::one())?
+        .u64();
     // Take grace_period + 1 and then slice last one off
     let epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
@@ -251,7 +259,9 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
 pub fn get_claimable_epochs(deps: Deps) -> StdResult<ClaimableEpochsResponse> {
     let config = CONFIG.load(deps.storage)?;
     // Adding 1 because we store the future epoch in the map also, so grace_period + 1
-    let grace_period = config.grace_period.u64() + 1;
+    let grace_period = Uint64::new(config.grace_period)
+        .checked_add(Uint64::one())?
+        .u64();
     // Take grace_period + 1 and then slice last one off
     let mut epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)

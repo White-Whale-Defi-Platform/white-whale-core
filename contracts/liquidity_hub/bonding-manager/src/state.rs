@@ -1,7 +1,5 @@
 use crate::ContractError;
-use cosmwasm_std::{
-    Addr, Decimal, Deps, DepsMut, Order, StdError, StdResult, Timestamp, Uint128, Uint64,
-};
+use cosmwasm_std::{Addr, Decimal, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
 use white_whale_std::bonding_manager::{Bond, Config, Epoch, GlobalIndex};
 
@@ -12,27 +10,27 @@ pub const CONFIG: Item<Config> = Item::new("config");
 pub const BOND: Map<(&Addr, &Denom), Bond> = Map::new("bond");
 pub const UNBOND: Map<(&Addr, &Denom, u64), Bond> = Map::new("unbond");
 pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
-pub const LAST_CLAIMED_EPOCH: Map<&Addr, Uint64> = Map::new("last_claimed_epoch");
+pub const LAST_CLAIMED_EPOCH: Map<&Addr, u64> = Map::new("last_claimed_epoch");
 pub const EPOCHS: Map<&[u8], Epoch> = Map::new("epochs");
 
 /// Updates the local weight of the given address.
 pub fn update_local_weight(
     deps: &mut DepsMut,
     address: Addr,
-    timestamp: Timestamp,
+    current_epoch_id: u64,
     mut bond: Bond,
 ) -> Result<Bond, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
     bond.weight = get_weight(
-        timestamp,
+        current_epoch_id,
         bond.weight,
         bond.asset.amount,
         config.growth_rate,
-        bond.timestamp,
+        bond.updated_last,
     )?;
 
-    bond.timestamp = timestamp;
+    bond.updated_last = current_epoch_id;
 
     let denom: &String = &bond.asset.denom;
 
@@ -45,20 +43,20 @@ pub fn update_local_weight(
 /// Updates the global weight of the contract.
 pub fn update_global_weight(
     deps: &mut DepsMut,
-    timestamp: Timestamp,
+    current_epoch_id: u64,
     mut global_index: GlobalIndex,
 ) -> Result<GlobalIndex, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
     global_index.weight = get_weight(
-        timestamp,
+        current_epoch_id,
         global_index.weight,
         global_index.bonded_amount,
         config.growth_rate,
-        global_index.timestamp,
+        global_index.last_updated,
     )?;
 
-    global_index.timestamp = timestamp;
+    global_index.last_updated = current_epoch_id;
 
     //todo remove? done outside of this function. Or remove outside
     GLOBAL.save(deps.storage, &global_index)?;
@@ -66,21 +64,20 @@ pub fn update_global_weight(
     Ok(global_index)
 }
 
-/// Calculates the bonding weight of the given amount for the provided timestamps.
+/// Calculates the bonding weight of the given amount for the provided epochs.
 pub fn get_weight(
-    current_timestamp: Timestamp,
+    current_epoch_id: u64,
     weight: Uint128,
     amount: Uint128,
     growth_rate: Decimal,
-    timestamp: Timestamp,
+    epoch_id: u64,
 ) -> StdResult<Uint128> {
-    let time_factor = if timestamp == Timestamp::default() {
+    let time_factor = if current_epoch_id == epoch_id {
         Uint128::zero()
     } else {
         Uint128::from(
-            current_timestamp
-                .seconds()
-                .checked_sub(timestamp.seconds())
+            current_epoch_id
+                .checked_sub(epoch_id)
                 .ok_or_else(|| StdError::generic_err("Error calculating time_factor"))?,
         )
     };
@@ -96,7 +93,7 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
     // last epochs within the grace period
     let epochs = EPOCHS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period.u64() as usize)
+        .take(grace_period as usize)
         .map(|item| {
             let (_, epoch) = item?;
             Ok(epoch)
@@ -105,7 +102,7 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<Epoch>> {
 
     // if the epochs vector's length is the same as the grace period it means there is one epoch that
     // is expiring once the new one is created i.e. the last epoch in the vector
-    if epochs.len() == grace_period.u64() as usize {
+    if epochs.len() == grace_period as usize {
         Ok(Some(epochs.last().cloned().unwrap_or_default()))
     } else {
         // nothing is expiring yet

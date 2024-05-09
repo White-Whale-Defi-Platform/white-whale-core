@@ -96,14 +96,12 @@
             },
             "unbonding_period": {
               "description": "The unbonding period.",
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Uint64"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
             }
           },
           "additionalProperties": false

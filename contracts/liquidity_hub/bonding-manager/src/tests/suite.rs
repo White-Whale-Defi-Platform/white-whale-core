@@ -456,7 +456,7 @@ impl TestingSuite {
                 &self.bonding_manager_addr,
                 &QueryMsg::Weight {
                     address,
-                    timestamp: Some(self.app.block_info().time),
+                    epoch_id: Some(self.app.block_info().time),
                     global_index: None,
                 },
             )
