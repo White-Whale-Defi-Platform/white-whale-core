@@ -72,7 +72,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(1_000u128),
                 global_weight: Uint128::new(1_000u128),
                 share: Decimal::one(),
-                timestamp: Timestamp::from_nanos(1571883819879305533u64),
+                epoch_id: Timestamp::from_nanos(1571883819879305533u64),
             },
         );
 
@@ -137,7 +137,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(5_000u128),
                 global_weight: Uint128::new(950_409_000u128),
                 share: Decimal::from_ratio(5_000u128, 950_409_000u128),
-                timestamp: Timestamp::from_nanos(1572013419879305533u64),
+                epoch_id: Timestamp::from_nanos(1572013419879305533u64),
             },
         )
         .query_bonded(None, |res| {
@@ -170,7 +170,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(734_404_000u128),
                 global_weight: Uint128::new(1_728_009_000u128),
                 share: Decimal::from_ratio(734_404_000u128, 1_728_009_000u128),
-                timestamp: Timestamp::from_nanos(1572099819879305533u64),
+                epoch_id: Timestamp::from_nanos(1572099819879305533u64),
             },
         )
         .assert_bonding_weight_response(
@@ -180,7 +180,7 @@ fn test_bond_successfully() {
                 weight: Uint128::new(432_005_000u128),
                 global_weight: Uint128::new(1_728_009_000u128),
                 share: Decimal::from_ratio(432_005_000u128, 1_728_009_000u128),
-                timestamp: Timestamp::from_nanos(1572099819879305533u64),
+                epoch_id: Timestamp::from_nanos(1572099819879305533u64),
             },
         )
         .query_bonded(None, |result| {

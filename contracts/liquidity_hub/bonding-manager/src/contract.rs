@@ -2,9 +2,9 @@ use cosmwasm_std::{ensure, entry_point, from_json, Addr, Coin, Order, Reply, Uin
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use cw_utils::parse_reply_execute_data;
-use white_whale_std::pool_network::asset;
 
 use white_whale_std::bonding_manager::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
+use white_whale_std::pool_network::asset;
 
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
@@ -65,15 +65,15 @@ pub fn execute(
     match msg {
         ExecuteMsg::Bond => {
             let asset_to_bond = helpers::validate_funds(&deps, &info)?;
-            commands::bond(deps, env.block.time, info, env, asset_to_bond)
+            commands::bond(deps, info, env, asset_to_bond)
         }
         ExecuteMsg::Unbond { asset } => {
             cw_utils::nonpayable(&info)?;
-            commands::unbond(deps, env.block.time, info, env, asset)
+            commands::unbond(deps, info, env, asset)
         }
         ExecuteMsg::Withdraw { denom } => {
             cw_utils::nonpayable(&info)?;
-            commands::withdraw(deps, env.block.time, info.sender, denom)
+            commands::withdraw(deps, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
             epoch_manager_addr,
@@ -94,7 +94,7 @@ pub fn execute(
         ExecuteMsg::FillRewards => commands::fill_rewards(deps, env, info),
         ExecuteMsg::Claim => commands::claim(deps, info),
         ExecuteMsg::EpochChangedHook { current_epoch } => {
-            commands::on_epoch_created(deps, env, info, current_epoch)
+            commands::on_epoch_created(deps, info, current_epoch)
         }
         ExecuteMsg::UpdateOwnership(action) => {
             cw_utils::nonpayable(&info)?;
@@ -104,7 +104,7 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config => Ok(to_json_binary(&queries::query_config(deps)?)?),
         QueryMsg::Bonded { address } => Ok(to_json_binary(&queries::query_bonded(deps, address)?)?),
@@ -121,20 +121,29 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             limit,
         )?)?),
         QueryMsg::Withdrawable { address, denom } => Ok(to_json_binary(
-            &queries::query_withdrawable(deps, env.block.time, address, denom)?,
+            &queries::query_withdrawable(deps, address, denom)?,
         )?),
         QueryMsg::Weight {
             address,
-            timestamp,
+            epoch_id,
             global_index,
         } => {
-            // If timestamp is not provided, use current block time
-            let timestamp = timestamp.unwrap_or(env.block.time);
+            let epoch_id = if let Some(epoch_id) = epoch_id {
+                epoch_id
+            } else {
+                // If epoch_id is not provided, use current epoch
+                let config = CONFIG.load(deps.storage)?;
+                let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+                    deps.querier.query_wasm_smart(
+                        config.epoch_manager_addr,
+                        &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+                    )?;
+                current_epoch.epoch.id
+            };
 
-            // TODO: Make better timestamp handling
             Ok(to_json_binary(&queries::query_weight(
                 deps,
-                timestamp,
+                epoch_id,
                 address,
                 global_index,
             )?)?)

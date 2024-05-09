@@ -58,7 +58,9 @@
           "$ref": "#/definitions/GlobalIndex"
         },
         "id": {
-          "$ref": "#/definitions/Uint64"
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
         },
         "start_time": {
           "$ref": "#/definitions/Timestamp"
@@ -77,7 +79,7 @@
       "required": [
         "bonded_amount",
         "bonded_assets",
-        "timestamp",
+        "last_updated",
         "weight"
       ],
       "properties": {
@@ -96,13 +98,11 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "timestamp": {
-          "description": "The timestamp at which the total bond was registered.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Timestamp"
-            }
-          ]
+        "last_updated": {
+          "description": "The epoch id at which the total bond was updated.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
         },
         "weight": {
           "description": "The total weight of the bond at the given block height.",

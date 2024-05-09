@@ -2,7 +2,7 @@ use crate::epoch_manager::epoch_manager::Epoch as EpochV2;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, Uint64, WasmMsg,
+    to_json_binary, Addr, Coin, CosmosMsg, Decimal, StdResult, Timestamp, Uint128, WasmMsg,
 };
 use cw_ownable::{cw_ownable_execute, cw_ownable_query};
 
@@ -16,21 +16,22 @@ pub struct Config {
     pub distribution_denom: String,
     /// Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can
     /// be withdrawn
-    pub unbonding_period: Uint64,
+    pub unbonding_period: u64,
     /// A fraction that controls the effect of time on the weight of a bond. If the growth rate is set
     /// to zero, time will have no impact on the weight.
     pub growth_rate: Decimal,
     /// Denom of the asset to be bonded. Can't only be set at instantiation.
     pub bonding_assets: Vec<String>,
-    /// The duration of the grace period in epochs, i.e. how many expired epochs can be claimed
-    pub grace_period: Uint64,
+    /// Grace period the maximum age of a epoch bucket before it's considered expired and fees
+    /// are forwarded from it
+    pub grace_period: u64,
 }
 
 #[cw_serde]
 #[derive(Default)]
 pub struct Epoch {
     // Epoch identifier
-    pub id: Uint64,
+    pub id: u64,
     // Epoch start time
     pub start_time: Timestamp,
     // Initial fees to be distributed in this epoch.
@@ -48,9 +49,9 @@ pub struct Bond {
     /// The amount of bonded tokens.
     pub asset: Coin,
     /// The epoch id at which the Bond was created.
-    pub created_at_epoch: Uint64,
-    /// The timestamp at which the bond was done.
-    pub timestamp: Timestamp,
+    pub created_at_epoch: u64,
+    /// The epoch id at which the bond was last time updated.
+    pub updated_last: u64,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
 }
@@ -63,7 +64,7 @@ impl Default for Bond {
                 amount: Uint128::zero(),
             },
             created_at_epoch: Default::default(),
-            timestamp: Timestamp::default(),
+            updated_last: Default::default(),
             weight: Uint128::zero(),
         }
     }
@@ -76,8 +77,8 @@ pub struct GlobalIndex {
     pub bonded_amount: Uint128,
     /// Assets that are bonded in the contract.
     pub bonded_assets: Vec<Coin>,
-    /// The timestamp at which the total bond was registered.
-    pub timestamp: Timestamp,
+    /// The epoch id at which the total bond was updated.
+    pub last_updated: u64,
     /// The total weight of the bond at the given block height.
     pub weight: Uint128,
 }
@@ -86,15 +87,16 @@ pub struct GlobalIndex {
 pub struct InstantiateMsg {
     /// Denom to be swapped to and rewarded
     pub distribution_denom: String,
-    /// Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can
+    /// Unbonding period in epochs. The time (in epochs) that needs to pass before an unbonded position can
     /// be withdrawn
-    pub unbonding_period: Uint64,
+    pub unbonding_period: u64,
     /// Weight grow rate. Needs to be between 0 and 1.
     pub growth_rate: Decimal,
     /// [String] denoms of the assets that can be bonded.
     pub bonding_assets: Vec<String>,
-    /// Grace period the maximum age of a bucket before fees are forwarded from it
-    pub grace_period: Uint64,
+    /// Grace period the maximum age of a epoch bucket before it's considered expired and fees
+    /// are forwarded from it
+    pub grace_period: u64,
     /// The epoch manager contract
     pub epoch_manager_addr: String,
 }
@@ -126,7 +128,7 @@ pub enum ExecuteMsg {
         /// The new pool manager address.
         pool_manager_addr: Option<String>,
         /// The unbonding period.
-        unbonding_period: Option<Uint64>,
+        unbonding_period: Option<u64>,
         /// The new growth rate.
         growth_rate: Option<Decimal>,
     },
@@ -190,7 +192,7 @@ pub enum QueryMsg {
         /// The address to check for weight.
         address: String,
         /// The timestamp to check for weight. If none is provided, the current block time is used.
-        timestamp: Option<Timestamp>,
+        epoch_id: Option<u64>,
         /// The global index to check for weight. If none is provided, the current global index is used.
         global_index: Option<GlobalIndex>,
     },
@@ -221,7 +223,7 @@ pub struct BondedResponse {
     pub bonded_assets: Vec<Coin>,
     /// If Some, the epoch id at which the user/address bonded first time. None is used when this
     /// Response is used to check the bonded assets in the contract.
-    pub first_bonded_epoch_id: Option<Uint64>,
+    pub first_bonded_epoch_id: Option<u64>,
 }
 
 /// Response for the Unbonding query
@@ -251,8 +253,8 @@ pub struct BondingWeightResponse {
     pub global_weight: Uint128,
     /// The share the address has of the rewards at the particular timestamp.
     pub share: Decimal,
-    /// The timestamp at which the weight was calculated.
-    pub timestamp: Timestamp,
+    /// The epoch id at which the weight was calculated.
+    pub epoch_id: u64,
 }
 
 /// Creates a message to fill rewards on the whale lair contract.
