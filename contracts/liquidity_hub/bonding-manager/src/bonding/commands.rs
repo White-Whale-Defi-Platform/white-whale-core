@@ -16,7 +16,7 @@ pub(crate) fn bond(
     asset: Coin,
 ) -> Result<Response, ContractError> {
     println!("----bond----");
-    helpers::validate_buckets(&deps)?;
+    helpers::validate_buckets_not_empty(&deps)?;
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps)?;
 

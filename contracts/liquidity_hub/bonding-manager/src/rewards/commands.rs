@@ -1,84 +1,23 @@
-use crate::queries::{get_expiring_reward_bucket, query_claimable, query_weight};
-use crate::state::{CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS};
-use crate::{helpers, ContractError};
 use cosmwasm_std::{
-    ensure, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
-    StdError, StdResult, SubMsg, Uint128, Uint64,
+    ensure, from_json, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, SubMsg, Uint128,
 };
-use white_whale_std::bonding_manager::{GlobalIndex, RewardBucket};
+use cw_utils::parse_reply_execute_data;
+
+use white_whale_std::bonding_manager::{GlobalIndex, RewardBucket, UpcomingRewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::Epoch;
 use white_whale_std::pool_network::asset;
 
-pub(crate) fn fill_rewards(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-) -> Result<Response, ContractError> {
-    println!("----fill_rewards----");
+use crate::queries::{get_expiring_reward_bucket, query_claimable, query_weight};
+use crate::state::{
+    fill_upcoming_reward_bucket, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS,
+    UPCOMING_REWARD_BUCKET,
+};
+use crate::{helpers, ContractError};
 
-    // Finding the most recent bucket
-    let upcoming_bucket_id = match REWARD_BUCKETS
-        .keys(deps.storage, None, None, Order::Descending)
-        .next()
-    {
-        Some(bucket_id) => bucket_id?,
-        None => return Err(ContractError::Unauthorized),
-    };
-
-    let config = CONFIG.load(deps.storage)?;
-    let distribution_denom = config.distribution_denom.clone();
-
-    let mut messages: Vec<CosmosMsg> = vec![];
-    let mut submessages: Vec<SubMsg> = vec![];
-    // swap non-whale to whale
-    // Search info funds for LP tokens, LP tokens will contain LP_SYMBOL from lp_common and the string .pair.
-    let mut whale = info
-        .funds
-        .iter()
-        .find(|coin| coin.denom.eq(distribution_denom.as_str()))
-        .unwrap_or(&Coin {
-            denom: distribution_denom.clone(),
-            amount: Uint128::zero(),
-        })
-        .to_owned();
-
-    // coins (not the distribution_denom) that are laying in the contract and have not been swapped before for lack
-    // of swap routes
-    let remanent_coins = deps
-        .querier
-        .query_all_balances(env.contract.address)?
-        .into_iter()
-        .filter(|coin| coin.denom.ne(distribution_denom.as_str()))
-        .collect::<Vec<Coin>>();
-
-    // Each of these helpers will add messages to the messages vector
-    // and may increment the whale Coin above with the result of the swaps
-    helpers::handle_lp_tokens(&remanent_coins, &config, &mut submessages)?;
-    helpers::swap_coins_to_main_token(
-        remanent_coins,
-        &deps,
-        config,
-        &mut whale,
-        &distribution_denom,
-        &mut messages,
-    )?;
-
-    // Add the whale to the funds, the whale figure now should be the result
-    // of all the LP token withdrawals and swaps
-    // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
-    // If this became an issue would could look at replys instead of the query
-    REWARD_BUCKETS.update(deps.storage, upcoming_bucket_id, |bucket| -> StdResult<_> {
-        let mut bucket = bucket.unwrap_or_default();
-        bucket.available = asset::aggregate_coins(bucket.available, vec![whale.clone()])?;
-        bucket.total = asset::aggregate_coins(bucket.total, vec![whale.clone()])?;
-        Ok(bucket)
-    })?;
-    Ok(Response::default()
-        .add_messages(messages)
-        .add_submessages(submessages)
-        .add_attributes(vec![("action", "fill_rewards".to_string())]))
-}
-
+/// Handles the new epoch created by the epoch manager. It creates a new reward bucket with the
+/// fees that have been accrued in the previous epoch, creates a new bucket for the upcoming rewards
+/// and forwards the fees from the expiring bucket to the new one.
 pub(crate) fn on_epoch_created(
     deps: DepsMut,
     info: MessageInfo,
@@ -99,80 +38,156 @@ pub(crate) fn on_epoch_created(
     // This happens only on the very first epoch where Global has not been initialised yet
     if global.is_none() {
         let initial_global_index = GlobalIndex {
+            epoch_id: current_epoch.id,
             updated_last: current_epoch.id,
             ..Default::default()
         };
         GLOBAL.save(deps.storage, &initial_global_index)?;
-        REWARD_BUCKETS.save(
-            deps.storage,
-            current_epoch.id,
-            &RewardBucket {
-                id: current_epoch.id,
-                epoch_start_time: current_epoch.start_time,
-                global_index: initial_global_index,
-                ..RewardBucket::default()
-            },
-        )?;
     }
 
-    // Update the global index epoch id field
-    let mut global = GLOBAL.load(deps.storage)?;
-    global.epoch_id = current_epoch.id;
+    // Update the global index epoch id
+    let mut global_index = GLOBAL.load(deps.storage)?;
+    global_index.epoch_id = current_epoch.id;
 
-    // update the global index for the current bucket, take the current snapshot of the global index
-    REWARD_BUCKETS.update(
-        deps.storage,
-        current_epoch.id,
-        |reward_bucket| -> StdResult<_> {
-            let mut reward_bucket = reward_bucket.unwrap_or_default();
-            reward_bucket.global_index = global;
-            Ok(reward_bucket)
-        },
-    )?;
+    // Create a new reward bucket for the current epoch with the total rewards accrued in the
+    // upcoming bucket item
+    let upcoming_bucket = UPCOMING_REWARD_BUCKET.load(deps.storage)?;
+    let mut new_reward_bucket = RewardBucket {
+        id: current_epoch.id,
+        epoch_start_time: current_epoch.start_time,
+        total: upcoming_bucket.total.clone(),
+        available: upcoming_bucket.total,
+        claimed: vec![],
+        global_index,
+    };
 
     // forward fees from the expiring bucket to the new one.
     let mut expiring_reward_bucket = get_expiring_reward_bucket(deps.as_ref())?;
     if let Some(expiring_bucket) = expiring_reward_bucket.as_mut() {
-        // Load all the available assets from the expiring bucket
-        let amount_to_be_forwarded = REWARD_BUCKETS
-            .load(deps.storage, expiring_bucket.id)?
-            .available;
-        REWARD_BUCKETS.update(deps.storage, current_epoch.id, |bucket| -> StdResult<_> {
-            let mut bucket = bucket.unwrap_or_default();
-            bucket.available =
-                asset::aggregate_coins(bucket.available, amount_to_be_forwarded.clone())?;
-            bucket.total = asset::aggregate_coins(bucket.total, amount_to_be_forwarded)?;
+        // Aggregate the available assets from the expiring bucket to the new reward bucket
+        new_reward_bucket.available = asset::aggregate_coins(
+            new_reward_bucket.available,
+            expiring_bucket.available.clone(),
+        )?;
+        new_reward_bucket.total =
+            asset::aggregate_coins(new_reward_bucket.total, expiring_bucket.available.clone())?;
 
-            Ok(bucket)
-        })?;
         // Set the available assets for the expiring bucket to an empty vec now that they have been
         // forwarded
-        REWARD_BUCKETS.update(deps.storage, expiring_bucket.id, |bucket| -> StdResult<_> {
-            let mut bucket = bucket.unwrap_or_default();
-            bucket.available = vec![];
-            Ok(bucket)
-        })?;
+        expiring_bucket.available.clear();
+        REWARD_BUCKETS.save(deps.storage, expiring_bucket.id, expiring_bucket)?;
     }
 
-    // Create a new bucket for the rewards flowing from this time on, i.e. to be distributed in
-    // the next epoch. Also, forwards the expiring bucket (only 21 bucket are live at a given moment)
-    let next_epoch_id = Uint64::new(current_epoch.id)
-        .checked_add(Uint64::one())?
-        .u64();
-    REWARD_BUCKETS.save(
-        deps.storage,
-        next_epoch_id,
-        &RewardBucket {
-            id: next_epoch_id,
-            epoch_start_time: current_epoch.start_time.plus_days(1),
-            // this global index is to be updated the next time this hook is called, as this future epoch
-            // will become the current one
-            global_index: Default::default(),
-            ..RewardBucket::default()
-        },
-    )?;
+    // Save the new reward bucket
+    REWARD_BUCKETS.save(deps.storage, current_epoch.id, &new_reward_bucket)?;
+    // Reset the upcoming bucket
+    UPCOMING_REWARD_BUCKET.save(deps.storage, &UpcomingRewardBucket::default())?;
 
     Ok(Response::default().add_attributes(vec![("action", "epoch_changed_hook".to_string())]))
+}
+
+/// Fills the upcoming rewards bucket with the upcoming fees.
+pub(crate) fn fill_rewards(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
+    println!("----fill_rewards----");
+
+    let config = CONFIG.load(deps.storage)?;
+    let distribution_denom = config.distribution_denom.clone();
+
+    let mut messages: Vec<CosmosMsg> = vec![];
+    let mut submessages: Vec<SubMsg> = vec![];
+    // swap non-whale to whale
+
+    let mut distribution_denom_in_tx = info
+        .funds
+        .iter()
+        .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+        .unwrap_or(&Coin {
+            denom: distribution_denom.clone(),
+            amount: Uint128::zero(),
+        })
+        .to_owned();
+
+    // coins (not the distribution_denom) that are laying in the contract and have not been swapped before for lack
+    // of swap routes
+    let remnant_coins = deps
+        .querier
+        .query_all_balances(env.contract.address)?
+        .into_iter()
+        .filter(|coin| coin.denom.ne(distribution_denom.as_str()))
+        .collect::<Vec<Coin>>();
+
+    // Each of these helpers will add messages to the messages vector
+    // and may increment the distribution_denom Coin above with the result of the swaps
+    helpers::handle_lp_tokens_rewards(&remnant_coins, &config, &mut submessages)?;
+    helpers::swap_coins_to_main_token(
+        remnant_coins,
+        &deps,
+        config,
+        &mut distribution_denom_in_tx,
+        &distribution_denom,
+        &mut messages,
+    )?;
+
+    // Add the whale to the funds, the whale figure now should be the result
+    // of all the swaps
+    // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
+    // If this became an issue we could look at replies instead of the query
+    // The lp_tokens being withdrawn are handled in the reply entry point
+    fill_upcoming_reward_bucket(deps, distribution_denom_in_tx.clone())?;
+
+    Ok(Response::default()
+        .add_messages(messages)
+        .add_submessages(submessages)
+        .add_attributes(vec![("action", "fill_rewards".to_string())]))
+}
+
+/// Handles the lp withdrawal reply. It will swap the non-distribution denom coins to the
+/// distribution denom and aggregate the funds to the upcoming reward bucket.
+pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
+    println!("---handle_lp_withdrawal_reply---");
+
+    // Read the coins sent via data on the withdraw response of the pool manager
+    let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
+    let data = execute_contract_response
+        .data
+        .ok_or(ContractError::Unauthorized)?;
+
+    let coins: Vec<Coin> = from_json(data.as_slice())?;
+    let config = CONFIG.load(deps.storage)?;
+    let distribution_denom = config.distribution_denom.clone();
+    let mut messages = vec![];
+
+    // Search received coins funds for the coin that is not the distribution denom
+    // This will be swapped for
+    let mut distribution_asset = coins
+        .iter()
+        .find(|coin| coin.denom.eq(distribution_denom.as_str()))
+        .unwrap_or(&Coin {
+            denom: distribution_denom.clone(),
+            amount: Uint128::zero(),
+        })
+        .to_owned();
+
+    // Swap other coins to the distribution denom
+    helpers::swap_coins_to_main_token(
+        coins,
+        &deps,
+        config,
+        &mut distribution_asset,
+        &distribution_denom,
+        &mut messages,
+    )?;
+
+    // update the upcoming bucket with the new funds
+    fill_upcoming_reward_bucket(deps, distribution_asset.clone())?;
+
+    Ok(Response::new()
+        .add_messages(messages)
+        .add_attribute("total_withdrawn", msg.id.to_string()))
 }
 
 /// Claims pending rewards for the sender.

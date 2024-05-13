@@ -1,7 +1,10 @@
 use crate::ContractError;
-use cosmwasm_std::{Addr, Decimal, Deps, DepsMut, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, Deps, DepsMut, Order, StdError, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
-use white_whale_std::bonding_manager::{Bond, Config, GlobalIndex, RewardBucket};
+use white_whale_std::bonding_manager::{
+    Bond, Config, GlobalIndex, RewardBucket, UpcomingRewardBucket,
+};
+use white_whale_std::pool_network::asset;
 
 type Denom = str;
 
@@ -16,7 +19,7 @@ pub const REWARD_BUCKETS: Map<u64, RewardBucket> = Map::new("reward_buckets");
 /// This is the upcoming reward bucket that will hold the rewards coming to the contract after a
 /// new epoch gets created. Once a new epoch is created, this bucket will be forwarded to the
 /// reward buckets map, and reset for the new rewards to come.
-pub const UPCOMING_REWARD_BUCKET: Item<RewardBucket> = Item::new("upcoming_reward_bucket");
+pub const UPCOMING_REWARD_BUCKET: Item<UpcomingRewardBucket> = Item::new("upcoming_reward_bucket");
 
 /// Updates the local weight of the given address.
 pub fn update_bond_weight(
@@ -111,4 +114,14 @@ pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<RewardBucket>> {
         // nothing is expiring yet
         Ok(None)
     }
+}
+
+/// Fills the upcoming reward bucket with the given funds.
+pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> {
+    UPCOMING_REWARD_BUCKET.update(deps.storage, |mut upcoming_bucket| -> StdResult<_> {
+        upcoming_bucket.total = asset::aggregate_coins(upcoming_bucket.total, vec![funds])?;
+        Ok(upcoming_bucket)
+    })?;
+
+    Ok(())
 }

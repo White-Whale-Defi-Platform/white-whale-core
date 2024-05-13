@@ -1,15 +1,13 @@
-use cosmwasm_std::{ensure, entry_point, from_json, Addr, Coin, Order, Reply, Uint128};
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use cw2::{get_contract_version, set_contract_version};
-use cw_utils::parse_reply_execute_data;
-
-use white_whale_std::bonding_manager::{Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
-use white_whale_std::pool_network::asset;
-
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, REWARD_BUCKETS};
+use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, UPCOMING_REWARD_BUCKET};
 use crate::{bonding, commands, queries, rewards};
+use cosmwasm_std::{ensure, entry_point, Addr, Reply};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
+use cw2::{get_contract_version, set_contract_version};
+use white_whale_std::bonding_manager::{
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UpcomingRewardBucket,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-bonding_manager";
@@ -45,6 +43,9 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
+    // Initialize the upcoming reward bucket
+    UPCOMING_REWARD_BUCKET.save(deps.storage, &UpcomingRewardBucket::default())?;
+
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", info.sender.to_string()),
@@ -53,6 +54,15 @@ pub fn instantiate(
         ("bonding_assets", msg.bonding_assets.join(", ")),
         ("grace_period", config.grace_period.to_string()),
     ]))
+}
+
+// Reply entrypoint handling LP withdraws from fill_rewards
+#[entry_point]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    match msg.id {
+        LP_WITHDRAWAL_REPLY_ID => rewards::commands::handle_lp_withdrawal_reply(deps, msg),
+        _ => Err(ContractError::Unauthorized),
+    }
 }
 
 #[entry_point]
@@ -155,81 +165,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             Ok(to_json_binary(&queries::query_claimable(deps, address)?)?)
         }
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-    }
-}
-
-// Reply entrypoint handling LP withdraws from fill_rewards
-#[entry_point]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match msg.id {
-        LP_WITHDRAWAL_REPLY_ID => {
-            // Read the epoch sent by the fee collector through the ForwardFeesResponse
-            let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
-            let data = execute_contract_response
-                .data
-                .ok_or(ContractError::Unauthorized)?;
-
-            let coins: Vec<Coin> = from_json(data.as_slice())?;
-            let config = CONFIG.load(deps.storage)?;
-            let distribution_denom = config.distribution_denom.clone();
-            let mut messages = vec![];
-
-            // Search received coins funds for the coin that is not the distribution denom
-            // This will be swapped for
-            let mut to_be_distribution_asset = coins
-                .iter()
-                .find(|coin| coin.denom.ne(distribution_denom.as_str()))
-                .unwrap_or(&Coin {
-                    denom: config.distribution_denom.clone(),
-                    amount: Uint128::zero(),
-                })
-                .to_owned();
-            println!("reply");
-            // Swap other coins to the distribution denom
-            helpers::swap_coins_to_main_token(
-                coins,
-                &deps,
-                config,
-                &mut to_be_distribution_asset,
-                &distribution_denom,
-                &mut messages,
-            )?;
-
-            // if the swap was successful and the to_be_distribution_asset.denom is the
-            // distribution_denom, update the upcoming epoch with the new funds
-            if to_be_distribution_asset.denom == distribution_denom {
-                // Finding the upcoming EpochID
-                let upcoming_epoch_id = match REWARD_BUCKETS
-                    .keys(deps.storage, None, None, Order::Descending)
-                    .next()
-                {
-                    Some(epoch_id) => epoch_id?,
-                    None => return Err(ContractError::Unauthorized),
-                };
-
-                REWARD_BUCKETS.update(
-                    deps.storage,
-                    upcoming_epoch_id,
-                    |epoch| -> StdResult<_> {
-                        let mut upcoming_epoch = epoch.unwrap_or_default();
-                        upcoming_epoch.available = asset::aggregate_coins(
-                            upcoming_epoch.available,
-                            vec![to_be_distribution_asset.clone()],
-                        )?;
-                        upcoming_epoch.total = asset::aggregate_coins(
-                            upcoming_epoch.total,
-                            vec![to_be_distribution_asset.clone()],
-                        )?;
-                        Ok(upcoming_epoch)
-                    },
-                )?;
-            }
-
-            Ok(Response::new()
-                .add_messages(messages)
-                .add_attribute("total_withdrawn", msg.id.to_string()))
-        }
-        _ => Err(ContractError::Unauthorized),
     }
 }
 
