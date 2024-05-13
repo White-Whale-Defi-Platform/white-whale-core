@@ -9,7 +9,7 @@ use white_whale_std::pool_network::asset;
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
 use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, REWARD_BUCKETS};
-use crate::{commands, queries};
+use crate::{bonding, commands, queries, rewards};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-bonding_manager";
@@ -65,15 +65,15 @@ pub fn execute(
     match msg {
         ExecuteMsg::Bond => {
             let asset_to_bond = helpers::validate_funds(&deps, &info)?;
-            commands::bond(deps, info, env, asset_to_bond)
+            bonding::commands::bond(deps, info, env, asset_to_bond)
         }
         ExecuteMsg::Unbond { asset } => {
             cw_utils::nonpayable(&info)?;
-            commands::unbond(deps, info, env, asset)
+            bonding::commands::unbond(deps, info, env, asset)
         }
         ExecuteMsg::Withdraw { denom } => {
             cw_utils::nonpayable(&info)?;
-            commands::withdraw(deps, info.sender, denom)
+            bonding::commands::withdraw(deps, info.sender, denom)
         }
         ExecuteMsg::UpdateConfig {
             epoch_manager_addr,
@@ -91,10 +91,10 @@ pub fn execute(
                 growth_rate,
             )
         }
-        ExecuteMsg::FillRewards => commands::fill_rewards(deps, env, info),
-        ExecuteMsg::Claim => commands::claim(deps, info),
+        ExecuteMsg::FillRewards => rewards::commands::fill_rewards(deps, env, info),
+        ExecuteMsg::Claim => rewards::commands::claim(deps, info),
         ExecuteMsg::EpochChangedHook { current_epoch } => {
-            commands::on_epoch_created(deps, info, current_epoch)
+            rewards::commands::on_epoch_created(deps, info, current_epoch)
         }
         ExecuteMsg::UpdateOwnership(action) => {
             cw_utils::nonpayable(&info)?;

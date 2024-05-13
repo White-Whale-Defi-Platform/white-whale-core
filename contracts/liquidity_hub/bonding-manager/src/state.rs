@@ -13,6 +13,11 @@ pub const GLOBAL: Item<GlobalIndex> = Item::new("global");
 pub const LAST_CLAIMED_EPOCH: Map<&Addr, u64> = Map::new("last_claimed_epoch");
 pub const REWARD_BUCKETS: Map<u64, RewardBucket> = Map::new("reward_buckets");
 
+/// This is the upcoming reward bucket that will hold the rewards coming to the contract after a
+/// new epoch gets created. Once a new epoch is created, this bucket will be forwarded to the
+/// reward buckets map, and reset for the new rewards to come.
+pub const UPCOMING_REWARD_BUCKET: Item<RewardBucket> = Item::new("upcoming_reward_bucket");
+
 /// Updates the local weight of the given address.
 pub fn update_bond_weight(
     deps: &mut DepsMut,
