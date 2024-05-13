@@ -14,7 +14,7 @@ pub const LAST_CLAIMED_EPOCH: Map<&Addr, u64> = Map::new("last_claimed_epoch");
 pub const REWARD_BUCKETS: Map<u64, RewardBucket> = Map::new("reward_buckets");
 
 /// Updates the local weight of the given address.
-pub fn update_local_weight(
+pub fn update_bond_weight(
     deps: &mut DepsMut,
     address: Addr,
     current_epoch_id: u64,
@@ -33,6 +33,8 @@ pub fn update_local_weight(
     bond.updated_last = current_epoch_id;
     BOND.save(deps.storage, (&address, &bond.asset.denom), &bond)?;
 
+    println!("updated bond: {:?}", bond);
+
     Ok(bond)
 }
 
@@ -49,11 +51,13 @@ pub fn update_global_weight(
         global_index.weight,
         global_index.bonded_amount,
         config.growth_rate,
-        global_index.last_updated,
+        global_index.updated_last,
     )?;
 
-    global_index.last_updated = current_epoch_id;
+    global_index.updated_last = current_epoch_id;
     GLOBAL.save(deps.storage, &global_index)?;
+
+    println!("updated global_index: {:?}", global_index);
 
     Ok(global_index)
 }

@@ -16,9 +16,9 @@ fn test_update_config_successfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(1_000_000_000_000u64),
+            unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .assert_owner("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3".to_string())
@@ -26,7 +26,7 @@ fn test_update_config_successfully() {
             owner.clone(),
             None,
             None,
-            Some(Uint64::new(500u64)),
+            Some(500u64),
             Some(Decimal::from_ratio(
                 Uint128::new(1u128),
                 Uint128::new(2u128),
@@ -37,9 +37,9 @@ fn test_update_config_successfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(500u64),
+            unbonding_period: 500u64,
             growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
@@ -54,9 +54,9 @@ fn test_update_config_successfully() {
             pool_manager_addr: Addr::unchecked("contract6"),
             epoch_manager_addr: Addr::unchecked("contract5"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(500u64),
+            unbonding_period: 500u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }
@@ -72,16 +72,16 @@ fn test_update_config_unsuccessfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(1_000_000_000_000u64),
+            unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             Addr::unchecked("unauthorized"),
             None,
             None,
-            Some(Uint64::new(500u64)),
+            Some(500u64),
             Some(Decimal::from_ratio(
                 Uint128::new(1u128),
                 Uint128::new(2u128),
@@ -100,16 +100,16 @@ fn test_update_config_unsuccessfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(1_000_000_000_000u64),
+            unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         })
         .update_config(
             owner,
             None,
             None,
-            Some(Uint64::new(500u64)),
+            Some(500u64),
             Some(Decimal::from_ratio(
                 Uint128::new(2u128),
                 Uint128::new(1u128),
@@ -128,9 +128,9 @@ fn test_update_config_unsuccessfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(1_000_000_000_000u64),
+            unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }

@@ -12,7 +12,7 @@ fn test_instantiate_successfully() {
 
     suite
         .instantiate(
-            Uint64::new(1_000u64),
+            1u64,
             Decimal::one(),
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
@@ -21,9 +21,9 @@ fn test_instantiate_successfully() {
             pool_manager_addr: Addr::unchecked("contract2"),
             epoch_manager_addr: Addr::unchecked("contract0"),
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(1_000u64),
+            unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            grace_period: Uint64::new(21u64),
+            grace_period: 21u64,
             bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
         });
 }
@@ -35,7 +35,7 @@ fn test_instantiate_unsuccessfully() {
     // over bonding assets limit
     suite
         .instantiate_err(
-            Uint64::new(1_000u64),
+            1u64,
             Decimal::one(),
             vec![
                 "ampWHALE".to_string(),
@@ -51,7 +51,7 @@ fn test_instantiate_unsuccessfully() {
             },
         )
         .instantiate_err(
-            Uint64::new(1_000u64),
+            1u64,
             Decimal::percent(200),
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],

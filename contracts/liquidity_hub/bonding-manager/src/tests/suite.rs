@@ -14,8 +14,8 @@ use white_whale_testing::multi_test::stargate_mock::StargateMock;
 use crate::state::{CONFIG, REWARD_BUCKETS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
-    BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
-    UnbondingResponse, WithdrawableResponse,
+    BondedResponse, BondingWeightResponse, Config, ExecuteMsg, GlobalIndex, InstantiateMsg,
+    QueryMsg, UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
@@ -82,6 +82,7 @@ pub struct TestingSuite {
 
 /// instantiate / execute messages
 impl TestingSuite {
+    #[track_caller]
     pub(crate) fn default() -> Self {
         let sender = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
         let another_sender = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
@@ -125,6 +126,7 @@ impl TestingSuite {
         }
     }
 
+    #[track_caller]
     pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_nanos(seconds * 1_000_000_000);
@@ -132,7 +134,7 @@ impl TestingSuite {
 
         self
     }
-
+    #[track_caller]
     pub(crate) fn add_one_day(&mut self) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_days(1);
@@ -141,24 +143,26 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
-            Uint64::new(86_400_000000000u64),
+            1u64,
             Decimal::one(),
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
         )
     }
 
+    #[track_caller]
     pub(crate) fn instantiate(
         &mut self,
-        unbonding_period: Uint64,
+        unbonding_period: u64,
         growth_rate: Decimal,
         bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let epoch_manager_id = self.app.store_code(epoch_manager_contract());
-        println!("epoch_manager_id: {}", self.app.block_info().time.nanos());
+
         let epoch_manager_addr = self
             .app
             .instantiate_contract(
@@ -183,7 +187,6 @@ impl TestingSuite {
         let bonding_manager_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
-        println!("bonding_manager_addr: {}", bonding_manager_addr);
 
         let hook_registration_msg =
             white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
@@ -239,9 +242,10 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn instantiate_err(
         &mut self,
-        unbonding_period: Uint64,
+        unbonding_period: u64,
         growth_rate: Decimal,
         bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
@@ -255,6 +259,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn bond(
         &mut self,
         sender: Addr,
@@ -272,6 +277,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn unbond(
         &mut self,
         sender: Addr,
@@ -288,6 +294,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn claim(
         &mut self,
         sender: Addr,
@@ -303,6 +310,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn withdraw(
         &mut self,
         sender: Addr,
@@ -319,6 +327,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn create_new_epoch(&mut self) -> &mut Self {
         let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
         self.app
@@ -346,12 +355,13 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
         epoch_manager_addr: Option<String>,
         pool_manager_addr: Option<String>,
-        unbonding_period: Option<Uint64>,
+        unbonding_period: Option<u64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -369,25 +379,11 @@ impl TestingSuite {
 
         self
     }
-
-    pub(crate) fn add_epochs_to_state(&mut self, epochs: Vec<RewardBucket>) -> &mut Self {
-        for epoch in epochs {
-            REWARD_BUCKETS
-                .save(
-                    &mut self.owned_deps.storage,
-                    &epoch.id.to_be_bytes(),
-                    &epoch,
-                )
-                .unwrap();
-        }
-
-        self
-    }
 }
 
 fn instantiate_contract(
-    robot: &mut TestingSuite,
-    unbonding_period: Uint64,
+    suite: &mut TestingSuite,
+    unbonding_period: u64,
     growth_rate: Decimal,
     bonding_assets: Vec<String>,
     funds: &Vec<Coin>,
@@ -397,23 +393,24 @@ fn instantiate_contract(
         distribution_denom: "uwhale".to_string(),
         growth_rate,
         bonding_assets,
-        grace_period: Uint64::new(21),
+        grace_period: 21u64,
         epoch_manager_addr: "".to_string(),
     };
 
-    let bonding_manager_id = robot.app.store_code(bonding_manager_contract());
-    robot.app.instantiate_contract(
+    let bonding_manager_id = suite.app.store_code(bonding_manager_contract());
+    suite.app.instantiate_contract(
         bonding_manager_id,
-        robot.sender.clone(),
+        suite.sender.clone(),
         &msg,
         funds,
         "Bonding Manager".to_string(),
-        Some(robot.sender.clone().to_string()),
+        Some(suite.sender.clone().to_string()),
     )
 }
 
 /// queries
 impl TestingSuite {
+    #[track_caller]
     pub(crate) fn query_config(
         &mut self,
         response: impl Fn(StdResult<(&mut Self, Config)>),
@@ -428,7 +425,7 @@ impl TestingSuite {
 
         self
     }
-
+    #[track_caller]
     pub(crate) fn query_owner(
         &mut self,
         response: impl Fn(StdResult<(&mut Self, String)>),
@@ -444,9 +441,12 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_weight(
         &mut self,
         address: String,
+        epoch_id: Option<u64>,
+        global_index: Option<GlobalIndex>,
         response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
     ) -> &mut Self {
         let bonding_weight_response: BondingWeightResponse = self
@@ -456,8 +456,8 @@ impl TestingSuite {
                 &self.bonding_manager_addr,
                 &QueryMsg::Weight {
                     address,
-                    epoch_id: Some(self.app.block_info().time),
-                    global_index: None,
+                    epoch_id,
+                    global_index,
                 },
             )
             .unwrap();
@@ -467,7 +467,28 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_claimable_epochs(
+    #[track_caller]
+    pub(crate) fn query_global_index(
+        &mut self,
+        epoch_id: Option<u64>,
+        response: impl Fn(StdResult<(&mut Self, GlobalIndex)>),
+    ) -> &mut Self {
+        let global_index: GlobalIndex = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.bonding_manager_addr,
+                &QueryMsg::GlobalIndex { epoch_id },
+            )
+            .unwrap();
+
+        response(Ok((self, global_index)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_claimable_reward_buckets(
         &mut self,
         address: Option<Addr>,
         response: impl Fn(StdResult<(&mut Self, Vec<RewardBucket>)>),
@@ -489,6 +510,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_bonded(
         &mut self,
         address: Option<String>,
@@ -505,6 +527,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_unbonding(
         &mut self,
         address: String,
@@ -532,6 +555,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_withdrawable(
         &mut self,
         address: String,
@@ -546,7 +570,6 @@ impl TestingSuite {
                 &QueryMsg::Withdrawable { address, denom },
             )
             .unwrap();
-        println!("withdrawable_response: {:?}", withdrawable_response);
 
         response(Ok((self, withdrawable_response)));
 
@@ -671,27 +694,11 @@ impl TestingSuite {
 
         self
     }
-
-    #[track_caller]
-    pub(crate) fn create_epoch(
-        &mut self,
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let sender = self.another_sender.clone();
-
-        result(self.app.execute_contract(
-            sender,
-            self.epoch_manager_addr.clone(),
-            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
-            &[],
-        ));
-
-        self
-    }
 }
 
 /// assertions
 impl TestingSuite {
+    #[track_caller]
     pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
         self.query_config(|res| {
             let config = res.unwrap().1;
@@ -701,6 +708,7 @@ impl TestingSuite {
         self
     }
 
+    #[track_caller]
     pub(crate) fn assert_owner(&mut self, expected: String) -> &mut Self {
         self.query_owner(|res| {
             let owner = res.unwrap().1;
@@ -709,7 +717,7 @@ impl TestingSuite {
 
         self
     }
-
+    #[track_caller]
     pub(crate) fn assert_bonded_response(
         &mut self,
         address: String,
@@ -721,17 +729,21 @@ impl TestingSuite {
         })
     }
 
+    #[track_caller]
     pub(crate) fn assert_bonding_weight_response(
         &mut self,
         address: String,
+        epoch_id: Option<u64>,
+        global_index: Option<GlobalIndex>,
         expected: BondingWeightResponse,
     ) -> &mut Self {
-        self.query_weight(address, |res| {
+        self.query_weight(address, epoch_id, global_index, |res| {
             let bonding_weight_response = res.unwrap().1;
             assert_eq!(bonding_weight_response, expected);
         })
     }
 
+    #[track_caller]
     pub(crate) fn assert_unbonding_response(
         &mut self,
         address: String,
@@ -744,6 +756,7 @@ impl TestingSuite {
         })
     }
 
+    #[track_caller]
     pub(crate) fn assert_withdrawable_response(
         &mut self,
         address: String,
