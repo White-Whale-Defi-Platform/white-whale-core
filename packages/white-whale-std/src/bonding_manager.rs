@@ -46,6 +46,13 @@ pub struct RewardBucket {
 }
 
 #[cw_serde]
+#[derive(Default)]
+pub struct UpcomingRewardBucket {
+    // The fees to be distributed in this reward bucket.
+    pub total: Vec<Coin>,
+}
+
+#[cw_serde]
 pub struct Bond {
     /// The amount of bonded tokens.
     pub asset: Coin,

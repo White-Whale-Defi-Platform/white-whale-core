@@ -266,14 +266,12 @@ pub fn query_global_index(deps: Deps, epoch_id: Option<u64>) -> StdResult<Global
 /// after creating a new epoch is created.
 pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    // Adding 1 because we store the future bucket in the map also, so grace_period + 1
-    let grace_period_plus_future_bucket = Uint64::new(config.grace_period)
-        .checked_add(Uint64::one())?
-        .u64();
-    // Take grace_period + 1 and then slice last one off
+    let grace_period = config.grace_period;
+
+    // Take grace_period
     let buckets = REWARD_BUCKETS
         .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period_plus_future_bucket as usize)
+        .take(grace_period as usize)
         .map(|item| {
             let (_, bucket) = item?;
             Ok(bucket)
@@ -282,7 +280,7 @@ pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, Co
 
     // if the buckets vector's length is the same as the grace period it means there is one bucket that
     // is expiring once the new one is created i.e. the last bucket in the vector
-    if buckets.len() == grace_period_plus_future_bucket as usize {
+    if buckets.len() == grace_period as usize {
         let expiring_reward_bucket: RewardBucket = buckets.into_iter().last().unwrap_or_default();
         Ok(Some(expiring_reward_bucket))
     } else {

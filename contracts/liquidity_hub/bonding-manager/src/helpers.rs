@@ -3,6 +3,7 @@ use cosmwasm_std::{
     StdResult, SubMsg, WasmMsg,
 };
 use cw_utils::PaymentError;
+
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, Config};
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
@@ -84,7 +85,7 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), Contract
 
 // Used in FillRewards to search the funds for LP tokens and withdraw them
 // If we do get some LP tokens to withdraw they could be swapped to whale in the reply
-pub fn handle_lp_tokens(
+pub fn handle_lp_tokens_rewards(
     funds: &Vec<Coin>,
     config: &Config,
     submessages: &mut Vec<SubMsg>,
@@ -163,16 +164,14 @@ pub fn swap_coins_to_main_token(
     for coin in coins_to_swap {
         println!("Swapping {} to {}", coin.denom, distribution_denom);
 
-        let swap_route_query = white_whale_std::pool_manager::QueryMsg::SwapRoute {
-            offer_asset_denom: coin.denom.to_string(),
-            ask_asset_denom: distribution_denom.to_string(),
-        };
-
-        println!("he");
         // Query for the routes and pool
-        let swap_routes_response: StdResult<SwapRouteResponse> = deps
-            .querier
-            .query_wasm_smart(config.pool_manager_addr.to_string(), &swap_route_query);
+        let swap_routes_response: StdResult<SwapRouteResponse> = deps.querier.query_wasm_smart(
+            config.pool_manager_addr.to_string(),
+            &white_whale_std::pool_manager::QueryMsg::SwapRoute {
+                offer_asset_denom: coin.denom.to_string(),
+                ask_asset_denom: distribution_denom.to_string(),
+            },
+        );
 
         println!("swap_routes_response: {:?}", swap_routes_response);
         let swap_routes = match swap_routes_response {
@@ -247,7 +246,7 @@ pub fn swap_coins_to_main_token(
 
 /// Validates that there are reward buckets in the state. If there are none, it means the system has just
 /// been started and the epoch manager has still not created any epochs yet.
-pub(crate) fn validate_buckets(deps: &DepsMut) -> Result<(), ContractError> {
+pub(crate) fn validate_buckets_not_empty(deps: &DepsMut) -> Result<(), ContractError> {
     let reward_buckets = REWARD_BUCKETS
         .keys(deps.storage, None, None, Order::Descending)
         .collect::<StdResult<Vec<_>>>()?;
