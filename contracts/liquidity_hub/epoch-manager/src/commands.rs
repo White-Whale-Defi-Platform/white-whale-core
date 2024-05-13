@@ -32,15 +32,7 @@ pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
 
     let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
-    println!("Creating new epoch");
-
-    println!("Current epoch: {:?}", current_epoch);
-    println!("env.block.time: {:?}", env.block.time.seconds());
-    println!("x: {:?}", current_epoch.start_time.seconds());
-    println!(
-        "config.epoch_config.duration.u64(): {:?}",
-        config.epoch_config.duration.u64()
-    );
+    println!("----create_epoch----");
 
     ensure!(
         env.block.time >= current_epoch.start_time,

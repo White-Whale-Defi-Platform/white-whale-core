@@ -59,8 +59,8 @@ pub enum ContractError {
     #[error("There are unclaimed rewards available. Claim them before attempting to bond/unbond")]
     UnclaimedRewards,
 
-    #[error("Trying to bond/unbond at a late time before the new/latest epoch has been created")]
-    NewEpochNotCreatedYet,
+    #[error("Trying to bond before an epoch has been created")]
+    EpochNotCreatedYet,
 
     #[error("Nothing to claim")]
     NothingToClaim,

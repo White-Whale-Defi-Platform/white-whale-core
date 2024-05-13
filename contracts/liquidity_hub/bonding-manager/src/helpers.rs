@@ -1,10 +1,10 @@
 use cosmwasm_std::{
-    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, ReplyOn,
+    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, ReplyOn,
     StdResult, SubMsg, WasmMsg,
 };
 use cw_utils::PaymentError;
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, Config};
-use white_whale_std::constants::{DAY_IN_SECONDS, LP_SYMBOL};
+use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
@@ -68,33 +68,16 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
-pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
+pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
         config.epoch_manager_addr.to_string(),
         &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
     )?;
 
-    let current_epoch = epoch_response.epoch;
-    // Check if the current time is more than a day after the epoch start time
-    if current_epoch.id != 0u64 {
-        let current_time = env.block.time.seconds();
+    let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, epoch_response.epoch.id)?;
 
-        let start_time_seconds = current_epoch
-            .start_time
-            .seconds()
-            .checked_add(DAY_IN_SECONDS);
-
-        match start_time_seconds {
-            Some(start_time_plus_day) => {
-                ensure!(
-                    current_time <= start_time_plus_day,
-                    ContractError::NewEpochNotCreatedYet
-                );
-            }
-            None => return Err(ContractError::Unauthorized),
-        }
-    }
+    ensure!(reward_bucket.is_some(), ContractError::EpochNotCreatedYet);
 
     Ok(())
 }

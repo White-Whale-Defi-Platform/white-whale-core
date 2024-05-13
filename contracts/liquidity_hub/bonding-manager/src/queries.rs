@@ -161,7 +161,15 @@ pub(crate) fn query_weight(
         .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
+    println!("----query_weight----");
+    println!("bonds: {:?}", bonds);
+
     let config = CONFIG.load(deps.storage)?;
+    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        )?;
 
     let mut total_bond_weight = Uint128::zero();
     // Search bonds for unique bond.asset.denoms
@@ -169,6 +177,17 @@ pub(crate) fn query_weight(
     let mut unique_denoms: HashSet<String> = HashSet::new();
 
     for (_, mut bond) in bonds? {
+        println!("bond-before: {:?}", bond);
+
+        // if bond.updated_last == current_epoch.epoch.id {
+        //     // take previous value
+        // }
+
+        //todo
+        if bond.created_at_epoch == current_epoch.epoch.id {
+            continue;
+        }
+
         bond.weight = get_weight(
             epoch_id,
             bond.weight,
@@ -177,31 +196,40 @@ pub(crate) fn query_weight(
             bond.updated_last,
         )?;
 
+        println!("bond-after: {:?}", bond);
+
         if !unique_denoms.contains(&bond.asset.denom) {
             unique_denoms.insert(bond.asset.denom.clone());
+            println!("unique_denoms: {:?}", unique_denoms);
         }
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
+        println!("total_bond_weight: {:?}", total_bond_weight);
     }
 
     // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
     let mut global_index = if let Some(global_index) = global_index {
         global_index
     } else {
+        println!("here?");
         GLOBAL
             .may_load(deps.storage)
             .unwrap_or_else(|_| Some(GlobalIndex::default()))
             .ok_or_else(|| StdError::generic_err("Global index not found"))?
     };
 
+    println!("global_index: {:?}", global_index);
+
     global_index.weight = get_weight(
         epoch_id,
         global_index.weight,
         global_index.bonded_amount,
         config.growth_rate,
-        global_index.last_updated,
+        global_index.updated_last,
     )?;
+
+    println!("global_index--after: {:?}", global_index);
 
     // Represents the share of the global weight that the address has
     // If global_index.weight is zero no one has bonded yet so the share is
@@ -221,7 +249,15 @@ pub(crate) fn query_weight(
 }
 
 /// Queries the global index
-pub fn query_global_index(deps: Deps) -> StdResult<GlobalIndex> {
+pub fn query_global_index(deps: Deps, epoch_id: Option<u64>) -> StdResult<GlobalIndex> {
+    // if an epoch_id is provided, return the global index of the corresponding reward bucket
+    if let Some(epoch_id) = epoch_id {
+        let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, epoch_id)?;
+        if let Some(reward_bucket) = reward_bucket {
+            return Ok(reward_bucket.global_index);
+        }
+    }
+
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     Ok(global_index)
 }
@@ -334,6 +370,8 @@ pub fn query_claimable(
         // again without any available rewards, as those were forwarded to newer buckets.
         claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
+
+    // todo exclude buckets which eopch id is the same as the bond created epoch id
 
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,

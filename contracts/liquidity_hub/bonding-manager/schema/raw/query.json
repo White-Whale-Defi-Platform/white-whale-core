@@ -151,10 +151,28 @@
     },
     {
       "description": "Returns the global index of the contract.",
-      "type": "string",
-      "enum": [
+      "type": "object",
+      "required": [
         "global_index"
-      ]
+      ],
+      "properties": {
+        "global_index": {
+          "type": "object",
+          "properties": {
+            "epoch_id": {
+              "description": "The epoch id to check for the global index. If none is provided, the current global index is returned.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     },
     {
       "description": "Returns the [RewardBucket]s that can be claimed by an address.",
@@ -215,7 +233,8 @@
       "required": [
         "bonded_amount",
         "bonded_assets",
-        "last_updated",
+        "epoch_id",
+        "updated_last",
         "weight"
       ],
       "properties": {
@@ -234,7 +253,13 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "last_updated": {
+        "epoch_id": {
+          "description": "The epoch id the global index was taken a snapshot for",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "updated_last": {
           "description": "The epoch id at which the total bond was updated.",
           "type": "integer",
           "format": "uint64",

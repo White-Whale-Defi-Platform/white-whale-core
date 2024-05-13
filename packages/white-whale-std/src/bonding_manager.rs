@@ -55,6 +55,7 @@ pub struct Bond {
     pub updated_last: u64,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
+    //pub previous: (u64, Uint128)
 }
 
 impl Default for Bond {
@@ -74,12 +75,14 @@ impl Default for Bond {
 #[cw_serde]
 #[derive(Default)]
 pub struct GlobalIndex {
+    /// The epoch id the global index was taken a snapshot for
+    pub epoch_id: u64,
     /// The total amount of tokens bonded in the contract.
     pub bonded_amount: Uint128,
     /// Assets that are bonded in the contract.
     pub bonded_assets: Vec<Coin>,
     /// The epoch id at which the total bond was updated.
-    pub last_updated: u64,
+    pub updated_last: u64,
     /// The total weight of the bond at the given block height.
     pub weight: Uint128,
 }
@@ -201,7 +204,11 @@ pub enum QueryMsg {
 
     /// Returns the global index of the contract.
     #[returns(GlobalIndex)]
-    GlobalIndex,
+    GlobalIndex {
+        /// The epoch id to check for the global index. If none is provided, the current global index
+        /// is returned.
+        epoch_id: Option<u64>,
+    },
 
     /// Returns the [RewardBucket]s that can be claimed by an address.
     #[returns(ClaimableRewardBucketsResponse)]

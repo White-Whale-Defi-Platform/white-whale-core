@@ -36,7 +36,8 @@
       "required": [
         "bonded_amount",
         "bonded_assets",
-        "last_updated",
+        "epoch_id",
+        "updated_last",
         "weight"
       ],
       "properties": {
@@ -55,7 +56,13 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "last_updated": {
+        "epoch_id": {
+          "description": "The epoch id the global index was taken a snapshot for",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "updated_last": {
           "description": "The epoch id at which the total bond was updated.",
           "type": "integer",
           "format": "uint64",

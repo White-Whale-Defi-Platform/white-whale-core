@@ -10,7 +10,7 @@ use white_whale_std::pool_network::asset;
 use crate::helpers::validate_growth_rate;
 use crate::queries::{get_expiring_reward_bucket, query_claimable, query_weight, MAX_PAGE_LIMIT};
 use crate::state::{
-    update_global_weight, update_local_weight, BOND, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH,
+    update_bond_weight, update_global_weight, BOND, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH,
     REWARD_BUCKETS, UNBOND,
 };
 use crate::{helpers, ContractError};
@@ -19,14 +19,13 @@ use crate::{helpers, ContractError};
 pub(crate) fn bond(
     mut deps: DepsMut,
     info: MessageInfo,
-    env: Env,
+    _env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    println!("bonding");
+    println!("----bond----");
     helpers::validate_buckets(&deps)?;
     helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
-    println!("bonding 2");
+    helpers::validate_bonding_for_current_epoch(&deps)?;
 
     let config = CONFIG.load(deps.storage)?;
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
@@ -44,17 +43,19 @@ pub(crate) fn bond(
                 ..asset.clone()
             },
             created_at_epoch: current_epoch.epoch.id,
+            updated_last: current_epoch.epoch.id,
             ..Bond::default()
         });
 
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
-    update_local_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
+    update_bond_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
     // include time term in the weight
+
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
@@ -81,7 +82,7 @@ pub(crate) fn unbond(
     );
 
     helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    helpers::validate_bonding_for_current_epoch(&deps)?;
     if let Some(mut unbond) = BOND
         .key((&info.sender, &asset.denom))
         .may_load(deps.storage)?
@@ -100,7 +101,7 @@ pub(crate) fn unbond(
             )?;
 
         // update local values, decrease the bond
-        unbond = update_local_weight(
+        unbond = update_bond_weight(
             &mut deps,
             info.sender.clone(),
             current_epoch.epoch.id,
@@ -364,12 +365,7 @@ pub(crate) fn fill_rewards(
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    println!(
-        "EPOCHS: {:?}",
-        REWARD_BUCKETS
-            .keys(deps.storage, None, None, Order::Descending)
-            .collect::<Vec<_>>()
-    );
+    println!("----fill_rewards----");
 
     // Finding the most recent bucket
     let upcoming_bucket_id = match REWARD_BUCKETS
@@ -406,7 +402,6 @@ pub(crate) fn fill_rewards(
         .filter(|coin| coin.denom.ne(distribution_denom.as_str()))
         .collect::<Vec<Coin>>();
 
-    println!("remanent_coins: {:?}", remanent_coins);
     // Each of these helpers will add messages to the messages vector
     // and may increment the whale Coin above with the result of the swaps
     helpers::handle_lp_tokens(&remanent_coins, &config, &mut submessages)?;
@@ -419,7 +414,6 @@ pub(crate) fn fill_rewards(
         &mut messages,
     )?;
 
-    println!("here");
     // Add the whale to the funds, the whale figure now should be the result
     // of all the LP token withdrawals and swaps
     // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
@@ -443,6 +437,7 @@ pub(crate) fn on_epoch_created(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
+    println!("----on_epoch_created----");
     println!("EpochChangedHook: {:?}", current_epoch);
     // A new epoch has been created, update rewards bucket and forward the expiring bucket
     let config = CONFIG.load(deps.storage)?;
@@ -455,7 +450,7 @@ pub(crate) fn on_epoch_created(
     // This happens only on the very first epoch where Global has not been initialised yet
     if global.is_none() {
         let initial_global_index = GlobalIndex {
-            last_updated: current_epoch.id,
+            updated_last: current_epoch.id,
             ..Default::default()
         };
         GLOBAL.save(deps.storage, &initial_global_index)?;
@@ -471,7 +466,9 @@ pub(crate) fn on_epoch_created(
         )?;
     }
 
-    let global = GLOBAL.load(deps.storage)?;
+    // Update the global index epoch id field
+    let mut global = GLOBAL.load(deps.storage)?;
+    global.epoch_id = current_epoch.id;
 
     // update the global index for the current bucket, take the current snapshot of the global index
     REWARD_BUCKETS.update(
@@ -483,17 +480,6 @@ pub(crate) fn on_epoch_created(
             Ok(reward_bucket)
         },
     )?;
-
-    // todo to delete once the testing is done
-    let all_buckets: Vec<RewardBucket> = REWARD_BUCKETS
-        .range(deps.storage, None, None, Order::Descending)
-        .map(|item| {
-            let (_, bucket) = item?;
-            Ok(bucket)
-        })
-        .collect::<StdResult<Vec<RewardBucket>>>()?;
-
-    println!("EPOCHS: {:?}", all_buckets);
 
     // forward fees from the expiring bucket to the new one.
     let mut expiring_reward_bucket = get_expiring_reward_bucket(deps.as_ref())?;
