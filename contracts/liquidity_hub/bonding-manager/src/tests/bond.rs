@@ -80,7 +80,7 @@ fn test_bond_successfully() {
             Some(global_index.clone().into_inner()),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(1_000u128),
+                weight: Uint128::zero(),
                 global_weight: Uint128::zero(), // because the snapshot was taken at the beginning of the epoch
                 share: Decimal::zero(),
                 epoch_id: 1u64,
@@ -179,9 +179,9 @@ fn test_bond_successfully() {
             Some(global_index.clone().into_inner()),
             BondingWeightResponse {
                 address: sender.to_string(),
-                weight: Uint128::new(10000u128),
-                global_weight: Uint128::new(10000u128),
-                share: Decimal::from_ratio(10000u128, 10000u128),
+                weight: Uint128::new(6_000u128),
+                global_weight: Uint128::new(8_000u128),
+                share: Decimal::from_ratio(6_000u128, 8_000u128),
                 epoch_id: 2u64,
             },
         )

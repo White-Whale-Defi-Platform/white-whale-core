@@ -62,7 +62,7 @@ pub struct Bond {
     pub updated_last: u64,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
-    //pub previous: (u64, Uint128)
+    //pub previous: Option<(u64, Uint128)>
 }
 
 impl Default for Bond {
@@ -75,6 +75,7 @@ impl Default for Bond {
             created_at_epoch: Default::default(),
             updated_last: Default::default(),
             weight: Uint128::zero(),
+            //previous: None,
         }
     }
 }

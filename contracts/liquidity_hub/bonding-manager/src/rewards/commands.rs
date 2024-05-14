@@ -122,7 +122,7 @@ pub(crate) fn fill_rewards(
 
     // Each of these helpers will add messages to the messages vector
     // and may increment the distribution_denom Coin above with the result of the swaps
-    helpers::handle_lp_tokens_rewards(&remnant_coins, &config, &mut submessages)?;
+    helpers::handle_lp_tokens_rewards(&deps, &remnant_coins, &config, &mut submessages)?;
     helpers::swap_coins_to_main_token(
         remnant_coins,
         &deps,
@@ -194,6 +194,7 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let claimable_reward_buckets_for_user =
         query_claimable(deps.as_ref(), Some(info.sender.to_string()))?.reward_buckets;
+
     ensure!(
         !claimable_reward_buckets_for_user.is_empty(),
         ContractError::NothingToClaim
