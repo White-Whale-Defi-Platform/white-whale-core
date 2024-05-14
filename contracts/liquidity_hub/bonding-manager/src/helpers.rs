@@ -86,6 +86,7 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), Contract
 // Used in FillRewards to search the funds for LP tokens and withdraw them
 // If we do get some LP tokens to withdraw they could be swapped to whale in the reply
 pub fn handle_lp_tokens_rewards(
+    deps: &DepsMut,
     funds: &Vec<Coin>,
     config: &Config,
     submessages: &mut Vec<SubMsg>,
@@ -103,6 +104,18 @@ pub fn handle_lp_tokens_rewards(
             extract_pool_identifier(&lp_token.denom).ok_or(ContractError::AssetMismatch)?;
 
         println!("pool_identifier: {:?}", pool_identifier);
+
+        // make sure a pool with the given identifier exists
+        let pool: StdResult<PoolInfoResponse> = deps.querier.query_wasm_smart(
+            config.pool_manager_addr.to_string(),
+            &white_whale_std::pool_manager::QueryMsg::Pool {
+                pool_identifier: pool_identifier.to_string(),
+            },
+        );
+
+        if pool.is_err() {
+            continue;
+        }
 
         // if LP Tokens ,verify and withdraw then swap to whale
         let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {

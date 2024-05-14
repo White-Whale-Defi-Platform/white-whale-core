@@ -1,5 +1,7 @@
 use crate::queries::MAX_PAGE_LIMIT;
-use crate::state::{update_bond_weight, update_global_weight, BOND, CONFIG, GLOBAL, UNBOND};
+use crate::state::{
+    update_bond_weight, update_global_weight, BOND, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, UNBOND,
+};
 use crate::{helpers, ContractError};
 use cosmwasm_std::{
     ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Order, Response,
@@ -17,6 +19,7 @@ pub(crate) fn bond(
 ) -> Result<Response, ContractError> {
     println!("----bond----");
     helpers::validate_buckets_not_empty(&deps)?;
+    //todo maybe claim for the user
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps)?;
 
@@ -40,10 +43,16 @@ pub(crate) fn bond(
             ..Bond::default()
         });
 
+    // if bond.updated_last != current_epoch.epoch.id.clone() {
+    //     bond.previous = Some((bond.updated_last, bond.weight));
+    // }
+
     // update local values
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
     update_bond_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
+
+    LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
     // update global values
     let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
@@ -119,6 +128,7 @@ pub(crate) fn unbond(
                 weight: Uint128::zero(),
                 updated_last: current_epoch.epoch.id,
                 created_at_epoch: current_epoch.epoch.id,
+                //previous: None,
             },
         )?;
         // update global values
