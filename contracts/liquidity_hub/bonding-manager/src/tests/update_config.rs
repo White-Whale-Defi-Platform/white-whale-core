@@ -8,7 +8,7 @@ use crate::ContractError;
 #[test]
 fn test_update_config_successfully() {
     let mut suite = TestingSuite::default();
-    let owner = suite.sender.clone();
+    let owner = suite.senders[0].clone();
 
     suite
         .instantiate_default()
@@ -85,7 +85,7 @@ fn test_update_config_successfully() {
 #[test]
 fn test_update_config_unsuccessfully() {
     let mut suite = TestingSuite::default();
-    let owner = suite.sender.clone();
+    let owner = suite.senders[0].clone();
 
     suite
         .instantiate_default()

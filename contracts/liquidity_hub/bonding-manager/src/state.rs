@@ -35,10 +35,10 @@ pub fn update_bond_weight(
         bond.weight,
         bond.asset.amount,
         config.growth_rate,
-        bond.updated_last,
+        bond.last_updated,
     )?;
 
-    bond.updated_last = current_epoch_id;
+    bond.last_updated = current_epoch_id;
     BOND.save(deps.storage, (&address, &bond.asset.denom), &bond)?;
 
     println!("updated bond: {:?}", bond);
@@ -54,15 +54,15 @@ pub fn update_global_weight(
 ) -> Result<GlobalIndex, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    global_index.weight = get_weight(
+    global_index.last_weight = get_weight(
         current_epoch_id,
-        global_index.weight,
+        global_index.last_weight,
         global_index.bonded_amount,
         config.growth_rate,
-        global_index.updated_last,
+        global_index.last_updated,
     )?;
 
-    global_index.updated_last = current_epoch_id;
+    global_index.last_updated = current_epoch_id;
     GLOBAL.save(deps.storage, &global_index)?;
 
     println!("updated global_index: {:?}", global_index);

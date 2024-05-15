@@ -25,7 +25,10 @@ pub(crate) fn on_epoch_created(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    println!("----on_epoch_created----");
+    println!(
+        ">>>>>>>>>>>>>>>>>>> {:?}{:?}{:?}",
+        current_epoch.id, current_epoch.id, current_epoch.id
+    );
     println!("EpochChangedHook: {:?}", current_epoch);
     // A new epoch has been created, update rewards bucket and forward the expiring bucket
     let config = CONFIG.load(deps.storage)?;
@@ -39,7 +42,7 @@ pub(crate) fn on_epoch_created(
     if global.is_none() {
         let initial_global_index = GlobalIndex {
             epoch_id: current_epoch.id,
-            updated_last: current_epoch.id,
+            last_updated: current_epoch.id,
             ..Default::default()
         };
         GLOBAL.save(deps.storage, &initial_global_index)?;
@@ -48,6 +51,14 @@ pub(crate) fn on_epoch_created(
     // Update the global index epoch id
     let mut global_index = GLOBAL.load(deps.storage)?;
     global_index.epoch_id = current_epoch.id;
+
+    if global_index.bonded_amount == Uint128::zero() {
+        global_index.last_updated = current_epoch.id;
+    }
+
+    GLOBAL.save(deps.storage, &global_index)?;
+
+    println!("--- global_index: {:?}", global_index);
 
     // Create a new reward bucket for the current epoch with the total rewards accrued in the
     // upcoming bucket item
@@ -161,6 +172,7 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
     let distribution_denom = config.distribution_denom.clone();
     let mut messages = vec![];
 
+    println!("coins: {:?}", coins);
     // Search received coins funds for the coin that is not the distribution denom
     // This will be swapped for
     let mut distribution_asset = coins
@@ -172,6 +184,8 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
         })
         .to_owned();
 
+    println!("distribution_asset: {:?}", distribution_asset);
+
     // Swap other coins to the distribution denom
     helpers::swap_coins_to_main_token(
         coins,
@@ -181,6 +195,8 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
         &distribution_denom,
         &mut messages,
     )?;
+
+    println!("distribution_asset: {:?}", distribution_asset);
 
     // update the upcoming bucket with the new funds
     fill_upcoming_reward_bucket(deps, distribution_asset.clone())?;
@@ -210,6 +226,10 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
                                 available_fee.amount.saturating_sub(reward.amount);
                         }
                     }
+
+                    reward_bucket
+                        .available
+                        .retain(|coin| coin.amount > Uint128::zero());
 
                     if reward_bucket.claimed.is_empty() {
                         reward_bucket.claimed = vec![Coin {
