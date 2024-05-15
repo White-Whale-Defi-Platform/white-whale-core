@@ -71,8 +71,7 @@ type OsmosisTokenFactoryApp = App<
 >;
 pub struct TestingSuite {
     pub app: OsmosisTokenFactoryApp,
-    pub sender: Addr,
-    pub another_sender: Addr,
+    pub senders: Vec<Addr>,
     pub bonding_manager_addr: Addr,
     pub pool_manager_addr: Addr,
     pub epoch_manager_addr: Addr,
@@ -116,8 +115,7 @@ impl TestingSuite {
 
         Self {
             app: app,
-            sender,
-            another_sender,
+            senders: vec![sender, another_sender, sender_3],
             bonding_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
             epoch_manager_addr: Addr::unchecked(""),
@@ -167,7 +165,7 @@ impl TestingSuite {
             .app
             .instantiate_contract(
                 epoch_manager_id,
-                self.sender.clone(),
+                self.senders[0].clone(),
                 &white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
                     start_epoch: EpochV2 {
                         id: 0,
@@ -195,7 +193,7 @@ impl TestingSuite {
         let resp = self
             .app
             .execute_contract(
-                self.sender.clone(),
+                self.senders[0].clone(),
                 epoch_manager_addr.clone(),
                 &hook_registration_msg,
                 &[],
@@ -213,7 +211,7 @@ impl TestingSuite {
 
         let pool_manager_id = self.app.store_code(contract_pool_manager());
 
-        let creator = self.sender.clone();
+        let creator = self.senders[0].clone();
 
         let pool_manager_addr = self
             .app
@@ -233,7 +231,12 @@ impl TestingSuite {
             unbonding_period: None,
         };
         self.app
-            .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
+            .execute_contract(
+                self.senders[0].clone(),
+                bonding_manager_addr.clone(),
+                &msg,
+                &[],
+            )
             .unwrap();
 
         self.bonding_manager_addr = bonding_manager_addr;
@@ -332,7 +335,7 @@ impl TestingSuite {
         let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
         self.app
             .execute_contract(
-                self.sender.clone(),
+                self.senders[0].clone(),
                 self.epoch_manager_addr.clone(),
                 &new_epoch_msg,
                 &[],
@@ -400,11 +403,11 @@ fn instantiate_contract(
     let bonding_manager_id = suite.app.store_code(bonding_manager_contract());
     suite.app.instantiate_contract(
         bonding_manager_id,
-        suite.sender.clone(),
+        suite.senders[0].clone(),
         &msg,
         funds,
         "Bonding Manager".to_string(),
-        Some(suite.sender.clone().to_string()),
+        Some(suite.senders[0].clone().to_string()),
     )
 }
 

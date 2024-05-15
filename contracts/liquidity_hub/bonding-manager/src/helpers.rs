@@ -178,8 +178,6 @@ pub fn swap_coins_to_main_token(
         })
         .collect();
     for coin in coins_to_swap {
-        println!("Swapping {} to {}", coin.denom, distribution_denom);
-
         // Query for the routes and pool
         let swap_routes_response: StdResult<SwapRouteResponse> = deps.querier.query_wasm_smart(
             config.pool_manager_addr.to_string(),
@@ -189,7 +187,6 @@ pub fn swap_coins_to_main_token(
             },
         );
 
-        println!("swap_routes_response: {:?}", swap_routes_response);
         let swap_routes = match swap_routes_response {
             Ok(swap_routes) => swap_routes,
             // no routes, skip
@@ -233,6 +230,7 @@ pub fn swap_coins_to_main_token(
                     operations: swap_routes.swap_route.swap_operations.clone(),
                 },
             )?;
+
         // Add the simulate amount received to the distribution_denom amount, if the swap fails this should
         // also be rolled back
         to_be_distribution_asset.amount = to_be_distribution_asset
@@ -310,7 +308,7 @@ pub fn calculate_rewards(
             Some(reward_bucket.global_index.clone()),
         )?;
 
-        // if the user has no share in the bucket, skip it
+        // sanity check, if the user has no share in the bucket, skip it
         if bonding_weight_response_for_epoch.share.is_zero() {
             continue;
         };
@@ -324,7 +322,9 @@ pub fn calculate_rewards(
         let mut claimed_rewards_from_bucket = vec![];
 
         for reward in reward_bucket.total.iter() {
-            let user_reward = reward.amount * bonding_weight_response_for_epoch.share;
+            let user_reward = reward
+                .amount
+                .checked_mul_floor(bonding_weight_response_for_epoch.share)?;
 
             // make sure the reward is sound
             let reward_validation: Result<(), StdError> = reward_bucket
@@ -332,6 +332,7 @@ pub fn calculate_rewards(
                 .iter()
                 .find(|available_fee| available_fee.denom == reward.denom)
                 .map(|available_reward| {
+                    // sanity check
                     if user_reward > available_reward.amount {
                         attributes.push(Attribute {
                             key: "error".to_string(),

@@ -39,30 +39,33 @@ pub(crate) fn bond(
                 ..asset.clone()
             },
             created_at_epoch: current_epoch.epoch.id,
-            updated_last: current_epoch.epoch.id,
+            last_updated: current_epoch.epoch.id,
             ..Bond::default()
         });
 
-    // if bond.updated_last != current_epoch.epoch.id.clone() {
-    //     bond.previous = Some((bond.updated_last, bond.weight));
-    // }
-
     // update local values
+    bond = update_bond_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
-    update_bond_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
 
-    LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
+    BOND.save(deps.storage, (&info.sender, &bond.asset.denom), &bond)?;
 
     // update global values
-    let mut global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
+    let mut global_index = GLOBAL.load(deps.storage)?;
     // include time term in the weight
 
-    global_index.weight = global_index.weight.checked_add(asset.amount)?;
+    println!("bonding global_index: {:?}", global_index);
+
+    global_index = update_global_weight(&mut deps, current_epoch.epoch.id, global_index.clone())?;
+
+    global_index.last_weight = global_index.last_weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
         asset::aggregate_coins(&global_index.bonded_assets, &vec![asset.clone()])?;
-    update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
+
+    GLOBAL.save(deps.storage, &global_index)?;
+
+    LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "bond".to_string()),
@@ -126,7 +129,7 @@ pub(crate) fn unbond(
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),
-                updated_last: current_epoch.epoch.id,
+                last_updated: current_epoch.epoch.id,
                 created_at_epoch: current_epoch.epoch.id,
                 //previous: None,
             },
@@ -137,7 +140,7 @@ pub(crate) fn unbond(
         global_index.bonded_amount = global_index.bonded_amount.saturating_sub(asset.amount);
         global_index.bonded_assets =
             white_whale_std::coin::deduct_coins(global_index.bonded_assets, vec![asset.clone()])?;
-        global_index.weight = global_index.weight.saturating_sub(weight_slash);
+        global_index.last_weight = global_index.last_weight.saturating_sub(weight_slash);
 
         GLOBAL.save(deps.storage, &global_index)?;
 

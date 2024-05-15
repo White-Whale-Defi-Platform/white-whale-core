@@ -59,7 +59,7 @@ pub struct Bond {
     /// The epoch id at which the Bond was created.
     pub created_at_epoch: u64,
     /// The epoch id at which the bond was last time updated.
-    pub updated_last: u64,
+    pub last_updated: u64,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
     //pub previous: Option<(u64, Uint128)>
@@ -73,7 +73,7 @@ impl Default for Bond {
                 amount: Uint128::zero(),
             },
             created_at_epoch: Default::default(),
-            updated_last: Default::default(),
+            last_updated: Default::default(),
             weight: Uint128::zero(),
             //previous: None,
         }
@@ -90,9 +90,9 @@ pub struct GlobalIndex {
     /// Assets that are bonded in the contract.
     pub bonded_assets: Vec<Coin>,
     /// The epoch id at which the total bond was updated.
-    pub updated_last: u64,
-    /// The total weight of the bond at the given block height.
-    pub weight: Uint128,
+    pub last_updated: u64,
+    /// The total weight of the contract at the given updated_last epoch id.
+    pub last_weight: Uint128,
 }
 
 #[cw_serde]

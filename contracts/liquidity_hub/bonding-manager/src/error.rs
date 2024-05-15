@@ -1,4 +1,6 @@
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint128};
+use cosmwasm_std::{
+    CheckedMultiplyFractionError, DivideByZeroError, OverflowError, StdError, Uint128,
+};
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
@@ -17,6 +19,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
