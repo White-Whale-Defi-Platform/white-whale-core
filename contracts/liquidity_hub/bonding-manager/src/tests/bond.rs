@@ -125,7 +125,7 @@ fn test_bond_successfully() {
         .query_global_index(Some(2u64), |res| {
             let gi = res.unwrap().1;
             println!("gi 2:: {:?}", gi);
-            *global_index.borrow_mut() = gi.clone();
+            *global_index.borrow_mut() = gi.clone(); // 8000 weight
         });
 
     suite
@@ -150,7 +150,7 @@ fn test_bond_successfully() {
             },
         )
         .assert_bonded_response(
-            sender.to_string(),
+            sender.to_string(), // weight -> 10k
             BondedResponse {
                 total_bonded: Uint128::new(5_000u128),
                 bonded_assets: vec![
@@ -176,7 +176,7 @@ fn test_bond_successfully() {
         .assert_bonding_weight_response(
             sender.to_string(),
             Some(2u64),
-            Some(global_index.clone().into_inner()),
+            None,
             BondingWeightResponse {
                 address: sender.to_string(),
                 weight: Uint128::new(6_000u128),

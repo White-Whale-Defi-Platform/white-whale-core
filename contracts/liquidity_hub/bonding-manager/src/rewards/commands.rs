@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    ensure, from_json, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, SubMsg, Uint128,
+    ensure, from_json, BankMsg, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Reply, Response,
+    SubMsg, Uint128,
 };
 use cw_utils::parse_reply_execute_data;
 
@@ -8,7 +8,7 @@ use white_whale_std::bonding_manager::{GlobalIndex, RewardBucket, UpcomingReward
 use white_whale_std::epoch_manager::epoch_manager::Epoch;
 use white_whale_std::pool_network::asset;
 
-use crate::queries::{get_expiring_reward_bucket, query_claimable, query_weight};
+use crate::queries::get_expiring_reward_bucket;
 use crate::state::{
     fill_upcoming_reward_bucket, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS,
     UPCOMING_REWARD_BUCKET,
@@ -66,11 +66,11 @@ pub(crate) fn on_epoch_created(
     if let Some(expiring_bucket) = expiring_reward_bucket.as_mut() {
         // Aggregate the available assets from the expiring bucket to the new reward bucket
         new_reward_bucket.available = asset::aggregate_coins(
-            new_reward_bucket.available,
-            expiring_bucket.available.clone(),
+            &new_reward_bucket.available,
+            &expiring_bucket.available.clone(),
         )?;
         new_reward_bucket.total =
-            asset::aggregate_coins(new_reward_bucket.total, expiring_bucket.available.clone())?;
+            asset::aggregate_coins(&new_reward_bucket.total, &expiring_bucket.available.clone())?;
 
         // Set the available assets for the expiring bucket to an empty vec now that they have been
         // forwarded
@@ -192,121 +192,71 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
 
 /// Claims pending rewards for the sender.
 pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    let claimable_reward_buckets_for_user =
-        query_claimable(deps.as_ref(), Some(info.sender.to_string()))?.reward_buckets;
+    let (total_claimable_rewards, attributes, modified_reward_buckets) =
+        helpers::calculate_rewards(&deps.as_ref(), info.sender.clone(), true)?;
 
-    ensure!(
-        !claimable_reward_buckets_for_user.is_empty(),
-        ContractError::NothingToClaim
-    );
+    // Save the modified reward buckets
+    for (reward_id, claimed_rewards) in modified_reward_buckets {
+        REWARD_BUCKETS.update(
+            deps.storage,
+            reward_id,
+            |reward_bucket| -> Result<_, ContractError> {
+                let mut reward_bucket = reward_bucket.unwrap();
 
-    let mut claimable_rewards = vec![];
-    let mut attributes = vec![];
-    for mut reward_bucket in claimable_reward_buckets_for_user.clone() {
-        let bonding_weight_response_for_epoch = query_weight(
-            deps.as_ref(),
-            reward_bucket.id,
-            info.sender.to_string(),
-            Some(reward_bucket.global_index.clone()),
-        )?;
+                for reward in claimed_rewards.iter() {
+                    for available_fee in reward_bucket.available.iter_mut() {
+                        if available_fee.denom == reward.denom {
+                            available_fee.amount =
+                                available_fee.amount.saturating_sub(reward.amount);
+                        }
+                    }
 
-        // if the user has no share in the bucket, skip it
-        if bonding_weight_response_for_epoch.share.is_zero() {
-            continue;
-        };
-
-        // sanity check
-        ensure!(
-            bonding_weight_response_for_epoch.share <= Decimal::percent(100u64),
-            ContractError::InvalidShare
-        );
-
-        for reward in reward_bucket.total.iter() {
-            let user_reward = reward.amount * bonding_weight_response_for_epoch.share;
-
-            // make sure the reward is sound
-            let reward_validation: Result<(), StdError> = reward_bucket
-                .available
-                .iter()
-                .find(|available_fee| available_fee.denom == reward.denom)
-                .map(|available_fee| {
-                    if user_reward > available_fee.amount {
-                        attributes.push((
-                            "error",
-                            ContractError::InvalidReward {
-                                reward: user_reward,
-                                available: available_fee.amount,
+                    if reward_bucket.claimed.is_empty() {
+                        reward_bucket.claimed = vec![Coin {
+                            denom: reward.denom.clone(),
+                            amount: reward.amount,
+                        }];
+                    } else {
+                        for claimed_reward in reward_bucket.claimed.iter_mut() {
+                            if claimed_reward.denom == reward.denom {
+                                claimed_reward.amount =
+                                    claimed_reward.amount.checked_add(reward.amount)?;
                             }
-                            .to_string(),
-                        ));
-                    }
-                    Ok(())
-                })
-                .ok_or(StdError::generic_err("Invalid fee"))?;
 
-            // if the reward is invalid, skip the bucket
-            match reward_validation {
-                Ok(_) => {}
-                Err(_) => continue,
-            }
-
-            let denom = &reward.denom;
-            // add the reward
-            claimable_rewards = asset::aggregate_coins(
-                claimable_rewards,
-                vec![Coin {
-                    denom: denom.to_string(),
-                    amount: user_reward,
-                }],
-            )?;
-
-            // modify the bucket to reflect the new available and claimed amount
-            for available_fee in reward_bucket.available.iter_mut() {
-                if available_fee.denom == reward.denom {
-                    available_fee.amount = available_fee.amount.saturating_sub(user_reward);
-                }
-            }
-
-            if reward_bucket.claimed.is_empty() {
-                reward_bucket.claimed = vec![Coin {
-                    denom: denom.to_string(),
-                    amount: user_reward,
-                }];
-            } else {
-                for claimed_reward in reward_bucket.claimed.iter_mut() {
-                    if claimed_reward.denom == reward.denom {
-                        claimed_reward.amount = claimed_reward.amount.checked_add(user_reward)?;
-                    }
-
-                    // sanity check, should never happen
-                    for total_reward in reward_bucket.total.iter() {
-                        if total_reward.denom == claimed_reward.denom {
-                            ensure!(
-                                claimed_reward.amount <= total_reward.amount,
-                                ContractError::InvalidShare
-                            );
+                            // sanity check, should never happen
+                            for total_reward in reward_bucket.total.iter() {
+                                if total_reward.denom == claimed_reward.denom {
+                                    ensure!(
+                                        claimed_reward.amount <= total_reward.amount,
+                                        ContractError::InvalidShare
+                                    );
+                                }
+                            }
                         }
                     }
                 }
-            }
 
-            REWARD_BUCKETS.save(deps.storage, reward_bucket.id, &reward_bucket)?;
-        }
+                Ok(reward_bucket)
+            },
+        )?;
     }
 
     // update the last claimed epoch for the user. it's in the first bucket on the list since it's sorted
     // in descending order
-    LAST_CLAIMED_EPOCH.save(
-        deps.storage,
-        &info.sender,
-        &claimable_reward_buckets_for_user[0].id,
-    )?;
+    let config = CONFIG.load(deps.storage)?;
+    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+        )?;
+
+    LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
     Ok(Response::default()
         .add_attributes(vec![("action", "claim".to_string())])
         .add_attributes(attributes)
         .add_message(CosmosMsg::Bank(BankMsg::Send {
             to_address: info.sender.to_string(),
-            amount: claimable_rewards,
+            amount: total_claimable_rewards,
         })))
 }

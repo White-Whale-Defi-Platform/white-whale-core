@@ -1,12 +1,12 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
-use crate::ContractError;
+use crate::{helpers, ContractError};
 use white_whale_std::bonding_manager::{
-    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, UnbondingResponse,
-    WithdrawableResponse,
+    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, RewardsResponse,
+    UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 
@@ -148,7 +148,7 @@ pub(crate) fn query_withdrawable(
 
 /// Queries the current weight of the given address.
 pub(crate) fn query_weight(
-    deps: Deps,
+    deps: &Deps,
     epoch_id: u64,
     address: String,
     global_index: Option<GlobalIndex>,
@@ -165,31 +165,10 @@ pub(crate) fn query_weight(
     println!("bonds: {:?}", bonds);
 
     let config = CONFIG.load(deps.storage)?;
-    let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
-        deps.querier.query_wasm_smart(
-            config.epoch_manager_addr,
-            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
-        )?;
 
     let mut total_bond_weight = Uint128::zero();
-    // Search bonds for unique bond.asset.denoms
-    // Make an empty set of unique denoms
-    let mut unique_denoms: HashSet<String> = HashSet::new();
 
     for (_, mut bond) in bonds? {
-        println!("bond-before: {:?}", bond);
-
-        if bond.updated_last == current_epoch.epoch.id {
-            continue;
-        }
-        //
-        // println!("bond.previous.is_some(): {:?} ",  bond.previous.is_some() && bond.previous.unwrap().0 == current_epoch.epoch.id);
-        // //todo
-        // if bond.created_at_epoch == current_epoch.epoch.id ||
-        //     bond.previous.is_some() && bond.previous.unwrap().0 == current_epoch.epoch.id {
-        //     continue;
-        // }
-
         bond.weight = get_weight(
             epoch_id,
             bond.weight,
@@ -198,12 +177,6 @@ pub(crate) fn query_weight(
             bond.updated_last,
         )?;
 
-        println!("bond-after: {:?}", bond);
-
-        if !unique_denoms.contains(&bond.asset.denom) {
-            unique_denoms.insert(bond.asset.denom.clone());
-            println!("unique_denoms: {:?}", unique_denoms);
-        }
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
@@ -293,7 +266,7 @@ pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, Co
 
 /// Returns the buckets that are within the grace period, i.e. the ones which fees can still be claimed.
 /// The result is ordered by bucket id, descending. Thus, the first element is the current bucket.
-pub fn get_claimable_reward_buckets(deps: Deps) -> StdResult<ClaimableRewardBucketsResponse> {
+pub fn get_claimable_reward_buckets(deps: &Deps) -> StdResult<ClaimableRewardBucketsResponse> {
     let config = CONFIG.load(deps.storage)?;
     let grace_period = config.grace_period;
 
@@ -321,7 +294,7 @@ pub fn get_claimable_reward_buckets(deps: Deps) -> StdResult<ClaimableRewardBuck
 /// Returns the reward buckets that can be claimed by the given address. If no address is provided,
 /// returns all possible buckets stored in the contract that can potentially be claimed.
 pub fn query_claimable(
-    deps: Deps,
+    deps: &Deps,
     address: Option<String>,
 ) -> StdResult<ClaimableRewardBucketsResponse> {
     let mut claimable_reward_buckets = get_claimable_reward_buckets(deps)?.reward_buckets;
@@ -348,4 +321,12 @@ pub fn query_claimable(
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,
     })
+}
+
+/// Returns the rewards that can be claimed by the given address.
+pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsResponse, ContractError> {
+    let (rewards, _, _) =
+        helpers::calculate_rewards(&deps, deps.api.addr_validate(&address)?, false)?;
+
+    Ok(RewardsResponse { rewards })
 }

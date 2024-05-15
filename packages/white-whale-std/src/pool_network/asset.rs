@@ -568,7 +568,7 @@ pub fn aggregate_assets(assets: Vec<Asset>, other_assets: Vec<Asset>) -> StdResu
 }
 
 /// Aggregates assets from two vectors, summing up the amounts of assets that are the same.
-pub fn aggregate_coins(coins: Vec<Coin>, other_coins: Vec<Coin>) -> StdResult<Vec<Coin>> {
+pub fn aggregate_coins(coins: &Vec<Coin>, other_coins: &Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut aggregated_coins: Vec<Coin> = Vec::with_capacity(coins.len() + other_coins.len());
     for coin in coins {
         aggregated_coins.push(coin.clone());

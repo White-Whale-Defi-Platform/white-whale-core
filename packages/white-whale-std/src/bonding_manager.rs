@@ -199,16 +199,18 @@ pub enum QueryMsg {
         denom: String,
     },
 
+    //todo maybe this should be removed? No need to expose this if what's important is how many rewards
+    // the user have, which can be given with the Rewards query
     /// Returns the weight of the address.
-    #[returns(BondingWeightResponse)]
-    Weight {
-        /// The address to check for weight.
-        address: String,
-        /// The timestamp to check for weight. If none is provided, the current block time is used.
-        epoch_id: Option<u64>,
-        /// The global index to check for weight. If none is provided, the current global index is used.
-        global_index: Option<GlobalIndex>,
-    },
+    // #[returns(BondingWeightResponse)]
+    // Weight {
+    //     /// The address to check for weight.
+    //     address: String,
+    //     /// The timestamp to check for weight. If none is provided, the current block time is used.
+    //     epoch_id: Option<u64>,
+    //     /// The global index to check for weight. If none is provided, the current global index is used.
+    //     global_index: Option<GlobalIndex>,
+    // },
 
     /// Returns the global index of the contract.
     #[returns(GlobalIndex)]
@@ -218,6 +220,7 @@ pub enum QueryMsg {
         epoch_id: Option<u64>,
     },
 
+    //todo maybe we don't need to expose this?
     /// Returns the [RewardBucket]s that can be claimed by an address.
     #[returns(ClaimableRewardBucketsResponse)]
     Claimable {
@@ -225,10 +228,22 @@ pub enum QueryMsg {
         /// reward buckets stored in the contract that can potentially be claimed are returned.
         address: Option<String>,
     },
+
+    //todo add rewards query that show how much a user can claim at that point of time
+    /// Returns the rewards for the given address.
+    #[returns(RewardsResponse)]
+    Rewards { address: String },
 }
 
 #[cw_serde]
 pub struct MigrateMsg {}
+
+/// Response for the Rewards query
+#[cw_serde]
+pub struct RewardsResponse {
+    /// The rewards that can be claimed by the address.
+    pub rewards: Vec<Coin>,
+}
 
 /// Response for the Bonded query
 #[cw_serde]
