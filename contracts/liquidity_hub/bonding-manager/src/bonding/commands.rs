@@ -61,7 +61,7 @@ pub(crate) fn bond(
     global_index.weight = global_index.weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
-        asset::aggregate_coins(global_index.bonded_assets, vec![asset.clone()])?;
+        asset::aggregate_coins(&global_index.bonded_assets, &vec![asset.clone()])?;
     update_global_weight(&mut deps, current_epoch.epoch.id, global_index)?;
 
     Ok(Response::default().add_attributes(vec![

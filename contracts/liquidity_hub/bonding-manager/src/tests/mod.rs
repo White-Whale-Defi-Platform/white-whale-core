@@ -1,4 +1,4 @@
-mod bond;
+// mod bond;
 // mod claim;
 mod instantiate;
 // mod rewards;

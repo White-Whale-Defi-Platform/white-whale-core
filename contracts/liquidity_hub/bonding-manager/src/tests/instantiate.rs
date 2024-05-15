@@ -17,14 +17,20 @@ fn test_instantiate_successfully() {
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
         )
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 1u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 1u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         });
 }
 

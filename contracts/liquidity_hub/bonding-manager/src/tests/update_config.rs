@@ -1,9 +1,9 @@
-use cosmwasm_std::{Addr, Decimal, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 
-use crate::ContractError;
 use white_whale_std::bonding_manager::Config;
 
 use crate::tests::suite::TestingSuite;
+use crate::ContractError;
 
 #[test]
 fn test_update_config_successfully() {
@@ -12,16 +12,25 @@ fn test_update_config_successfully() {
 
     suite
         .instantiate_default()
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 1u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 1u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         })
-        .assert_owner("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3".to_string())
+        .query_owner(|res| {
+            let owner = res.unwrap().1;
+            assert_eq!(owner, "migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
+        })
         .update_config(
             owner.clone(),
             None,
@@ -33,14 +42,20 @@ fn test_update_config_successfully() {
             )),
             |_res| {},
         )
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 500u64,
-            growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 500u64,
+                    growth_rate: Decimal::from_ratio(Uint128::new(1u128), Uint128::new(2u128)),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         })
         .update_config(
             owner,
@@ -50,14 +65,20 @@ fn test_update_config_successfully() {
             Some(Decimal::one()),
             |_res| {},
         )
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract6"),
-            epoch_manager_addr: Addr::unchecked("contract5"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 500u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract6"),
+                    epoch_manager_addr: Addr::unchecked("contract5"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 500u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         });
 }
 
@@ -68,14 +89,20 @@ fn test_update_config_unsuccessfully() {
 
     suite
         .instantiate_default()
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 1u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 1u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         })
         .update_config(
             Addr::unchecked("unauthorized"),
@@ -96,14 +123,20 @@ fn test_update_config_unsuccessfully() {
                 }
             },
         )
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 1u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 1u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         })
         .update_config(
             owner,
@@ -124,13 +157,19 @@ fn test_update_config_unsuccessfully() {
                 }
             },
         )
-        .assert_config(Config {
-            pool_manager_addr: Addr::unchecked("contract2"),
-            epoch_manager_addr: Addr::unchecked("contract0"),
-            distribution_denom: "uwhale".to_string(),
-            unbonding_period: 1u64,
-            growth_rate: Decimal::one(),
-            grace_period: 21u64,
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+        .query_config(|res| {
+            let config = res.unwrap().1;
+            assert_eq!(
+                config,
+                Config {
+                    pool_manager_addr: Addr::unchecked("contract2"),
+                    epoch_manager_addr: Addr::unchecked("contract0"),
+                    distribution_denom: "uwhale".to_string(),
+                    unbonding_period: 1u64,
+                    growth_rate: Decimal::one(),
+                    grace_period: 21u64,
+                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+                }
+            );
         });
 }

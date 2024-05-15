@@ -1,5 +1,5 @@
 use crate::ContractError;
-use cosmwasm_std::{Addr, Coin, Decimal, Deps, DepsMut, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Coin, Decimal, DepsMut, StdError, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
 use white_whale_std::bonding_manager::{
     Bond, Config, GlobalIndex, RewardBucket, UpcomingRewardBucket,
@@ -91,35 +91,10 @@ pub fn get_weight(
     Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
 }
 
-/// Returns the epoch that is falling out the grace period, which is the one expiring after creating
-/// a new epoch is created.
-pub fn get_expiring_epoch(deps: Deps) -> StdResult<Option<RewardBucket>> {
-    let grace_period = CONFIG.load(deps.storage)?.grace_period;
-
-    // last epochs within the grace period
-    let epochs = REWARD_BUCKETS
-        .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period as usize)
-        .map(|item| {
-            let (_, epoch) = item?;
-            Ok(epoch)
-        })
-        .collect::<StdResult<Vec<RewardBucket>>>()?;
-
-    // if the epochs vector's length is the same as the grace period it means there is one epoch that
-    // is expiring once the new one is created i.e. the last epoch in the vector
-    if epochs.len() == grace_period as usize {
-        Ok(Some(epochs.last().cloned().unwrap_or_default()))
-    } else {
-        // nothing is expiring yet
-        Ok(None)
-    }
-}
-
 /// Fills the upcoming reward bucket with the given funds.
 pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> {
     UPCOMING_REWARD_BUCKET.update(deps.storage, |mut upcoming_bucket| -> StdResult<_> {
-        upcoming_bucket.total = asset::aggregate_coins(upcoming_bucket.total, vec![funds])?;
+        upcoming_bucket.total = asset::aggregate_coins(&upcoming_bucket.total, &vec![funds])?;
         Ok(upcoming_bucket)
     })?;
 

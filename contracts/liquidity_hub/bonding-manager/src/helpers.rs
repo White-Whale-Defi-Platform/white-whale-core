@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use cosmwasm_std::{
-    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Order, ReplyOn,
-    StdResult, SubMsg, WasmMsg,
+    ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, MessageInfo,
+    Order, ReplyOn, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw_utils::PaymentError;
 
@@ -10,10 +12,11 @@ use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
+use white_whale_std::pool_network::asset::aggregate_coins;
 
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
-use crate::queries::query_claimable;
+use crate::queries::{query_claimable, query_weight};
 use crate::state::{CONFIG, REWARD_BUCKETS};
 
 /// Validates that the growth rate is between 0 and 1.
@@ -57,7 +60,7 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
     let claimable_rewards: ClaimableRewardBucketsResponse =
-        query_claimable(deps.as_ref(), Some(info.sender.to_string())).unwrap();
+        query_claimable(&deps.as_ref(), Some(info.sender.to_string())).unwrap();
     // ensure the user has nothing to claim
     ensure!(
         claimable_rewards.reward_buckets.is_empty(),
@@ -267,4 +270,105 @@ pub(crate) fn validate_buckets_not_empty(deps: &DepsMut) -> Result<(), ContractE
     ensure!(!reward_buckets.is_empty(), ContractError::Unauthorized);
 
     Ok(())
+}
+
+type ClaimableRewards = Vec<Coin>;
+// key is reward id, value is the rewards claimed from that bucket
+type ModifiedRewardBuckets = HashMap<u64, Vec<Coin>>;
+
+/// Calculates the rewards for a user.
+pub fn calculate_rewards(
+    deps: &Deps,
+    address: Addr,
+    is_claim: bool,
+) -> Result<(ClaimableRewards, Vec<Attribute>, ModifiedRewardBuckets), ContractError> {
+    let claimable_reward_buckets_for_user =
+        query_claimable(deps, Some(address.to_string()))?.reward_buckets;
+
+    // if the function is being called from the claim function
+    if is_claim {
+        ensure!(
+            !claimable_reward_buckets_for_user.is_empty(),
+            ContractError::NothingToClaim
+        );
+    } else {
+        // if the function is being called from the rewards query
+        if claimable_reward_buckets_for_user.is_empty() {
+            return Ok((vec![], vec![], HashMap::new()));
+        }
+    }
+
+    let mut total_claimable_rewards = vec![];
+    let mut attributes = vec![];
+    let mut modified_reward_buckets = HashMap::new();
+
+    for reward_bucket in claimable_reward_buckets_for_user {
+        let bonding_weight_response_for_epoch = query_weight(
+            deps,
+            reward_bucket.id,
+            address.to_string(),
+            Some(reward_bucket.global_index.clone()),
+        )?;
+
+        // if the user has no share in the bucket, skip it
+        if bonding_weight_response_for_epoch.share.is_zero() {
+            continue;
+        };
+
+        // sanity check
+        ensure!(
+            bonding_weight_response_for_epoch.share <= Decimal::percent(100u64),
+            ContractError::InvalidShare
+        );
+
+        let mut claimed_rewards_from_bucket = vec![];
+
+        for reward in reward_bucket.total.iter() {
+            let user_reward = reward.amount * bonding_weight_response_for_epoch.share;
+
+            // make sure the reward is sound
+            let reward_validation: Result<(), StdError> = reward_bucket
+                .available
+                .iter()
+                .find(|available_fee| available_fee.denom == reward.denom)
+                .map(|available_reward| {
+                    if user_reward > available_reward.amount {
+                        attributes.push(Attribute {
+                            key: "error".to_string(),
+                            value: ContractError::InvalidReward {
+                                reward: user_reward,
+                                available: available_reward.amount,
+                            }
+                            .to_string(),
+                        });
+                        return Err(StdError::generic_err("Invalid fee"));
+                    }
+                    Ok(())
+                })
+                .ok_or(StdError::generic_err("Invalid fee"))?;
+
+            // if the reward is invalid, skip the bucket
+            match reward_validation {
+                Ok(_) => {}
+                Err(_) => continue,
+            }
+
+            let reward = Coin {
+                denom: reward.denom.to_string(),
+                amount: user_reward,
+            };
+
+            // add the reward
+            total_claimable_rewards =
+                aggregate_coins(&total_claimable_rewards, &vec![reward.clone()])?;
+
+            if is_claim {
+                claimed_rewards_from_bucket =
+                    aggregate_coins(&claimed_rewards_from_bucket, &vec![reward])?;
+                modified_reward_buckets
+                    .insert(reward_bucket.id, claimed_rewards_from_bucket.clone());
+            }
+        }
+    }
+    Ok((total_claimable_rewards, attributes, modified_reward_buckets))
 }

@@ -15,7 +15,7 @@ use crate::state::{CONFIG, REWARD_BUCKETS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
     BondedResponse, BondingWeightResponse, Config, ExecuteMsg, GlobalIndex, InstantiateMsg,
-    QueryMsg, UnbondingResponse, WithdrawableResponse,
+    QueryMsg, RewardsResponse, UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
@@ -442,32 +442,6 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_weight(
-        &mut self,
-        address: String,
-        epoch_id: Option<u64>,
-        global_index: Option<GlobalIndex>,
-        response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
-    ) -> &mut Self {
-        let bonding_weight_response: BondingWeightResponse = self
-            .app
-            .wrap()
-            .query_wasm_smart(
-                &self.bonding_manager_addr,
-                &QueryMsg::Weight {
-                    address,
-                    epoch_id,
-                    global_index,
-                },
-            )
-            .unwrap();
-
-        response(Ok((self, bonding_weight_response)));
-
-        self
-    }
-
-    #[track_caller]
     pub(crate) fn query_global_index(
         &mut self,
         epoch_id: Option<u64>,
@@ -572,6 +546,23 @@ impl TestingSuite {
             .unwrap();
 
         response(Ok((self, withdrawable_response)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_rewards(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, RewardsResponse)>),
+    ) -> &mut Self {
+        let rewards_response: RewardsResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Rewards { address })
+            .unwrap();
+
+        response(Ok((self, rewards_response)));
 
         self
     }
@@ -693,79 +684,5 @@ impl TestingSuite {
         ));
 
         self
-    }
-}
-
-/// assertions
-impl TestingSuite {
-    #[track_caller]
-    pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
-        self.query_config(|res| {
-            let config = res.unwrap().1;
-            assert_eq!(config, expected);
-        });
-
-        self
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_owner(&mut self, expected: String) -> &mut Self {
-        self.query_owner(|res| {
-            let owner = res.unwrap().1;
-            assert_eq!(owner, expected);
-        });
-
-        self
-    }
-    #[track_caller]
-    pub(crate) fn assert_bonded_response(
-        &mut self,
-        address: String,
-        expected: BondedResponse,
-    ) -> &mut Self {
-        self.query_bonded(Some(address), |res| {
-            let bonded_response = res.unwrap().1;
-            assert_eq!(bonded_response, expected);
-        })
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_bonding_weight_response(
-        &mut self,
-        address: String,
-        epoch_id: Option<u64>,
-        global_index: Option<GlobalIndex>,
-        expected: BondingWeightResponse,
-    ) -> &mut Self {
-        self.query_weight(address, epoch_id, global_index, |res| {
-            let bonding_weight_response = res.unwrap().1;
-            assert_eq!(bonding_weight_response, expected);
-        })
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_unbonding_response(
-        &mut self,
-        address: String,
-        denom: String,
-        expected: UnbondingResponse,
-    ) -> &mut Self {
-        self.query_unbonding(address, denom, None, None, |res| {
-            let unbonding_response = res.unwrap().1;
-            assert_eq!(unbonding_response, expected);
-        })
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_withdrawable_response(
-        &mut self,
-        address: String,
-        denom: String,
-        expected: WithdrawableResponse,
-    ) -> &mut Self {
-        self.query_withdrawable(address, denom, |res| {
-            let withdrawable_response = res.unwrap().1;
-            assert_eq!(withdrawable_response, expected);
-        })
     }
 }
