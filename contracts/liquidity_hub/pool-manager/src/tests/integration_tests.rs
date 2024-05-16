@@ -2701,7 +2701,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "1".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2753,7 +2753,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 2);
             assert_eq!(positions[0], Position {
                 identifier: "1".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2761,7 +2761,7 @@ mod locking_lp {
             });
             assert_eq!(positions[1], Position {
                 identifier: "2".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_000_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_000_000u128) },
                 unlocking_duration: 200_000,
                 open: true,
                 expiring_at: None,
@@ -2897,7 +2897,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "incentive_identifier".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -2950,7 +2950,7 @@ mod locking_lp {
             assert_eq!(positions.len(), 1);
             assert_eq!(positions[0], Position {
                 identifier: "incentive_identifier".to_string(),
-                lp_asset: Coin { denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_999_000u128) },
+                lp_asset: Coin { denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna.uLP".to_string(), amount: Uint128::from(1_999_000u128) },
                 unlocking_duration: 86_400,
                 open: true,
                 expiring_at: None,
@@ -3775,15 +3775,15 @@ mod multiple_pools {
                     balances,
                     vec![
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
@@ -3830,7 +3830,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1001000, "uwhale"), coin(999070, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -3873,7 +3873,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -3926,7 +3926,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1001000, "uwhale"), coin(999_150, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -3962,7 +3962,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(999_300, "uwhale"), coin(1_001_150, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4016,7 +4016,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1003000, "uluna"), coin(997_218, "uusd")],
                     pool_type: PoolType::ConstantProduct,
@@ -4057,7 +4057,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1_001_599, "uluna"), coin(998_718, "uusd")],
                     pool_type: PoolType::ConstantProduct,
@@ -4096,15 +4096,15 @@ mod multiple_pools {
                     let balances = result.unwrap();
                     assert_eq!(balances, vec![
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
-                            denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                            denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                             amount: Uint128::from(1_000u128),
                         },
                         Coin {
@@ -4154,7 +4154,7 @@ mod multiple_pools {
             // this should have not changed since last time, since we didn't touch this pool
             assert_eq!(pool_info, PoolInfo {
                 asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
                 assets: vec![coin(999_140, "uwhale"), coin(1_001_070, "uluna")],
                 pool_type: PoolType::ConstantProduct,
@@ -4172,7 +4172,7 @@ mod multiple_pools {
 
                 assert_eq!(pool_info, PoolInfo {
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
-                    lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                    lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
                     assets: vec![coin(1_004_300, "uwhale"), coin(996_913, "uluna")],
                     pool_type: PoolType::ConstantProduct,
@@ -4189,7 +4189,7 @@ mod multiple_pools {
 
             assert_eq!(pool_info, PoolInfo {
                 asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
-                lp_denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
                 assets: vec![coin(1_005_587, "uluna"), coin(995_035, "uusd")],
                 pool_type: PoolType::ConstantProduct,
@@ -4224,15 +4224,15 @@ mod multiple_pools {
                 let balances = result.unwrap();
                 assert_eq!(balances, vec![
                     Coin {
-                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {
-                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {
-                        denom: "factory/migaloo16jzpxp0e8550c9aht6q9svcux30vtyyyyxv5w2l2djjra46580ws2xujnh/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
+                        denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                         amount: Uint128::from(1_000u128),
                     },
                     Coin {

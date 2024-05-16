@@ -189,9 +189,10 @@ impl TestingSuite {
 
         if !bonding_manager_addr.into_string().is_empty() {
             let pool_manager_addr = self.pool_manager_addr.clone();
+            let epoch_manager_addr = self.epoch_manager_addr.clone();
 
             let msg = white_whale_std::bonding_manager::ExecuteMsg::UpdateConfig {
-                owner: None,
+                epoch_manager_addr: Some(epoch_manager_addr.into_string()),
                 pool_manager_addr: Some(pool_manager_addr.into_string()),
                 unbonding_period: None,
                 growth_rate: None,
@@ -212,8 +213,8 @@ impl TestingSuite {
 
     #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
-        self.create_bonding_manager();
         self.create_epoch_manager();
+        self.create_bonding_manager();
         self.create_incentive_manager();
         self.add_hook(self.incentive_manager_addr.clone());
         self.add_hook(self.bonding_manager_addr.clone());
@@ -230,13 +231,15 @@ impl TestingSuite {
 
     fn create_bonding_manager(&mut self) {
         let bonding_manager_id = self.app.store_code(bonding_manager_contract());
+        let epoch_manager_addr = self.epoch_manager_addr.to_string();
 
         let msg = white_whale_std::bonding_manager::InstantiateMsg {
             distribution_denom: "uwhale".to_string(),
-            unbonding_period: Uint64::new(86400u64),
+            unbonding_period: 86_400u64,
             growth_rate: Decimal::one(),
             bonding_assets: vec!["bWHALE".to_string(), "ampWHALE".to_string()],
             grace_period: Default::default(),
+            epoch_manager_addr,
         };
 
         let creator = self.creator().clone();
@@ -283,8 +286,6 @@ impl TestingSuite {
     }
 
     fn add_hook(&mut self, contract: Addr) {
-        let epoch_manager_id = self.app.store_code(epoch_manager_contract());
-
         let msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
             contract_addr: contract.to_string(),
         };
@@ -520,58 +521,6 @@ impl TestingSuite {
         swap_routes: Vec<SwapRoute>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        result(self.app.execute_contract(
-            sender,
-            self.pool_manager_addr.clone(),
-            &white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes },
-            &[],
-        ));
-
-        self
-    }
-
-    /// Adds swap routes to the pool manager contract.
-    #[track_caller]
-    pub(crate) fn add_swap_routes_default(
-        &mut self,
-        sender: Addr,
-        result: impl Fn(Result<AppResponse, anyhow::Error>),
-    ) -> &mut Self {
-        let swap_routes = vec![
-            SwapRoute {
-                offer_asset_denom: "uluna".to_string(),
-                ask_asset_denom: "uwhale".to_string(),
-                swap_operations: vec![
-                    SwapOperation::WhaleSwap {
-                        token_in_denom: "uwhale".to_string(),
-                        token_out_denom: "uluna".to_string(),
-                        pool_identifier: "whale-uluna".to_string(),
-                    },
-                    SwapOperation::WhaleSwap {
-                        token_in_denom: "uluna".to_string(),
-                        token_out_denom: "uusd".to_string(),
-                        pool_identifier: "uluna-uusd".to_string(),
-                    },
-                ],
-            },
-            SwapRoute {
-                offer_asset_denom: "uwhale".to_string(),
-                ask_asset_denom: "uusd".to_string(),
-                swap_operations: vec![
-                    SwapOperation::WhaleSwap {
-                        token_in_denom: "uwhale".to_string(),
-                        token_out_denom: "uluna".to_string(),
-                        pool_identifier: "whale-uluna".to_string(),
-                    },
-                    SwapOperation::WhaleSwap {
-                        token_in_denom: "uluna".to_string(),
-                        token_out_denom: "uusd".to_string(),
-                        pool_identifier: "uluna-uusd".to_string(),
-                    },
-                ],
-            },
-        ];
-
         result(self.app.execute_contract(
             sender,
             self.pool_manager_addr.clone(),
