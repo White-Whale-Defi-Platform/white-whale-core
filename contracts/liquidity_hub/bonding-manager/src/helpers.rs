@@ -144,7 +144,7 @@ pub fn handle_lp_tokens_rewards(
 /// Extracts the pool identifier from an LP token denom.
 /// LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the
 /// identifier and not the LP SYMBOL. The identifier can contain dots, slashes, etc.
-fn extract_pool_identifier(lp_token_denom: &str) -> Option<&str> {
+pub(crate) fn extract_pool_identifier(lp_token_denom: &str) -> Option<&str> {
     // Split the string at ".pool." to isolate the part after ".pool."
     let parts: Vec<&str> = lp_token_denom.splitn(2, ".pool.").collect();
     if parts.len() < 2 {

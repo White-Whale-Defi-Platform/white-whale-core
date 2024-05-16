@@ -1,8 +1,10 @@
-// mod bond;
+mod bond;
 mod claim;
+mod epoch;
 mod instantiate;
 mod rewards;
 mod suite;
 // mod unbond;
+mod helpers;
 mod update_config;
 // mod withdraw;
