@@ -158,8 +158,7 @@ fn get_factory_token_label(denom: &str) -> StdResult<String> {
     Ok(format!("{FACTORY_PREFIX}/{token_creator}/{token_subdenom}"))
 }
 
-//todo test these functions in isolation
-// move to ww package
+/// Deducts the coins in `to_deduct` from `coins` if they exist.
 pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coin>> {
     let mut updated_coins = coins.to_vec();
 
@@ -173,6 +172,8 @@ pub fn deduct_coins(coins: Vec<Coin>, to_deduct: Vec<Coin>) -> StdResult<Vec<Coi
             )));
         }
     }
+
+    updated_coins.retain(|coin| coin.amount > Uint128::zero());
 
     Ok(updated_coins)
 }

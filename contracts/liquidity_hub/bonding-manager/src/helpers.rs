@@ -90,23 +90,18 @@ pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), Contract
 // If we do get some LP tokens to withdraw they could be swapped to whale in the reply
 pub fn handle_lp_tokens_rewards(
     deps: &DepsMut,
-    funds: &Vec<Coin>,
+    funds: &[Coin],
     config: &Config,
     submessages: &mut Vec<SubMsg>,
 ) -> Result<(), ContractError> {
-    println!("funds: {:?}", funds);
     let lp_tokens: Vec<&Coin> = funds
         .iter()
         .filter(|coin| coin.denom.contains(".pool.") | coin.denom.contains(LP_SYMBOL))
         .collect();
 
-    println!("lp_tokens: {:?}", lp_tokens);
-
     for lp_token in lp_tokens {
         let pool_identifier =
             extract_pool_identifier(&lp_token.denom).ok_or(ContractError::AssetMismatch)?;
-
-        println!("pool_identifier: {:?}", pool_identifier);
 
         // make sure a pool with the given identifier exists
         let pool: StdResult<PoolInfoResponse> = deps.querier.query_wasm_smart(
@@ -305,7 +300,7 @@ pub fn calculate_rewards(
             deps,
             reward_bucket.id,
             address.to_string(),
-            Some(reward_bucket.global_index.clone()),
+            reward_bucket.global_index.clone(),
         )?;
 
         // sanity check, if the user has no share in the bucket, skip it

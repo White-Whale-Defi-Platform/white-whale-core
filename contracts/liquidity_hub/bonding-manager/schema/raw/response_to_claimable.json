@@ -37,8 +37,8 @@
         "bonded_amount",
         "bonded_assets",
         "epoch_id",
-        "updated_last",
-        "weight"
+        "last_updated",
+        "last_weight"
       ],
       "properties": {
         "bonded_amount": {
@@ -62,14 +62,14 @@
           "format": "uint64",
           "minimum": 0.0
         },
-        "updated_last": {
+        "last_updated": {
           "description": "The epoch id at which the total bond was updated.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
         },
-        "weight": {
-          "description": "The total weight of the bond at the given block height.",
+        "last_weight": {
+          "description": "The total weight of the contract at the given updated_last epoch id.",
           "allOf": [
             {
               "$ref": "#/definitions/Uint128"

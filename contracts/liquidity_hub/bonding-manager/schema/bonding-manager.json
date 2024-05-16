@@ -488,7 +488,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Returns the weight of the address. Returns the global index of the contract.",
+        "description": "Returns the global index of the contract.",
         "type": "object",
         "required": [
           "global_index"
@@ -497,8 +497,8 @@
           "global_index": {
             "type": "object",
             "properties": {
-              "epoch_id": {
-                "description": "The epoch id to check for the global index. If none is provided, the current global index is returned.",
+              "reward_bucket_id": {
+                "description": "The reward bucket id to check for the global index. If none is provided, the current global index is returned.",
                 "type": [
                   "integer",
                   "null"
@@ -678,8 +678,8 @@
             "bonded_amount",
             "bonded_assets",
             "epoch_id",
-            "updated_last",
-            "weight"
+            "last_updated",
+            "last_weight"
           ],
           "properties": {
             "bonded_amount": {
@@ -703,14 +703,14 @@
               "format": "uint64",
               "minimum": 0.0
             },
-            "updated_last": {
+            "last_updated": {
               "description": "The epoch id at which the total bond was updated.",
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
             },
-            "weight": {
-              "description": "The total weight of the bond at the given block height.",
+            "last_weight": {
+              "description": "The total weight of the contract at the given updated_last epoch id.",
               "allOf": [
                 {
                   "$ref": "#/definitions/Uint128"
@@ -863,8 +863,8 @@
         "bonded_amount",
         "bonded_assets",
         "epoch_id",
-        "updated_last",
-        "weight"
+        "last_updated",
+        "last_weight"
       ],
       "properties": {
         "bonded_amount": {
@@ -888,14 +888,14 @@
           "format": "uint64",
           "minimum": 0.0
         },
-        "updated_last": {
+        "last_updated": {
           "description": "The epoch id at which the total bond was updated.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
         },
-        "weight": {
-          "description": "The total weight of the bond at the given block height.",
+        "last_weight": {
+          "description": "The total weight of the contract at the given updated_last epoch id.",
           "allOf": [
             {
               "$ref": "#/definitions/Uint128"
@@ -1094,7 +1094,7 @@
           "required": [
             "asset",
             "created_at_epoch",
-            "updated_last",
+            "last_updated",
             "weight"
           ],
           "properties": {
@@ -1112,9 +1112,18 @@
               "format": "uint64",
               "minimum": 0.0
             },
-            "updated_last": {
+            "last_updated": {
               "description": "The epoch id at which the bond was last time updated.",
               "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "unbonded_at": {
+              "description": "The time at which the Bond was unbonded.",
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint64",
               "minimum": 0.0
             },

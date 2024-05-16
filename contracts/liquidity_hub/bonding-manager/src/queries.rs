@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use cosmwasm_std::{Decimal, Deps, Order, StdError, StdResult, Uint128};
+use cosmwasm_std::{Decimal, Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{helpers, ContractError};
@@ -151,7 +151,7 @@ pub(crate) fn query_weight(
     deps: &Deps,
     epoch_id: u64,
     address: String,
-    global_index: Option<GlobalIndex>,
+    mut global_index: GlobalIndex,
 ) -> StdResult<BondingWeightResponse> {
     let address = deps.api.addr_validate(&address)?;
 
@@ -161,14 +161,9 @@ pub(crate) fn query_weight(
         .take(MAX_PAGE_LIMIT as usize)
         .collect();
 
-    println!("----query_weight----");
-    println!("bonds: {:?}", bonds);
-
     let config = CONFIG.load(deps.storage)?;
 
     let mut total_bond_weight = Uint128::zero();
-
-    println!("epoch id: {:?}", epoch_id);
 
     for (_, mut bond) in bonds? {
         bond.weight = get_weight(
@@ -182,21 +177,7 @@ pub(crate) fn query_weight(
         // Aggregate the weights of all the bonds for the given address.
         // This assumes bonding assets are fungible.
         total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
-        println!("total_bond_weight: {:?}", total_bond_weight);
     }
-
-    // If a global weight from an Epoch was passed, use that to get the weight, otherwise use the current global index weight
-    let mut global_index = if let Some(global_index) = global_index {
-        global_index
-    } else {
-        println!("here?");
-        GLOBAL
-            .may_load(deps.storage)
-            .unwrap_or_else(|_| Some(GlobalIndex::default()))
-            .ok_or_else(|| StdError::generic_err("Global index not found"))?
-    };
-
-    println!("global_index: {:?}", global_index);
 
     global_index.last_weight = get_weight(
         epoch_id,
@@ -206,8 +187,6 @@ pub(crate) fn query_weight(
         global_index.last_updated,
     )?;
 
-    println!("global_index--after: {:?}", global_index);
-
     // Represents the share of the global weight that the address has
     // If global_index.weight is zero no one has bonded yet so the share is
     let share = if global_index.last_weight.is_zero() {
@@ -215,8 +194,6 @@ pub(crate) fn query_weight(
     } else {
         Decimal::from_ratio(total_bond_weight, global_index.last_weight)
     };
-
-    println!("share: {:?}", share);
 
     Ok(BondingWeightResponse {
         address: address.to_string(),
@@ -228,13 +205,15 @@ pub(crate) fn query_weight(
 }
 
 /// Queries the global index
-pub fn query_global_index(deps: Deps, epoch_id: Option<u64>) -> StdResult<GlobalIndex> {
-    // if an epoch_id is provided, return the global index of the corresponding reward bucket
-    if let Some(epoch_id) = epoch_id {
-        let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, epoch_id)?;
-        if let Some(reward_bucket) = reward_bucket {
-            return Ok(reward_bucket.global_index);
-        }
+pub fn query_global_index(deps: Deps, reward_bucket_id: Option<u64>) -> StdResult<GlobalIndex> {
+    // if a reward_bucket_id is provided, return the global index of the corresponding reward bucket
+    if let Some(reward_bucket_id) = reward_bucket_id {
+        let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, reward_bucket_id)?;
+        return if let Some(reward_bucket) = reward_bucket {
+            Ok(reward_bucket.global_index)
+        } else {
+            Ok(GlobalIndex::default())
+        };
     }
 
     let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
@@ -298,16 +277,11 @@ pub fn query_claimable(
     address: Option<String>,
 ) -> StdResult<ClaimableRewardBucketsResponse> {
     let mut claimable_reward_buckets = get_claimable_reward_buckets(deps)?.reward_buckets;
-    println!("fable");
-    println!("claimable_reward_buckets: {:?}", claimable_reward_buckets);
-
     // if an address is provided, filter what's claimable for that address
     if let Some(address) = address {
         let address = deps.api.addr_validate(&address)?;
 
         let last_claimed_epoch = LAST_CLAIMED_EPOCH.may_load(deps.storage, &address)?;
-
-        println!("last_claimed_epoch: {:?}", last_claimed_epoch);
 
         // filter out buckets that have already been claimed by the user
         if let Some(last_claimed_epoch) = last_claimed_epoch {
@@ -321,8 +295,6 @@ pub fn query_claimable(
         // again without any available rewards, as those were forwarded to newer buckets.
         claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
-
-    println!("claimable_reward_buckets: {:?}", claimable_reward_buckets);
 
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,

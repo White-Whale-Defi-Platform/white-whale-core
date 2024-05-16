@@ -107,7 +107,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Returns the weight of the address. Returns the global index of the contract.",
+      "description": "Returns the global index of the contract.",
       "type": "object",
       "required": [
         "global_index"
@@ -116,8 +116,8 @@
         "global_index": {
           "type": "object",
           "properties": {
-            "epoch_id": {
-              "description": "The epoch id to check for the global index. If none is provided, the current global index is returned.",
+            "reward_bucket_id": {
+              "description": "The reward bucket id to check for the global index. If none is provided, the current global index is returned.",
               "type": [
                 "integer",
                 "null"

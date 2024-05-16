@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint64};
+use cosmwasm_std::{Addr, Decimal};
 
 use white_whale_std::bonding_manager::Config;
 

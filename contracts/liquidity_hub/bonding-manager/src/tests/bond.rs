@@ -1,14 +1,6 @@
-use cosmwasm_std::{coin, coins, Coin, Decimal, Timestamp, Uint128};
-use std::cell::RefCell;
-
-use white_whale_std::bonding_manager::{
-    BondedResponse, BondingWeightResponse, GlobalIndex, RewardBucket,
-};
-use white_whale_std::fee::{Fee, PoolFee};
-use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
-
 use crate::tests::suite::TestingSuite;
 use crate::ContractError;
+use cosmwasm_std::{coin, coins};
 
 #[test]
 fn test_bond_unsuccessful() {

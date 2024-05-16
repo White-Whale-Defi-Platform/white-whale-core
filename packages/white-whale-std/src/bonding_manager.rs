@@ -54,15 +54,16 @@ pub struct UpcomingRewardBucket {
 
 #[cw_serde]
 pub struct Bond {
-    /// The amount of bonded tokens.
-    pub asset: Coin,
     /// The epoch id at which the Bond was created.
     pub created_at_epoch: u64,
     /// The epoch id at which the bond was last time updated.
     pub last_updated: u64,
+    /// The amount of bonded tokens.
+    pub asset: Coin,
     /// The weight of the bond at the given block height.
     pub weight: Uint128,
-    //pub previous: Option<(u64, Uint128)>
+    /// The time at which the Bond was unbonded.
+    pub unbonded_at: Option<u64>,
 }
 
 impl Default for Bond {
@@ -73,9 +74,9 @@ impl Default for Bond {
                 amount: Uint128::zero(),
             },
             created_at_epoch: Default::default(),
+            unbonded_at: None,
             last_updated: Default::default(),
             weight: Uint128::zero(),
-            //previous: None,
         }
     }
 }
@@ -166,7 +167,6 @@ pub enum QueryMsg {
     /// Returns the [Config] of te contract.
     #[returns(Config)]
     Config,
-
     /// Returns the amount of assets that have been bonded by the specified address.
     #[returns(BondedResponse)]
     Bonded {
@@ -174,7 +174,6 @@ pub enum QueryMsg {
         /// contract are returned.
         address: Option<String>,
     },
-
     /// Returns the amount of tokens of the given denom that are been unbonded by the specified address.
     /// Allows pagination with start_after and limit.
     #[returns(UnbondingResponse)]
@@ -188,7 +187,6 @@ pub enum QueryMsg {
         /// The maximum amount of unbonding assets to return.
         limit: Option<u8>,
     },
-
     /// Returns the amount of unbonding tokens of the given denom for the specified address that can
     /// be withdrawn, i.e. that have passed the unbonding period.
     #[returns(WithdrawableResponse)]
@@ -198,29 +196,13 @@ pub enum QueryMsg {
         /// The denom to check for withdrawable assets.
         denom: String,
     },
-
-    //todo maybe this should be removed? No need to expose this if what's important is how many rewards
-    // the user have, which can be given with the Rewards query
-    /// Returns the weight of the address.
-    // #[returns(BondingWeightResponse)]
-    // Weight {
-    //     /// The address to check for weight.
-    //     address: String,
-    //     /// The timestamp to check for weight. If none is provided, the current block time is used.
-    //     epoch_id: Option<u64>,
-    //     /// The global index to check for weight. If none is provided, the current global index is used.
-    //     global_index: Option<GlobalIndex>,
-    // },
-
     /// Returns the global index of the contract.
     #[returns(GlobalIndex)]
     GlobalIndex {
-        /// The epoch id to check for the global index. If none is provided, the current global index
+        /// The reward bucket id to check for the global index. If none is provided, the current global index
         /// is returned.
-        epoch_id: Option<u64>,
+        reward_bucket_id: Option<u64>,
     },
-
-    //todo maybe we don't need to expose this?
     /// Returns the [RewardBucket]s that can be claimed by an address.
     #[returns(ClaimableRewardBucketsResponse)]
     Claimable {
@@ -228,8 +210,6 @@ pub enum QueryMsg {
         /// reward buckets stored in the contract that can potentially be claimed are returned.
         address: Option<String>,
     },
-
-    //todo add rewards query that show how much a user can claim at that point of time
     /// Returns the rewards for the given address.
     #[returns(RewardsResponse)]
     Rewards { address: String },

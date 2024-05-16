@@ -41,8 +41,6 @@ pub fn update_bond_weight(
     bond.last_updated = current_epoch_id;
     BOND.save(deps.storage, (&address, &bond.asset.denom), &bond)?;
 
-    println!("updated bond: {:?}", bond);
-
     Ok(bond)
 }
 
@@ -64,8 +62,6 @@ pub fn update_global_weight(
 
     global_index.last_updated = current_epoch_id;
     GLOBAL.save(deps.storage, &global_index)?;
-
-    println!("updated global_index: {:?}", global_index);
 
     Ok(global_index)
 }

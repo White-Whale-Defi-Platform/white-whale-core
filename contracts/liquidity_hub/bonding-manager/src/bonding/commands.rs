@@ -17,9 +17,7 @@ pub(crate) fn bond(
     _env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
-    println!("----bond----");
     helpers::validate_buckets_not_empty(&deps)?;
-    //todo maybe claim for the user
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps)?;
 
@@ -43,7 +41,7 @@ pub(crate) fn bond(
             ..Bond::default()
         });
 
-    // update local values
+    // update bond values
     bond = update_bond_weight(&mut deps, info.sender.clone(), current_epoch.epoch.id, bond)?;
     bond.asset.amount = bond.asset.amount.checked_add(asset.amount)?;
     bond.weight = bond.weight.checked_add(asset.amount)?;
@@ -52,12 +50,8 @@ pub(crate) fn bond(
 
     // update global values
     let mut global_index = GLOBAL.load(deps.storage)?;
-    // include time term in the weight
-
-    println!("bonding global_index: {:?}", global_index);
 
     global_index = update_global_weight(&mut deps, current_epoch.epoch.id, global_index.clone())?;
-
     global_index.last_weight = global_index.last_weight.checked_add(asset.amount)?;
     global_index.bonded_amount = global_index.bonded_amount.checked_add(asset.amount)?;
     global_index.bonded_assets =
@@ -105,7 +99,7 @@ pub(crate) fn unbond(
                 &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
             )?;
 
-        // update local values, decrease the bond
+        // update bond values, decrease the bond
         unbond = update_bond_weight(
             &mut deps,
             info.sender.clone(),
@@ -125,13 +119,13 @@ pub(crate) fn unbond(
         // record the unbonding
         UNBOND.save(
             deps.storage,
-            (&info.sender, &asset.denom, env.block.time.nanos()),
+            (&info.sender, &asset.denom, env.block.time.seconds()),
             &Bond {
                 asset: asset.clone(),
                 weight: Uint128::zero(),
                 last_updated: current_epoch.epoch.id,
                 created_at_epoch: current_epoch.epoch.id,
-                //previous: None,
+                unbonded_at: Some(env.block.time.seconds()),
             },
         )?;
         // update global values
@@ -185,6 +179,8 @@ pub(crate) fn withdraw(
             UNBOND.remove(deps.storage, (&address, &denom, ts));
         }
     }
+
+    ensure!(!refund_amount.is_zero(), ContractError::NothingToWithdraw);
 
     let refund_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: address.to_string(),

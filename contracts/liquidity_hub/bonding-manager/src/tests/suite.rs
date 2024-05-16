@@ -1,9 +1,6 @@
 use anyhow::Error;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{
-    coin, from_json, Addr, Binary, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint128, Uint64,
-};
-// use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use cosmwasm_std::testing::{MockApi, MockStorage};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Uint128, Uint64};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
@@ -11,11 +8,10 @@ use cw_multi_test::{
 use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
-use crate::state::{CONFIG, REWARD_BUCKETS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
-    BondedResponse, BondingWeightResponse, Config, ExecuteMsg, GlobalIndex, InstantiateMsg,
-    QueryMsg, RewardsResponse, UnbondingResponse, WithdrawableResponse,
+    BondedResponse, Config, ExecuteMsg, GlobalIndex, InstantiateMsg, QueryMsg, RewardsResponse,
+    UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
@@ -75,8 +71,6 @@ pub struct TestingSuite {
     pub bonding_manager_addr: Addr,
     pub pool_manager_addr: Addr,
     pub epoch_manager_addr: Addr,
-    owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
-    env: cosmwasm_std::Env,
 }
 
 /// instantiate / execute messages
@@ -123,8 +117,6 @@ impl TestingSuite {
             bonding_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
             epoch_manager_addr: Addr::unchecked(""),
-            owned_deps: mock_dependencies(),
-            env: mock_env(),
         }
     }
 
@@ -194,8 +186,7 @@ impl TestingSuite {
             white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
                 contract_addr: bonding_manager_addr.clone().to_string(),
             };
-        let resp = self
-            .app
+        self.app
             .execute_contract(
                 self.senders[0].clone(),
                 epoch_manager_addr.clone(),
@@ -468,7 +459,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_global_index(
         &mut self,
-        epoch_id: Option<u64>,
+        reward_bucket_id: Option<u64>,
         response: impl Fn(StdResult<(&mut Self, GlobalIndex)>),
     ) -> &mut Self {
         let global_index: GlobalIndex = self
@@ -476,7 +467,7 @@ impl TestingSuite {
             .wrap()
             .query_wasm_smart(
                 &self.bonding_manager_addr,
-                &QueryMsg::GlobalIndex { epoch_id },
+                &QueryMsg::GlobalIndex { reward_bucket_id },
             )
             .unwrap();
 

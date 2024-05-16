@@ -158,9 +158,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         //         global_index,
         //     )?)?)
         // }
-        QueryMsg::GlobalIndex { epoch_id } => Ok(to_json_binary(&queries::query_global_index(
-            deps, epoch_id,
-        )?)?),
+        QueryMsg::GlobalIndex { reward_bucket_id } => Ok(to_json_binary(
+            &queries::query_global_index(deps, reward_bucket_id)?,
+        )?),
         QueryMsg::Claimable { address } => {
             Ok(to_json_binary(&queries::query_claimable(&deps, address)?)?)
         }

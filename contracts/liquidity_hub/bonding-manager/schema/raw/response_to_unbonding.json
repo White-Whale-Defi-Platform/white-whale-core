@@ -31,7 +31,7 @@
       "required": [
         "asset",
         "created_at_epoch",
-        "updated_last",
+        "last_updated",
         "weight"
       ],
       "properties": {
@@ -49,9 +49,18 @@
           "format": "uint64",
           "minimum": 0.0
         },
-        "updated_last": {
+        "last_updated": {
           "description": "The epoch id at which the bond was last time updated.",
           "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "unbonded_at": {
+          "description": "The time at which the Bond was unbonded.",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint64",
           "minimum": 0.0
         },
