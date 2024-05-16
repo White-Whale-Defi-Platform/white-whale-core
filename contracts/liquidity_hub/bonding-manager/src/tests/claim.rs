@@ -1008,7 +1008,7 @@ fn test_rewards_forwarding() {
     });
 
     // create two more epochs (without swapping, so they won't have any rewards), so the first bucket is forwarded to the one with id 22
-    for i in 1..=2 {
+    for _ in 1..=2 {
         suite.add_one_day().create_new_epoch();
     }
 

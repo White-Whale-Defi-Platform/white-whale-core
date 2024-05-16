@@ -25,11 +25,6 @@ pub(crate) fn on_epoch_created(
 ) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
-    println!(
-        ">>>>>>>>>>>>>>>>>>> {:?}{:?}{:?}",
-        current_epoch.id, current_epoch.id, current_epoch.id
-    );
-    println!("EpochChangedHook: {:?}", current_epoch);
     // A new epoch has been created, update rewards bucket and forward the expiring bucket
     let config = CONFIG.load(deps.storage)?;
     ensure!(
@@ -57,8 +52,6 @@ pub(crate) fn on_epoch_created(
     }
 
     GLOBAL.save(deps.storage, &global_index)?;
-
-    println!("--- global_index: {:?}", global_index);
 
     // Create a new reward bucket for the current epoch with the total rewards accrued in the
     // upcoming bucket item
@@ -103,8 +96,6 @@ pub(crate) fn fill_rewards(
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
-    println!("----fill_rewards----");
-
     let config = CONFIG.load(deps.storage)?;
     let distribution_denom = config.distribution_denom.clone();
 
@@ -159,8 +150,6 @@ pub(crate) fn fill_rewards(
 /// Handles the lp withdrawal reply. It will swap the non-distribution denom coins to the
 /// distribution denom and aggregate the funds to the upcoming reward bucket.
 pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response, ContractError> {
-    println!("---handle_lp_withdrawal_reply---");
-
     // Read the coins sent via data on the withdraw response of the pool manager
     let execute_contract_response = parse_reply_execute_data(msg.clone()).unwrap();
     let data = execute_contract_response
@@ -172,7 +161,6 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
     let distribution_denom = config.distribution_denom.clone();
     let mut messages = vec![];
 
-    println!("coins: {:?}", coins);
     // Search received coins funds for the coin that is not the distribution denom
     // This will be swapped for
     let mut distribution_asset = coins
@@ -184,8 +172,6 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
         })
         .to_owned();
 
-    println!("distribution_asset: {:?}", distribution_asset);
-
     // Swap other coins to the distribution denom
     helpers::swap_coins_to_main_token(
         coins,
@@ -195,8 +181,6 @@ pub fn handle_lp_withdrawal_reply(deps: DepsMut, msg: Reply) -> Result<Response,
         &distribution_denom,
         &mut messages,
     )?;
-
-    println!("distribution_asset: {:?}", distribution_asset);
 
     // update the upcoming bucket with the new funds
     fill_upcoming_reward_bucket(deps, distribution_asset.clone())?;

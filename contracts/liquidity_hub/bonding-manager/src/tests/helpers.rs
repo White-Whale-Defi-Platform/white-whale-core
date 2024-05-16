@@ -1,5 +1,4 @@
 use crate::helpers::extract_pool_identifier;
-use cosmwasm_std::coin;
 
 #[test]
 fn test_extract_pool_identifier() {
