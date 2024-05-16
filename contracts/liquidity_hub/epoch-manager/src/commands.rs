@@ -32,7 +32,6 @@ pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Respon
 
     let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
-    println!("----create_epoch----");
 
     ensure!(
         env.block.time >= current_epoch.start_time,
