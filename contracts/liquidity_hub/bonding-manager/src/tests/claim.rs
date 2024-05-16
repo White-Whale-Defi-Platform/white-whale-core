@@ -224,17 +224,9 @@ fn test_claim_successfully() {
 
     // we bond tokens with the creator
     suite
-        .bond(
-            creator.clone(),
-            Coin {
-                denom: "ampWHALE".to_string(),
-                amount: Uint128::new(1_000u128),
-            },
-            &coins(1_000u128, "ampWHALE"),
-            |res| {
-                res.unwrap();
-            },
-        )
+        .bond(creator.clone(), &coins(1_000u128, "ampWHALE"), |res| {
+            res.unwrap();
+        })
         .query_rewards(creator.clone().to_string(), |res| {
             let (_, rewards) = res.unwrap();
             // empty as the user just bonded
@@ -357,17 +349,9 @@ fn test_claim_successfully() {
 
     suite
         .fast_forward(20_000)
-        .bond(
-            another_sender.clone(),
-            Coin {
-                denom: "bWHALE".to_string(),
-                amount: Uint128::new(700u128),
-            },
-            &coins(700u128, "bWHALE"),
-            |res| {
-                res.unwrap();
-            },
-        )
+        .bond(another_sender.clone(), &coins(700u128, "bWHALE"), |res| {
+            res.unwrap();
+        })
         .query_rewards(another_sender.clone().to_string(), |res| {
             let (_, rewards) = res.unwrap();
             // empty as the user just bonded
@@ -512,10 +496,6 @@ fn test_claim_successfully() {
     suite
         .bond(
             another_sender.clone(),
-            Coin {
-                denom: "bWHALE".to_string(),
-                amount: Uint128::new(1_000u128),
-            },
             &coins(1_000u128, "bWHALE"),
             |result| {
                 let err = result.unwrap_err().downcast::<ContractError>().unwrap();
@@ -528,10 +508,6 @@ fn test_claim_successfully() {
         )
         .bond(
             yet_another_sender.clone(),
-            Coin {
-                denom: "bWHALE".to_string(),
-                amount: Uint128::new(5_000u128),
-            },
             &coins(5_000u128, "bWHALE"),
             |result| {
                 result.unwrap();
@@ -728,36 +704,20 @@ fn test_claim_successfully() {
         );
 
     suite
-        .bond(
-            creator.clone(),
-            Coin {
-                denom: "bWHALE".to_string(),
-                amount: Uint128::new(1_000u128),
-            },
-            &coins(1_000u128, "bWHALE"),
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        .bond(creator.clone(), &coins(1_000u128, "bWHALE"), |result| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                match err {
-                    ContractError::UnclaimedRewards { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
-                }
-            },
-        )
+            match err {
+                ContractError::UnclaimedRewards { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
+            }
+        })
         .claim(creator.clone(), |result| {
             result.unwrap();
         })
-        .bond(
-            creator.clone(),
-            Coin {
-                denom: "bWHALE".to_string(),
-                amount: Uint128::new(1_000u128),
-            },
-            &coins(1_000u128, "bWHALE"),
-            |result| {
-                result.unwrap();
-            },
-        )
+        .bond(creator.clone(), &coins(1_000u128, "bWHALE"), |result| {
+            result.unwrap();
+        })
         .claim(creator.clone(), |result| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 

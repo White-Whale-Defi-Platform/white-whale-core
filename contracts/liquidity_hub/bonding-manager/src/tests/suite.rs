@@ -94,6 +94,10 @@ impl TestingSuite {
             coin(1_000_000_000_000, "ampWHALE"),
             coin(1_000_000_000_000, "bWHALE"),
             coin(1_000_000_000_000, "non_whitelisted_asset"),
+            coin(
+                1_000_000_000_000,
+                "factory/contract100/uluna-uwhale.pool.random_identifier.uLP",
+            ),
         ];
 
         let balances = vec![
@@ -266,7 +270,6 @@ impl TestingSuite {
     pub(crate) fn bond(
         &mut self,
         sender: Addr,
-        _asset: Coin,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -341,6 +344,24 @@ impl TestingSuite {
                 &[],
             )
             .unwrap();
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn on_epoch_created(
+        &mut self,
+        sender: Addr,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::EpochChangedHook {
+            current_epoch: Default::default(),
+        };
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
 
         self
     }
@@ -644,7 +665,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn fill_rewards_lp(
+    pub(crate) fn fill_rewards(
         &mut self,
         sender: Addr,
         funds: Vec<Coin>,

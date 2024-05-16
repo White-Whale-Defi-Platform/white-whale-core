@@ -1,9 +1,9 @@
 use std::vec;
 
 use cosmwasm_std::{coin, Coin, Decimal, Uint128};
+
 use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::pool_manager::SwapRoute;
-use white_whale_std::pool_network::asset::MINIMUM_LIQUIDITY_AMOUNT;
 
 use crate::tests::suite::TestingSuite;
 
@@ -150,7 +150,7 @@ fn test_fill_rewards_from_pool_manager() {
         },
     );
 
-    suite.fill_rewards_lp(
+    suite.fill_rewards(
         creator.clone(),
         vec![coin(
             1000,
@@ -175,7 +175,7 @@ fn test_fill_rewards_from_pool_manager() {
     );
 
     // send some random asset that doesn't have swap routes
-    suite.fill_rewards_lp(
+    suite.fill_rewards(
         creator.clone(),
         vec![coin(1000, "non_whitelisted_asset")],
         |res| {
@@ -203,5 +203,64 @@ fn test_fill_rewards_from_pool_manager() {
                 amount: Uint128::from(4998u128),
             },
         ]
+    );
+}
+
+#[test]
+fn test_fill_random_lp_token() {
+    let mut suite = TestingSuite::default();
+    let creator = suite.senders[0].clone();
+
+    suite
+        .instantiate_default()
+        .fast_forward(90_000)
+        .create_new_epoch();
+
+    // Get balance of the bonding manager it should have received fees from the swap
+    suite.query_balance(
+        "uwhale".to_string(),
+        suite.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::zero());
+        },
+    );
+
+    suite.fill_rewards(creator.clone(), vec![coin(5_000, "uwhale")], |res| {
+        res.unwrap();
+    });
+
+    suite.query_balance(
+        "uwhale".to_string(),
+        suite.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::new(5_000));
+        },
+    );
+
+    // this token doesn't exist in the pool manager. It shouldn't be swapped
+    suite.fill_rewards(
+        creator.clone(),
+        vec![coin(
+            1000,
+            "factory/contract100/uluna-uwhale.pool.random_identifier.uLP",
+        )],
+        |res| {
+            res.unwrap();
+        },
+    );
+
+    suite.query_balance(
+        "uwhale".to_string(),
+        suite.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::new(5_000));
+        },
+    );
+    suite.query_balance(
+        "factory/contract100/uluna-uwhale.pool.random_identifier.uLP".to_string(),
+        suite.bonding_manager_addr.clone(),
+        |res| {
+            assert_eq!(res, Uint128::new(1_000));
+        },
     );
 }
