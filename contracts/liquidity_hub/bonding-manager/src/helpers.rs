@@ -19,8 +19,10 @@ use white_whale_std::pool_network::asset::aggregate_coins;
 
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
-use crate::queries::{query_claimable, MAX_PAGE_LIMIT};
-use crate::state::{get_weight, BOND, CONFIG, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET};
+use crate::queries::query_claimable;
+use crate::state::{
+    get_bonds_by_receiver, get_weight, CONFIG, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET,
+};
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
@@ -377,19 +379,14 @@ pub(crate) fn get_user_share(
     address: String,
     mut global_index: GlobalIndex,
 ) -> StdResult<Decimal> {
-    let address = deps.api.addr_validate(&address)?;
-
-    let bonds: StdResult<Vec<_>> = BOND
-        .prefix(&address)
-        .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_PAGE_LIMIT as usize)
-        .collect();
+    let mut bonds_by_receiver =
+        get_bonds_by_receiver(deps.storage, address, Some(true), None, None, None)?;
 
     let config = CONFIG.load(deps.storage)?;
 
     let mut total_bond_weight = Uint128::zero();
 
-    for (_, mut bond) in bonds? {
+    for bond in bonds_by_receiver.iter_mut() {
         bond.weight = get_weight(
             epoch_id,
             bond.weight,

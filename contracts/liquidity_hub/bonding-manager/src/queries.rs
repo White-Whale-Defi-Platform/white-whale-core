@@ -1,15 +1,13 @@
-use cosmwasm_std::{Deps, Order, StdResult, Uint128};
-use cw_storage_plus::Bound;
+use cosmwasm_std::{Deps, StdResult, Uint128};
 
 use crate::{helpers, ContractError};
 use white_whale_std::bonding_manager::ClaimableRewardBucketsResponse;
 use white_whale_std::bonding_manager::{
-    Bond, BondedResponse, Config, GlobalIndex, RewardsResponse, UnbondingResponse,
-    WithdrawableResponse,
+    BondedResponse, Config, GlobalIndex, RewardsResponse, UnbondingResponse, WithdrawableResponse,
 };
 
 use crate::state::{
-    BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS, UNBOND,
+    get_bonds_by_receiver, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, MAX_LIMIT, REWARD_BUCKETS,
 };
 
 /// Queries the current configuration of the contract.
@@ -20,56 +18,45 @@ pub(crate) fn query_config(deps: Deps) -> StdResult<Config> {
 /// Queries the current bonded amount of the given address. If no address is provided, returns
 /// the global bonded amount.
 pub(crate) fn query_bonded(deps: Deps, address: Option<String>) -> StdResult<BondedResponse> {
-    let (total_bonded, bonded_assets, first_bonded_epoch_id) = if let Some(address) = address {
+    let (total_bonded, bonded_assets) = if let Some(address) = address {
         let address = deps.api.addr_validate(&address)?;
 
-        let bonds: Vec<Bond> = BOND
-            .prefix(&address)
-            .range(deps.storage, None, None, Order::Ascending)
-            .take(BONDING_ASSETS_LIMIT)
-            .map(|item| {
-                let (_, bond) = item?;
-                Ok(bond)
-            })
-            .collect::<StdResult<Vec<Bond>>>()?;
+        let bonds = get_bonds_by_receiver(
+            deps.storage,
+            address.to_string(),
+            Some(true),
+            None,
+            None,
+            None,
+        )?;
 
         // if it doesn't have bonded, return empty response
         if bonds.is_empty() {
             return Ok(BondedResponse {
                 total_bonded: Default::default(),
                 bonded_assets: Default::default(),
-                first_bonded_epoch_id: Default::default(),
             });
         }
 
         let mut total_bonded = Uint128::zero();
         let mut bonded_assets = vec![];
-        let mut first_bonded_epoch_id = u64::MAX;
 
         for bond in bonds {
-            if bond.created_at_epoch < first_bonded_epoch_id {
-                first_bonded_epoch_id = bond.created_at_epoch;
-            }
-
             total_bonded = total_bonded.checked_add(bond.asset.amount)?;
             bonded_assets.push(bond.asset);
         }
 
-        (total_bonded, bonded_assets, Some(first_bonded_epoch_id))
+        (total_bonded, bonded_assets)
     } else {
         let global_index = GLOBAL.may_load(deps.storage)?.unwrap_or_default();
-        (global_index.bonded_amount, global_index.bonded_assets, None)
+        (global_index.bonded_amount, global_index.bonded_assets)
     };
 
     Ok(BondedResponse {
         total_bonded,
         bonded_assets,
-        first_bonded_epoch_id,
     })
 }
-
-pub const MAX_PAGE_LIMIT: u8 = 30u8;
-pub const DEFAULT_PAGE_LIMIT: u8 = 10u8;
 
 /// Queries the current unbonding amount of the given address.
 pub(crate) fn query_unbonding(
@@ -80,18 +67,16 @@ pub(crate) fn query_unbonding(
     limit: Option<u8>,
 ) -> StdResult<UnbondingResponse> {
     let address = deps.api.addr_validate(&address)?;
-    let limit = limit.unwrap_or(DEFAULT_PAGE_LIMIT).min(MAX_PAGE_LIMIT) as usize;
-    let start = calc_range_start(start_after).map(Bound::ExclusiveRaw);
 
-    let unbonding = UNBOND
-        .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
-        .range(deps.storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            let (_, bond) = item?;
-            Ok(bond)
-        })
-        .collect::<StdResult<Vec<Bond>>>()?;
+    let unbonding = get_bonds_by_receiver(
+        deps.storage,
+        address.to_string(),
+        Some(false),
+        Some(denom),
+        start_after,
+        limit,
+    )?;
+
     // aggregate all the amounts in unbonding vec and return uint128
     let unbonding_amount = unbonding.iter().try_fold(Uint128::zero(), |acc, bond| {
         acc.checked_add(bond.asset.amount)
@@ -103,14 +88,6 @@ pub(crate) fn query_unbonding(
     })
 }
 
-fn calc_range_start(start_after: Option<u64>) -> Option<Vec<u8>> {
-    start_after.map(|block_height| {
-        let mut v: Vec<u8> = block_height.to_be_bytes().to_vec();
-        v.push(0);
-        v
-    })
-}
-
 /// Queries the amount of unbonding tokens of the specified address that have passed the
 /// unbonding period and can be withdrawn.
 pub(crate) fn query_withdrawable(
@@ -118,11 +95,14 @@ pub(crate) fn query_withdrawable(
     address: String,
     denom: String,
 ) -> StdResult<WithdrawableResponse> {
-    let unbonding: StdResult<Vec<_>> = UNBOND
-        .prefix((&deps.api.addr_validate(address.as_str())?, &denom))
-        .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_PAGE_LIMIT as usize)
-        .collect();
+    let unbonding = get_bonds_by_receiver(
+        deps.storage,
+        address,
+        Some(false),
+        Some(denom),
+        None,
+        Some(MAX_LIMIT),
+    )?;
 
     let config = CONFIG.load(deps.storage)?;
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
@@ -132,7 +112,7 @@ pub(crate) fn query_withdrawable(
         )?;
 
     let mut withdrawable_amount = Uint128::zero();
-    for (_, bond) in unbonding? {
+    for bond in unbonding {
         if current_epoch.epoch.id.saturating_sub(bond.created_at_epoch) >= config.unbonding_period {
             withdrawable_amount = withdrawable_amount.checked_add(bond.asset.amount)?;
         }
@@ -186,6 +166,7 @@ pub fn query_claimable(
         claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
 
+    println!("here: {:?}", claimable_reward_buckets);
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,
     })

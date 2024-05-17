@@ -54,6 +54,8 @@ pub struct UpcomingRewardBucket {
 
 #[cw_serde]
 pub struct Bond {
+    /// The id of the bond.
+    pub id: u64,
     /// The epoch id at which the Bond was created.
     pub created_at_epoch: u64,
     /// The epoch id at which the bond was last time updated.
@@ -64,11 +66,14 @@ pub struct Bond {
     pub weight: Uint128,
     /// The time at which the Bond was unbonded.
     pub unbonded_at: Option<u64>,
+    /// The owner of the bond.
+    pub receiver: Addr,
 }
 
 impl Default for Bond {
     fn default() -> Self {
         Self {
+            id: 0,
             asset: Coin {
                 denom: String::new(),
                 amount: Uint128::zero(),
@@ -77,6 +82,7 @@ impl Default for Bond {
             unbonded_at: None,
             last_updated: Default::default(),
             weight: Uint128::zero(),
+            receiver: Addr::unchecked(""),
         }
     }
 }
@@ -229,11 +235,8 @@ pub struct BondedResponse {
     /// The total amount of bonded tokens by the address. Bear in mind the bonded assets are
     /// considered to be equal for this purpose.
     pub total_bonded: Uint128,
-    /// The total amount of bonded assets by the address.
+    /// The assets that are bonded by the address.
     pub bonded_assets: Vec<Coin>,
-    /// If Some, the epoch id at which the user/address bonded first time. None is used when this
-    /// Response is used to check the bonded assets in the contract.
-    pub first_bonded_epoch_id: Option<u64>,
 }
 
 /// Response for the Unbonding query

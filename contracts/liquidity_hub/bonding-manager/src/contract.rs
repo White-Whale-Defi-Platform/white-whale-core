@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
-use crate::state::{BONDING_ASSETS_LIMIT, CONFIG, UPCOMING_REWARD_BUCKET};
+use crate::state::{BONDING_ASSETS_LIMIT, BOND_COUNTER, CONFIG, UPCOMING_REWARD_BUCKET};
 use crate::{bonding, commands, queries, rewards};
 use cosmwasm_std::{ensure, entry_point, Addr, Reply};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
@@ -45,6 +45,7 @@ pub fn instantiate(
 
     // Initialize the upcoming reward bucket
     UPCOMING_REWARD_BUCKET.save(deps.storage, &UpcomingRewardBucket::default())?;
+    BOND_COUNTER.save(deps.storage, &0)?;
 
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
