@@ -16,22 +16,16 @@ pub const BONDS: IndexedMap<u64, Bond, BondIndexes> = IndexedMap::new(
     "bonds",
     BondIndexes {
         receiver: MultiIndex::new(|_pk, b| b.receiver.to_string(), "bonds", "bonds__receiver"),
-        asset_denom: MultiIndex::new(
-            |_pk, b| b.asset.denom.to_string(),
-            "bonds",
-            "bonds__asset_denom",
-        ),
     },
 );
 
 pub struct BondIndexes<'a> {
     pub receiver: MultiIndex<'a, String, Bond, String>,
-    pub asset_denom: MultiIndex<'a, String, Bond, String>,
 }
 
 impl<'a> IndexList<Bond> for BondIndexes<'a> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Bond>> + '_> {
-        let v: Vec<&dyn Index<Bond>> = vec![&self.receiver, &self.asset_denom];
+        let v: Vec<&dyn Index<Bond>> = vec![&self.receiver];
         Box::new(v.into_iter())
     }
 }
@@ -136,8 +130,6 @@ pub fn get_bonds_by_receiver(
             Ok(bond)
         })
         .collect::<StdResult<Vec<Bond>>>()?;
-
-    println!("bonds_by_receiver: {:?}", bonds_by_receiver);
 
     if let Some(is_bonding) = is_bonding {
         bonds_by_receiver.retain(|bond| bond.unbonded_at.is_none() == is_bonding);

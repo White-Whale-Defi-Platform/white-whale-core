@@ -43,7 +43,7 @@ pub fn instantiate(
     CONFIG.save(deps.storage, &config)?;
     cw_ownable::initialize_owner(deps.storage, deps.api, Some(info.sender.as_str()))?;
 
-    // Initialize the upcoming reward bucket
+    // Initialize the upcoming reward bucket and bond counter
     UPCOMING_REWARD_BUCKET.save(deps.storage, &UpcomingRewardBucket::default())?;
     BOND_COUNTER.save(deps.storage, &0)?;
 

@@ -9,20 +9,11 @@
   ],
   "properties": {
     "bonded_assets": {
-      "description": "The total amount of bonded assets by the address.",
+      "description": "The assets that are bonded by the address.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Coin"
       }
-    },
-    "first_bonded_epoch_id": {
-      "description": "If Some, the epoch id at which the user/address bonded first time. None is used when this Response is used to check the bonded assets in the contract.",
-      "type": [
-        "integer",
-        "null"
-      ],
-      "format": "uint64",
-      "minimum": 0.0
     },
     "total_bonded": {
       "description": "The total amount of bonded tokens by the address. Bear in mind the bonded assets are considered to be equal for this purpose.",

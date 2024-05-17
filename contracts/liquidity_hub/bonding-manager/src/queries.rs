@@ -166,7 +166,6 @@ pub fn query_claimable(
         claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
 
-    println!("here: {:?}", claimable_reward_buckets);
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,
     })
