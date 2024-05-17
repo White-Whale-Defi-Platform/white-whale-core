@@ -8,11 +8,8 @@ use white_whale_std::bonding_manager::{GlobalIndex, RewardBucket, UpcomingReward
 use white_whale_std::epoch_manager::epoch_manager::Epoch;
 use white_whale_std::pool_network::asset;
 
-use crate::queries::get_expiring_reward_bucket;
-use crate::state::{
-    fill_upcoming_reward_bucket, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS,
-    UPCOMING_REWARD_BUCKET,
-};
+use crate::helpers::{fill_upcoming_reward_bucket, get_expiring_reward_bucket};
+use crate::state::{CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET};
 use crate::{helpers, ContractError};
 
 /// Handles the new epoch created by the epoch manager. It creates a new reward bucket with the

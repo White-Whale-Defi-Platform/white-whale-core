@@ -1,18 +1,15 @@
-use std::collections::VecDeque;
-
-use cosmwasm_std::{Decimal, Deps, Order, StdResult, Uint128};
+use cosmwasm_std::{Deps, Order, StdResult, Uint128};
 use cw_storage_plus::Bound;
 
 use crate::{helpers, ContractError};
+use white_whale_std::bonding_manager::ClaimableRewardBucketsResponse;
 use white_whale_std::bonding_manager::{
-    Bond, BondedResponse, BondingWeightResponse, Config, GlobalIndex, RewardsResponse,
-    UnbondingResponse, WithdrawableResponse,
+    Bond, BondedResponse, Config, GlobalIndex, RewardsResponse, UnbondingResponse,
+    WithdrawableResponse,
 };
-use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 
 use crate::state::{
-    get_weight, BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS,
-    UNBOND,
+    BOND, BONDING_ASSETS_LIMIT, CONFIG, GLOBAL, LAST_CLAIMED_EPOCH, REWARD_BUCKETS, UNBOND,
 };
 
 /// Queries the current configuration of the contract.
@@ -146,65 +143,8 @@ pub(crate) fn query_withdrawable(
     })
 }
 
-/// Queries the current weight of the given address.
-pub(crate) fn query_weight(
-    deps: &Deps,
-    epoch_id: u64,
-    address: String,
-    mut global_index: GlobalIndex,
-) -> StdResult<BondingWeightResponse> {
-    let address = deps.api.addr_validate(&address)?;
-
-    let bonds: StdResult<Vec<_>> = BOND
-        .prefix(&address)
-        .range(deps.storage, None, None, Order::Ascending)
-        .take(MAX_PAGE_LIMIT as usize)
-        .collect();
-
-    let config = CONFIG.load(deps.storage)?;
-
-    let mut total_bond_weight = Uint128::zero();
-
-    for (_, mut bond) in bonds? {
-        bond.weight = get_weight(
-            epoch_id,
-            bond.weight,
-            bond.asset.amount,
-            config.growth_rate,
-            bond.last_updated,
-        )?;
-
-        // Aggregate the weights of all the bonds for the given address.
-        // This assumes bonding assets are fungible.
-        total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
-    }
-
-    global_index.last_weight = get_weight(
-        epoch_id,
-        global_index.last_weight,
-        global_index.bonded_amount,
-        config.growth_rate,
-        global_index.last_updated,
-    )?;
-
-    // Represents the share of the global weight that the address has
-    // If global_index.weight is zero no one has bonded yet so the share is
-    let share = if global_index.last_weight.is_zero() {
-        Decimal::zero()
-    } else {
-        Decimal::from_ratio(total_bond_weight, global_index.last_weight)
-    };
-
-    Ok(BondingWeightResponse {
-        address: address.to_string(),
-        weight: total_bond_weight,
-        global_weight: global_index.last_weight,
-        share,
-        epoch_id,
-    })
-}
-
-/// Queries the global index
+/// Queries the global index. If a reward_bucket_id is provided, returns the global index of that reward bucket.
+/// Otherwise, returns the current global index.
 pub fn query_global_index(deps: Deps, reward_bucket_id: Option<u64>) -> StdResult<GlobalIndex> {
     // if a reward_bucket_id is provided, return the global index of the corresponding reward bucket
     if let Some(reward_bucket_id) = reward_bucket_id {
@@ -220,63 +160,13 @@ pub fn query_global_index(deps: Deps, reward_bucket_id: Option<u64>) -> StdResul
     Ok(global_index)
 }
 
-/// Returns the reward bucket that is falling out the grace period, which is the one expiring
-/// after creating a new epoch is created.
-pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let grace_period = config.grace_period;
-
-    // Take grace_period
-    let buckets = REWARD_BUCKETS
-        .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period as usize)
-        .map(|item| {
-            let (_, bucket) = item?;
-            Ok(bucket)
-        })
-        .collect::<StdResult<Vec<RewardBucket>>>()?;
-
-    // if the buckets vector's length is the same as the grace period it means there is one bucket that
-    // is expiring once the new one is created i.e. the last bucket in the vector
-    if buckets.len() == grace_period as usize {
-        let expiring_reward_bucket: RewardBucket = buckets.into_iter().last().unwrap_or_default();
-        Ok(Some(expiring_reward_bucket))
-    } else {
-        // nothing is expiring yet
-        Ok(None)
-    }
-}
-
-/// Returns the buckets that are within the grace period, i.e. the ones which fees can still be claimed.
-/// The result is ordered by bucket id, descending. Thus, the first element is the current bucket.
-pub fn get_claimable_reward_buckets(deps: &Deps) -> StdResult<ClaimableRewardBucketsResponse> {
-    let config = CONFIG.load(deps.storage)?;
-    let grace_period = config.grace_period;
-
-    let mut reward_buckets = REWARD_BUCKETS
-        .range(deps.storage, None, None, Order::Descending)
-        .take(grace_period as usize)
-        .map(|item| {
-            let (_, bucket) = item?;
-
-            Ok(bucket)
-        })
-        .collect::<StdResult<VecDeque<RewardBucket>>>()?;
-
-    reward_buckets.retain(|bucket| !bucket.available.is_empty());
-
-    Ok(ClaimableRewardBucketsResponse {
-        reward_buckets: reward_buckets.into(),
-    })
-}
-
 /// Returns the reward buckets that can be claimed by the given address. If no address is provided,
 /// returns all possible buckets stored in the contract that can potentially be claimed.
 pub fn query_claimable(
     deps: &Deps,
     address: Option<String>,
 ) -> StdResult<ClaimableRewardBucketsResponse> {
-    let mut claimable_reward_buckets = get_claimable_reward_buckets(deps)?.reward_buckets;
+    let mut claimable_reward_buckets = helpers::get_claimable_reward_buckets(deps)?.reward_buckets;
     // if an address is provided, filter what's claimable for that address
     if let Some(address) = address {
         let address = deps.api.addr_validate(&address)?;

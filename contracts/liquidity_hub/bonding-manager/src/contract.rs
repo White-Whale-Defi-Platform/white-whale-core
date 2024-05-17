@@ -133,31 +133,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::Withdrawable { address, denom } => Ok(to_json_binary(
             &queries::query_withdrawable(deps, address, denom)?,
         )?),
-        // QueryMsg::Weight {
-        //     address,
-        //     epoch_id,
-        //     global_index,
-        // } => {
-        //     let epoch_id = if let Some(epoch_id) = epoch_id {
-        //         epoch_id
-        //     } else {
-        //         // If epoch_id is not provided, use current epoch
-        //         let config = CONFIG.load(deps.storage)?;
-        //         let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
-        //             deps.querier.query_wasm_smart(
-        //                 config.epoch_manager_addr,
-        //                 &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
-        //             )?;
-        //         current_epoch.epoch.id
-        //     };
-        //
-        //     Ok(to_json_binary(&queries::query_weight(
-        //         deps,
-        //         epoch_id,
-        //         address,
-        //         global_index,
-        //     )?)?)
-        // }
         QueryMsg::GlobalIndex { reward_bucket_id } => Ok(to_json_binary(
             &queries::query_global_index(deps, reward_bucket_id)?,
         )?),

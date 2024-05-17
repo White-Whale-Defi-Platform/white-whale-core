@@ -1,10 +1,9 @@
 use crate::ContractError;
-use cosmwasm_std::{Addr, Coin, Decimal, DepsMut, StdError, StdResult, Uint128};
+use cosmwasm_std::{Addr, Decimal, DepsMut, StdError, StdResult, Uint128};
 use cw_storage_plus::{Item, Map};
 use white_whale_std::bonding_manager::{
     Bond, Config, GlobalIndex, RewardBucket, UpcomingRewardBucket,
 };
-use white_whale_std::pool_network::asset;
 
 type Denom = str;
 
@@ -85,14 +84,4 @@ pub fn get_weight(
     };
 
     Ok(weight.checked_add(amount.checked_mul(time_factor)? * growth_rate)?)
-}
-
-/// Fills the upcoming reward bucket with the given funds.
-pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> {
-    UPCOMING_REWARD_BUCKET.update(deps.storage, |mut upcoming_bucket| -> StdResult<_> {
-        upcoming_bucket.total = asset::aggregate_coins(&upcoming_bucket.total, &vec![funds])?;
-        Ok(upcoming_bucket)
-    })?;
-
-    Ok(())
 }
