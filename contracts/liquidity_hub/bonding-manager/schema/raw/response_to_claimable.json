@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ClaimableRewardBucketsResponse",
+  "description": "Response for the Claimable query",
   "type": "object",
   "required": [
     "reward_buckets"

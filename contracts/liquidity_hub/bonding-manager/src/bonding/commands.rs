@@ -30,7 +30,7 @@ pub(crate) fn bond(
             &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
         )?;
 
-    let mut bonds_by_receiver = get_bonds_by_receiver(
+    let bonds_by_receiver = get_bonds_by_receiver(
         deps.storage,
         info.sender.to_string(),
         Some(true),
@@ -40,7 +40,8 @@ pub(crate) fn bond(
     )?;
 
     let mut bond = if bonds_by_receiver.is_empty() {
-        // create bond id
+        // the user doesn't have any bonds of the given asset
+
         let bond_id =
             BOND_COUNTER.update::<_, StdError>(deps.storage, |current_id| Ok(current_id + 1u64))?;
 
@@ -56,16 +57,13 @@ pub(crate) fn bond(
             ..Bond::default()
         }
     } else {
+        // sanity check
         ensure!(
             bonds_by_receiver.len() == 1usize,
-            //todo change this error
-            ContractError::NothingToUnbond
+            ContractError::AssetMismatch
         );
 
-        //todo change this error
-        bonds_by_receiver
-            .pop()
-            .ok_or(ContractError::NothingToUnbond)?
+        bonds_by_receiver[0].clone()
     };
 
     // update bond values
@@ -110,7 +108,7 @@ pub(crate) fn unbond(
     helpers::validate_claimed(&deps, &info)?;
     helpers::validate_bonding_for_current_epoch(&deps)?;
 
-    let mut bonds_by_receiver = get_bonds_by_receiver(
+    let bonds_by_receiver = get_bonds_by_receiver(
         deps.storage,
         info.sender.to_string(),
         Some(true),
@@ -121,17 +119,19 @@ pub(crate) fn unbond(
 
     ensure!(
         bonds_by_receiver.len() <= 1usize,
-        //todo change this error
-        ContractError::NothingToUnbond
+        ContractError::AssetMismatch
     );
 
     if bonds_by_receiver.is_empty() {
         Err(ContractError::NothingToUnbond)
     } else {
-        //todo change this error
-        let mut unbond: Bond = bonds_by_receiver
-            .pop()
-            .ok_or(ContractError::NothingToUnbond)?;
+        // sanity check
+        ensure!(
+            bonds_by_receiver.len() == 1usize,
+            ContractError::AssetMismatch
+        );
+
+        let mut unbond = bonds_by_receiver[0].clone();
 
         // check if the address has enough bond
         ensure!(
