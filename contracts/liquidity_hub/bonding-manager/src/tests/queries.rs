@@ -205,7 +205,6 @@ fn test_queries() {
                         denom: "ampWHALE".to_string(),
                         amount: Uint128::from(1_000u128),
                     }],
-                    first_bonded_epoch_id: None,
                 }
             );
         });
@@ -245,32 +244,40 @@ fn test_queries() {
                         total_amount: Uint128::new(1_000),
                         unbonding_requests: vec![
                             Bond {
+                                id: 2,
                                 asset: coin(100, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572056619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone()
                             },
                             Bond {
+                                id: 3,
                                 asset: coin(200, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572057619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone()
                             },
                             Bond {
+                                id: 4,
                                 asset: coin(300, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572058619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone()
                             },
                             Bond {
+                                id: 5,
                                 asset: coin(400, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572059619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone()
                             },
                         ],
                     }
@@ -290,18 +297,22 @@ fn test_queries() {
                         total_amount: Uint128::new(300),
                         unbonding_requests: vec![
                             Bond {
+                                id: 2,
                                 asset: coin(100, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572056619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone(),
                             },
                             Bond {
+                                id: 3,
                                 asset: coin(200, "ampWHALE"),
                                 created_at_epoch: 3,
                                 unbonded_at: Some(1572057619),
                                 last_updated: 3,
                                 weight: Default::default(),
+                                receiver: creator.clone(),
                             },
                         ],
                     }
@@ -312,7 +323,7 @@ fn test_queries() {
     suite.query_unbonding(
         creator.clone().to_string(),
         "ampWHALE".to_string(),
-        Some(1572057619),
+        Some(3),
         Some(2),
         |res| {
             let unbonding_response = res.unwrap().1;
@@ -322,18 +333,22 @@ fn test_queries() {
                     total_amount: Uint128::new(700),
                     unbonding_requests: vec![
                         Bond {
+                            id: 4,
                             asset: coin(300, "ampWHALE"),
                             created_at_epoch: 3,
                             unbonded_at: Some(1572058619),
                             last_updated: 3,
                             weight: Default::default(),
+                            receiver: creator.clone()
                         },
                         Bond {
+                            id: 5,
                             asset: coin(400, "ampWHALE"),
                             created_at_epoch: 3,
                             unbonded_at: Some(1572059619),
                             last_updated: 3,
                             weight: Default::default(),
+                            receiver: creator.clone()
                         },
                     ],
                 }

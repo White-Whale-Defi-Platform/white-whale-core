@@ -502,11 +502,13 @@ fn test_unbonding_withdraw() {
                 assert_eq!(
                     unbonding_response.unbonding_requests[0],
                     Bond {
+                        id: 4,
                         asset: coin(1_000u128, "ampWHALE"),
                         created_at_epoch: 6,
                         unbonded_at: Some(1572335819),
                         last_updated: 6,
                         weight: Uint128::zero(),
+                        receiver: creator.clone(),
                     }
                 );
             },
@@ -724,7 +726,6 @@ fn test_unbonding_withdraw() {
                 BondedResponse {
                     total_bonded: Uint128::new(200),
                     bonded_assets: coins(200u128, "bWHALE"),
-                    first_bonded_epoch_id: Some(4u64),
                 }
             );
         })
@@ -741,18 +742,22 @@ fn test_unbonding_withdraw() {
                         total_amount: Uint128::new(500),
                         unbonding_requests: vec![
                             Bond {
+                                id: 5,
                                 asset: coin(300u128, "bWHALE"),
                                 created_at_epoch: 8,
                                 unbonded_at: Some(1572508619),
                                 last_updated: 8,
                                 weight: Uint128::zero(),
+                                receiver: another_sender.clone(),
                             },
                             Bond {
+                                id: 6,
                                 asset: coin(200u128, "bWHALE"),
                                 created_at_epoch: 8,
                                 unbonded_at: Some(1572508620),
                                 last_updated: 8,
                                 weight: Uint128::zero(),
+                                receiver: another_sender.clone(),
                             }
                         ],
                     }
@@ -964,7 +969,6 @@ fn test_unbonding_withdraw() {
                 BondedResponse {
                     total_bonded: Uint128::new(200),
                     bonded_assets: coins(200u128, "bWHALE"),
-                    first_bonded_epoch_id: Some(4u64),
                 }
             );
         })
