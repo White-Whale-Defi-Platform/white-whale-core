@@ -147,10 +147,8 @@ pub enum ExecuteMsg {
     },
     /// Claims the available rewards
     Claim,
-
     /// Fills the contract with new rewards.
     FillRewards,
-
     /// Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from
     /// this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring
     /// reward bucket (only 21 of them are live at a given moment)
@@ -254,19 +252,11 @@ pub struct WithdrawableResponse {
     pub withdrawable_amount: Uint128,
 }
 
-/// Response for the Weight query.
+/// Response for the Claimable query
 #[cw_serde]
-pub struct BondingWeightResponse {
-    /// The weight of the address.
-    pub address: String,
-    /// The weight of the address at the given timestamp.
-    pub weight: Uint128,
-    /// The global weight of the contract.
-    pub global_weight: Uint128,
-    /// The share the address has of the rewards at the particular timestamp.
-    pub share: Decimal,
-    /// The epoch id at which the weight was calculated.
-    pub epoch_id: u64,
+pub struct ClaimableRewardBucketsResponse {
+    /// The reward buckets that can be claimed by the address.
+    pub reward_buckets: Vec<RewardBucket>,
 }
 
 /// Creates a message to fill rewards on the whale lair contract.
@@ -276,10 +266,4 @@ pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Coin>) -> StdResult<C
         msg: to_json_binary(&ExecuteMsg::FillRewards)?,
         funds: assets,
     }))
-}
-
-#[cw_serde]
-pub struct ClaimableRewardBucketsResponse {
-    /// The reward buckets that can be claimed by the address.
-    pub reward_buckets: Vec<RewardBucket>,
 }

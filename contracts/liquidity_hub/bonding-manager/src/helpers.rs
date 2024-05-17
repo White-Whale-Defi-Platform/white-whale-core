@@ -1,23 +1,26 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use cosmwasm_std::{
     ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, MessageInfo,
-    Order, ReplyOn, StdError, StdResult, SubMsg, WasmMsg,
+    Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_utils::PaymentError;
 
-use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, Config};
+use white_whale_std::bonding_manager::{
+    ClaimableRewardBucketsResponse, Config, GlobalIndex, RewardBucket,
+};
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
+use white_whale_std::pool_network::asset;
 use white_whale_std::pool_network::asset::aggregate_coins;
 
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
-use crate::queries::{query_claimable, query_weight};
-use crate::state::{CONFIG, REWARD_BUCKETS};
+use crate::queries::{query_claimable, MAX_PAGE_LIMIT};
+use crate::state::{get_weight, BOND, CONFIG, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET};
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
@@ -296,7 +299,7 @@ pub fn calculate_rewards(
     let mut modified_reward_buckets = HashMap::new();
 
     for reward_bucket in claimable_reward_buckets_for_user {
-        let bonding_weight_response_for_epoch = query_weight(
+        let user_share = get_user_share(
             deps,
             reward_bucket.id,
             address.to_string(),
@@ -304,22 +307,20 @@ pub fn calculate_rewards(
         )?;
 
         // sanity check, if the user has no share in the bucket, skip it
-        if bonding_weight_response_for_epoch.share.is_zero() {
+        if user_share.is_zero() {
             continue;
         };
 
         // sanity check
         ensure!(
-            bonding_weight_response_for_epoch.share <= Decimal::percent(100u64),
+            user_share <= Decimal::percent(100u64),
             ContractError::InvalidShare
         );
 
         let mut claimed_rewards_from_bucket = vec![];
 
         for reward in reward_bucket.total.iter() {
-            let user_reward = reward
-                .amount
-                .checked_mul_floor(bonding_weight_response_for_epoch.share)?;
+            let user_reward = reward.amount.checked_mul_floor(user_share)?;
 
             // make sure the reward is sound
             let reward_validation: Result<(), StdError> = reward_bucket
@@ -367,4 +368,116 @@ pub fn calculate_rewards(
         }
     }
     Ok((total_claimable_rewards, attributes, modified_reward_buckets))
+}
+
+/// Gets the user share for the given epoch and global index.
+pub(crate) fn get_user_share(
+    deps: &Deps,
+    epoch_id: u64,
+    address: String,
+    mut global_index: GlobalIndex,
+) -> StdResult<Decimal> {
+    let address = deps.api.addr_validate(&address)?;
+
+    let bonds: StdResult<Vec<_>> = BOND
+        .prefix(&address)
+        .range(deps.storage, None, None, Order::Ascending)
+        .take(MAX_PAGE_LIMIT as usize)
+        .collect();
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let mut total_bond_weight = Uint128::zero();
+
+    for (_, mut bond) in bonds? {
+        bond.weight = get_weight(
+            epoch_id,
+            bond.weight,
+            bond.asset.amount,
+            config.growth_rate,
+            bond.last_updated,
+        )?;
+
+        // Aggregate the weights of all the bonds for the given address.
+        // This assumes bonding assets are fungible.
+        total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
+    }
+
+    global_index.last_weight = get_weight(
+        epoch_id,
+        global_index.last_weight,
+        global_index.bonded_amount,
+        config.growth_rate,
+        global_index.last_updated,
+    )?;
+
+    // Represents the share of the global weight that the address has
+    // If global_index.weight is zero no one has bonded yet so the share is
+    let share = if global_index.last_weight.is_zero() {
+        Decimal::zero()
+    } else {
+        Decimal::from_ratio(total_bond_weight, global_index.last_weight)
+    };
+
+    Ok(share)
+}
+
+/// Returns the reward bucket that is falling out the grace period, which is the one expiring
+/// after creating a new epoch is created.
+pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let grace_period = config.grace_period;
+
+    // Take grace_period
+    let buckets = REWARD_BUCKETS
+        .range(deps.storage, None, None, Order::Descending)
+        .take(grace_period as usize)
+        .map(|item| {
+            let (_, bucket) = item?;
+            Ok(bucket)
+        })
+        .collect::<StdResult<Vec<RewardBucket>>>()?;
+
+    // if the buckets vector's length is the same as the grace period it means there is one bucket that
+    // is expiring once the new one is created i.e. the last bucket in the vector
+    if buckets.len() == grace_period as usize {
+        let expiring_reward_bucket: RewardBucket = buckets.into_iter().last().unwrap_or_default();
+        Ok(Some(expiring_reward_bucket))
+    } else {
+        // nothing is expiring yet
+        Ok(None)
+    }
+}
+
+/// Returns the buckets that are within the grace period, i.e. the ones which fees can still be claimed.
+/// The result is ordered by bucket id, descending. Thus, the first element is the current bucket.
+pub fn get_claimable_reward_buckets(deps: &Deps) -> StdResult<ClaimableRewardBucketsResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let grace_period = config.grace_period;
+
+    let mut reward_buckets = REWARD_BUCKETS
+        .range(deps.storage, None, None, Order::Descending)
+        .take(grace_period as usize)
+        .map(|item| {
+            let (_, bucket) = item?;
+
+            Ok(bucket)
+        })
+        .collect::<StdResult<VecDeque<RewardBucket>>>()?;
+
+    reward_buckets.retain(|bucket| !bucket.available.is_empty());
+
+    Ok(ClaimableRewardBucketsResponse {
+        reward_buckets: reward_buckets.into(),
+    })
+}
+
+/// Fills the upcoming reward bucket with the given funds.
+pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> {
+    UPCOMING_REWARD_BUCKET.update(deps.storage, |mut upcoming_bucket| -> StdResult<_> {
+        upcoming_bucket.total = asset::aggregate_coins(&upcoming_bucket.total, &vec![funds])?;
+        Ok(upcoming_bucket)
+    })?;
+
+    Ok(())
 }
