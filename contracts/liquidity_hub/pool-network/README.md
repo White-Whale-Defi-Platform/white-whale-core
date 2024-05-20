@@ -4,8 +4,8 @@ White Whale's pool network is based on [Terraswap](https://github.com/terraswap/
 
 ## Contracts
 
-| Name                                               | Description                                  |
-| -------------------------------------------------- | -------------------------------------------- |
+| Name                                     | Description                                  |
+| ---------------------------------------- | -------------------------------------------- |
 | [`terraswap_factory`](terraswap_factory) |                                              |
 | [`terraswap_pair`](terraswap_pair)       |                                              |
 | [`terraswap_router`](terraswap_router)   |                                              |
