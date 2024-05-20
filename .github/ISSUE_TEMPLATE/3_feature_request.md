@@ -1,10 +1,9 @@
 ---
 name: Feature request
 about: Suggest a new idea for White Whale Migaloo. This is something that doesn't exist currently, and you want to see.
-title: ''
-labels: 'enhancement'
-assignees: ''
-
+title: ""
+labels: "enhancement"
+assignees: ""
 ---
 
 <!-- Thank you for using White Whale Migaloo!
