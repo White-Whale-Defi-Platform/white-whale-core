@@ -63,18 +63,24 @@ fn deposit_and_withdraw_sanity_check() {
     };
 
     // Create a pool
-    suite.instantiate_default().create_pool(
-        creator.clone(),
-        asset_denoms,
-        vec![6u8, 6u8],
-        pool_fees,
-        PoolType::ConstantProduct,
-        Some("whale-uluna".to_string()),
-        vec![coin(1000, "uusd")],
-        |result| {
+    suite
+        .instantiate_default()
+        .add_one_day()
+        .create_new_epoch(|result| {
             result.unwrap();
-        },
-    );
+        })
+        .create_pool(
+            creator.clone(),
+            asset_denoms,
+            vec![6u8, 6u8],
+            pool_fees,
+            PoolType::ConstantProduct,
+            Some("whale-uluna".to_string()),
+            vec![coin(1000, "uusd")],
+            |result| {
+                result.unwrap();
+            },
+        );
 
     let contract_addr = suite.pool_manager_addr.clone();
     let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
@@ -218,23 +224,29 @@ mod pool_creation_failures {
             extra_fees: vec![],
         };
         // Create a poo
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            None,
-            vec![coin(90, "uusd")],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                None,
+                vec![coin(90, "uusd")],
+                |result| {
+                    let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                match err {
-                    ContractError::InvalidPoolCreationFee { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
-                }
-            },
-        );
+                    match err {
+                        ContractError::InvalidPoolCreationFee { .. } => {}
+                        _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+                    }
+                },
+            );
     }
 
     #[test]
@@ -285,6 +297,10 @@ mod pool_creation_failures {
         // Create a poo
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 asset_infos.clone(),
@@ -371,6 +387,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -565,6 +585,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -709,6 +733,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -869,6 +897,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1098,6 +1130,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1265,6 +1301,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1431,6 +1471,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1629,6 +1673,10 @@ mod router {
         // Create a pool
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 first_pool,
@@ -1849,18 +1897,24 @@ mod swapping {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Query pool info to ensure the query is working fine
         suite.query_pool_info("whale-uluna".to_string(), |result| {
@@ -2070,18 +2124,24 @@ mod swapping {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::StableSwap { amp: 100 },
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::StableSwap { amp: 100 },
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Lets try to add liquidity
         suite.provide_liquidity(
@@ -2264,18 +2324,24 @@ mod swapping {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_infos,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         // Lets try to add liquidity, 1000 of each token.
         suite.provide_liquidity(
@@ -2554,18 +2620,24 @@ mod locking_lp {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let incentive_manager_addr = suite.incentive_manager_addr.clone();
@@ -2744,18 +2816,24 @@ mod locking_lp {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let incentive_manager_addr = suite.incentive_manager_addr.clone();
@@ -2939,18 +3017,24 @@ mod provide_liquidity {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
         let lp_denom = suite.get_lp_denom("whale-uluna".to_string());
@@ -3388,18 +3472,24 @@ mod provide_liquidity {
         };
 
         // Create a pool
-        suite.instantiate_default().create_pool(
-            creator.clone(),
-            asset_denoms,
-            vec![6u8, 6u8],
-            pool_fees,
-            PoolType::ConstantProduct,
-            Some("whale-uluna".to_string()),
-            vec![coin(1000, "uusd")],
-            |result| {
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
                 result.unwrap();
-            },
-        );
+            })
+            .create_pool(
+                creator.clone(),
+                asset_denoms,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                Some("whale-uluna".to_string()),
+                vec![coin(1000, "uusd")],
+                |result| {
+                    result.unwrap();
+                },
+            );
 
         let contract_addr = suite.pool_manager_addr.clone();
 
@@ -3545,6 +3635,10 @@ mod multiple_pools {
         // Create pools
         suite
             .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
             .create_pool(
                 creator.clone(),
                 asset_denoms_1.clone(),

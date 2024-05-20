@@ -57,3 +57,4 @@ whale-lair.workspace = true
 incentive-manager.workspace = true
 epoch-manager.workspace = true
 white-whale-testing.workspace = true
+bonding-manager.workspace = true

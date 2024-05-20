@@ -7,13 +7,12 @@ To understand the framework better, please read the overview in the
 and dig into the [cosmwasm docs](https://www.cosmwasm.com).
 This assumes you understand the theory and just want to get coding.
 
-
-# Architecture 
+# Architecture
 
 ```mermaid
-graph LR 
+graph LR
 
-subgraph WHALE Dex 
+subgraph WHALE Dex
 subgraph Pool Manager
         Admin --> |Can Create| Pairs
         Users --> |Can Create for X Fee| Pairs --> | Stored In| Contract
@@ -22,7 +21,7 @@ subgraph Pool Manager
         Users --> |Can Withdraw Liquidity from | Contract --> |Burn provided | Liquidity_Token --> |Send refund assets to| Users
 
 
-        
+
     end
 
 end
@@ -31,16 +30,15 @@ end
 
 ### Todo work
 
-+ [X] Create a pool manager contract
-+ [X] Can create a pair 
-+ [X] Can provide liquidity 
-+ [X] Can withdraw liquidity
-+ [X] Can swap assets
-+ [ ] Tests for all the above ported over 
-+ [ ] Tests for Swap Operations 
-+ [ ] Tests for swap routes 
-+ [ ] 
-
+- [x] Create a pool manager contract
+- [x] Can create a pair
+- [x] Can provide liquidity
+- [x] Can withdraw liquidity
+- [x] Can swap assets
+- [ ] Tests for all the above ported over
+- [ ] Tests for Swap Operations
+- [ ] Tests for swap routes
+- [ ]
 
 ## Creating a new repo from template
 

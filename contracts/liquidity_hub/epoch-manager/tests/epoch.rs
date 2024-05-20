@@ -23,7 +23,7 @@ fn create_new_epoch_successfully() {
     // move time ahead so we can create the epoch
     env.block.time = env.block.time.plus_nanos(86400);
 
-    let msg = ExecuteMsg::CreateEpoch {};
+    let msg = ExecuteMsg::CreateEpoch;
     let res = execute(deps.as_mut(), env, info, msg).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::CurrentEpoch {}).unwrap();
@@ -62,20 +62,20 @@ fn create_new_epoch_successfully() {
     );
 }
 
-// #[test]
-// fn create_new_epoch_unsuccessfully() {
-//     let mut deps = mock_dependencies(&[]);
-//     let info = mock_info("owner", &[]);
-//     let mut env = mock_env();
-//     mock_instantiation(deps.as_mut(), info.clone()).unwrap();
+#[test]
+fn create_new_epoch_unsuccessfully() {
+    let mut deps = mock_dependencies(&[]);
+    let info = mock_info("owner", &[]);
+    let mut env = mock_env();
+    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
-//     // move time ahead but not enough so the epoch creation fails
-//     env.block.time = env.block.time.plus_nanos(86300);
+    // move time ahead but not enough so the epoch creation fails
+    env.block.time = env.block.time.plus_nanos(86300);
 
-//     let msg = ExecuteMsg::CreateEpoch {};
-//     let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
-//     match err {
-//         ContractError::CurrentEpochNotExpired => {}
-//         _ => panic!("should return ContractError::CurrentEpochNotExpired"),
-//     }
-// }
+    let msg = ExecuteMsg::CreateEpoch;
+    let err = execute(deps.as_mut(), env, info, msg).unwrap_err();
+    match err {
+        ContractError::CurrentEpochNotExpired => {}
+        _ => panic!("should return ContractError::CurrentEpochNotExpired"),
+    }
+}

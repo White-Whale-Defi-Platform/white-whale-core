@@ -1,10 +1,9 @@
 ---
 name: Bug on migaloo-core contracts
 about: You are interacting with White Whale's contracts, and you are getting an unexpected behavior, an exception, or something looks wrong.
-title: ''
-labels: 'bug'
-assignees: ''
-
+title: ""
+labels: "bug"
+assignees: ""
 ---
 
 <!-- Thank you for using White Whale Migaloo!
@@ -22,6 +21,7 @@ assignees: ''
 If you want to report a security issue, please follow our security policy: `https://github.com/White-Whale-Defi-Platform/migaloo-core/blob/main/SECURITY.md`
 
 ---
+
 ## Steps to Reproduce
 
 <!-- Please include full steps to reproduce so that we can reproduce the problem. -->
@@ -37,17 +37,19 @@ If you want to report a security issue, please follow our security policy: `http
 ---
 
 ### Additional context
+
 Add any other context about the problem here, code snippets, json responses and so on.
 
 <details>
 <summary>Code sample</summary>
 
 <!--
-      If case you are working on a smart contract, please attach a minimal reproducible 
+      If case you are working on a smart contract, please attach a minimal reproducible
       sample that shows the problem and attach it below between the lines with the backticks.
 -->
 
 ```rust
+
 ```
 
 </details>
@@ -56,7 +58,7 @@ Add any other context about the problem here, code snippets, json responses and 
   <summary>Logs</summary>
 
 <!--
-      Paste the log output below between the lines with the backticks, whether it is 
+      Paste the log output below between the lines with the backticks, whether it is
       from compilation or executing a query on chain.
 
       Please see if the error message includes enough information
@@ -64,6 +66,7 @@ Add any other context about the problem here, code snippets, json responses and 
 -->
 
 ```
+
 ```
 
 </details>

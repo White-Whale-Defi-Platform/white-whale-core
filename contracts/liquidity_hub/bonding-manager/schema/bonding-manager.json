@@ -9,6 +9,7 @@
     "required": [
       "bonding_assets",
       "distribution_denom",
+      "epoch_manager_addr",
       "grace_period",
       "growth_rate",
       "unbonding_period"
@@ -25,13 +26,15 @@
         "description": "Denom to be swapped to and rewarded",
         "type": "string"
       },
+      "epoch_manager_addr": {
+        "description": "The epoch manager contract",
+        "type": "string"
+      },
       "grace_period": {
-        "description": "Grace period the maximum age of a bucket before fees are forwarded from it",
-        "allOf": [
-          {
-            "$ref": "#/definitions/Uint64"
-          }
-        ]
+        "description": "Grace period the maximum age of a reward bucket before it's considered expired and fees are forwarded from it",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
       },
       "growth_rate": {
         "description": "Weight grow rate. Needs to be between 0 and 1.",
@@ -42,22 +45,16 @@
         ]
       },
       "unbonding_period": {
-        "description": "Unbonding period in nanoseconds.",
-        "allOf": [
-          {
-            "$ref": "#/definitions/Uint64"
-          }
-        ]
+        "description": "Unbonding period in epochs. The time (in epochs) that needs to pass before an unbonded position can be withdrawn",
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
       }
     },
     "additionalProperties": false,
     "definitions": {
       "Decimal": {
         "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
-        "type": "string"
-      },
-      "Uint64": {
-        "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
         "type": "string"
       }
     }
@@ -68,17 +65,10 @@
     "oneOf": [
       {
         "description": "Bonds the specified [Asset].",
-        "type": "object",
-        "required": [
+        "type": "string",
+        "enum": [
           "bond"
-        ],
-        "properties": {
-          "bond": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+        ]
       },
       {
         "description": "Unbonds the specified [Asset].",
@@ -94,7 +84,12 @@
             ],
             "properties": {
               "asset": {
-                "$ref": "#/definitions/Coin"
+                "description": "The asset to unbond.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Coin"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -103,7 +98,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Sends withdrawable unbonded tokens to the user.",
+        "description": "Sends withdrawable assets of the given denom to the user. An asset becomes withdrawable after it has been unbonded and the unbonding period has passed.",
         "type": "object",
         "required": [
           "withdraw"
@@ -116,6 +111,7 @@
             ],
             "properties": {
               "denom": {
+                "description": "The denom to withdraw.",
                 "type": "string"
               }
             },
@@ -134,7 +130,15 @@
           "update_config": {
             "type": "object",
             "properties": {
+              "epoch_manager_addr": {
+                "description": "The new epoch manager address.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "growth_rate": {
+                "description": "The new growth rate.",
                 "anyOf": [
                   {
                     "$ref": "#/definitions/Decimal"
@@ -144,27 +148,21 @@
                   }
                 ]
               },
-              "owner": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
               "pool_manager_addr": {
+                "description": "The new pool manager address.",
                 "type": [
                   "string",
                   "null"
                 ]
               },
               "unbonding_period": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/Uint64"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
+                "description": "The unbonding period.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
@@ -173,52 +171,21 @@
         "additionalProperties": false
       },
       {
-        "type": "object",
-        "required": [
-          "claim"
-        ],
-        "properties": {
-          "claim": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "V2 MESSAGES Fills the whale lair with new rewards.",
-        "type": "object",
-        "required": [
-          "fill_rewards"
-        ],
-        "properties": {
-          "fill_rewards": {
-            "type": "object",
-            "required": [
-              "assets"
-            ],
-            "properties": {
-              "assets": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/Coin"
-                }
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Fills the whale lair with new rewards.",
+        "description": "Claims the available rewards",
         "type": "string",
         "enum": [
-          "fill_rewards_coin"
+          "claim"
         ]
       },
       {
-        "description": "Creates a new bucket for the rewards flowing from this time on, i.e. to be distributed in the next epoch. Also, forwards the expiring epoch (only 21 epochs are live at a given moment)",
+        "description": "Fills the contract with new rewards.",
+        "type": "string",
+        "enum": [
+          "fill_rewards"
+        ]
+      },
+      {
+        "description": "Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from this time on, i.e. to be distributed in the upcoming epoch. Also, forwards the expiring reward bucket (only 21 of them are live at a given moment)",
         "type": "object",
         "required": [
           "epoch_changed_hook"
@@ -231,16 +198,85 @@
             ],
             "properties": {
               "current_epoch": {
-                "$ref": "#/definitions/Epoch"
+                "description": "The current epoch, the one that was newly created.",
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/Epoch"
+                  }
+                ]
               }
             },
             "additionalProperties": false
           }
         },
         "additionalProperties": false
+      },
+      {
+        "description": "Update the contract's ownership. The `action` to be provided can be either to propose transferring ownership to an account, accept a pending ownership transfer, or renounce the ownership permanently.",
+        "type": "object",
+        "required": [
+          "update_ownership"
+        ],
+        "properties": {
+          "update_ownership": {
+            "$ref": "#/definitions/Action"
+          }
+        },
+        "additionalProperties": false
       }
     ],
     "definitions": {
+      "Action": {
+        "description": "Actions that can be taken to alter the contract's ownership",
+        "oneOf": [
+          {
+            "description": "Propose to transfer the contract's ownership to another account, optionally with an expiry time.\n\nCan only be called by the contract's current owner.\n\nAny existing pending ownership transfer is overwritten.",
+            "type": "object",
+            "required": [
+              "transfer_ownership"
+            ],
+            "properties": {
+              "transfer_ownership": {
+                "type": "object",
+                "required": [
+                  "new_owner"
+                ],
+                "properties": {
+                  "expiry": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/definitions/Expiration"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "new_owner": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Accept the pending ownership transfer.\n\nCan only be called by the pending owner.",
+            "type": "string",
+            "enum": [
+              "accept_ownership"
+            ]
+          },
+          {
+            "description": "Give up the contract's ownership and the possibility of appointing a new owner.\n\nCan only be invoked by the contract's current owner.\n\nAny existing pending ownership transfer is canceled.",
+            "type": "string",
+            "enum": [
+              "renounce_ownership"
+            ]
+          }
+        ]
+      },
       "Coin": {
         "type": "object",
         "required": [
@@ -278,6 +314,53 @@
         },
         "additionalProperties": false
       },
+      "Expiration": {
+        "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+        "oneOf": [
+          {
+            "description": "AtHeight will expire when `env.block.height` >= height",
+            "type": "object",
+            "required": [
+              "at_height"
+            ],
+            "properties": {
+              "at_height": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "AtTime will expire when `env.block.time` >= time",
+            "type": "object",
+            "required": [
+              "at_time"
+            ],
+            "properties": {
+              "at_time": {
+                "$ref": "#/definitions/Timestamp"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "description": "Never will never expire. Used to express the empty variant",
+            "type": "object",
+            "required": [
+              "never"
+            ],
+            "properties": {
+              "never": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "Timestamp": {
         "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
         "allOf": [
@@ -302,17 +385,10 @@
     "oneOf": [
       {
         "description": "Returns the [Config] of te contract.",
-        "type": "object",
-        "required": [
+        "type": "string",
+        "enum": [
           "config"
-        ],
-        "properties": {
-          "config": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
+        ]
       },
       {
         "description": "Returns the amount of assets that have been bonded by the specified address.",
@@ -323,12 +399,13 @@
         "properties": {
           "bonded": {
             "type": "object",
-            "required": [
-              "address"
-            ],
             "properties": {
               "address": {
-                "type": "string"
+                "description": "The address to check for bonded assets. If none is provided, all bonded assets in the contract are returned.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false
@@ -351,12 +428,15 @@
             ],
             "properties": {
               "address": {
+                "description": "The address to check for unbonding assets.",
                 "type": "string"
               },
               "denom": {
+                "description": "The denom to check for unbonding assets.",
                 "type": "string"
               },
               "limit": {
+                "description": "The maximum amount of unbonding assets to return.",
                 "type": [
                   "integer",
                   "null"
@@ -365,6 +445,7 @@
                 "minimum": 0.0
               },
               "start_after": {
+                "description": "The amount of unbonding assets to skip. Allows pagination.",
                 "type": [
                   "integer",
                   "null"
@@ -393,68 +474,14 @@
             ],
             "properties": {
               "address": {
+                "description": "The address to check for withdrawable assets.",
                 "type": "string"
               },
               "denom": {
+                "description": "The denom to check for withdrawable assets.",
                 "type": "string"
               }
             },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Returns the weight of the address.",
-        "type": "object",
-        "required": [
-          "weight"
-        ],
-        "properties": {
-          "weight": {
-            "type": "object",
-            "required": [
-              "address"
-            ],
-            "properties": {
-              "address": {
-                "type": "string"
-              },
-              "global_index": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/GlobalIndex"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              },
-              "timestamp": {
-                "anyOf": [
-                  {
-                    "$ref": "#/definitions/Timestamp"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Returns the total amount of assets that have been bonded to the contract.",
-        "type": "object",
-        "required": [
-          "total_bonded"
-        ],
-        "properties": {
-          "total_bonded": {
-            "type": "object",
             "additionalProperties": false
           }
         },
@@ -469,27 +496,24 @@
         "properties": {
           "global_index": {
             "type": "object",
+            "properties": {
+              "reward_bucket_id": {
+                "description": "The reward bucket id to check for the global index. If none is provided, the current global index is returned.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
             "additionalProperties": false
           }
         },
         "additionalProperties": false
       },
       {
-        "description": "Returns the [Epoch]s that can be claimed.",
-        "type": "object",
-        "required": [
-          "claimable_epochs"
-        ],
-        "properties": {
-          "claimable_epochs": {
-            "type": "object",
-            "additionalProperties": false
-          }
-        },
-        "additionalProperties": false
-      },
-      {
-        "description": "Returns the [Epoch]s that can be claimed by an address.",
+        "description": "Returns the [RewardBucket]s that can be claimed by an address.",
         "type": "object",
         "required": [
           "claimable"
@@ -497,11 +521,34 @@
         "properties": {
           "claimable": {
             "type": "object",
+            "properties": {
+              "address": {
+                "description": "The address to check for claimable reward buckets. If none is provided, all possible reward buckets stored in the contract that can potentially be claimed are returned.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Returns the rewards for the given address.",
+        "type": "object",
+        "required": [
+          "rewards"
+        ],
+        "properties": {
+          "rewards": {
+            "type": "object",
             "required": [
-              "addr"
+              "address"
             ],
             "properties": {
-              "addr": {
+              "address": {
                 "type": "string"
               }
             },
@@ -509,84 +556,22 @@
           }
         },
         "additionalProperties": false
-      }
-    ],
-    "definitions": {
-      "Coin": {
-        "type": "object",
-        "required": [
-          "amount",
-          "denom"
-        ],
-        "properties": {
-          "amount": {
-            "$ref": "#/definitions/Uint128"
-          },
-          "denom": {
-            "type": "string"
-          }
-        }
       },
-      "GlobalIndex": {
+      {
+        "description": "Query the contract's ownership information",
         "type": "object",
         "required": [
-          "bonded_amount",
-          "bonded_assets",
-          "timestamp",
-          "weight"
+          "ownership"
         ],
         "properties": {
-          "bonded_amount": {
-            "description": "The total amount of tokens bonded in the contract.",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              }
-            ]
-          },
-          "bonded_assets": {
-            "description": "Assets that are bonded in the contract.",
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/Coin"
-            }
-          },
-          "timestamp": {
-            "description": "The timestamp at which the total bond was registered.",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Timestamp"
-              }
-            ]
-          },
-          "weight": {
-            "description": "The total weight of the bond at the given block height.",
-            "allOf": [
-              {
-                "$ref": "#/definitions/Uint128"
-              }
-            ]
+          "ownership": {
+            "type": "object",
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
-      },
-      "Timestamp": {
-        "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
-        "allOf": [
-          {
-            "$ref": "#/definitions/Uint64"
-          }
-        ]
-      },
-      "Uint128": {
-        "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-        "type": "string"
-      },
-      "Uint64": {
-        "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
-        "type": "string"
       }
-    }
+    ]
   },
   "migrate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -603,21 +588,23 @@
       "type": "object",
       "required": [
         "bonded_assets",
-        "first_bonded_epoch_id",
         "total_bonded"
       ],
       "properties": {
         "bonded_assets": {
+          "description": "The assets that are bonded by the address.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Coin"
           }
         },
-        "first_bonded_epoch_id": {
-          "$ref": "#/definitions/Uint64"
-        },
         "total_bonded": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The total amount of bonded tokens by the address. Bear in mind the bonded assets are considered to be equal for this purpose.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -639,26 +626,24 @@
         },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }
     },
     "claimable": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ClaimableEpochsResponse",
+      "title": "ClaimableRewardBucketsResponse",
+      "description": "Response for the Claimable query",
       "type": "object",
       "required": [
-        "epochs"
+        "reward_buckets"
       ],
       "properties": {
-        "epochs": {
+        "reward_buckets": {
+          "description": "The reward buckets that can be claimed by the address.",
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Epoch"
+            "$ref": "#/definitions/RewardBucket"
           }
         }
       },
@@ -679,54 +664,14 @@
             }
           }
         },
-        "Epoch": {
-          "type": "object",
-          "required": [
-            "available",
-            "claimed",
-            "global_index",
-            "id",
-            "start_time",
-            "total"
-          ],
-          "properties": {
-            "available": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            },
-            "claimed": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            },
-            "global_index": {
-              "$ref": "#/definitions/GlobalIndex"
-            },
-            "id": {
-              "$ref": "#/definitions/Uint64"
-            },
-            "start_time": {
-              "$ref": "#/definitions/Timestamp"
-            },
-            "total": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            }
-          },
-          "additionalProperties": false
-        },
         "GlobalIndex": {
           "type": "object",
           "required": [
             "bonded_amount",
             "bonded_assets",
-            "timestamp",
-            "weight"
+            "epoch_id",
+            "last_updated",
+            "last_weight"
           ],
           "properties": {
             "bonded_amount": {
@@ -744,16 +689,20 @@
                 "$ref": "#/definitions/Coin"
               }
             },
-            "timestamp": {
-              "description": "The timestamp at which the total bond was registered.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/Timestamp"
-                }
-              ]
+            "epoch_id": {
+              "description": "The epoch id the global index was taken a snapshot for",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
             },
-            "weight": {
-              "description": "The total weight of the bond at the given block height.",
+            "last_updated": {
+              "description": "The epoch id at which the total bond was updated.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "last_weight": {
+              "description": "The total weight of the contract at the given updated_last epoch id.",
               "allOf": [
                 {
                   "$ref": "#/definitions/Uint128"
@@ -763,64 +712,14 @@
           },
           "additionalProperties": false
         },
-        "Timestamp": {
-          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Uint64"
-            }
-          ]
-        },
-        "Uint128": {
-          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
-          "type": "string"
-        }
-      }
-    },
-    "claimable_epochs": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ClaimableEpochsResponse",
-      "type": "object",
-      "required": [
-        "epochs"
-      ],
-      "properties": {
-        "epochs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Epoch"
-          }
-        }
-      },
-      "additionalProperties": false,
-      "definitions": {
-        "Coin": {
-          "type": "object",
-          "required": [
-            "amount",
-            "denom"
-          ],
-          "properties": {
-            "amount": {
-              "$ref": "#/definitions/Uint128"
-            },
-            "denom": {
-              "type": "string"
-            }
-          }
-        },
-        "Epoch": {
+        "RewardBucket": {
           "type": "object",
           "required": [
             "available",
             "claimed",
+            "epoch_start_time",
             "global_index",
             "id",
-            "start_time",
             "total"
           ],
           "properties": {
@@ -836,63 +735,22 @@
                 "$ref": "#/definitions/Coin"
               }
             },
+            "epoch_start_time": {
+              "$ref": "#/definitions/Timestamp"
+            },
             "global_index": {
               "$ref": "#/definitions/GlobalIndex"
             },
             "id": {
-              "$ref": "#/definitions/Uint64"
-            },
-            "start_time": {
-              "$ref": "#/definitions/Timestamp"
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
             },
             "total": {
               "type": "array",
               "items": {
                 "$ref": "#/definitions/Coin"
               }
-            }
-          },
-          "additionalProperties": false
-        },
-        "GlobalIndex": {
-          "type": "object",
-          "required": [
-            "bonded_amount",
-            "bonded_assets",
-            "timestamp",
-            "weight"
-          ],
-          "properties": {
-            "bonded_amount": {
-              "description": "The total amount of tokens bonded in the contract.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/Uint128"
-                }
-              ]
-            },
-            "bonded_assets": {
-              "description": "Assets that are bonded in the contract.",
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Coin"
-              }
-            },
-            "timestamp": {
-              "description": "The timestamp at which the total bond was registered.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/Timestamp"
-                }
-              ]
-            },
-            "weight": {
-              "description": "The total weight of the bond at the given block height.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/Uint128"
-                }
-              ]
             }
           },
           "additionalProperties": false
@@ -922,9 +780,9 @@
       "required": [
         "bonding_assets",
         "distribution_denom",
+        "epoch_manager_addr",
         "grace_period",
         "growth_rate",
-        "owner",
         "pool_manager_addr",
         "unbonding_period"
       ],
@@ -940,27 +798,25 @@
           "description": "Distribution denom for the rewards",
           "type": "string"
         },
-        "grace_period": {
-          "description": "The duration of the grace period in epochs, i.e. how many expired epochs can be claimed",
+        "epoch_manager_addr": {
+          "description": "Epoch Manager contract address",
           "allOf": [
             {
-              "$ref": "#/definitions/Uint64"
+              "$ref": "#/definitions/Addr"
             }
           ]
+        },
+        "grace_period": {
+          "description": "Grace period the maximum age of a reward bucket before it's considered expired and fees are forwarded from it",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
         },
         "growth_rate": {
           "description": "A fraction that controls the effect of time on the weight of a bond. If the growth rate is set to zero, time will have no impact on the weight.",
           "allOf": [
             {
               "$ref": "#/definitions/Decimal"
-            }
-          ]
-        },
-        "owner": {
-          "description": "Owner of the contract.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Addr"
             }
           ]
         },
@@ -973,12 +829,10 @@
           ]
         },
         "unbonding_period": {
-          "description": "Unbonding period in nanoseconds.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Uint64"
-            }
-          ]
+          "description": "Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can be withdrawn",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
         }
       },
       "additionalProperties": false,
@@ -990,10 +844,6 @@
         "Decimal": {
           "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
           "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
-          "type": "string"
         }
       }
     },
@@ -1004,8 +854,9 @@
       "required": [
         "bonded_amount",
         "bonded_assets",
-        "timestamp",
-        "weight"
+        "epoch_id",
+        "last_updated",
+        "last_weight"
       ],
       "properties": {
         "bonded_amount": {
@@ -1023,16 +874,20 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "timestamp": {
-          "description": "The timestamp at which the total bond was registered.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Timestamp"
-            }
-          ]
+        "epoch_id": {
+          "description": "The epoch id the global index was taken a snapshot for",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
         },
-        "weight": {
-          "description": "The total weight of the bond at the given block height.",
+        "last_updated": {
+          "description": "The epoch id at which the total bond was updated.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "last_weight": {
+          "description": "The total weight of the contract at the given updated_last epoch id.",
           "allOf": [
             {
               "$ref": "#/definitions/Uint128"
@@ -1056,6 +911,93 @@
               "type": "string"
             }
           }
+        },
+        "Uint128": {
+          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
+          "type": "string"
+        }
+      }
+    },
+    "ownership": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Ownership_for_String",
+      "description": "The contract's ownership info",
+      "type": "object",
+      "properties": {
+        "owner": {
+          "description": "The contract's current owner. `None` if the ownership has been renounced.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pending_expiry": {
+          "description": "The deadline for the pending owner to accept the ownership. `None` if there isn't a pending ownership transfer, or if a transfer exists and it doesn't have a deadline.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Expiration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pending_owner": {
+          "description": "The account who has been proposed to take over the ownership. `None` if there isn't a pending ownership transfer.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Expiration": {
+          "description": "Expiration represents a point in time when some event happens. It can compare with a BlockInfo and will return is_expired() == true once the condition is hit (and for every block in the future)",
+          "oneOf": [
+            {
+              "description": "AtHeight will expire when `env.block.height` >= height",
+              "type": "object",
+              "required": [
+                "at_height"
+              ],
+              "properties": {
+                "at_height": {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "AtTime will expire when `env.block.time` >= time",
+              "type": "object",
+              "required": [
+                "at_time"
+              ],
+              "properties": {
+                "at_time": {
+                  "$ref": "#/definitions/Timestamp"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Never will never expire. Used to express the empty variant",
+              "type": "object",
+              "required": [
+                "never"
+              ],
+              "properties": {
+                "never": {
+                  "type": "object",
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "Timestamp": {
           "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
@@ -1065,38 +1007,27 @@
             }
           ]
         },
-        "Uint128": {
-          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
         "Uint64": {
           "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }
     },
-    "total_bonded": {
+    "rewards": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BondedResponse",
-      "description": "Response for the Bonded query",
+      "title": "RewardsResponse",
+      "description": "Response for the Rewards query",
       "type": "object",
       "required": [
-        "bonded_assets",
-        "first_bonded_epoch_id",
-        "total_bonded"
+        "rewards"
       ],
       "properties": {
-        "bonded_assets": {
+        "rewards": {
+          "description": "The rewards that can be claimed by the address.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Coin"
           }
-        },
-        "first_bonded_epoch_id": {
-          "$ref": "#/definitions/Uint64"
-        },
-        "total_bonded": {
-          "$ref": "#/definitions/Uint128"
         }
       },
       "additionalProperties": false,
@@ -1118,10 +1049,6 @@
         },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }
@@ -1137,9 +1064,15 @@
       ],
       "properties": {
         "total_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The total amount of unbonded tokens by the address.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         },
         "unbonding_requests": {
+          "description": "The total amount of unbonded assets by the address.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/Bond"
@@ -1148,11 +1081,18 @@
       },
       "additionalProperties": false,
       "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
         "Bond": {
           "type": "object",
           "required": [
             "asset",
-            "timestamp",
+            "created_at_epoch",
+            "id",
+            "last_updated",
+            "receiver",
             "weight"
           ],
           "properties": {
@@ -1164,13 +1104,40 @@
                 }
               ]
             },
-            "timestamp": {
-              "description": "The timestamp at which the bond was done.",
+            "created_at_epoch": {
+              "description": "The epoch id at which the Bond was created.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "id": {
+              "description": "The id of the bond.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "last_updated": {
+              "description": "The epoch id at which the bond was last time updated.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "receiver": {
+              "description": "The owner of the bond.",
               "allOf": [
                 {
-                  "$ref": "#/definitions/Timestamp"
+                  "$ref": "#/definitions/Addr"
                 }
               ]
+            },
+            "unbonded_at": {
+              "description": "The time at which the Bond was unbonded.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
             },
             "weight": {
               "description": "The weight of the bond at the given block height.",
@@ -1198,73 +1165,8 @@
             }
           }
         },
-        "Timestamp": {
-          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Uint64"
-            }
-          ]
-        },
         "Uint128": {
           "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
-          "type": "string"
-        }
-      }
-    },
-    "weight": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BondingWeightResponse",
-      "description": "Response for the Weight query.",
-      "type": "object",
-      "required": [
-        "address",
-        "global_weight",
-        "share",
-        "timestamp",
-        "weight"
-      ],
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "global_weight": {
-          "$ref": "#/definitions/Uint128"
-        },
-        "share": {
-          "$ref": "#/definitions/Decimal"
-        },
-        "timestamp": {
-          "$ref": "#/definitions/Timestamp"
-        },
-        "weight": {
-          "$ref": "#/definitions/Uint128"
-        }
-      },
-      "additionalProperties": false,
-      "definitions": {
-        "Decimal": {
-          "description": "A fixed-point decimal value with 18 fractional digits, i.e. Decimal(1_000_000_000_000_000_000) == 1.0\n\nThe greatest possible value that can be represented is 340282366920938463463.374607431768211455 (which is (2^128 - 1) / 10^18)",
-          "type": "string"
-        },
-        "Timestamp": {
-          "description": "A point in time in nanosecond precision.\n\nThis type can represent times from 1970-01-01T00:00:00Z to 2554-07-21T23:34:33Z.\n\n## Examples\n\n``` # use cosmwasm_std::Timestamp; let ts = Timestamp::from_nanos(1_000_000_202); assert_eq!(ts.nanos(), 1_000_000_202); assert_eq!(ts.seconds(), 1); assert_eq!(ts.subsec_nanos(), 202);\n\nlet ts = ts.plus_seconds(2); assert_eq!(ts.nanos(), 3_000_000_202); assert_eq!(ts.seconds(), 3); assert_eq!(ts.subsec_nanos(), 202); ```",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Uint64"
-            }
-          ]
-        },
-        "Uint128": {
-          "description": "A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u128` to get the value out:\n\n``` # use cosmwasm_std::Uint128; let a = Uint128::from(123u128); assert_eq!(a.u128(), 123);\n\nlet b = Uint128::from(42u64); assert_eq!(b.u128(), 42);\n\nlet c = Uint128::from(70u32); assert_eq!(c.u128(), 70); ```",
-          "type": "string"
-        },
-        "Uint64": {
-          "description": "A thin wrapper around u64 that is using strings for JSON encoding/decoding, such that the full u64 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.\n\n# Examples\n\nUse `from` to create instances of this and `u64` to get the value out:\n\n``` # use cosmwasm_std::Uint64; let a = Uint64::from(42u64); assert_eq!(a.u64(), 42);\n\nlet b = Uint64::from(70u32); assert_eq!(b.u64(), 70); ```",
           "type": "string"
         }
       }
@@ -1279,7 +1181,12 @@
       ],
       "properties": {
         "withdrawable_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The total amount of withdrawable assets by the address.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false,

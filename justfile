@@ -34,6 +34,7 @@ format:
   cargo fmt --all
   find . -type f -iname "*.toml" -print0 | xargs -0 taplo format
   find . -type f -name '*.sh' -exec shfmt -w {} \;
+  scripts/utils/format_md.sh
 
 # Runs clippy with the a feature flag if provided.
 lint FEATURE='':

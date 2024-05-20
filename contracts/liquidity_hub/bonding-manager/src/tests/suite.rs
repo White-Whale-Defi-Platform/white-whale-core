@@ -1,9 +1,6 @@
 use anyhow::Error;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{
-    coin, from_json, Addr, Coin, Decimal, Empty, OwnedDeps, StdResult, Uint128, Uint64,
-};
-// use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use cosmwasm_std::testing::{MockApi, MockStorage};
+use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Uint128, Uint64};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
@@ -11,17 +8,14 @@ use cw_multi_test::{
 use white_whale_std::fee::PoolFee;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
-use crate::contract::query;
-use crate::state::{CONFIG, EPOCHS};
 use cw_multi_test::{Contract, ContractWrapper};
 use white_whale_std::bonding_manager::{
-    BondedResponse, BondingWeightResponse, Config, ExecuteMsg, InstantiateMsg, QueryMsg,
+    BondedResponse, Config, ExecuteMsg, GlobalIndex, InstantiateMsg, QueryMsg, RewardsResponse,
     UnbondingResponse, WithdrawableResponse,
 };
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, Epoch};
+use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
 use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
 use white_whale_std::pool_manager::PoolType;
-use white_whale_std::pool_network::asset::PairType;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -36,11 +30,13 @@ pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
 }
 
 fn contract_pool_manager() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new_with_empty(
+    let contract = ContractWrapper::new(
         pool_manager::contract::execute,
         pool_manager::contract::instantiate,
         pool_manager::contract::query,
-    );
+    )
+    .with_migrate(pool_manager::contract::migrate)
+    .with_reply(pool_manager::contract::reply);
 
     Box::new(contract)
 }
@@ -69,21 +65,19 @@ type OsmosisTokenFactoryApp = App<
     GovFailingModule,
     StargateMock,
 >;
-pub struct TestingRobot {
+pub struct TestingSuite {
     pub app: OsmosisTokenFactoryApp,
-    pub sender: Addr,
-    pub another_sender: Addr,
+    pub senders: Vec<Addr>,
     pub bonding_manager_addr: Addr,
     pub pool_manager_addr: Addr,
     pub epoch_manager_addr: Addr,
-    owned_deps: OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>,
-    env: cosmwasm_std::Env,
 }
 
 /// instantiate / execute messages
-impl TestingRobot {
+impl TestingSuite {
+    #[track_caller]
     pub(crate) fn default() -> Self {
-        let sender = Addr::unchecked("owner");
+        let sender = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
         let another_sender = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
         let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
 
@@ -94,6 +88,10 @@ impl TestingRobot {
             coin(1_000_000_000_000, "ampWHALE"),
             coin(1_000_000_000_000, "bWHALE"),
             coin(1_000_000_000_000, "non_whitelisted_asset"),
+            coin(
+                1_000_000_000_000,
+                "factory/contract100/uluna-uwhale.pool.random_identifier.uLP",
+            ),
         ];
 
         let balances = vec![
@@ -115,16 +113,14 @@ impl TestingRobot {
 
         Self {
             app: app,
-            sender,
-            another_sender,
+            senders: vec![sender, another_sender, sender_3],
             bonding_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
             epoch_manager_addr: Addr::unchecked(""),
-            owned_deps: mock_dependencies(),
-            env: mock_env(),
         }
     }
 
+    #[track_caller]
     pub(crate) fn fast_forward(&mut self, seconds: u64) -> &mut Self {
         let mut block_info = self.app.block_info();
         block_info.time = block_info.time.plus_nanos(seconds * 1_000_000_000);
@@ -132,41 +128,48 @@ impl TestingRobot {
 
         self
     }
+    #[track_caller]
+    pub(crate) fn add_one_day(&mut self) -> &mut Self {
+        let mut block_info = self.app.block_info();
+        block_info.time = block_info.time.plus_days(1);
+        self.app.set_block(block_info);
 
+        self
+    }
+
+    #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
         self.instantiate(
-            Uint64::new(1_000_000_000_000u64),
+            1u64,
             Decimal::one(),
             vec!["ampWHALE".to_string(), "bWHALE".to_string()],
             &vec![],
         )
     }
 
+    #[track_caller]
     pub(crate) fn instantiate(
         &mut self,
-        unbonding_period: Uint64,
+        unbonding_period: u64,
         growth_rate: Decimal,
         bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
     ) -> &mut Self {
         let epoch_manager_id = self.app.store_code(epoch_manager_contract());
-        println!(
-            "epoch_manager_id: {}",
-            self.app.block_info().time.minus_seconds(10).nanos()
-        );
+
         let epoch_manager_addr = self
             .app
             .instantiate_contract(
                 epoch_manager_id,
-                self.sender.clone(),
+                self.senders[0].clone(),
                 &white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
                     start_epoch: EpochV2 {
                         id: 0,
-                        start_time: self.app.block_info().time.plus_seconds(10),
+                        start_time: self.app.block_info().time,
                     },
                     epoch_config: EpochConfig {
                         duration: Uint64::new(86_400_000_000_000u64), // a day
-                        genesis_epoch: self.app.block_info().time.plus_seconds(10).nanos().into(), // March 14, 2023 2:00:00 PM
+                        genesis_epoch: self.app.block_info().time.nanos().into(),
                     },
                 },
                 &[],
@@ -178,31 +181,16 @@ impl TestingRobot {
         let bonding_manager_addr =
             instantiate_contract(self, unbonding_period, growth_rate, bonding_assets, funds)
                 .unwrap();
-        println!("bonding_manager_addr: {}", bonding_manager_addr);
 
         let hook_registration_msg =
             white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::AddHook {
                 contract_addr: bonding_manager_addr.clone().to_string(),
             };
-        let resp = self
-            .app
-            .execute_contract(
-                self.sender.clone(),
-                epoch_manager_addr.clone(),
-                &hook_registration_msg,
-                &[],
-            )
-            .unwrap();
-
-        println!("hook_registration_msg: {:?}", resp);
-        // self.fast_forward(10);
-        let new_epoch_msg =
-            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
         self.app
             .execute_contract(
-                self.sender.clone(),
+                self.senders[0].clone(),
                 epoch_manager_addr.clone(),
-                &new_epoch_msg,
+                &hook_registration_msg,
                 &[],
             )
             .unwrap();
@@ -218,7 +206,7 @@ impl TestingRobot {
 
         let pool_manager_id = self.app.store_code(contract_pool_manager());
 
-        let creator = self.sender.clone();
+        let creator = self.senders[0].clone();
 
         let pool_manager_addr = self
             .app
@@ -232,23 +220,30 @@ impl TestingRobot {
             )
             .unwrap();
         let msg = ExecuteMsg::UpdateConfig {
+            epoch_manager_addr: Some(epoch_manager_addr.clone().to_string()),
             pool_manager_addr: Some(pool_manager_addr.clone().to_string()),
             growth_rate: None,
-            owner: None,
             unbonding_period: None,
         };
         self.app
-            .execute_contract(self.sender.clone(), bonding_manager_addr.clone(), &msg, &[])
+            .execute_contract(
+                self.senders[0].clone(),
+                bonding_manager_addr.clone(),
+                &msg,
+                &[],
+            )
             .unwrap();
+
         self.bonding_manager_addr = bonding_manager_addr;
         self.pool_manager_addr = pool_manager_addr;
         self.epoch_manager_addr = epoch_manager_addr;
         self
     }
 
+    #[track_caller]
     pub(crate) fn instantiate_err(
         &mut self,
-        unbonding_period: Uint64,
+        unbonding_period: u64,
         growth_rate: Decimal,
         bonding_assets: Vec<String>,
         funds: &Vec<Coin>,
@@ -262,10 +257,10 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn bond(
         &mut self,
         sender: Addr,
-        _asset: Coin,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
@@ -279,6 +274,7 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn unbond(
         &mut self,
         sender: Addr,
@@ -295,6 +291,7 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn claim(
         &mut self,
         sender: Addr,
@@ -310,6 +307,7 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn withdraw(
         &mut self,
         sender: Addr,
@@ -326,17 +324,35 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn create_new_epoch(&mut self) -> &mut Self {
-        let new_epoch_msg =
-            white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch {};
+        let new_epoch_msg = white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch;
         self.app
             .execute_contract(
-                self.sender.clone(),
+                self.senders[0].clone(),
                 self.epoch_manager_addr.clone(),
                 &new_epoch_msg,
                 &[],
             )
             .unwrap();
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn on_epoch_created(
+        &mut self,
+        sender: Addr,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::EpochChangedHook {
+            current_epoch: Default::default(),
+        };
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
 
         self
     }
@@ -354,17 +370,18 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
-        owner: Option<String>,
+        epoch_manager_addr: Option<String>,
         pool_manager_addr: Option<String>,
-        unbonding_period: Option<Uint64>,
+        unbonding_period: Option<u64>,
         growth_rate: Option<Decimal>,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::UpdateConfig {
-            owner,
+            epoch_manager_addr,
             pool_manager_addr,
             unbonding_period,
             growth_rate,
@@ -377,39 +394,11 @@ impl TestingRobot {
 
         self
     }
-
-    pub(crate) fn add_epochs_to_state(&mut self, epochs: Vec<Epoch>) -> &mut Self {
-        for epoch in epochs {
-            EPOCHS
-                .save(
-                    &mut self.owned_deps.storage,
-                    &epoch.id.to_be_bytes(),
-                    &epoch,
-                )
-                .unwrap();
-        }
-        CONFIG
-            .save(
-                &mut self.owned_deps.storage,
-                &Config {
-                    distribution_denom: "uwhale".to_string(),
-                    unbonding_period: Uint64::new(1_000_000_000_000u64),
-                    growth_rate: Decimal::one(),
-                    bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
-                    grace_period: Uint64::new(21),
-                    owner: Addr::unchecked("owner"),
-                    pool_manager_addr: Addr::unchecked("pool_manager"),
-                },
-            )
-            .unwrap();
-
-        self
-    }
 }
 
 fn instantiate_contract(
-    robot: &mut TestingRobot,
-    unbonding_period: Uint64,
+    suite: &mut TestingSuite,
+    unbonding_period: u64,
     growth_rate: Decimal,
     bonding_assets: Vec<String>,
     funds: &Vec<Coin>,
@@ -419,22 +408,24 @@ fn instantiate_contract(
         distribution_denom: "uwhale".to_string(),
         growth_rate,
         bonding_assets,
-        grace_period: Uint64::new(21),
+        grace_period: 21u64,
+        epoch_manager_addr: "".to_string(),
     };
 
-    let bonding_manager_id = robot.app.store_code(bonding_manager_contract());
-    robot.app.instantiate_contract(
+    let bonding_manager_id = suite.app.store_code(bonding_manager_contract());
+    suite.app.instantiate_contract(
         bonding_manager_id,
-        robot.sender.clone(),
+        suite.senders[0].clone(),
         &msg,
         funds,
-        "White Whale Lair".to_string(),
-        Some(robot.sender.clone().to_string()),
+        "Bonding Manager".to_string(),
+        Some(suite.senders[0].clone().to_string()),
     )
 }
 
 /// queries
-impl TestingRobot {
+impl TestingSuite {
+    #[track_caller]
     pub(crate) fn query_config(
         &mut self,
         response: impl Fn(StdResult<(&mut Self, Config)>),
@@ -449,95 +440,69 @@ impl TestingRobot {
 
         self
     }
-
-    pub(crate) fn query_weight(
+    #[track_caller]
+    pub(crate) fn query_owner(
         &mut self,
-        address: String,
-
-        response: impl Fn(StdResult<(&mut Self, BondingWeightResponse)>),
+        response: impl Fn(StdResult<(&mut Self, String)>),
     ) -> &mut Self {
-        let bonding_weight_response: BondingWeightResponse = self
+        let ownership: cw_ownable::Ownership<String> = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Ownership {})
+            .unwrap();
+
+        response(Ok((self, ownership.owner.unwrap())));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_global_index(
+        &mut self,
+        reward_bucket_id: Option<u64>,
+        response: impl Fn(StdResult<(&mut Self, GlobalIndex)>),
+    ) -> &mut Self {
+        let global_index: GlobalIndex = self
             .app
             .wrap()
             .query_wasm_smart(
                 &self.bonding_manager_addr,
-                &QueryMsg::Weight {
-                    address,
-                    timestamp: Some(self.app.block_info().time),
-                    global_index: None,
-                },
+                &QueryMsg::GlobalIndex { reward_bucket_id },
             )
             .unwrap();
 
-        response(Ok((self, bonding_weight_response)));
+        response(Ok((self, global_index)));
 
         self
     }
 
-    pub(crate) fn query_claimable_epochs(
+    #[track_caller]
+    pub(crate) fn query_claimable_reward_buckets(
         &mut self,
         address: Option<Addr>,
-        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
+        response: impl Fn(StdResult<(&mut Self, Vec<RewardBucket>)>),
     ) -> &mut Self {
-        let query_res = if let Some(address) = address {
-            query(
-                self.owned_deps.as_ref(),
-                self.env.clone(),
-                QueryMsg::Claimable {
-                    addr: address.to_string(),
-                },
-            )
-            .unwrap()
+        let address = if let Some(address) = address {
+            Some(address.to_string())
         } else {
-            query(
-                self.owned_deps.as_ref(),
-                self.env.clone(),
-                QueryMsg::ClaimableEpochs {},
-            )
-            .unwrap()
+            None
         };
 
-        let res: ClaimableEpochsResponse = from_json(query_res).unwrap();
+        let query_res: ClaimableRewardBucketsResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Claimable { address })
+            .unwrap();
 
-        response(Ok((self, res.epochs)));
+        response(Ok((self, query_res.reward_buckets)));
 
         self
     }
 
-    pub(crate) fn query_claimable_epochs_live(
-        &mut self,
-        address: Option<Addr>,
-        response: impl Fn(StdResult<(&mut Self, Vec<Epoch>)>),
-    ) -> &mut Self {
-        let query_res = if let Some(address) = address {
-            let bonded_response: ClaimableEpochsResponse = self
-                .app
-                .wrap()
-                .query_wasm_smart(
-                    &self.bonding_manager_addr,
-                    &QueryMsg::Claimable {
-                        addr: address.to_string(),
-                    },
-                )
-                .unwrap();
-            bonded_response
-        } else {
-            let bonded_response: ClaimableEpochsResponse = self
-                .app
-                .wrap()
-                .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::ClaimableEpochs {})
-                .unwrap();
-            bonded_response
-        };
-
-        response(Ok((self, query_res.epochs)));
-
-        self
-    }
-
+    #[track_caller]
     pub(crate) fn query_bonded(
         &mut self,
-        address: String,
+        address: Option<String>,
         response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
     ) -> &mut Self {
         let bonded_response: BondedResponse = self
@@ -551,6 +516,7 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_unbonding(
         &mut self,
         address: String,
@@ -578,6 +544,7 @@ impl TestingRobot {
         self
     }
 
+    #[track_caller]
     pub(crate) fn query_withdrawable(
         &mut self,
         address: String,
@@ -592,24 +559,25 @@ impl TestingRobot {
                 &QueryMsg::Withdrawable { address, denom },
             )
             .unwrap();
-        println!("withdrawable_response: {:?}", withdrawable_response);
 
         response(Ok((self, withdrawable_response)));
 
         self
     }
 
-    pub(crate) fn query_total_bonded(
+    #[track_caller]
+    pub(crate) fn query_rewards(
         &mut self,
-        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, RewardsResponse)>),
     ) -> &mut Self {
-        let bonded_response: BondedResponse = self
+        let rewards_response: RewardsResponse = self
             .app
             .wrap()
-            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::TotalBonded {})
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Rewards { address })
             .unwrap();
 
-        response(Ok((self, bonded_response)));
+        response(Ok((self, rewards_response)));
 
         self
     }
@@ -688,18 +656,18 @@ impl TestingRobot {
     }
 
     #[track_caller]
-    pub(crate) fn fill_rewards_lp(
+    pub(crate) fn fill_rewards(
         &mut self,
         sender: Addr,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
-        let msg = white_whale_std::bonding_manager::ExecuteMsg::FillRewardsCoin {};
-
-        result(
-            self.app
-                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &funds),
-        );
+        result(self.app.execute_contract(
+            sender,
+            self.bonding_manager_addr.clone(),
+            &ExecuteMsg::FillRewards,
+            &funds,
+        ));
 
         self
     }
@@ -731,63 +699,5 @@ impl TestingRobot {
         ));
 
         self
-    }
-}
-
-/// assertions
-impl TestingRobot {
-    pub(crate) fn assert_config(&mut self, expected: Config) -> &mut Self {
-        self.query_config(|res| {
-            let config = res.unwrap().1;
-            assert_eq!(config, expected);
-        });
-
-        self
-    }
-
-    pub(crate) fn assert_bonded_response(
-        &mut self,
-        address: String,
-        expected: BondedResponse,
-    ) -> &mut Self {
-        self.query_bonded(address, |res| {
-            let bonded_response = res.unwrap().1;
-            assert_eq!(bonded_response, expected);
-        })
-    }
-
-    pub(crate) fn assert_bonding_weight_response(
-        &mut self,
-        address: String,
-        expected: BondingWeightResponse,
-    ) -> &mut Self {
-        self.query_weight(address, |res| {
-            let bonding_weight_response = res.unwrap().1;
-            assert_eq!(bonding_weight_response, expected);
-        })
-    }
-
-    pub(crate) fn assert_unbonding_response(
-        &mut self,
-        address: String,
-        denom: String,
-        expected: UnbondingResponse,
-    ) -> &mut Self {
-        self.query_unbonding(address, denom, None, None, |res| {
-            let unbonding_response = res.unwrap().1;
-            assert_eq!(unbonding_response, expected);
-        })
-    }
-
-    pub(crate) fn assert_withdrawable_response(
-        &mut self,
-        address: String,
-        denom: String,
-        expected: WithdrawableResponse,
-    ) -> &mut Self {
-        self.query_withdrawable(address, denom, |res| {
-            let withdrawable_response = res.unwrap().1;
-            assert_eq!(withdrawable_response, expected);
-        })
     }
 }

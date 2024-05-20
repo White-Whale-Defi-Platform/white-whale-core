@@ -474,7 +474,6 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_network::incentive::ExecuteMsg::Claim {};
-        println!("-------------- claiming {}", sender);
         result(self.app.execute_contract(sender, incentive_addr, &msg, &[]));
 
         self

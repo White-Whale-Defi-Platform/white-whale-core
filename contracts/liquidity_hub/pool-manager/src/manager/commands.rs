@@ -12,7 +12,6 @@ use crate::{
 
 use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_manager::{PoolInfo, PoolType};
-use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
 
@@ -108,8 +107,8 @@ pub fn create_pool(
     // send pool creation fee to whale lair
     let creation_fee = vec![config.pool_creation_fee];
 
-    // send pool creation fee to whale lair i.e the new fee_collector
-    messages.push(fill_rewards_msg_coin(
+    // send pool creation fee to the bonding manager
+    messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
         config.bonding_manager_addr.into_string(),
         creation_fee,
     )?);
@@ -174,15 +173,6 @@ pub fn create_pool(
     )?;
 
     attributes.push(attr("lp_asset", lp_asset));
-
-    #[cfg(all(
-        not(feature = "token_factory"),
-        not(feature = "osmosis_token_factory"),
-        not(feature = "injective")
-    ))]
-    {
-        return Err(ContractError::TokenFactoryNotEnabled);
-    }
 
     messages.push(white_whale_std::tokenfactory::create_denom::create_denom(
         env.contract.address,
