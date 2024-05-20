@@ -165,7 +165,7 @@ pub fn swap_coins_to_main_token(
     coins: Vec<Coin>,
     deps: &DepsMut,
     config: Config,
-    to_be_distribution_asset: &mut Coin,
+    distribution_asset: &mut Coin,
     distribution_denom: &String,
     messages: &mut Vec<CosmosMsg>,
 ) -> Result<(), ContractError> {
@@ -233,7 +233,7 @@ pub fn swap_coins_to_main_token(
 
         // Add the simulate amount received to the distribution_denom amount, if the swap fails this should
         // also be rolled back
-        to_be_distribution_asset.amount = to_be_distribution_asset
+        distribution_asset.amount = distribution_asset
             .amount
             .checked_add(simulate_swap_operations_response.amount)?;
 

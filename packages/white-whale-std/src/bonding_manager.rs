@@ -135,7 +135,8 @@ pub enum ExecuteMsg {
         /// The asset to unbond.
         asset: Coin,
     },
-    /// Sends withdrawable unbonded tokens to the user.
+    /// Sends withdrawable assets of the given denom to the user. An asset becomes withdrawable after
+    /// it has been unbonded and the unbonding period has passed.
     Withdraw {
         /// The denom to withdraw.
         denom: String,

@@ -37,7 +37,7 @@
       "additionalProperties": false
     },
     {
-      "description": "Sends withdrawable unbonded tokens to the user.",
+      "description": "Sends withdrawable assets of the given denom to the user. An asset becomes withdrawable after it has been unbonded and the unbonding period has passed.",
       "type": "object",
       "required": [
         "withdraw"

@@ -44,8 +44,7 @@ pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch
 /// The lp weight history for addresses, including the contract. i.e. how much lp weight an address
 /// or contract has at a given epoch.
 /// Key is a tuple of (address, lp_denom, epoch_id), value is the lp weight.
-pub const LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> =
-    Map::new("address_lp_weight_history");
+pub const LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> = Map::new("lp_weight_history");
 
 /// A monotonically increasing counter to generate unique incentive identifiers.
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");

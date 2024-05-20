@@ -29,19 +29,16 @@ pub(crate) fn on_epoch_created(
         ContractError::Unauthorized
     );
 
-    let global = GLOBAL.may_load(deps.storage)?;
-    // This happens only on the very first epoch where Global has not been initialised yet
-    if global.is_none() {
-        let initial_global_index = GlobalIndex {
+    let mut global_index = GLOBAL.load(deps.storage).unwrap_or(
+        // This happens only on the very first epoch where Global has not been initialised yet
+        GlobalIndex {
             epoch_id: current_epoch.id,
             last_updated: current_epoch.id,
             ..Default::default()
-        };
-        GLOBAL.save(deps.storage, &initial_global_index)?;
-    }
+        },
+    );
 
     // Update the global index epoch id
-    let mut global_index = GLOBAL.load(deps.storage)?;
     global_index.epoch_id = current_epoch.id;
 
     if global_index.bonded_amount == Uint128::zero() {
@@ -100,7 +97,7 @@ pub(crate) fn fill_rewards(
     let mut submessages: Vec<SubMsg> = vec![];
     // swap non-whale to whale
 
-    let mut distribution_denom_in_tx = info
+    let mut distribution_asset_in_tx = info
         .funds
         .iter()
         .find(|coin| coin.denom.eq(distribution_denom.as_str()))
@@ -126,7 +123,7 @@ pub(crate) fn fill_rewards(
         remnant_coins,
         &deps,
         config,
-        &mut distribution_denom_in_tx,
+        &mut distribution_asset_in_tx,
         &distribution_denom,
         &mut messages,
     )?;
@@ -136,7 +133,7 @@ pub(crate) fn fill_rewards(
     // Because we are using minimum receive, it is possible the contract can accumulate micro amounts of whale if we get more than what the swap query returned
     // If this became an issue we could look at replies instead of the query
     // The lp_tokens being withdrawn are handled in the reply entry point
-    fill_upcoming_reward_bucket(deps, distribution_denom_in_tx.clone())?;
+    fill_upcoming_reward_bucket(deps, distribution_asset_in_tx.clone())?;
 
     Ok(Response::default()
         .add_messages(messages)
