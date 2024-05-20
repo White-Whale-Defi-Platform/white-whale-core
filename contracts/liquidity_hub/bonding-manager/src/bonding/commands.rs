@@ -84,6 +84,11 @@ pub(crate) fn bond(
 
     GLOBAL.save(deps.storage, &global_index)?;
 
+    // first time the user bonds it shouldn't be able to claim rewards until the next epoch. This is
+    // why we save the last claimed epoch as the current epoch.
+    // In case the user has already bonded before, it won't be able to bond again without first
+    // claiming the pending rewards, in which case the last claimed epoch will be updated to the
+    // current epoch anyway.
     LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
     Ok(Response::default().add_attributes(vec![
@@ -125,12 +130,6 @@ pub(crate) fn unbond(
     if bonds_by_receiver.is_empty() {
         Err(ContractError::NothingToUnbond)
     } else {
-        // sanity check
-        ensure!(
-            bonds_by_receiver.len() == 1usize,
-            ContractError::AssetMismatch
-        );
-
         let mut unbond = bonds_by_receiver[0].clone();
 
         // check if the address has enough bond
@@ -192,7 +191,7 @@ pub(crate) fn unbond(
     }
 }
 
-/// Withdraws the rewards for the provided address
+/// Withdraws the unbonded asset of the given denom for the provided address
 pub(crate) fn withdraw(
     deps: DepsMut,
     address: Addr,

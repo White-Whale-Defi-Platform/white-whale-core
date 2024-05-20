@@ -11,7 +11,7 @@ pub const BONDING_ASSETS_LIMIT: usize = 2;
 pub const CONFIG: Item<Config> = Item::new("config");
 
 /// A monotonically increasing counter to generate unique bond ids.
-pub const BOND_COUNTER: Item<u64> = Item::new("bond_id_counter");
+pub const BOND_COUNTER: Item<u64> = Item::new("bond_counter");
 pub const BONDS: IndexedMap<u64, Bond, BondIndexes> = IndexedMap::new(
     "bonds",
     BondIndexes {
