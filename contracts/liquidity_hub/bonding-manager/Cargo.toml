@@ -48,3 +48,4 @@ anyhow.workspace = true
 white-whale-testing.workspace = true
 pool-manager.workspace = true
 epoch-manager.workspace = true
+test-case.workspace = true

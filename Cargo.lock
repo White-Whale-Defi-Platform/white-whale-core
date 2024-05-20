@@ -123,6 +123,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
+ "test-case",
  "thiserror",
  "white-whale-std",
  "white-whale-testing",
