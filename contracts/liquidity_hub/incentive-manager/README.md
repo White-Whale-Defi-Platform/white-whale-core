@@ -1,20 +1,16 @@
 # Incentive Manager
 
-The Incentive Manager is the V2 iteration of the original incentives; this is a monolithic contract that handles all
+The Incentive Manager is the V2 iteration of the original incentives system; this is a monolithic contract that handles all
 the incentives-related logic.
 
 ## How it works
 
-The following is a high-level overview of how the Incentive Manager works. It touches on some technical details, assisting
-developers in understanding the contract's inner workings, while also providing a general understanding of the contract's
-functionality, so a regular user can understand how to interact with it.
+The Incentives system is now completely encapsulated within one contract called the Incentive Manager. The Incentive 
+Manager has two main concepts; an `Incentive`, defined as a reward to be distributed and a `Position`, defined as a 
+user's liquidity in a pool locked in the contract.
 
-There are two main concepts in the Incentive Manager: an `Incentive` and a `Position`. An `Incentive` is a reward that is 
-distributed to users based on their `Position`. A `Position` is a user's liquidity in a pool, and it is represented by 
-LP tokens, which the user gets when providing liquidity into pools in the Pool Manager contract.
-
-When a user provides liquidity into a pool, they receive LP tokens. These LP tokens can be locked in the Incentive Manager 
-to get incentive rewards (if there are any).
+Users of the Liquidity Hub, when providing liquidity, can opt to lock their LP shares which will in turn send them to 
+the Incentive Manager until they are unlocked.
 
 ### Incentives
 
@@ -25,28 +21,37 @@ incentive creation fee, which is sent to the Bonding Manager.
 Users can decide to provide an identifier, which they can later use to top up or close the incentive. If no identifier is
 provided, the contract will generate one.
 
+#### Topping up an Incentive
+
 To top up an incentive, the owner of the incentive must call `ManageIncentive` with the `IncentiveAction::Fill` action. 
 The user must provide the same identifier as the original incentive. The incentive can only be topped up with the same 
 token as the original incentive, and the amount must be a multiple of the original incentive's amount.
+
+#### Closing an Incentive
 
 To close an incentive, the owner of the incentive or the owner of the contract must call `ManageIncentive` with the 
 `IncentiveAction::Close` action with the identifier of the incentive to be closed. The incentive will be closed, and the
 remaining tokens will be sent to the owner of the incentive.
 
-Incentive rewards are distributed every epoch, which is created by the Epoch Manager. Whenever an epoch is created; the 
-Incentive Manager gets called via the `EpochChangedHook` hook, alerting the contract of the new epoch. The contract will 
-then take snapshots for every LP token in the contract and save it in the `LP_WEIGHT_HISTORY` map for the current epoch. 
-That helps to calculate the rewards when users claim them.
+#### Reward Distribution
 
-The maximum number of concurrent incentives for a given LP denom is defined when the contract is instantiated, and it is 
+Incentive rewards are distributed every epoch, which is created by the Epoch Manager. Whenever an epoch is created; the 
+Incentive Manager gets called via the `EpochChangedHook` hook, alerting the contract that a new epoch has been created. 
+The contract will then take snapshots for every LP token in the contract and save it in the `LP_WEIGHT_HISTORY` map for 
+the current epoch. That helps to calculate the rewards when users claim them.
+
+The maximum number of concurrent incentives for a given LP denom is defined when the contract is instantiated, and it is
 stored in the config as `max_concurrent_incentives`.
+
 
 ### Positions
 
 Positions can be created, expanded (topped up), or withdrawn. This is done via the `ManagePosition` 
-message, followed by the desired action, i.e. `PositionAction::Fill` or `PositionAction::Close`. When a user creates a 
-position, it must provide an unlocking duration. The unlocking duration is the time it takes in seconds to unlock the 
-position, which is necessary to withdraw the LP tokens from the contract.
+message, followed by the desired action, i.e. `PositionAction::Fill`, `PositionAction::Close` or `PositionAction::Withdraw`.
+When a user creates a position, it must provide an unlocking duration. The unlocking duration is the time it takes in 
+seconds to unlock the position, which is necessary to withdraw the LP tokens from the contract.
+
+#### Topping up a Position
 
 When a user creates a position, the LP tokens are locked in the contract. The user can't withdraw them until the unlocking 
 duration is complete. To expand a position, the user must call `ManagePosition` with the `PositionAction::Fill` action 
@@ -58,9 +63,13 @@ If a user doesn't provide an identifier when creating a position, the contract w
 
 The minimum unlocking duration is 1 day, and the maximum is 365 days.
 
+#### Closing a Position
+
 Closing a position is done by calling `ManagePosition` with the `PositionAction::Close` action. The user must provide the 
 identifier of the position to be closed. Once this action is triggered, the `Position.open` state is set to false, and 
 `expiring_at` is set to the block height after which the position will be able to be withdrawn.
+
+#### Withdrawing a Position
 
 Once the unlocking duration is complete, the user can withdraw the LP tokens from the contract by calling the `ManagePosition` 
 with the `PositionAction::Withdraw` action. Alternatively, if the user doesn't want to wait for the unlocking duration to 
