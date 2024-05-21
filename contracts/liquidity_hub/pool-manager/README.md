@@ -1,132 +1,57 @@
-# CosmWasm Starter Pack
+# Pool Manager
 
-This is a template to build smart contracts in Rust to run inside a
-[Cosmos SDK](https://github.com/cosmos/cosmos-sdk) module on all chains that enable it.
-To understand the framework better, please read the overview in the
-[cosmwasm repo](https://github.com/CosmWasm/cosmwasm/blob/master/README.md),
-and dig into the [cosmwasm docs](https://www.cosmwasm.com).
-This assumes you understand the theory and just want to get coding.
+The Pool Manager is a contract that handles pools in the Migaloo DEX.
 
-# Architecture
+Pools can contain two or three assets and are used to provide liquidity to the DEX. The Pool Manager is responsible for
+creating pools and handling swaps, whether they are single or multi-hop operations.
 
-```mermaid
-graph LR
+## How it works
 
-subgraph WHALE Dex
-subgraph Pool Manager
-        Admin --> |Can Create| Pairs
-        Users --> |Can Create for X Fee| Pairs --> | Stored In| Contract
-        Contract --> |Deploys either a native or cw20 based| Liquidity_Token
-        Users --> |Can Provide Liquidity to | Contract --> |Mint to User| Liquidity_Token
-        Users --> |Can Withdraw Liquidity from | Contract --> |Burn provided | Liquidity_Token --> |Send refund assets to| Users
+The following is a high-level overview of how the Pool Manager works. It touches on some technical details, assisting
+developers in understanding the contract's inner workings while also providing a general understanding of the contract's
+functionality, so a regular user can understand how to interact with it.
 
+### Pool Creation
 
+Creating pools is a simple and permissionless process. A user can call the `CreatePool` message, with the desired pool
+parameters such as asset denoms, fees, and pool type among others, together with the pool creation fee. The pool creation
+fee is a protocol fee that is sent to the Bonding Manager via the `FillRewards` message. There can be multiple pools 
+for the same asset pair, though each pool must have a unique identifier. Pools cannot be removed or updated once 
+created, so it is important to get the parameters right from the start.
 
-    end
+The liquidity in a given pool is tracked with LP tokens, which are minted via the Token Factory module by the Pool Manager. 
+These tokens represent the user's share of a pool's liquidity, and they can be used to redeem the assets in the pool.
 
-end
+Pool information is stored in the `POOLS` map, containing information such as the asset denoms and decimals, the LP denom, 
+the assets in the pool (balance), the pool type and pool fees.
 
-```
+A pool can be of two types: `ConstantProduct` (xyk) or `StableSwap`. The `ConstantProduct` type is suitable for assets that 
+may have varying values and are not intended to be equivalent. The `StableSwap` type is suitable for assets that are 
+meant to be the same and whose values should be approximately the same, such as stablecoins.
 
-### Todo work
+### Deposits and Withdrawals
 
-- [x] Create a pool manager contract
-- [x] Can create a pair
-- [x] Can provide liquidity
-- [x] Can withdraw liquidity
-- [x] Can swap assets
-- [ ] Tests for all the above ported over
-- [ ] Tests for Swap Operations
-- [ ] Tests for swap routes
-- [ ]
+Users can deposit and withdraw assets from the pools at any time. To deposit, users must call the `ProvideLiquidity` 
+message, together with the pool identifier and the assets to deposit among other parameters. For pools with two assets, 
+it is possible to provide liquidity with a single asset. The Pool Manager will swap half of the provided asset for the 
+other asset in the pool, ensuring the pool's balance is kept in check.
 
-## Creating a new repo from template
+Once the user has provided liquidity, they will receive LP tokens in return proportional to the amount of liquidity 
+provided.
 
-Assuming you have a recent version of Rust and Cargo installed
-(via [rustup](https://rustup.rs/)),
-then the following should get you a new repo to start a contract:
+To withdraw liquidity, users must call the `WithdrawLiquidity` message, with the pool identifier together with the LP 
+token to redeem the assets. The Pool Manager will burn the LP tokens and send the corresponding assets to the user, 
+updating the pool's balance accordingly.
 
-Install [cargo-generate](https://github.com/ashleygwilliams/cargo-generate) and cargo-run-script.
-Unless you did that before, run this line now:
+### Swaps
 
-```sh
-cargo install cargo-generate --features vendored-openssl
-cargo install cargo-run-script
-```
+Swaps are the main feature of the Pool Manager. Users can swap assets from one pool to another by using the `Swap` message.
+If the swap is a single-hop operation, the Pool Manager will perform the swap directly. If the swap is a multi-hop operation, 
+the `ExecuteSwapOperations` message should be used instead, providing the route to follow for the swap to be executed 
+successfully. 
 
-Now, use it to create your new contract.
-Go to the folder in which you want to place it and run:
+After a swap takes place, the pool's balances are updated, and the fees are collected. The Bonding Manager receives the 
+protocol fee via the `FillRewards` message, while the swap fee remains in the pool to benefit the LP token holders, 
+increasing the pool's liquidity and thus the LP token value.
 
-**Latest**
-
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --name PROJECT_NAME
-```
-
-For cloning minimal code repo:
-
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --name PROJECT_NAME -d minimal=true
-```
-
-**Older Version**
-
-Pass version as branch flag:
-
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --branch <version> --name PROJECT_NAME
-```
-
-Example:
-
-```sh
-cargo generate --git https://github.com/CosmWasm/cw-template.git --branch 0.16 --name PROJECT_NAME
-```
-
-You will now have a new folder called `PROJECT_NAME` (I hope you changed that to something else)
-containing a simple working contract and build system that you can customize.
-
-## Create a Repo
-
-After generating, you have a initialized local git repo, but no commits, and no remote.
-Go to a server (eg. github) and create a new upstream repo (called `YOUR-GIT-URL` below).
-Then run the following:
-
-```sh
-# this is needed to create a valid Cargo.lock file (see below)
-cargo check
-git branch -M main
-git add .
-git commit -m 'Initial Commit'
-git remote add origin YOUR-GIT-URL
-git push -u origin main
-```
-
-## CI Support
-
-We have template configurations for both [GitHub Actions](.github/workflows/Basic.yml)
-and [Circle CI](.circleci/config.yml) in the generated project, so you can
-get up and running with CI right away.
-
-One note is that the CI runs all `cargo` commands
-with `--locked` to ensure it uses the exact same versions as you have locally. This also means
-you must have an up-to-date `Cargo.lock` file, which is not auto-generated.
-The first time you set up the project (or after adding any dep), you should ensure the
-`Cargo.lock` file is updated, so the CI will test properly. This can be done simply by
-running `cargo check` or `cargo unit-test`.
-
-## Using your project
-
-Once you have your custom repo, you should check out [Developing](./Developing.md) to explain
-more on how to run tests and develop code. Or go through the
-[online tutorial](https://docs.cosmwasm.com/) to get a better feel
-of how to develop.
-
-[Publishing](./Publishing.md) contains useful information on how to publish your contract
-to the world, once you are ready to deploy it on a running blockchain. And
-[Importing](./Importing.md) contains information about pulling in other contracts or crates
-that have been published.
-
-Please replace this README file with information about your specific project. You can keep
-the `Developing.md` and `Publishing.md` files as useful referenced, but please set some
-proper description in the README.
+On Osmosis, there's an additional fee that is sent to the Osmosis community pool.
