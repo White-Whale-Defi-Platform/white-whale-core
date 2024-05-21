@@ -78,10 +78,10 @@ pub fn execute(
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => Ok(to_json_binary(&queries::query_config(deps)?)?),
-        QueryMsg::CurrentEpoch {} => Ok(to_json_binary(&queries::query_current_epoch(deps)?)?),
+        QueryMsg::Config => Ok(to_json_binary(&queries::query_config(deps)?)?),
+        QueryMsg::CurrentEpoch => Ok(to_json_binary(&queries::query_current_epoch(deps)?)?),
         QueryMsg::Epoch { id } => Ok(to_json_binary(&queries::query_epoch(deps, id)?)?),
-        QueryMsg::Hooks {} => Ok(to_json_binary(&queries::query_hooks(deps)?)?),
+        QueryMsg::Hooks => Ok(to_json_binary(&queries::query_hooks(deps)?)?),
         QueryMsg::Hook { hook } => Ok(to_json_binary(&queries::query_hook(deps, hook)?)?),
     }
 }

@@ -297,6 +297,7 @@
         "type": "string"
       },
       "Epoch": {
+        "description": "The epoch definition.",
         "type": "object",
         "required": [
           "id",
