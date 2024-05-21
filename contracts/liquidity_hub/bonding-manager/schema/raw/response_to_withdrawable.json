@@ -8,7 +8,12 @@
   ],
   "properties": {
     "withdrawable_amount": {
-      "$ref": "#/definitions/Uint128"
+      "description": "The total amount of withdrawable assets by the address.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Uint128"
+        }
+      ]
     }
   },
   "additionalProperties": false,

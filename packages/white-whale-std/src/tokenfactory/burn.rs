@@ -1,18 +1,6 @@
 use std::str::FromStr;
 
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
 use crate::tokenfactory::common::{create_msg, MsgTypes};
-#[allow(unused_imports)]
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
-use crate::tokenfactory::mint::MsgMint;
 use anybuf::{Anybuf, Bufany};
 use cosmwasm_schema::cw_serde;
 #[allow(unused_imports)]

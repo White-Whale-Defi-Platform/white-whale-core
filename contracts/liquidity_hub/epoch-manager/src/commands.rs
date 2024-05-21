@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Response, SubMsg};
+use cosmwasm_std::{ensure, Api, DepsMut, Env, MessageInfo, Response, SubMsg};
 
 use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
@@ -27,27 +27,27 @@ pub(crate) fn remove_hook(
 }
 
 /// Creates a new epoch.
-pub fn create_epoch(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-) -> Result<Response, ContractError> {
+pub fn create_epoch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     cw_utils::nonpayable(&info)?;
 
     let mut current_epoch = query_current_epoch(deps.as_ref())?.epoch;
     let config = CONFIG.load(deps.storage)?;
-    println!("Creating new epoch");
 
-    // if env
-    //     .block
-    //     .time
-    //     .minus_nanos(current_epoch.start_time.nanos())
-    //     .nanos()
-    //     < config.epoch_config.duration.u64()
-    // {
-    //     return Err(ContractError::CurrentEpochNotExpired);
-    // }
-    println!("Creating new epoch");
+    ensure!(
+        env.block.time >= current_epoch.start_time,
+        ContractError::GenesisEpochHasNotStarted
+    );
+
+    if env
+        .block
+        .time
+        .minus_nanos(current_epoch.start_time.nanos())
+        .nanos()
+        < config.epoch_config.duration.u64()
+    {
+        return Err(ContractError::CurrentEpochNotExpired);
+    }
+
     current_epoch.id = current_epoch
         .id
         .checked_add(1u64)
@@ -56,11 +56,7 @@ pub fn create_epoch(
         .start_time
         .plus_nanos(config.epoch_config.duration.u64());
 
-    EPOCHS.save(
-        deps.storage,
-        &current_epoch.id.to_be_bytes(),
-        &current_epoch,
-    )?;
+    EPOCHS.save(deps.storage, current_epoch.id, &current_epoch)?;
 
     let messages = HOOKS.prepare_hooks(deps.storage, |hook| {
         EpochChangedHookMsg {
