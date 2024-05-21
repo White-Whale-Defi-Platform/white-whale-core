@@ -5,7 +5,11 @@ handles all the vaults and flashloans on the Migaloo DEX.
 
 Vaults are single collateral pools used primarily by bots to take arbitrage opportunities across different AMMs via 
 flashloans. Flashloans have fees that are distributed among the users that have deposited into the vault where the 
-flashloan originated, and the users who bond assets on the Bonding Manager.
+The Vault Network is a WW-controlled collection of single asset vaults that bots use to access flashloan capital for arbitrage, liquidation, and other DeFi uses. By using the Flash Loan Vaults, arbitrage and liquidations happen locally in a capital-efficient manner and without capital requirements. That is, each arbitrageur or liquidator will no longer need their own capital on each local chain waiting idly to arb or to liquidate because they can access a flash loan for their capital needs. When an arbitrage opportunity arises, an arbitrageur takes a flash loan, arbs the local dex price versus the WW pool, and then pays back the loan plus the flash loan fee. The arbitrageur then keeps the profit without having used any of their own capital.
+
+Depositors of tokens into flash loan vaults benefit from fees paid when their vault is accessed for flash loans; the greater the volume, the more fees generated. Flash loan vaults are a great source of yield with no impermanent loss.```
+
+Maybe just use what we already had for the Vault network in docs ? First paragraph tells us all the differences we need to know so can just reuse this blurb I think 
 
 ## How it works
 
