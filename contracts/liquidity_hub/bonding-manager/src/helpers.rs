@@ -1,25 +1,35 @@
+use std::collections::{HashMap, VecDeque};
+
 use cosmwasm_std::{
-    ensure, to_json_binary, Coin, CosmosMsg, Decimal, DepsMut, Env, MessageInfo, ReplyOn,
-    StdResult, SubMsg, Timestamp, Uint64, WasmMsg,
+    ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, MessageInfo,
+    Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw_utils::PaymentError;
-use white_whale_std::bonding_manager::{ClaimableEpochsResponse, EpochResponse};
+
+use white_whale_std::bonding_manager::{
+    ClaimableRewardBucketsResponse, Config, GlobalIndex, RewardBucket,
+};
 use white_whale_std::constants::LP_SYMBOL;
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
+use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
     PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
+use white_whale_std::pool_network::asset;
+use white_whale_std::pool_network::asset::aggregate_coins;
 
 use crate::contract::LP_WITHDRAWAL_REPLY_ID;
 use crate::error::ContractError;
-use crate::queries::{get_claimable_epochs, get_current_epoch};
-use crate::state::CONFIG;
+use crate::queries::query_claimable;
+use crate::state::{
+    get_bonds_by_receiver, get_weight, CONFIG, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET,
+};
 
 /// Validates that the growth rate is between 0 and 1.
 pub fn validate_growth_rate(growth_rate: Decimal) -> Result<(), ContractError> {
-    if growth_rate > Decimal::percent(100) {
-        return Err(ContractError::InvalidGrowthRate {});
-    }
+    ensure!(
+        growth_rate <= Decimal::percent(100),
+        ContractError::InvalidGrowthRate
+    );
     Ok(())
 }
 
@@ -52,85 +62,63 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 }
 
 /// if user has unclaimed rewards, fail with an exception prompting them to claim
-pub fn validate_claimed(deps: &DepsMut, _info: &MessageInfo) -> Result<(), ContractError> {
+pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
-    let claimable_rewards: ClaimableEpochsResponse = get_claimable_epochs(deps.as_ref()).unwrap();
-    // If epochs is greater than none
-    if !claimable_rewards.epochs.is_empty() {
-        return Err(ContractError::UnclaimedRewards {});
-    }
+    let claimable_rewards: ClaimableRewardBucketsResponse =
+        query_claimable(&deps.as_ref(), Some(info.sender.to_string())).unwrap();
+    // ensure the user has nothing to claim
+    ensure!(
+        claimable_rewards.reward_buckets.is_empty(),
+        ContractError::UnclaimedRewards
+    );
 
     Ok(())
 }
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
-/// global_index timestamp issues when querying the weight.
-pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
-    let epoch_response: EpochResponse = get_current_epoch(deps.as_ref()).unwrap();
+pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
+        config.epoch_manager_addr.to_string(),
+        &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
+    )?;
 
-    let current_epoch = epoch_response.epoch;
-    let current_time = env.block.time.seconds();
-    const DAY_IN_SECONDS: u64 = 86_400u64;
+    let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, epoch_response.epoch.id)?;
 
-    // Check if the current time is more than a day after the epoch start time
-    // to avoid potential overflow
-    if current_epoch.id != Uint64::zero() {
-        let start_time_seconds = current_epoch
-            .start_time
-            .seconds()
-            .checked_add(DAY_IN_SECONDS);
-        match start_time_seconds {
-            Some(start_time_plus_day) => {
-                if current_time > start_time_plus_day {
-                    return Err(ContractError::NewEpochNotCreatedYet {});
-                }
-            }
-            None => return Err(ContractError::Unauthorized {}),
-        }
-    }
+    ensure!(reward_bucket.is_some(), ContractError::EpochNotCreatedYet);
 
     Ok(())
 }
 
-/// Calculates the epoch id for any given timestamp based on the genesis epoch configuration.
-pub fn calculate_epoch(
-    genesis_epoch_config: EpochConfig,
-    timestamp: Timestamp,
-) -> StdResult<Uint64> {
-    let epoch_duration: Uint64 = genesis_epoch_config.duration;
-
-    // if this is true, it means the epoch is before the genesis epoch. In that case return Epoch 0.
-    if Uint64::new(timestamp.nanos()) < genesis_epoch_config.genesis_epoch {
-        return Ok(Uint64::zero());
-    }
-
-    let elapsed_time =
-        Uint64::new(timestamp.nanos()).checked_sub(genesis_epoch_config.genesis_epoch)?;
-    let epoch = elapsed_time
-        .checked_div(epoch_duration)?
-        .checked_add(Uint64::one())?;
-
-    Ok(epoch)
-}
-
 // Used in FillRewards to search the funds for LP tokens and withdraw them
 // If we do get some LP tokens to withdraw they could be swapped to whale in the reply
-pub fn handle_lp_tokens(
-    info: &MessageInfo,
-    config: &white_whale_std::bonding_manager::Config,
+pub fn handle_lp_tokens_rewards(
+    deps: &DepsMut,
+    funds: &[Coin],
+    config: &Config,
     submessages: &mut Vec<SubMsg>,
 ) -> Result<(), ContractError> {
-    let lp_tokens: Vec<&Coin> = info
-        .funds
+    let lp_tokens: Vec<&Coin> = funds
         .iter()
         .filter(|coin| coin.denom.contains(".pool.") | coin.denom.contains(LP_SYMBOL))
         .collect();
+
     for lp_token in lp_tokens {
-        // LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the identifier and not the LP SYMBOL
-        let pool_identifier = lp_token.denom.split(".pool.").collect::<Vec<&str>>()[1]
-            .split('.')
-            .collect::<Vec<&str>>()[0];
+        let pool_identifier =
+            extract_pool_identifier(&lp_token.denom).ok_or(ContractError::AssetMismatch)?;
+
+        // make sure a pool with the given identifier exists
+        let pool: StdResult<PoolInfoResponse> = deps.querier.query_wasm_smart(
+            config.pool_manager_addr.to_string(),
+            &white_whale_std::pool_manager::QueryMsg::Pool {
+                pool_identifier: pool_identifier.to_string(),
+            },
+        );
+
+        if pool.is_err() {
+            continue;
+        }
 
         // if LP Tokens ,verify and withdraw then swap to whale
         let lp_withdrawal_msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity {
@@ -153,12 +141,31 @@ pub fn handle_lp_tokens(
     Ok(())
 }
 
-// Used in FillRewards to search the funds for coins that are neither LP tokens nor whale and swap them to whale
+/// Extracts the pool identifier from an LP token denom.
+/// LP tokens have the format "{pair_label}.pool.{identifier}.{LP_SYMBOL}", get the
+/// identifier and not the LP SYMBOL. The identifier can contain dots, slashes, etc.
+pub(crate) fn extract_pool_identifier(lp_token_denom: &str) -> Option<&str> {
+    // Split the string at ".pool." to isolate the part after ".pool."
+    let parts: Vec<&str> = lp_token_denom.splitn(2, ".pool.").collect();
+    if parts.len() < 2 {
+        return None;
+    }
+
+    // Split by the last dot to isolate the identifier from "{LP_SYMBOL}"
+    let after_pool = parts[1];
+    let last_dot_pos = after_pool.rfind('.').unwrap_or(after_pool.len());
+
+    // Take everything before the last dot to get the identifier
+    Some(&after_pool[..last_dot_pos])
+}
+
+// Used in FillRewards to search the funds for coins that are neither LP tokens nor the distribution_denom
+// and swap them to distribution_denom
 pub fn swap_coins_to_main_token(
     coins: Vec<Coin>,
     deps: &DepsMut,
-    config: white_whale_std::bonding_manager::Config,
-    whale: &mut Coin,
+    config: Config,
+    distribution_asset: &mut Coin,
     distribution_denom: &String,
     messages: &mut Vec<CosmosMsg>,
 ) -> Result<(), ContractError> {
@@ -171,25 +178,30 @@ pub fn swap_coins_to_main_token(
         })
         .collect();
     for coin in coins_to_swap {
-        let swap_route_query = white_whale_std::pool_manager::QueryMsg::SwapRoute {
-            offer_asset_denom: coin.denom.to_string(),
-            ask_asset_denom: distribution_denom.to_string(),
+        // Query for the routes and pool
+        let swap_routes_response: StdResult<SwapRouteResponse> = deps.querier.query_wasm_smart(
+            config.pool_manager_addr.to_string(),
+            &white_whale_std::pool_manager::QueryMsg::SwapRoute {
+                offer_asset_denom: coin.denom.to_string(),
+                ask_asset_denom: distribution_denom.to_string(),
+            },
+        );
+
+        let swap_routes = match swap_routes_response {
+            Ok(swap_routes) => swap_routes,
+            // no routes, skip
+            Err(_) => continue,
         };
 
-        // Query for the routes and pool
-        let swap_routes: SwapRouteResponse = deps
-            .querier
-            .query_wasm_smart(config.pool_manager_addr.to_string(), &swap_route_query)?;
+        // sanity check
+        if swap_routes.swap_route.swap_operations.is_empty() {
+            // skip swap if there's not swap route for it
+            continue;
+        }
 
-        ensure!(
-            !swap_routes.swap_route.swap_operations.is_empty(),
-            ContractError::NoSwapRoute {
-                asset1: coin.denom.to_string(),
-                asset2: distribution_denom.to_string()
-            }
-        );
         // check if the pool has any assets, if not skip the swap
-        // Note we are only checking the first operation here. Might be better to another loop to check all operations
+        // Note we are only checking the first operation here.
+        // Might be better to another loop to check all operations
         let pool_query = white_whale_std::pool_manager::QueryMsg::Pool {
             pool_identifier: swap_routes
                 .swap_route
@@ -210,86 +222,259 @@ pub fn swap_coins_to_main_token(
             }
         });
 
-        let simulate: SimulateSwapOperationsResponse = deps.querier.query_wasm_smart(
-            config.pool_manager_addr.to_string(),
-            &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
-                offer_amount: coin.amount,
-                operations: swap_routes.swap_route.swap_operations.clone(),
-            },
-        )?;
-        // Add the simulate amount received to the whale amount, if the swap fails this should also be rolled back
-        whale.amount = whale.amount.checked_add(simulate.amount)?;
+        let simulate_swap_operations_response: SimulateSwapOperationsResponse =
+            deps.querier.query_wasm_smart(
+                config.pool_manager_addr.to_string(),
+                &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
+                    offer_amount: coin.amount,
+                    operations: swap_routes.swap_route.swap_operations.clone(),
+                },
+            )?;
+
+        // Add the simulate amount received to the distribution_denom amount, if the swap fails this should
+        // also be rolled back
+        distribution_asset.amount = distribution_asset
+            .amount
+            .checked_add(simulate_swap_operations_response.amount)?;
 
         if !skip_swap {
             // Prepare a swap message, use the simulate amount as the minimum receive
             // and 1% slippage to ensure we get at least what was simulated to be received
-            let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
-                operations: swap_routes.swap_route.swap_operations.clone(),
-                minimum_receive: Some(simulate.amount),
-                receiver: None,
-                max_spread: Some(Decimal::percent(5)),
-            };
-            let binary_msg = to_json_binary(&msg)?;
-            let wrapped_msg = WasmMsg::Execute {
+            let swap_msg = WasmMsg::Execute {
                 contract_addr: config.pool_manager_addr.to_string(),
-                msg: binary_msg,
+                msg: to_json_binary(
+                    &white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
+                        operations: swap_routes.swap_route.swap_operations.clone(),
+                        minimum_receive: Some(simulate_swap_operations_response.amount),
+                        receiver: None,
+                        max_spread: Some(Decimal::percent(5)),
+                    },
+                )?,
                 funds: vec![coin.clone()],
             };
-            messages.push(wrapped_msg.into());
+            messages.push(swap_msg.into());
         }
     }
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Validates that there are reward buckets in the state. If there are none, it means the system has just
+/// been started and the epoch manager has still not created any epochs yet.
+pub(crate) fn validate_buckets_not_empty(deps: &DepsMut) -> Result<(), ContractError> {
+    let reward_buckets = REWARD_BUCKETS
+        .keys(deps.storage, None, None, Order::Descending)
+        .collect::<StdResult<Vec<_>>>()?;
 
-    #[test]
-    fn test_calculate_epoch() {
-        let genesis_epoch = EpochConfig {
-            duration: Uint64::from(86400000000000u64), // 1 day in nanoseconds
-            genesis_epoch: Uint64::from(1683212400000000000u64), // May 4th 2023 15:00:00
+    ensure!(!reward_buckets.is_empty(), ContractError::Unauthorized);
+
+    Ok(())
+}
+
+type ClaimableRewards = Vec<Coin>;
+// key is reward id, value is the rewards claimed from that bucket
+type ModifiedRewardBuckets = HashMap<u64, Vec<Coin>>;
+
+/// Calculates the rewards for a user.
+pub fn calculate_rewards(
+    deps: &Deps,
+    address: Addr,
+    is_claim: bool,
+) -> Result<(ClaimableRewards, Vec<Attribute>, ModifiedRewardBuckets), ContractError> {
+    let claimable_reward_buckets_for_user =
+        query_claimable(deps, Some(address.to_string()))?.reward_buckets;
+
+    // if the function is being called from the claim function
+    if is_claim {
+        ensure!(
+            !claimable_reward_buckets_for_user.is_empty(),
+            ContractError::NothingToClaim
+        );
+    } else {
+        // if the function is being called from the rewards query
+        if claimable_reward_buckets_for_user.is_empty() {
+            return Ok((vec![], vec![], HashMap::new()));
+        }
+    }
+
+    let mut total_claimable_rewards = vec![];
+    let mut attributes = vec![];
+    let mut modified_reward_buckets = HashMap::new();
+
+    for reward_bucket in claimable_reward_buckets_for_user {
+        let user_share = get_user_share(
+            deps,
+            reward_bucket.id,
+            address.to_string(),
+            reward_bucket.global_index.clone(),
+        )?;
+
+        // sanity check, if the user has no share in the bucket, skip it
+        if user_share.is_zero() {
+            continue;
         };
 
-        // First bond timestamp equals genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683212400000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
+        // sanity check
+        ensure!(
+            user_share <= Decimal::percent(100u64),
+            ContractError::InvalidShare
+        );
 
-        // First bond timestamp is one day after genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683309600000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(2u64));
+        let mut claimed_rewards_from_bucket = vec![];
 
-        // First bond timestamp is three days after genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683471600000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(4u64));
+        for reward in reward_bucket.total.iter() {
+            let user_reward = reward.amount.checked_mul_floor(user_share)?;
 
-        // First bond timestamp is before genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683212300000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::zero());
+            // make sure the reward is sound
+            let reward_validation: Result<(), StdError> = reward_bucket
+                .available
+                .iter()
+                .find(|available_fee| available_fee.denom == reward.denom)
+                .map(|available_reward| {
+                    // sanity check
+                    if user_reward > available_reward.amount {
+                        attributes.push(Attribute {
+                            key: "error".to_string(),
+                            value: ContractError::InvalidReward {
+                                reward: user_reward,
+                                available: available_reward.amount,
+                            }
+                            .to_string(),
+                        });
+                        return Err(StdError::generic_err("Invalid fee"));
+                    }
+                    Ok(())
+                })
+                .ok_or(StdError::generic_err("Invalid fee"))?;
 
-        // First bond timestamp is within the same epoch as genesis epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683223200000000000u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
+            // if the reward is invalid, skip the bucket
+            match reward_validation {
+                Ok(_) => {}
+                Err(_) => continue,
+            }
 
-        // First bond timestamp is at the end of the genesis epoch, but not exactly (so it's still not epoch 2)
-        let first_bond_timestamp = Timestamp::from_nanos(1683298799999999999u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(1u64));
+            let reward = Coin {
+                denom: reward.denom.to_string(),
+                amount: user_reward,
+            };
 
-        // First bond timestamp is exactly one nanosecond after the end of an epoch
-        let first_bond_timestamp = Timestamp::from_nanos(1683298800000000001u64);
-        let epoch = calculate_epoch(genesis_epoch.clone(), first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(2u64));
+            // add the reward
+            total_claimable_rewards =
+                aggregate_coins(&total_claimable_rewards, &vec![reward.clone()])?;
 
-        // First bond timestamp is June 13th 2023 10:56:53
-        let first_bond_timestamp = Timestamp::from_nanos(1686653813000000000u64);
-        let epoch = calculate_epoch(genesis_epoch, first_bond_timestamp).unwrap();
-        assert_eq!(epoch, Uint64::from(40u64));
+            if is_claim {
+                claimed_rewards_from_bucket =
+                    aggregate_coins(&claimed_rewards_from_bucket, &vec![reward])?;
+                modified_reward_buckets
+                    .insert(reward_bucket.id, claimed_rewards_from_bucket.clone());
+            }
+        }
     }
+    Ok((total_claimable_rewards, attributes, modified_reward_buckets))
+}
+
+/// Gets the user share for the given epoch and global index.
+pub(crate) fn get_user_share(
+    deps: &Deps,
+    epoch_id: u64,
+    address: String,
+    mut global_index: GlobalIndex,
+) -> StdResult<Decimal> {
+    let mut bonds_by_receiver =
+        get_bonds_by_receiver(deps.storage, address, Some(true), None, None, None)?;
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let mut total_bond_weight = Uint128::zero();
+
+    for bond in bonds_by_receiver.iter_mut() {
+        bond.weight = get_weight(
+            epoch_id,
+            bond.weight,
+            bond.asset.amount,
+            config.growth_rate,
+            bond.last_updated,
+        )?;
+
+        // Aggregate the weights of all the bonds for the given address.
+        // This assumes bonding assets are fungible.
+        total_bond_weight = total_bond_weight.checked_add(bond.weight)?;
+    }
+
+    global_index.last_weight = get_weight(
+        epoch_id,
+        global_index.last_weight,
+        global_index.bonded_amount,
+        config.growth_rate,
+        global_index.last_updated,
+    )?;
+
+    // Represents the share of the global weight that the address has
+    // If global_index.weight is zero no one has bonded yet so the share is
+    let share = if global_index.last_weight.is_zero() {
+        Decimal::zero()
+    } else {
+        Decimal::from_ratio(total_bond_weight, global_index.last_weight)
+    };
+
+    Ok(share)
+}
+
+/// Returns the reward bucket that is falling out the grace period, which is the one expiring
+/// after creating a new epoch is created.
+pub fn get_expiring_reward_bucket(deps: Deps) -> Result<Option<RewardBucket>, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let grace_period = config.grace_period;
+
+    // Take grace_period
+    let buckets = REWARD_BUCKETS
+        .range(deps.storage, None, None, Order::Descending)
+        .take(grace_period as usize)
+        .map(|item| {
+            let (_, bucket) = item?;
+            Ok(bucket)
+        })
+        .collect::<StdResult<Vec<RewardBucket>>>()?;
+
+    // if the buckets vector's length is the same as the grace period it means there is one bucket that
+    // is expiring once the new one is created i.e. the last bucket in the vector
+    if buckets.len() == grace_period as usize {
+        let expiring_reward_bucket: RewardBucket = buckets.into_iter().last().unwrap_or_default();
+        Ok(Some(expiring_reward_bucket))
+    } else {
+        // nothing is expiring yet
+        Ok(None)
+    }
+}
+
+/// Returns the buckets that are within the grace period, i.e. the ones which fees can still be claimed.
+/// The result is ordered by bucket id, descending. Thus, the first element is the current bucket.
+pub fn get_claimable_reward_buckets(deps: &Deps) -> StdResult<ClaimableRewardBucketsResponse> {
+    let config = CONFIG.load(deps.storage)?;
+    let grace_period = config.grace_period;
+
+    let mut reward_buckets = REWARD_BUCKETS
+        .range(deps.storage, None, None, Order::Descending)
+        .take(grace_period as usize)
+        .map(|item| {
+            let (_, bucket) = item?;
+
+            Ok(bucket)
+        })
+        .collect::<StdResult<VecDeque<RewardBucket>>>()?;
+
+    reward_buckets.retain(|bucket| !bucket.available.is_empty());
+
+    Ok(ClaimableRewardBucketsResponse {
+        reward_buckets: reward_buckets.into(),
+    })
+}
+
+/// Fills the upcoming reward bucket with the given funds.
+pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> {
+    UPCOMING_REWARD_BUCKET.update(deps.storage, |mut upcoming_bucket| -> StdResult<_> {
+        upcoming_bucket.total = asset::aggregate_coins(&upcoming_bucket.total, &vec![funds])?;
+        Ok(upcoming_bucket)
+    })?;
+
+    Ok(())
 }

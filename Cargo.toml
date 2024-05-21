@@ -71,6 +71,7 @@ incentive-factory = { path = "./contracts/liquidity_hub/pool-network/incentive_f
 terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_token" }
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
 incentive-manager = { path = "./contracts/liquidity_hub/incentive-manager" }
+bonding-manager = { path = "./contracts/liquidity_hub/bonding-manager" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

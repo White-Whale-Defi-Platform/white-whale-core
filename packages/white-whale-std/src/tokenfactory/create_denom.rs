@@ -1,19 +1,8 @@
-/// Returns the MsgCreateDenom Stargate message
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
 use crate::tokenfactory::common::{create_msg, MsgTypes};
 use anybuf::{Anybuf, Bufany};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::StdResult;
-/// Returns the MsgCreateDenom Stargate message
-#[cfg(any(
-    feature = "token_factory",
-    feature = "osmosis_token_factory",
-    feature = "injective"
-))]
+
 use cosmwasm_std::{Addr, CosmosMsg};
 
 use crate::tokenfactory::common::EncodeMessage;

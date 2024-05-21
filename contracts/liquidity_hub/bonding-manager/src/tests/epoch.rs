@@ -1,35 +1,20 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{Timestamp, Uint64};
-use white_whale_std::epoch_manager::epoch_manager::EpochConfig;
-
 use crate::ContractError;
-use white_whale_std::bonding_manager::Epoch;
-use white_whale_std::pool_network::asset::AssetInfo;
 
-use crate::tests::robot::TestingRobot;
-use crate::tests::test_helpers;
+use crate::tests::suite::TestingSuite;
 
 #[test]
-fn test_current_epoch_no_epochs() {
-    let mut robot = TestingRobot::default();
+fn test_call_on_epoch_created_hook_unauthorized() {
+    let mut suite = TestingSuite::default();
+    let creator = suite.senders[0].clone();
 
-    robot
-        .instantiate_default()
-        .assert_current_epoch(&Epoch::default())
-        .query_epoch(Uint64::new(10), |res| {
-            // epoch 10 doesn't exist, it should return the default value
-            let (_, epoch) = res.unwrap();
-            assert_eq!(epoch, Epoch::default());
-        });
-}
+    suite.instantiate_default().add_one_day().create_new_epoch();
 
-#[test]
-fn test_expiring_epoch() {
-    let mut robot = TestingRobot::default();
-    let epochs = test_helpers::get_epochs();
+    suite.on_epoch_created(creator, |result| {
+        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-    robot
-        .instantiate_default()
-        // .add_epochs_to_state(epochs.clone())
-        .assert_expiring_epoch(Some(&epochs[1]));
+        match err {
+            ContractError::Unauthorized { .. } => {}
+            _ => panic!("Wrong error type, should return ContractError::Unauthorized"),
+        }
+    });
 }

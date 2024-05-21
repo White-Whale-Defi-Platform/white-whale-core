@@ -1,10 +1,9 @@
 use cosmwasm_std::{
-    attr, coin, ensure, wasm_execute, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut,
-    MessageInfo, Response, Uint128,
+    attr, coin, ensure, Addr, BankMsg, Coin, Decimal, DepsMut, MessageInfo, Response, Uint128,
 };
+use white_whale_std::coin::burn_coin_msg;
 use white_whale_std::common::validate_addr_or_default;
 use white_whale_std::pool_manager::{SwapOperation, SwapRoute};
-use white_whale_std::whale_lair;
 
 use crate::queries::simulate_swap_operations;
 use crate::{
@@ -118,19 +117,13 @@ pub fn execute_swap_operations(
 
                 // add the fee messages
                 if !swap_result.burn_fee_asset.amount.is_zero() {
-                    fee_messages.push(CosmosMsg::Bank(BankMsg::Burn {
-                        amount: vec![swap_result.burn_fee_asset],
-                    }));
+                    fee_messages.push(burn_coin_msg(swap_result.burn_fee_asset));
                 }
                 if !swap_result.protocol_fee_asset.amount.is_zero() {
-                    fee_messages.push(
-                        wasm_execute(
-                            config.bonding_manager_addr.to_string(),
-                            &whale_lair::ExecuteMsg::FillRewardsCoin {},
-                            vec![swap_result.protocol_fee_asset.clone()],
-                        )?
-                        .into(),
-                    );
+                    fee_messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
+                        config.bonding_manager_addr.to_string(),
+                        vec![swap_result.protocol_fee_asset.clone()],
+                    )?);
                 }
             }
         }

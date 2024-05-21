@@ -4,7 +4,6 @@ use cosmwasm_std::{
 };
 
 use white_whale_std::vault_manager::{CallbackMsg, ExecuteMsg};
-use white_whale_std::whale_lair::fill_rewards_msg_coin;
 
 use crate::helpers::query_balances;
 use crate::state::{get_vault_by_identifier, CONFIG, ONGOING_FLASHLOAN, TEMP_BALANCES, VAULTS};
@@ -214,7 +213,7 @@ pub fn after_flashloan(
     let config = CONFIG.load(deps.storage)?;
 
     // send protocol fee to whale lair
-    messages.push(fill_rewards_msg_coin(
+    messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
         config.whale_lair_addr.into_string(),
         coins(protocol_fee.u128(), loan_asset.denom),
     )?);

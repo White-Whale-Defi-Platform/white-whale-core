@@ -1,27 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BondedResponse",
-  "description": "Response for the Bonded query",
+  "title": "RewardsResponse",
+  "description": "Response for the Rewards query",
   "type": "object",
   "required": [
-    "bonded_assets",
-    "total_bonded"
+    "rewards"
   ],
   "properties": {
-    "bonded_assets": {
-      "description": "The assets that are bonded by the address.",
+    "rewards": {
+      "description": "The rewards that can be claimed by the address.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Coin"
       }
-    },
-    "total_bonded": {
-      "description": "The total amount of bonded tokens by the address. Bear in mind the bonded assets are considered to be equal for this purpose.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/Uint128"
-        }
-      ]
     }
   },
   "additionalProperties": false,

@@ -114,6 +114,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
+ "cw-ownable",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -122,6 +123,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
+ "test-case",
  "thiserror",
  "white-whale-std",
  "white-whale-testing",
@@ -952,6 +954,7 @@ name = "pool-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bonding-manager",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",

@@ -1,10 +1,9 @@
 ---
 name: Migaloo's architecture has an issue or can be improved
 about: You found an issue with the protocol's architecture, or have ideas on how to make further improvements.
-title: ''
-labels: 'protocol architecture'
-assignees: ''
-
+title: ""
+labels: "protocol architecture"
+assignees: ""
 ---
 
 <!-- Thank you for using White Whale Migaloo!
@@ -23,7 +22,7 @@ assignees: ''
 
 <!--
 
-     Please tell us what issue you found, explain how is that a problem to the 
+     Please tell us what issue you found, explain how is that a problem to the
      protocol.
 
      Alternatively, what do you think can be improved in the current architecture?

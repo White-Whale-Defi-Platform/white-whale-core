@@ -1,4 +1,4 @@
-use cosmwasm_std::{entry_point, to_json_binary};
+use cosmwasm_std::{ensure, entry_point, to_json_binary};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -26,20 +26,18 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     // validate start_time for the initial epoch
-    if msg.start_epoch.start_time < env.block.time {
-        return Err(ContractError::InvalidStartTime);
-    }
+    ensure!(
+        msg.start_epoch.start_time >= env.block.time,
+        ContractError::InvalidStartTime
+    );
 
-    if msg.epoch_config.genesis_epoch.u64() != msg.start_epoch.start_time.nanos() {
-        return Err(ContractError::EpochConfigMismatch);
-    }
+    ensure!(
+        msg.epoch_config.genesis_epoch.u64() == msg.start_epoch.start_time.nanos(),
+        ContractError::EpochConfigMismatch
+    );
 
     ADMIN.set(deps.branch(), Some(info.sender))?;
-    EPOCHS.save(
-        deps.storage,
-        &msg.start_epoch.id.to_be_bytes(),
-        &msg.start_epoch,
-    )?;
+    EPOCHS.save(deps.storage, msg.start_epoch.id, &msg.start_epoch)?;
 
     CONFIG.save(
         deps.storage,
@@ -69,7 +67,7 @@ pub fn execute(
         ExecuteMsg::RemoveHook { contract_addr } => {
             commands::remove_hook(deps, info, api, &contract_addr)
         }
-        ExecuteMsg::CreateEpoch {} => commands::create_epoch(deps, env, info),
+        ExecuteMsg::CreateEpoch => commands::create_epoch(deps, env, info),
         ExecuteMsg::UpdateConfig {
             owner,
             epoch_config,

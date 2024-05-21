@@ -1,10 +1,9 @@
 ---
 name: The CI infrastructure used by Migaloo has a problem
 about: As a contributor, you want to file an issue about the build/test infra, e.g. Github actions etc.
-title: ''
-labels: 'infra'
-assignees: ''
-
+title: ""
+labels: "infra"
+assignees: ""
 ---
 
 <!-- Thank you for using White Whale Migaloo!

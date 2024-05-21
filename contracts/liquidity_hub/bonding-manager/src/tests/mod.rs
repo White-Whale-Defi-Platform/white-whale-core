@@ -1,9 +1,10 @@
 mod bond;
 mod claim;
+mod epoch;
+mod helpers;
 mod instantiate;
+mod queries;
 mod rewards;
-mod robot;
-mod test_helpers;
-mod unbond;
+mod suite;
+mod unbond_withdraw;
 mod update_config;
-mod withdraw;

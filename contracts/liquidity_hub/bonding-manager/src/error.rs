@@ -1,4 +1,7 @@
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError};
+use cosmwasm_std::{
+    CheckedMultiplyFractionError, DivideByZeroError, OverflowError, StdError, Uint128,
+};
+use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
 use semver::Version;
 use thiserror::Error;
@@ -9,22 +12,28 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("Unauthorized")]
-    Unauthorized {},
+    Unauthorized,
+
+    #[error("{0}")]
+    OwnershipError(#[from] OwnershipError),
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
+
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
 
     #[error("The asset sent doesn't match the asset expected. Please check the denom and amount.")]
-    AssetMismatch {},
+    AssetMismatch,
 
     #[error("The amount of tokens to unbond is greater than the amount of tokens bonded.")]
-    InsufficientBond {},
+    InsufficientBond,
 
     #[error("The amount of tokens to unbond must be greater than zero.")]
-    InvalidUnbondingAmount {},
+    InvalidUnbondingAmount,
 
     #[error("{0}")]
     DivideByZeroError(#[from] DivideByZeroError),
@@ -33,21 +42,18 @@ pub enum ContractError {
     OverflowError(#[from] OverflowError),
 
     #[error("The growth rate must be between 0 and 1. i.e. 0.5 for 50%")]
-    InvalidGrowthRate {},
+    InvalidGrowthRate,
 
     #[error(
         "The amount of bonding assets is greater than the limit allowed. Limit is {0}, sent {1}."
     )]
     InvalidBondingAssetsLimit(usize, usize),
 
-    #[error("Can only bond native assets.")]
-    InvalidBondingAsset {},
+    #[error("Nothing to unbond")]
+    NothingToUnbond,
 
-    #[error("Nothing to unbond.")]
-    NothingToUnbond {},
-
-    #[error("Nothing to withdraw.")]
-    NothingToWithdraw {},
+    #[error("Nothing to withdraw")]
+    NothingToWithdraw,
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
@@ -56,19 +62,21 @@ pub enum ContractError {
     },
 
     #[error("There are unclaimed rewards available. Claim them before attempting to bond/unbond")]
-    UnclaimedRewards {},
+    UnclaimedRewards,
 
-    #[error("Trying to bond/unbond at a late time before the new/latest epoch has been created")]
-    NewEpochNotCreatedYet {},
-
-    #[error("Nothing to claim")]
-    NothingToClaim {},
+    #[error("Trying to bond before an epoch has been created")]
+    EpochNotCreatedYet,
 
     #[error("Nothing to claim")]
-    InvalidReward {},
+    NothingToClaim,
 
-    #[error("No Swap Route found for assets {asset1} and {asset2}")]
-    NoSwapRoute { asset1: String, asset2: String },
+    #[error("Something is off with the reward calculation, user share is above 1. Can't claim.")]
+    InvalidShare,
+
+    #[error(
+        "Invalid reward amount. Reward: {reward}, but only {available} available in the reward bucket."
+    )]
+    InvalidReward { reward: Uint128, available: Uint128 },
 }
 
 impl From<semver::Error> for ContractError {

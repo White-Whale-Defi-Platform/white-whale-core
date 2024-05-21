@@ -11,7 +11,7 @@ use crate::ContractError;
 /// Contract's config
 pub const CONFIG: Item<Config> = Item::new("config");
 
-/// An monotonically increasing counter to generate unique position identifiers.
+/// A monotonically increasing counter to generate unique position identifiers.
 pub const POSITION_ID_COUNTER: Item<u64> = Item::new("position_id_counter");
 
 /// The positions that a user has. Positions can be open or closed.
@@ -44,10 +44,9 @@ pub const LAST_CLAIMED_EPOCH: Map<&Addr, EpochId> = Map::new("last_claimed_epoch
 /// The lp weight history for addresses, including the contract. i.e. how much lp weight an address
 /// or contract has at a given epoch.
 /// Key is a tuple of (address, lp_denom, epoch_id), value is the lp weight.
-pub const LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> =
-    Map::new("address_lp_weight_history");
+pub const LP_WEIGHT_HISTORY: Map<(&Addr, &str, EpochId), Uint128> = Map::new("lp_weight_history");
 
-/// An monotonically increasing counter to generate unique incentive identifiers.
+/// A monotonically increasing counter to generate unique incentive identifiers.
 pub const INCENTIVE_COUNTER: Item<u64> = Item::new("incentive_counter");
 
 /// Incentives map
