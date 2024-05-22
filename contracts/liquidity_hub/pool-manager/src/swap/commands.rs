@@ -33,7 +33,7 @@ pub fn swap(
     // verify that the assets sent match the ones from the pool
     let pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
     ensure!(
-        vec![ask_asset_denom.clone(), offer_asset.denom.clone()]
+        [ask_asset_denom.clone(), offer_asset.denom.clone()]
             .iter()
             .all(|asset| pool
                 .assets

@@ -508,7 +508,7 @@ pub fn update_config() {
     let unauthorized = suite.senders[2].clone();
 
     let initial_config = RefCell::new(white_whale_std::vault_manager::Config {
-        whale_lair_addr: Addr::unchecked(""),
+        bonding_manager_addr: Addr::unchecked(""),
         vault_creation_fee: Coin {
             denom: "uluna".to_string(),
             amount: Default::default(),
@@ -559,7 +559,7 @@ pub fn update_config() {
             assert_eq!(
                 new_config,
                 white_whale_std::vault_manager::Config {
-                    whale_lair_addr: Addr::unchecked(
+                    bonding_manager_addr: Addr::unchecked(
                         "migaloo1gqjwmexg70ajk439ckfjq0uw2k3u2qmqwy6axu"
                     ),
                     vault_creation_fee: Coin {

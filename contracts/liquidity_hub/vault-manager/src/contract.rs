@@ -25,7 +25,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let config = Config {
-        whale_lair_addr: deps.api.addr_validate(&msg.whale_lair_addr)?,
+        bonding_manager_addr: deps.api.addr_validate(&msg.bonding_manager_addr)?,
         vault_creation_fee: msg.vault_creation_fee.clone(),
         flash_loan_enabled: true,
         deposit_enabled: true,
@@ -44,7 +44,10 @@ pub fn instantiate(
     Ok(Response::default().add_attributes(vec![
         ("action", "instantiate".to_string()),
         ("owner", msg.owner),
-        ("whale_lair_addr", config.whale_lair_addr.into_string()),
+        (
+            "bonding_manager_addr",
+            config.bonding_manager_addr.into_string(),
+        ),
         ("vault_creation_fee", config.vault_creation_fee.to_string()),
     ]))
 }
@@ -63,7 +66,7 @@ pub fn execute(
             vault_identifier,
         } => manager::commands::create_vault(deps, env, info, asset_denom, fees, vault_identifier),
         ExecuteMsg::UpdateConfig {
-            whale_lair_addr,
+            bonding_manager_addr,
             vault_creation_fee,
             flash_loan_enabled,
             deposit_enabled,
@@ -71,7 +74,7 @@ pub fn execute(
         } => manager::commands::update_config(
             deps,
             info,
-            whale_lair_addr,
+            bonding_manager_addr,
             vault_creation_fee,
             flash_loan_enabled,
             deposit_enabled,

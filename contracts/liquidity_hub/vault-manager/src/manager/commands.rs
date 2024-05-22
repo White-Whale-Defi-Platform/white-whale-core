@@ -32,15 +32,15 @@ pub fn create_vault(
 
     let mut messages: Vec<CosmosMsg> = vec![];
 
-    // send vault creation fee to whale lair
+    // send vault creation fee to bonding manager
     let creation_fee = coins(
         config.vault_creation_fee.amount.u128(),
         config.vault_creation_fee.denom.clone(),
     );
 
-    // send protocol fee to whale lair
+    // send protocol fee to bonding manager
     messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
-        config.whale_lair_addr.into_string(),
+        config.bonding_manager_addr.into_string(),
         creation_fee,
     )?);
 
@@ -106,7 +106,7 @@ pub fn create_vault(
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
-    whale_lair_addr: Option<String>,
+    bonding_manager_addr: Option<String>,
     vault_creation_fee: Option<Coin>,
     flash_loan_enabled: Option<bool>,
     deposit_enabled: Option<bool>,
@@ -116,8 +116,8 @@ pub fn update_config(
     cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
     let new_config = CONFIG.update::<_, ContractError>(deps.storage, |mut config| {
-        if let Some(new_whale_lair_addr) = whale_lair_addr {
-            config.whale_lair_addr = deps.api.addr_validate(&new_whale_lair_addr)?;
+        if let Some(new_bonding_manager_addr) = bonding_manager_addr {
+            config.bonding_manager_addr = deps.api.addr_validate(&new_bonding_manager_addr)?;
         }
 
         if let Some(vault_creation_fee) = vault_creation_fee {
@@ -141,7 +141,10 @@ pub fn update_config(
 
     Ok(Response::default().add_attributes(vec![
         ("method", "update_manager_config"),
-        ("whale_lair_addr", &new_config.whale_lair_addr.into_string()),
+        (
+            "bonding_manager_addr",
+            &new_config.bonding_manager_addr.into_string(),
+        ),
         (
             "vault_creation_fee",
             &new_config.vault_creation_fee.to_string(),

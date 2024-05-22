@@ -38,7 +38,7 @@ type OsmosisTokenFactoryApp = App<
 pub struct TestingSuite {
     app: OsmosisTokenFactoryApp,
     pub senders: [Addr; 3],
-    pub whale_lair_addr: Addr,
+    pub bonding_manager_addr: Addr,
     pub vault_manager_addr: Addr,
     pub cw20_tokens: Vec<Addr>,
     pub pools: Vec<Addr>,
@@ -129,7 +129,7 @@ impl TestingSuite {
         Self {
             app,
             senders: [sender_1, sender_2, sender_3],
-            whale_lair_addr: Addr::unchecked(""),
+            bonding_manager_addr: Addr::unchecked(""),
             vault_manager_addr: Addr::unchecked(""),
             cw20_tokens: vec![],
             pools: vec![],
@@ -146,7 +146,7 @@ impl TestingSuite {
         self.set_time(timestamp);
 
         self.instantiate(
-            self.whale_lair_addr.to_string(),
+            self.bonding_manager_addr.to_string(),
             Coin {
                 denom: "uwhale".to_string(),
                 amount: Uint128::new(1_000u128),
@@ -173,14 +173,14 @@ impl TestingSuite {
 
         let creator = self.creator().clone();
 
-        self.whale_lair_addr = self
+        self.bonding_manager_addr = self
             .app
             .instantiate_contract(
                 whale_lair_id,
                 creator.clone(),
                 &msg,
                 &[],
-                "White Whale Lair".to_string(),
+                "WW Bonding Manager".to_string(),
                 Some(creator.to_string()),
             )
             .unwrap();
@@ -258,7 +258,7 @@ impl TestingSuite {
     ) -> &mut Self {
         let msg = InstantiateMsg {
             owner: self.creator().to_string(),
-            whale_lair_addr,
+            bonding_manager_addr: whale_lair_addr,
             vault_creation_fee,
         };
 
@@ -373,7 +373,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::vault_manager::ExecuteMsg::UpdateConfig {
-            whale_lair_addr,
+            bonding_manager_addr: whale_lair_addr,
             vault_creation_fee,
             flash_loan_enabled,
             deposit_enabled,

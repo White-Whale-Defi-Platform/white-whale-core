@@ -258,8 +258,8 @@ pub enum ExecuteMsg {
     /// Updates the configuration of the contract.
     /// If a field is not specified (i.e., set to `None`), it will not be modified.
     UpdateConfig {
-        /// The new whale-lair contract address.
-        whale_lair_addr: Option<String>,
+        /// The new bonding-manager contract address.
+        bonding_manager_addr: Option<String>,
         /// The new fee that must be paid when a pool is created.
         pool_creation_fee: Option<Coin>,
         /// The new feature toggles of the contract, allowing fine-tuned
