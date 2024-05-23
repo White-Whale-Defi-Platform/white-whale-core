@@ -1,0 +1,17 @@
+[package]
+name = "integration-tests"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+bonding-manager.workspace = true
+epoch-manager.workspace = true
+incentive-manager.workspace = true
+pool-manager.workspace = true
+vault-manager.workspace = true
+cw-multi-test.workspace = true
+anyhow.workspace = true
+white-whale-std.workspace = true
+white-whale-testing.workspace = true
+cosmwasm-std.workspace = true
+cw-ownable.workspace = true
