@@ -765,13 +765,13 @@ fn compute_next_d(
 pub fn compute_mint_amount_for_deposit(
     amp_factor: &u64,
     deposits: &Vec<Coin>,
-    pool_assets: &[Coin],
+    swaps: &Vec<Coin>,
     pool_token_supply: Uint128,
 ) -> Option<Uint128> {
     // Initial invariant
     let d_0 = compute_d(amp_factor, deposits)?;
 
-    let new_balances: Vec<Coin> = pool_assets
+    let new_balances: Vec<Coin> = swaps
         .iter()
         .enumerate()
         .map(|(i, pool_asset)| {
@@ -1140,168 +1140,165 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_swaps_does_not_result_in_more_tokens_specific_one() {
-    //     const AMP_FACTOR: u64 = 324449;
-    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
-    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(10_000_000_000u128);
+    #[test]
+    fn test_swaps_does_not_result_in_more_tokens_specific_one() {
+        const AMP_FACTOR: u64 = 324449;
+        const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+        const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(10_000_000_000u128);
 
-    //     let stable_swap = StableSwap {
-    //         initial_amp_factor: AMP_FACTOR,
-    //         target_amp_factor: AMP_FACTOR,
-    //         current_ts: ZERO_TS,
-    //         start_ramp_ts: ZERO_TS,
-    //         stop_ramp_ts: ZERO_TS,
-    //     };
+        let mut t = SwapTest {
+            amp_factor: AMP_FACTOR,
+            swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+            user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+            user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+        };
 
-    //     let mut t = SwapTest {
-    //         stable_swap,
-    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
-    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
-    //     };
+        t.swap_a_to_b(Uint128::new(2097152u128));
+        t.swap_a_to_b(Uint128::new(8053063680u128));
+        t.swap_a_to_b(Uint128::new(48u128));
+        assert!(
+            t.user_token_balance_a + t.user_token_balance_b
+                <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+        );
+    }
 
-    //     t.swap_a_to_b(Uint128::new(2097152u128));
-    //     t.swap_a_to_b(Uint128::new(8053063680u128));
-    //     t.swap_a_to_b(Uint128::new(48u128));
-    //     assert!(
-    //         t.user_token_balance_a + t.user_token_balance_b
-    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
-    //     );
-    // }
+    #[test]
+    fn test_swaps_does_not_result_in_more_tokens_specific_two() {
+        const AMP_FACTOR: u64 = 186512;
+        const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+        const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
 
-    // #[test]
-    // fn test_swaps_does_not_result_in_more_tokens_specific_two() {
-    //     const AMP_FACTOR: u64 = 186512;
-    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
-    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
+        let mut t = SwapTest {
+            amp_factor: AMP_FACTOR,
+            swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+            user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+            user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+        };
 
-    //     let stable_swap = StableSwap {
-    //         initial_amp_factor: AMP_FACTOR,
-    //         target_amp_factor: AMP_FACTOR,
-    //         current_ts: ZERO_TS,
-    //         start_ramp_ts: ZERO_TS,
-    //         stop_ramp_ts: ZERO_TS,
-    //     };
+        t.swap_b_to_a(Uint128::new(33579101u128));
+        t.swap_a_to_b(Uint128::new(2097152u128));
+        assert!(
+            t.user_token_balance_a + t.user_token_balance_b
+                <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+        );
+    }
 
-    //     let mut t = SwapTest {
-    //         stable_swap,
-    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
-    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
-    //     };
+    #[test]
+    fn test_swaps_does_not_result_in_more_tokens_specific_three() {
+        const AMP_FACTOR: u64 = 1220;
+        const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+        const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
 
-    //     t.swap_b_to_a(Uint128::new(33579101u128));
-    //     t.swap_a_to_b(Uint128::new(2097152u128));
-    //     assert!(
-    //         t.user_token_balance_a + t.user_token_balance_b
-    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
-    //     );
-    // }
+        let mut t = SwapTest {
+            amp_factor: AMP_FACTOR,
+            swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+            swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+            user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+            user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+        };
 
-    // #[test]
-    // fn test_swaps_does_not_result_in_more_tokens_specific_three() {
-    //     const AMP_FACTOR: u64 = 1220;
-    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
-    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
+        t.swap_b_to_a(Uint128::from(65535u128));
+        t.swap_b_to_a(Uint128::from(6133503u128));
+        t.swap_a_to_b(Uint128::from(65535u128));
+        assert!(
+            t.user_token_balance_a + t.user_token_balance_b
+                <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+        );
+    }
 
-    //     let stable_swap = StableSwap {
-    //         initial_amp_factor: AMP_FACTOR,
-    //         target_amp_factor: AMP_FACTOR,
-    //         current_ts: ZERO_TS,
-    //         start_ramp_ts: ZERO_TS,
-    //         stop_ramp_ts: ZERO_TS,
-    //     };
+    proptest! {
+        #[test]
+        fn test_virtual_price_does_not_decrease_from_deposit(
+            amp_factor in MIN_AMP..=MAX_AMP,
+            deposit_amount_a in 0..MAX_TOKENS_IN.u128() >> 2,
+            deposit_amount_b in 0..MAX_TOKENS_IN.u128() >> 2,
+            deposit_amount_c in 0..MAX_TOKENS_IN.u128() >> 2,
+            swap_token_a_amount in 0..MAX_TOKENS_IN.u128(),
+            swap_token_b_amount in 0..MAX_TOKENS_IN.u128(),
+            swap_token_c_amount in 0..MAX_TOKENS_IN.u128(),
+            pool_token_supply in 0..MAX_TOKENS_IN.u128(),
+        ) {
+            let swaps = vec![
+                coin(swap_token_a_amount, "denom1"),
+                coin(swap_token_b_amount, "denom2"),
+                coin(swap_token_c_amount, "denom3"),
+            ];
 
-    //     let mut t = SwapTest {
-    //         stable_swap,
-    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
-    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
-    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
-    //     };
+            let d0 = compute_d(&amp_factor, &swaps).unwrap();
 
-    //     t.swap_b_to_a(Uint128::from(65535u128));
-    //     t.swap_b_to_a(Uint128::from(6133503u128));
-    //     t.swap_a_to_b(Uint128::from(65535u128));
-    //     assert!(
-    //         t.user_token_balance_a + t.user_token_balance_b
-    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
-    //     );
-    // }
+            let deposits = vec![
+                coin(deposit_amount_a, "denom1"),
+                coin(deposit_amount_b, "denom2"),
+                coin(deposit_amount_c, "denom3"),
+            ];
 
-    // proptest! {
-    //     #[test]
-    //     fn test_virtual_price_does_not_decrease_from_deposit(
-    //         current_ts in ZERO_TS..u64::MAX,
-    //         amp_factor in MIN_AMP..=MAX_AMP,
-    //         deposit_amount_a in 0..MAX_TOKENS_IN.u128() >> 2,
-    //         deposit_amount_b in 0..MAX_TOKENS_IN.u128() >> 2,
-    //         deposit_amount_c in 0..MAX_TOKENS_IN.u128() >> 2,
-    //         swap_token_a_amount in 0..MAX_TOKENS_IN.u128(),
-    //         swap_token_b_amount in 0..MAX_TOKENS_IN.u128(),
-    //         swap_token_c_amount in 0..MAX_TOKENS_IN.u128(),
-    //         pool_token_supply in 0..MAX_TOKENS_IN.u128(),
-    //     ) {
-    //         let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
-    //         let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
-    //         let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
-    //         let d0 = invariant.compute_d(Uint128::new(swap_token_a_amount), Uint128::new(swap_token_b_amount), Uint128::new(swap_token_c_amount)).unwrap();
+            let mint_amount = compute_mint_amount_for_deposit(
+                &amp_factor,
+                &swaps,
+                &deposits,
+                Uint128::new(pool_token_supply),
+                );
+            prop_assume!(mint_amount.is_some());
 
-    //         let mint_amount = invariant.compute_mint_amount_for_deposit(
-    //                 Uint128::new(deposit_amount_a),
-    //                 Uint128::new(deposit_amount_b),
-    //                 Uint128::new(deposit_amount_c),
-    //                 Uint128::new(swap_token_a_amount),
-    //                 Uint128::new(swap_token_b_amount),
-    //                 Uint128::new(swap_token_c_amount),
-    //                 Uint128::new(pool_token_supply),
-    //             );
-    //         prop_assume!(mint_amount.is_some());
+            let new_swap_token_a_amount = swap_token_a_amount + deposit_amount_a;
+            let new_swap_token_b_amount = swap_token_b_amount + deposit_amount_b;
+            let new_swap_token_c_amount = swap_token_c_amount + deposit_amount_c;
+            let new_pool_token_supply = pool_token_supply + mint_amount.unwrap().u128();
 
-    //         let new_swap_token_a_amount = swap_token_a_amount + deposit_amount_a;
-    //         let new_swap_token_b_amount = swap_token_b_amount + deposit_amount_b;
-    //         let new_swap_token_c_amount = swap_token_c_amount + deposit_amount_c;
-    //         let new_pool_token_supply = pool_token_supply + mint_amount.unwrap().u128();
-    //         let d1 = invariant.compute_d(Uint128::new(new_swap_token_a_amount), Uint128::new(new_swap_token_b_amount), Uint128::new(new_swap_token_c_amount)).unwrap();
+            let new_swaps = vec![
+                coin(new_swap_token_a_amount, "denom1"),
+                coin(new_swap_token_b_amount, "denom2"),
+                coin(new_swap_token_c_amount, "denom3"),
+            ];
 
-    //         assert!(d0 < d1);
-    //         assert!(d0 / Uint256::from( pool_token_supply) <= d1 /  Uint256::from( new_pool_token_supply));
-    //     }
-    // }
-    /*
+            let d1 = compute_d(&amp_factor, &new_swaps).unwrap();
+
+            assert!(d0 < d1);
+            assert!(d0 / Uint256::from( pool_token_supply) <= d1 /  Uint256::from( new_pool_token_supply));
+        }
+    }
+
     proptest! {
         #[test]
         fn test_virtual_price_does_not_decrease_from_swap(
-            current_ts in ZERO_TS..i64::MAX,
             amp_factor in MIN_AMP..=MAX_AMP,
-            source_token_amount in 0..MAX_TOKENS_IN,
-            swap_source_amount in 0..MAX_TOKENS_IN,
-            swap_destination_amount in 0..MAX_TOKENS_IN,
-            unswapped_amount in 0..MAX_TOKENS_IN,
+            source_token_amount in 0..MAX_TOKENS_IN.u128(),
+            swap_source_amount in 0..MAX_TOKENS_IN.u128(),
+            swap_destination_amount in 0..MAX_TOKENS_IN.u128(),
+            unswapped_amount in 0..MAX_TOKENS_IN.u128(),
         ) {
             let source_token_amount = source_token_amount;
             let swap_source_amount = swap_source_amount;
             let swap_destination_amount = swap_destination_amount;
             let unswapped_amount = unswapped_amount;
 
-            let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
-            let stop_ramp_ts = cmp::min(i64::MAX, current_ts + MIN_RAMP_DURATION);
-            let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
-            let d0 = invariant.compute_d(swap_source_amount, swap_destination_amount, unswapped_amount).unwrap();
+            let deposits = vec![
+                coin(swap_source_amount, "denom1"),
+                coin(swap_destination_amount, "denom2"),
+                coin(unswapped_amount, "denom3"),
+            ];
 
-            let swap_result = invariant.swap_to(source_token_amount, swap_source_amount, swap_destination_amount, unswapped_amount);
+            let d0 = compute_d(&amp_factor, &deposits).unwrap();
+
+            let swap_result = swap_to(&amp_factor, source_token_amount.into(), swap_source_amount.into(), swap_destination_amount.into(), unswapped_amount.into());
             prop_assume!(swap_result.is_some());
 
             let swap_result = swap_result.unwrap();
-            let d1 = invariant.compute_d(swap_result.new_source_amount, swap_result.new_destination_amount, unswapped_amount).unwrap();
+
+            let swaps = vec![
+                coin(swap_result.new_source_amount.u128(), "denom1"),
+                coin(swap_result.new_destination_amount.u128(), "denom2"),
+                coin(unswapped_amount, "denom3"),
+            ];
+
+            let d1 = compute_d(&amp_factor, &swaps).unwrap();
 
             assert!(d0 <= d1);  // Pool token supply not changed on swaps
         }
-    }*/
+    }
 }

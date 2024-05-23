@@ -5,3 +5,5 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 55857276de2241e3d09d36aba47854e0017db66f6c5a61e306b38ad0d3b8aeeb # shrinks to amp_factor = 1, initial_user_token_a_amount = 10000000, initial_user_token_b_amount = 10000000
+cc 33456e9a9f11bed69ac5171155ce7a64f73f912fcbfede19046989302d1b2da9 # shrinks to amp_factor = 10, deposit_amount_a = 0, deposit_amount_b = 0, deposit_amount_c = 0, swap_token_a_amount = 0, swap_token_b_amount = 0, swap_token_c_amount = 1, pool_token_supply = 0
+cc 75c3b0922c450b034b92dc8c2ea87edff47c90bbede702d84c9fd9c672e2f31f # shrinks to amp_factor = 141, deposit_amount_a = 308442737939502983046195411808336, deposit_amount_b = 0, deposit_amount_c = 0, swap_token_a_amount = 870112623450347049437652954298478, swap_token_b_amount = 501497230776538877048085549853566, swap_token_c_amount = 24063806364666791266594852039507, pool_token_supply = 2
