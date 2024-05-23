@@ -963,9 +963,12 @@ dependencies = [
  "cw20-base",
  "epoch-manager",
  "incentive-manager",
+ "proptest",
+ "rand",
  "semver",
  "serde",
  "sha2 0.10.8",
+ "stable-swap-sim",
  "test-case",
  "thiserror",
  "whale-lair",
@@ -1419,6 +1422,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "stable-swap-sim1"
+version = "0.1.0"
+dependencies = [
+ "pyo3",
+]
+
+[[package]]
 name = "stableswap-3pool"
 version = "1.2.3"
 dependencies = [
@@ -1435,7 +1445,7 @@ dependencies = [
  "schemars",
  "semver",
  "serde",
- "stable-swap-sim",
+ "stable-swap-sim1",
  "thiserror",
  "white-whale-std",
 ]

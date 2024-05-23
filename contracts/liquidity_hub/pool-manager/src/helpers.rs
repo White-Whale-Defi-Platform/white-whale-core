@@ -2,8 +2,8 @@ use std::ops::Mul;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult, Storage,
-    Uint128, Uint256,
+    coin, ensure, Addr, Coin, Decimal, Decimal256, Deps, DepsMut, Env, StdError, StdResult,
+    Storage, Uint128, Uint256,
 };
 
 use white_whale_std::fee::PoolFee;
@@ -16,17 +16,25 @@ use crate::math::Decimal256Helper;
 /// The amount of iterations to perform when calculating the Newton-Raphson approximation.
 const NEWTON_ITERATIONS: u64 = 32;
 
-// todo isn't this for the 3pool? shouldn't it be 3
-// the number of assets in the pool
-pub const N_COINS: u8 = 3;
+/// Encodes all results of swapping from a source token to a destination token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SwapResult {
+    /// New amount of source token
+    pub new_source_amount: Uint128,
+    /// New amount of destination token
+    pub new_destination_amount: Uint128,
+    /// Amount of destination token swapped
+    pub amount_swapped: Uint128,
+}
 
 fn calculate_stableswap_d(
+    n_coins: Uint256,
     offer_pool: Decimal256,
     ask_pool: Decimal256,
     amp: &u64,
     precision: u8,
 ) -> Result<Decimal256, ContractError> {
-    let n_coins = Decimal256::from_ratio(Uint256::from(N_COINS), Uint256::from_u128(1));
+    let n_coins_decimal = Decimal256::from_ratio(n_coins, Uint256::one());
 
     let sum_pools = offer_pool.checked_add(ask_pool)?;
     if sum_pools.is_zero() {
@@ -35,10 +43,7 @@ fn calculate_stableswap_d(
     }
 
     // ann = amp * n_coins
-    let ann = Decimal256::from_ratio(
-        Uint256::from_u128((*amp).into()).checked_mul(Uint256::from(N_COINS))?,
-        1u8,
-    );
+    let ann = Decimal256::from_ratio(Uint256::from_u128((*amp).into()).checked_mul(n_coins)?, 1u8);
 
     // perform Newton-Raphson method
     let mut current_d = sum_pools;
@@ -48,7 +53,7 @@ fn calculate_stableswap_d(
         let new_d = [offer_pool, ask_pool]
             .into_iter()
             .try_fold::<_, _, Result<_, ContractError>>(current_d, |acc, pool| {
-                let mul_pools = pool.checked_mul(n_coins)?;
+                let mul_pools = pool.checked_mul(n_coins_decimal)?;
                 acc.checked_multiply_ratio(current_d, mul_pools)
             })?;
 
@@ -56,12 +61,16 @@ fn calculate_stableswap_d(
         // current_d = ((ann * sum_pools + new_d * n_coins) * current_d) / ((ann - 1) * current_d + (n_coins + 1) * new_d)
         current_d = (ann
             .checked_mul(sum_pools)?
-            .checked_add(new_d.checked_mul(n_coins)?)?
+            .checked_add(new_d.checked_mul(n_coins_decimal)?)?
             .checked_mul(current_d)?)
         .checked_div(
             (ann.checked_sub(Decimal256::one())?
                 .checked_mul(current_d)?
-                .checked_add(n_coins.checked_add(Decimal256::one())?.checked_mul(new_d)?))?,
+                .checked_add(
+                    n_coins_decimal
+                        .checked_add(Decimal256::one())?
+                        .checked_mul(new_d)?,
+                ))?,
         )?;
 
         if current_d >= old_d {
@@ -95,6 +104,7 @@ pub enum StableSwapDirection {
 
 /// Calculates the new pool amount given the current pools and swap size.
 pub fn calculate_stableswap_y(
+    n_coins: Uint256,
     offer_pool: Decimal256,
     ask_pool: Decimal256,
     offer_amount: Decimal256,
@@ -102,9 +112,9 @@ pub fn calculate_stableswap_y(
     ask_precision: u8,
     direction: StableSwapDirection,
 ) -> Result<Uint128, ContractError> {
-    let ann = Uint256::from_u128((*amp).into()).checked_mul(Uint256::from(N_COINS))?;
+    let ann = Uint256::from_u128((*amp).into()).checked_mul(n_coins)?;
 
-    let d = calculate_stableswap_d(offer_pool, ask_pool, amp, ask_precision)?
+    let d = calculate_stableswap_d(n_coins, offer_pool, ask_pool, amp, ask_precision)?
         .to_uint256_with_precision(u32::from(ask_precision))?;
 
     let pool_sum = match direction {
@@ -114,8 +124,8 @@ pub fn calculate_stableswap_y(
     .to_uint256_with_precision(u32::from(ask_precision))?;
 
     let c = d
-        .checked_multiply_ratio(d, pool_sum.checked_mul(Uint256::from(N_COINS))?)?
-        .checked_multiply_ratio(d, ann.checked_mul(Uint256::from(N_COINS))?)?;
+        .checked_multiply_ratio(d, pool_sum.checked_mul(n_coins)?)?
+        .checked_multiply_ratio(d, ann.checked_mul(n_coins)?)?;
 
     let b = pool_sum.checked_add(d.checked_div(ann)?)?;
 
@@ -141,8 +151,11 @@ pub fn calculate_stableswap_y(
     Err(ContractError::ConvergeError)
 }
 
+#[allow(clippy::too_many_arguments)]
 /// computes a swap
+#[allow(clippy::too_many_arguments)]
 pub fn compute_swap(
+    n_coins: Uint256,
     offer_pool: Uint128,
     ask_pool: Uint128,
     offer_amount: Uint128,
@@ -180,6 +193,7 @@ pub fn compute_swap(
             let offer_amount = Decimal256::decimal_with_precision(offer_amount, offer_precision)?;
 
             let new_pool = calculate_stableswap_y(
+                n_coins,
                 offer_pool,
                 ask_pool,
                 offer_amount,
@@ -688,26 +702,27 @@ pub fn compute_d(amp_factor: &u64, deposits: &Vec<Coin>) -> Option<Uint256> {
         // Newton's method to approximate D
         let mut d_prev: Uint256;
         let mut d: Uint256 = sum_x.into();
-        for amount in amount_times_coins.into_iter() {
-            for _ in 0..256 {
-                let mut d_prod = d;
+        for _ in 0..256 {
+            let mut d_prod = d;
+            for amount in amount_times_coins.clone().into_iter() {
                 d_prod = d_prod
                     .checked_mul(d)
                     .unwrap()
                     .checked_div(amount.into())
                     .unwrap();
-                d_prev = d;
-                d = compute_next_d(amp_factor, d, d_prod, sum_x, n_coins).unwrap();
-                // Equality with the precision of 1
-                if d > d_prev {
-                    if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
-                        break;
-                    }
-                } else if d_prev.checked_sub(d).unwrap() <= Uint256::one() {
+            }
+            d_prev = d;
+            d = compute_next_d(amp_factor, d, d_prod, sum_x, n_coins).unwrap();
+            // Equality with the precision of 1
+            if d > d_prev {
+                if d.checked_sub(d_prev).unwrap() <= Uint256::one() {
                     break;
                 }
+            } else if d_prev.checked_sub(d).unwrap() <= Uint256::one() {
+                break;
             }
         }
+
         Some(d)
     }
 }
@@ -781,4 +796,512 @@ pub fn compute_mint_amount_for_deposit(
             .unwrap();
         Some(Uint128::try_from(amount).unwrap())
     }
+}
+
+/*
+############ trying to fix tests
+*/
+
+/// Number of coins in a swap. Hardcoded to 3 to reuse previous tests
+pub const N_COINS: u8 = 3;
+
+/// Compute the swap amount `y` in proportion to `x`.
+///
+/// Solve for `y`:
+///
+/// ```text
+/// y**2 + y * (sum' - (A*n**n - 1) * D / (A * n**n)) = D ** (n + 1) / (n ** (2 * n) * prod' * A)
+/// y**2 + b*y = c
+/// ```
+#[allow(clippy::many_single_char_names, clippy::unwrap_used)]
+pub fn compute_y_raw(
+    amp_factor: &u64,
+    swap_in: Uint128,
+    //swap_out: Uint128,
+    no_swap: Uint128,
+    d: Uint256,
+) -> Option<Uint256> {
+    let ann = amp_factor.checked_mul(N_COINS.into())?; // A * n ** n
+
+    // sum' = prod' = x
+    // c =  D ** (n + 1) / (n ** (2 * n) * prod' * A)
+    let mut c = d;
+
+    c = c
+        .checked_mul(d)
+        .unwrap()
+        .checked_div(swap_in.checked_mul(N_COINS.into()).unwrap().into())
+        .unwrap();
+
+    c = c
+        .checked_mul(d)
+        .unwrap()
+        .checked_div(no_swap.checked_mul(N_COINS.into()).unwrap().into())
+        .unwrap();
+    c = c
+        .checked_mul(d)
+        .unwrap()
+        .checked_div(ann.checked_mul(N_COINS.into()).unwrap().into())
+        .unwrap();
+    // b = sum(swap_in, no_swap) + D // Ann - D
+    // not subtracting D here because that could result in a negative.
+    let b = d
+        .checked_div(ann.into())
+        .unwrap()
+        .checked_add(swap_in.into())
+        .unwrap()
+        .checked_add(no_swap.into())
+        .unwrap();
+
+    // Solve for y by approximating: y**2 + b*y = c
+    let mut y_prev: Uint256;
+    let mut y = d;
+    for _ in 0..1000 {
+        y_prev = y;
+        // y = (y * y + c) / (2 * y + b - d);
+        let y_numerator = y.checked_mul(y).unwrap().checked_add(c).unwrap();
+        let y_denominator = y
+            .checked_mul(Uint256::from(2u8))
+            .unwrap()
+            .checked_add(b)
+            .unwrap()
+            .checked_sub(d)
+            .unwrap();
+        y = y_numerator.checked_div(y_denominator).unwrap();
+        if y > y_prev {
+            if y.checked_sub(y_prev).unwrap() <= Uint256::one() {
+                break;
+            }
+        } else if y_prev.checked_sub(y).unwrap() <= Uint256::one() {
+            break;
+        }
+    }
+    Some(y)
+}
+
+/// Computes the swap amount `y` in proportion to `x`.
+#[allow(clippy::unwrap_used)]
+pub fn compute_y(amp_factor: &u64, x: Uint128, no_swap: Uint128, d: Uint256) -> Option<Uint128> {
+    let amount = compute_y_raw(&amp_factor, x, no_swap, d)?;
+    Some(Uint128::try_from(amount).unwrap())
+}
+
+/// Compute SwapResult after an exchange
+#[allow(clippy::unwrap_used)]
+pub fn swap_to(
+    amp_factor: &u64,
+    source_amount: Uint128,
+    swap_source_amount: Uint128,
+    swap_destination_amount: Uint128,
+    unswaped_amount: Uint128,
+) -> Option<SwapResult> {
+    let deposits = vec![
+        coin(swap_source_amount.u128(), "denom1"),
+        coin(swap_destination_amount.u128(), "denom2"),
+        coin(unswaped_amount.u128(), "denom3"),
+    ];
+    let y = compute_y(
+        amp_factor,
+        swap_source_amount.checked_add(source_amount).unwrap(),
+        unswaped_amount,
+        compute_d(amp_factor, &deposits).unwrap(),
+    )?;
+    // https://github.com/curvefi/curve-contract/blob/b0bbf77f8f93c9c5f4e415bce9cd71f0cdee960e/contracts/pool-templates/base/SwapTemplateBase.vy#L466
+    let dy = swap_destination_amount
+        .checked_sub(y)
+        .unwrap()
+        .checked_sub(Uint128::one())
+        .unwrap();
+
+    let amount_swapped = dy;
+    let new_destination_amount = swap_destination_amount.checked_sub(amount_swapped).unwrap();
+    let new_source_amount = swap_source_amount.checked_add(source_amount).unwrap();
+
+    Some(SwapResult {
+        new_source_amount,
+        new_destination_amount,
+        amount_swapped,
+    })
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments
+)]
+mod tests {
+    use cosmwasm_std::coin;
+    use proptest::prelude::*;
+    use rand::Rng;
+    use sim::Model;
+
+    use super::*;
+
+    /// Minimum amplification coefficient.
+    pub const MIN_AMP: u64 = 1;
+
+    /// Maximum amplification coefficient.
+    pub const MAX_AMP: u64 = 1_000_000;
+
+    /// Maximum number of tokens to swap at once.
+    pub const MAX_TOKENS_IN: Uint128 = Uint128::new(2u128 << 110);
+
+    fn check_d(model: &Model, amount_a: u128, amount_b: u128, amount_c: u128) -> Uint256 {
+        let deposits = vec![
+            coin(amount_a, "denom1"),
+            coin(amount_b, "denom2"),
+            coin(amount_c, "denom4"),
+        ];
+
+        let d = compute_d(&model.amp_factor, &deposits).unwrap();
+        d
+    }
+
+    fn check_y(model: &Model, swap_in: u128, no_swap: u128, d: Uint256) {
+        let y = compute_y_raw(
+            &model.amp_factor,
+            Uint128::new(swap_in),
+            Uint128::new(no_swap),
+            d,
+        )
+        .unwrap();
+        assert_eq!(
+            Uint128::try_from(y).unwrap().u128(),
+            model.sim_y(0, 1, swap_in)
+        )
+    }
+
+    #[test]
+    fn test_curve_math_specific() {
+        // Specific cases
+        let model_no_balance = Model::new(1, vec![0, 0, 0], N_COINS);
+        check_d(&model_no_balance, 0, 0, 0);
+
+        let amount_a = 1046129065254161082u128;
+        let amount_b = 1250710035549196829u128;
+        let amount_c = 1111111111111111111u128;
+        let model = Model::new(1188, vec![amount_a, amount_b, amount_c], N_COINS);
+        let d = check_d(&model, amount_a, amount_b, amount_c);
+        let amount_x = 2045250484898639148u128;
+        check_y(&model, amount_x, amount_c, d);
+
+        let amount_a = 862538457714585493u128;
+        let amount_b = 492548187909826733u128;
+        let amount_c = 777777777777777777u128;
+        let model = Model::new(9, vec![amount_a, amount_b, amount_c], N_COINS);
+        let d = check_d(&model, amount_a, amount_b, amount_c);
+        let amount_x = 815577754938955939u128;
+
+        check_y(&model, amount_x, amount_c, d);
+    }
+
+    #[test]
+    fn test_compute_mint_amount_for_deposit() {
+        let deposits = vec![
+            coin(MAX_TOKENS_IN.u128(), "denom1"),
+            coin(MAX_TOKENS_IN.u128(), "denom2"),
+            coin(MAX_TOKENS_IN.u128(), "denom4"),
+        ];
+
+        let pool_assets = vec![
+            coin(MAX_TOKENS_IN.u128(), "denom1"),
+            coin(MAX_TOKENS_IN.u128(), "denom2"),
+            coin(MAX_TOKENS_IN.u128(), "denom4"),
+        ];
+
+        let pool_token_supply = MAX_TOKENS_IN;
+
+        let actual_mint_amount =
+            compute_mint_amount_for_deposit(&MIN_AMP, &deposits, &pool_assets, pool_token_supply)
+                .unwrap();
+        let expected_mint_amount = MAX_TOKENS_IN;
+
+        assert_eq!(actual_mint_amount, expected_mint_amount);
+    }
+
+    #[ignore]
+    #[test]
+    fn test_curve_math_with_random_inputs() {
+        for _ in 0..100 {
+            let mut rng = rand::thread_rng();
+
+            let amp_factor: u64 = rng.gen_range(MIN_AMP..=MAX_AMP);
+            let amount_a = rng.gen_range(1..=MAX_TOKENS_IN.u128());
+            let amount_b = rng.gen_range(1..=MAX_TOKENS_IN.u128());
+            let amount_c = rng.gen_range(1..=MAX_TOKENS_IN.u128());
+            println!("testing curve_math_with_random_inputs:");
+            println!(
+                "amp_factor: {}, amount_a: {}, amount_b: {}, amount_c: {}",
+                amp_factor, amount_a, amount_b, amount_c,
+            );
+
+            let model = Model::new(amp_factor, vec![amount_a, amount_b, amount_c], N_COINS);
+            let d = check_d(&model, amount_a, amount_b, amount_c);
+            let amount_x = rng.gen_range(0..=amount_a);
+
+            println!("amount_x: {}", amount_x);
+            check_y(&model, amount_x, amount_c, d);
+        }
+    }
+
+    #[derive(Debug)]
+    struct SwapTest {
+        pub amp_factor: u64,
+        pub swap_reserve_balance_a: Uint128,
+        pub swap_reserve_balance_b: Uint128,
+        pub swap_reserve_balance_c: Uint128,
+        pub user_token_balance_a: Uint128,
+        pub user_token_balance_b: Uint128,
+    }
+
+    impl SwapTest {
+        pub fn swap_a_to_b(&mut self, swap_amount: Uint128) {
+            self.do_swap(true, swap_amount)
+        }
+
+        pub fn swap_b_to_a(&mut self, swap_amount: Uint128) {
+            self.do_swap(false, swap_amount)
+        }
+
+        fn do_swap(&mut self, swap_a_to_b: bool, source_amount: Uint128) {
+            let (swap_source_amount, swap_dest_amount) = match swap_a_to_b {
+                true => (self.swap_reserve_balance_a, self.swap_reserve_balance_b),
+                false => (self.swap_reserve_balance_b, self.swap_reserve_balance_a),
+            };
+
+            let SwapResult {
+                new_source_amount,
+                new_destination_amount,
+                amount_swapped,
+                ..
+            } = swap_to(
+                &self.amp_factor,
+                source_amount,
+                swap_source_amount,
+                swap_dest_amount,
+                self.swap_reserve_balance_c,
+            )
+            .unwrap();
+
+            match swap_a_to_b {
+                true => {
+                    self.swap_reserve_balance_a = new_source_amount;
+                    self.swap_reserve_balance_b = new_destination_amount;
+                    self.user_token_balance_a -= source_amount;
+                    self.user_token_balance_b += amount_swapped;
+                }
+                false => {
+                    self.swap_reserve_balance_a = new_destination_amount;
+                    self.swap_reserve_balance_b = new_source_amount;
+                    self.user_token_balance_a += amount_swapped;
+                    self.user_token_balance_b -= source_amount;
+                }
+            }
+        }
+    }
+
+    proptest! {
+        #[test]
+        fn test_swaps_does_not_result_in_more_tokens(
+            amp_factor in MIN_AMP..=MAX_AMP,
+            initial_user_token_a_amount in 10_000_000..MAX_TOKENS_IN.u128() >> 16,
+            initial_user_token_b_amount in 10_000_000..MAX_TOKENS_IN.u128() >> 16,
+        ) {
+
+            let mut t = SwapTest { amp_factor, swap_reserve_balance_a: MAX_TOKENS_IN, swap_reserve_balance_b: MAX_TOKENS_IN,
+                swap_reserve_balance_c: MAX_TOKENS_IN,
+                user_token_balance_a: Uint128::new(initial_user_token_a_amount),
+                user_token_balance_b:Uint128::new(initial_user_token_b_amount),
+                };
+
+            const ITERATIONS: u64 = 100;
+            const SHRINK_MULTIPLIER: u64= 10;
+
+            for i in 0..ITERATIONS {
+                let before_balance_a = t.user_token_balance_a;
+                let before_balance_b = t.user_token_balance_b;
+                let swap_amount = before_balance_a / Uint128::from((i + 1) * SHRINK_MULTIPLIER);
+                t.swap_a_to_b(swap_amount);
+                let after_balance = t.user_token_balance_a + t.user_token_balance_b;
+
+                assert!(before_balance_a + before_balance_b >= after_balance, "before_a: {}, before_b: {}, after_a: {}, after_b: {}, amp_factor: {:?}", before_balance_a, before_balance_b, t.user_token_balance_a, t.user_token_balance_b, amp_factor);
+            }
+
+            for i in 0..ITERATIONS {
+                let before_balance_a = t.user_token_balance_a;
+                let before_balance_b = t.user_token_balance_b;
+                let swap_amount = before_balance_a / Uint128::from((i + 1) * SHRINK_MULTIPLIER);
+                t.swap_a_to_b(swap_amount);
+                let after_balance = t.user_token_balance_a + t.user_token_balance_b;
+
+                assert!(before_balance_a + before_balance_b >= after_balance, "before_a: {}, before_b: {}, after_a: {}, after_b: {}, amp_factor: {:?}", before_balance_a, before_balance_b, t.user_token_balance_a, t.user_token_balance_b, amp_factor);
+            }
+        }
+    }
+
+    // #[test]
+    // fn test_swaps_does_not_result_in_more_tokens_specific_one() {
+    //     const AMP_FACTOR: u64 = 324449;
+    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(10_000_000_000u128);
+
+    //     let stable_swap = StableSwap {
+    //         initial_amp_factor: AMP_FACTOR,
+    //         target_amp_factor: AMP_FACTOR,
+    //         current_ts: ZERO_TS,
+    //         start_ramp_ts: ZERO_TS,
+    //         stop_ramp_ts: ZERO_TS,
+    //     };
+
+    //     let mut t = SwapTest {
+    //         stable_swap,
+    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+    //     };
+
+    //     t.swap_a_to_b(Uint128::new(2097152u128));
+    //     t.swap_a_to_b(Uint128::new(8053063680u128));
+    //     t.swap_a_to_b(Uint128::new(48u128));
+    //     assert!(
+    //         t.user_token_balance_a + t.user_token_balance_b
+    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+    //     );
+    // }
+
+    // #[test]
+    // fn test_swaps_does_not_result_in_more_tokens_specific_two() {
+    //     const AMP_FACTOR: u64 = 186512;
+    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
+
+    //     let stable_swap = StableSwap {
+    //         initial_amp_factor: AMP_FACTOR,
+    //         target_amp_factor: AMP_FACTOR,
+    //         current_ts: ZERO_TS,
+    //         start_ramp_ts: ZERO_TS,
+    //         stop_ramp_ts: ZERO_TS,
+    //     };
+
+    //     let mut t = SwapTest {
+    //         stable_swap,
+    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+    //     };
+
+    //     t.swap_b_to_a(Uint128::new(33579101u128));
+    //     t.swap_a_to_b(Uint128::new(2097152u128));
+    //     assert!(
+    //         t.user_token_balance_a + t.user_token_balance_b
+    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+    //     );
+    // }
+
+    // #[test]
+    // fn test_swaps_does_not_result_in_more_tokens_specific_three() {
+    //     const AMP_FACTOR: u64 = 1220;
+    //     const INITIAL_SWAP_RESERVE_AMOUNT: Uint128 = Uint128::new(100_000_000_000u128);
+    //     const INITIAL_USER_TOKEN_AMOUNT: Uint128 = Uint128::new(1_000_000_000u128);
+
+    //     let stable_swap = StableSwap {
+    //         initial_amp_factor: AMP_FACTOR,
+    //         target_amp_factor: AMP_FACTOR,
+    //         current_ts: ZERO_TS,
+    //         start_ramp_ts: ZERO_TS,
+    //         stop_ramp_ts: ZERO_TS,
+    //     };
+
+    //     let mut t = SwapTest {
+    //         stable_swap,
+    //         swap_reserve_balance_a: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_b: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         swap_reserve_balance_c: INITIAL_SWAP_RESERVE_AMOUNT,
+    //         user_token_balance_a: INITIAL_USER_TOKEN_AMOUNT,
+    //         user_token_balance_b: INITIAL_USER_TOKEN_AMOUNT,
+    //     };
+
+    //     t.swap_b_to_a(Uint128::from(65535u128));
+    //     t.swap_b_to_a(Uint128::from(6133503u128));
+    //     t.swap_a_to_b(Uint128::from(65535u128));
+    //     assert!(
+    //         t.user_token_balance_a + t.user_token_balance_b
+    //             <= INITIAL_USER_TOKEN_AMOUNT * Uint128::from(2u8)
+    //     );
+    // }
+
+    // proptest! {
+    //     #[test]
+    //     fn test_virtual_price_does_not_decrease_from_deposit(
+    //         current_ts in ZERO_TS..u64::MAX,
+    //         amp_factor in MIN_AMP..=MAX_AMP,
+    //         deposit_amount_a in 0..MAX_TOKENS_IN.u128() >> 2,
+    //         deposit_amount_b in 0..MAX_TOKENS_IN.u128() >> 2,
+    //         deposit_amount_c in 0..MAX_TOKENS_IN.u128() >> 2,
+    //         swap_token_a_amount in 0..MAX_TOKENS_IN.u128(),
+    //         swap_token_b_amount in 0..MAX_TOKENS_IN.u128(),
+    //         swap_token_c_amount in 0..MAX_TOKENS_IN.u128(),
+    //         pool_token_supply in 0..MAX_TOKENS_IN.u128(),
+    //     ) {
+    //         let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
+    //         let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
+    //         let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
+    //         let d0 = invariant.compute_d(Uint128::new(swap_token_a_amount), Uint128::new(swap_token_b_amount), Uint128::new(swap_token_c_amount)).unwrap();
+
+    //         let mint_amount = invariant.compute_mint_amount_for_deposit(
+    //                 Uint128::new(deposit_amount_a),
+    //                 Uint128::new(deposit_amount_b),
+    //                 Uint128::new(deposit_amount_c),
+    //                 Uint128::new(swap_token_a_amount),
+    //                 Uint128::new(swap_token_b_amount),
+    //                 Uint128::new(swap_token_c_amount),
+    //                 Uint128::new(pool_token_supply),
+    //             );
+    //         prop_assume!(mint_amount.is_some());
+
+    //         let new_swap_token_a_amount = swap_token_a_amount + deposit_amount_a;
+    //         let new_swap_token_b_amount = swap_token_b_amount + deposit_amount_b;
+    //         let new_swap_token_c_amount = swap_token_c_amount + deposit_amount_c;
+    //         let new_pool_token_supply = pool_token_supply + mint_amount.unwrap().u128();
+    //         let d1 = invariant.compute_d(Uint128::new(new_swap_token_a_amount), Uint128::new(new_swap_token_b_amount), Uint128::new(new_swap_token_c_amount)).unwrap();
+
+    //         assert!(d0 < d1);
+    //         assert!(d0 / Uint256::from( pool_token_supply) <= d1 /  Uint256::from( new_pool_token_supply));
+    //     }
+    // }
+    /*
+    proptest! {
+        #[test]
+        fn test_virtual_price_does_not_decrease_from_swap(
+            current_ts in ZERO_TS..i64::MAX,
+            amp_factor in MIN_AMP..=MAX_AMP,
+            source_token_amount in 0..MAX_TOKENS_IN,
+            swap_source_amount in 0..MAX_TOKENS_IN,
+            swap_destination_amount in 0..MAX_TOKENS_IN,
+            unswapped_amount in 0..MAX_TOKENS_IN,
+        ) {
+            let source_token_amount = source_token_amount;
+            let swap_source_amount = swap_source_amount;
+            let swap_destination_amount = swap_destination_amount;
+            let unswapped_amount = unswapped_amount;
+
+            let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
+            let stop_ramp_ts = cmp::min(i64::MAX, current_ts + MIN_RAMP_DURATION);
+            let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
+            let d0 = invariant.compute_d(swap_source_amount, swap_destination_amount, unswapped_amount).unwrap();
+
+            let swap_result = invariant.swap_to(source_token_amount, swap_source_amount, swap_destination_amount, unswapped_amount);
+            prop_assume!(swap_result.is_some());
+
+            let swap_result = swap_result.unwrap();
+            let d1 = invariant.compute_d(swap_result.new_source_amount, swap_result.new_destination_amount, unswapped_amount).unwrap();
+
+            assert!(d0 <= d1);  // Pool token supply not changed on swaps
+        }
+    }*/
 }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128};
+use cosmwasm_std::{Coin, Decimal, DepsMut, Uint128, Uint256};
 
 use white_whale_std::pool_manager::PoolInfo;
 use white_whale_std::pool_network::swap::assert_max_spread;
@@ -58,6 +58,7 @@ pub fn perform_swap(
 
     // compute the swap
     let swap_computation = helpers::compute_swap(
+        Uint256::from(pool_info.assets.len() as u128),
         offer_asset_in_pool.amount,
         ask_asset_in_pool.amount,
         offer_asset.amount,
