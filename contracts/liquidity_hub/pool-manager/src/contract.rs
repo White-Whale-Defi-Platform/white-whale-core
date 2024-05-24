@@ -175,13 +175,13 @@ pub fn execute(
             router::commands::remove_swap_routes(deps, info.sender, swap_routes)
         }
         ExecuteMsg::UpdateConfig {
-            whale_lair_addr,
+            bonding_manager_addr,
             pool_creation_fee,
             feature_toggle,
         } => manager::update_config(
             deps,
             info,
-            whale_lair_addr,
+            bonding_manager_addr,
             pool_creation_fee,
             feature_toggle,
         ),

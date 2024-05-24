@@ -927,11 +927,11 @@ pub fn update_config() {
 
     suite.instantiate_default();
 
-    let whale_lair = suite.whale_lair_addr.clone();
+    let bonding_manager_addr = suite.bonding_manager_addr.clone();
     let epoch_manager = suite.epoch_manager_addr.clone();
 
     let expected_config = Config {
-        whale_lair_addr: whale_lair,
+        bonding_manager_addr,
         epoch_manager_addr: epoch_manager,
         create_incentive_fee: Coin {
             denom: "uwhale".to_string(),
@@ -1094,7 +1094,7 @@ pub fn update_config() {
     );
 
     let expected_config = Config {
-        whale_lair_addr: Addr::unchecked(MOCK_CONTRACT_ADDR),
+        bonding_manager_addr: Addr::unchecked(MOCK_CONTRACT_ADDR),
         epoch_manager_addr: Addr::unchecked(MOCK_CONTRACT_ADDR),
         create_incentive_fee: Coin {
             denom: "uwhale".to_string(),
@@ -1133,7 +1133,7 @@ pub fn test_manage_position() {
     suite.instantiate_default();
 
     let incentive_manager = suite.incentive_manager_addr.clone();
-    let whale_lair = suite.whale_lair_addr.clone();
+    let whale_lair = suite.bonding_manager_addr.clone();
 
     suite
         .add_hook(creator.clone(), incentive_manager, vec![], |result| {
@@ -2136,9 +2136,9 @@ fn test_close_expired_incentives() {
     let lp_denom = "factory/pool/uLP".to_string();
 
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_000u128, "uwhale"),
-        coin(1_000_000_000u128, "ulab"),
-        coin(1_000_000_000u128, "uosmo"),
+        coin(2_000_000_000u128, "uwhale"),
+        coin(2_000_000_000u128, "ulab"),
+        coin(2_000_000_000u128, "uosmo"),
         coin(1_000_000_000u128, lp_denom.clone()),
         coin(1_000_000_000u128, "invalid_lp"),
     ]);
@@ -2260,10 +2260,10 @@ fn expand_expired_incentive() {
     let lp_denom = "factory/pool/uLP".to_string();
 
     let mut suite = TestingSuite::default_with_balances(vec![
-        coin(1_000_000_000u128, "uwhale".to_string()),
-        coin(1_000_000_000u128, "ulab".to_string()),
-        coin(1_000_000_000u128, "uosmo".to_string()),
-        coin(1_000_000_000u128, lp_denom.clone()),
+        coin(2_000_000_000u128, "uwhale".to_string()),
+        coin(2_000_000_000u128, "ulab".to_string()),
+        coin(2_000_000_000u128, "uosmo".to_string()),
+        coin(2_000_000_000u128, lp_denom.clone()),
     ]);
 
     let creator = suite.creator();
@@ -2342,7 +2342,7 @@ fn test_emergency_withdrawal() {
 
     suite.instantiate_default();
 
-    let whale_lair_addr = suite.whale_lair_addr.clone();
+    let whale_lair_addr = suite.bonding_manager_addr.clone();
 
     suite
         .manage_incentive(
@@ -2446,7 +2446,7 @@ fn test_incentive_helper() {
     suite.instantiate_default();
 
     let incentive_manager_addr = suite.incentive_manager_addr.clone();
-    let whale_lair_addr = suite.whale_lair_addr.clone();
+    let whale_lair_addr = suite.bonding_manager_addr.clone();
 
     suite
         .manage_incentive(
@@ -2590,7 +2590,7 @@ fn test_multiple_incentives_and_positions() {
     suite.instantiate_default();
 
     let incentive_manager_addr = suite.incentive_manager_addr.clone();
-    let whale_lair_addr = suite.whale_lair_addr.clone();
+    let bonding_manager_addr = suite.bonding_manager_addr.clone();
 
     // create 4 incentives with 2 different LPs
     suite
@@ -2919,7 +2919,7 @@ fn test_multiple_incentives_and_positions() {
         )
         .query_balance(
             lp_denom_1.clone().to_string(),
-            whale_lair_addr.clone(),
+            bonding_manager_addr.clone(),
             |balance| {
                 // 10% of the lp the user input initially
                 assert_eq!(balance, Uint128::new(4_000));
@@ -2927,7 +2927,7 @@ fn test_multiple_incentives_and_positions() {
         )
         .query_balance(
             lp_denom_2.clone().to_string(),
-            whale_lair_addr.clone(),
+            bonding_manager_addr.clone(),
             |balance| {
                 // 10% of the lp the user input initially
                 assert_eq!(balance, Uint128::new(8_000));

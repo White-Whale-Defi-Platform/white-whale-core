@@ -212,9 +212,9 @@ pub fn after_flashloan(
 
     let config = CONFIG.load(deps.storage)?;
 
-    // send protocol fee to whale lair
+    // send protocol fee to bonding manager
     messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
-        config.whale_lair_addr.into_string(),
+        config.bonding_manager_addr.into_string(),
         coins(protocol_fee.u128(), loan_asset.denom),
     )?);
 

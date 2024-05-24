@@ -51,7 +51,7 @@ pub fn epoch_manager_contract() -> Box<dyn Contract<Empty>> {
         epoch_manager::contract::instantiate,
         epoch_manager::contract::query,
     )
-    .with_migrate(whale_lair::contract::migrate);
+    .with_migrate(epoch_manager::contract::migrate);
 
     Box::new(contract)
 }
@@ -63,7 +63,7 @@ pub fn incentive_manager_contract() -> Box<dyn Contract<Empty>> {
         incentive_manager::contract::instantiate,
         incentive_manager::contract::query,
     )
-    .with_migrate(whale_lair::contract::migrate);
+    .with_migrate(incentive_manager::contract::migrate);
 
     Box::new(contract)
 }
@@ -494,7 +494,7 @@ impl TestingSuite {
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
-        new_whale_lair_addr: Option<Addr>,
+        new_bonding_manager_addr: Option<Addr>,
         new_pool_creation_fee: Option<Coin>,
         new_feature_toggle: Option<FeatureToggle>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
@@ -503,7 +503,7 @@ impl TestingSuite {
             sender,
             self.pool_manager_addr.clone(),
             &white_whale_std::pool_manager::ExecuteMsg::UpdateConfig {
-                whale_lair_addr: new_whale_lair_addr.map(|addr| addr.to_string()),
+                bonding_manager_addr: new_bonding_manager_addr.map(|addr| addr.to_string()),
                 pool_creation_fee: new_pool_creation_fee,
                 feature_toggle: new_feature_toggle,
             },

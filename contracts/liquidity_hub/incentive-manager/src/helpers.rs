@@ -72,7 +72,7 @@ pub(crate) fn process_incentive_creation_fee(
 
     // send incentive creation fee to whale lair for distribution
     messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
-        config.whale_lair_addr.clone().into_string(),
+        config.bonding_manager_addr.clone().into_string(),
         vec![incentive_creation_fee.to_owned()],
     )?);
 

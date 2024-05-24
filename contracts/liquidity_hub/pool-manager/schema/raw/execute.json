@@ -325,6 +325,13 @@
         "update_config": {
           "type": "object",
           "properties": {
+            "bonding_manager_addr": {
+              "description": "The new bonding-manager contract address.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "feature_toggle": {
               "description": "The new feature toggles of the contract, allowing fine-tuned control over which operations are allowed.",
               "anyOf": [
@@ -345,13 +352,6 @@
                 {
                   "type": "null"
                 }
-              ]
-            },
-            "whale_lair_addr": {
-              "description": "The new whale-lair contract address.",
-              "type": [
-                "string",
-                "null"
               ]
             }
           },

@@ -43,3 +43,5 @@ white-whale-testing.workspace = true
 epoch-manager.workspace = true
 whale-lair.workspace = true
 anyhow.workspace = true
+bonding-manager.workspace = true
+pool-manager.workspace = true
