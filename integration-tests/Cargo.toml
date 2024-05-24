@@ -1,7 +1,16 @@
 [package]
 name = "integration-tests"
 version = "0.1.0"
+description = "e2e integration tests for the Migaloo project"
 edition.workspace = true
+
+
+[features]
+default = ["osmosis_token_factory"]
+injective = ["token_factory"]
+token_factory = []
+osmosis = ["osmosis_token_factory"]
+osmosis_token_factory = ["token_factory"]
 
 [dependencies]
 bonding-manager.workspace = true

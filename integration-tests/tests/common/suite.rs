@@ -1,12 +1,31 @@
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{coin, Addr, Coin, Decimal, Empty, StdResult, Timestamp, Uint64};
+use cosmwasm_std::{
+    coin, Addr, Coin, CosmosMsg, Decimal, Empty, StdResult, Timestamp, Uint128, Uint64,
+};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
+use white_whale_std::bonding_manager::{
+    BondedResponse, ClaimableRewardBucketsResponse, ExecuteMsg, GlobalIndex, QueryMsg,
+    RewardBucket, RewardsResponse, UnbondingResponse, WithdrawableResponse,
+};
 
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
+use white_whale_std::fee::PoolFee;
+use white_whale_std::incentive_manager::{
+    IncentiveAction, IncentivesBy, IncentivesResponse, LpWeightResponse, PositionAction,
+    PositionsResponse,
+};
+use white_whale_std::pool_manager::{
+    PoolInfoResponse, PoolType, ReverseSimulateSwapOperationsResponse, ReverseSimulationResponse,
+    SimulateSwapOperationsResponse, SimulationResponse, SwapOperation, SwapRoute,
+    SwapRoutesResponse,
+};
+use white_whale_std::vault_manager::{
+    FilterVaultBy, PaybackAssetResponse, ShareResponse, VaultsResponse,
+};
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
@@ -66,6 +85,31 @@ impl TestingSuite {
         self.add_one_day().create_epoch(creator, |res| {
             res.unwrap();
         });
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_balance(
+        &mut self,
+        denom: String,
+        address: Addr,
+        result: impl Fn(Uint128),
+    ) -> &mut Self {
+        let balance_response = self.app.wrap().query_balance(address, denom.clone());
+        result(balance_response.unwrap_or(coin(0, denom)).amount);
+
+        self
+    }
+
+    pub(crate) fn query_all_balances(
+        &mut self,
+        addr: String,
+        result: impl Fn(StdResult<Vec<Coin>>),
+    ) -> &mut Self {
+        let balance_resp: StdResult<Vec<Coin>> = self.app.wrap().query_all_balances(addr);
+
+        result(balance_resp);
 
         self
     }
@@ -135,7 +179,6 @@ impl TestingSuite {
         let bonding_manager_id = self.app.store_code(bonding_manager_contract());
         let epoch_manager_addr = self.epoch_manager_addr.to_string();
 
-        // create whale lair
         let msg = white_whale_std::bonding_manager::InstantiateMsg {
             distribution_denom: "uwhale".to_string(),
             unbonding_period: 1u64,
@@ -164,7 +207,6 @@ impl TestingSuite {
     fn create_epoch_manager(&mut self) {
         let epoch_manager_contract = self.app.store_code(epoch_manager_contract());
 
-        // create epoch manager
         let msg = white_whale_std::epoch_manager::epoch_manager::InstantiateMsg {
             start_epoch: Epoch {
                 id: 0,
@@ -199,7 +241,6 @@ impl TestingSuite {
 
         let creator = self.creator().clone();
 
-        // create epoch manager
         let msg = white_whale_std::incentive_manager::InstantiateMsg {
             owner: creator.to_string(),
             epoch_manager_addr,
@@ -230,7 +271,6 @@ impl TestingSuite {
         let bonding_manager_addr = self.bonding_manager_addr.to_string();
         let incentive_manager_addr = self.incentive_manager_addr.to_string();
 
-        // create epoch manager
         let msg = white_whale_std::pool_manager::InstantiateMsg {
             bonding_manager_addr,
             incentive_manager_addr,
@@ -257,7 +297,6 @@ impl TestingSuite {
         let creator = self.creator().clone();
         let bonding_manager_addr = self.bonding_manager_addr.to_string();
 
-        // create epoch manager
         let msg = white_whale_std::vault_manager::InstantiateMsg {
             owner: creator.to_string(),
             bonding_manager_addr,
@@ -281,7 +320,200 @@ impl TestingSuite {
 //------------------------------------//
 
 /// bonding manager actions
-impl TestingSuite {}
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn bond(
+        &mut self,
+        sender: Addr,
+        funds: &[Coin],
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Bond;
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn unbond(
+        &mut self,
+        sender: Addr,
+        asset: Coin,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Unbond { asset };
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn claim_bonding_rewards(
+        &mut self,
+        sender: Addr,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Claim {};
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn withdraw(
+        &mut self,
+        sender: Addr,
+        denom: String,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = ExecuteMsg::Withdraw { denom };
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_global_index(
+        &mut self,
+        reward_bucket_id: Option<u64>,
+        response: impl Fn(StdResult<(&mut Self, GlobalIndex)>),
+    ) -> &mut Self {
+        let global_index: GlobalIndex = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.bonding_manager_addr,
+                &QueryMsg::GlobalIndex { reward_bucket_id },
+            )
+            .unwrap();
+
+        response(Ok((self, global_index)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_claimable_reward_buckets(
+        &mut self,
+        address: Option<Addr>,
+        response: impl Fn(StdResult<(&mut Self, Vec<RewardBucket>)>),
+    ) -> &mut Self {
+        let address = if let Some(address) = address {
+            Some(address.to_string())
+        } else {
+            None
+        };
+
+        let query_res: ClaimableRewardBucketsResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Claimable { address })
+            .unwrap();
+
+        response(Ok((self, query_res.reward_buckets)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_bonded(
+        &mut self,
+        address: Option<String>,
+        response: impl Fn(StdResult<(&mut Self, BondedResponse)>),
+    ) -> &mut Self {
+        let bonded_response: BondedResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Bonded { address })
+            .unwrap();
+
+        response(Ok((self, bonded_response)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_unbonding(
+        &mut self,
+        address: String,
+        denom: String,
+        start_after: Option<u64>,
+        limit: Option<u8>,
+        response: impl Fn(StdResult<(&mut Self, UnbondingResponse)>),
+    ) -> &mut Self {
+        let unbonding_response: UnbondingResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.bonding_manager_addr,
+                &QueryMsg::Unbonding {
+                    address,
+                    denom,
+                    start_after,
+                    limit,
+                },
+            )
+            .unwrap();
+
+        response(Ok((self, unbonding_response)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_withdrawable(
+        &mut self,
+        address: String,
+        denom: String,
+        response: impl Fn(StdResult<(&mut Self, WithdrawableResponse)>),
+    ) -> &mut Self {
+        let withdrawable_response: WithdrawableResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.bonding_manager_addr,
+                &QueryMsg::Withdrawable { address, denom },
+            )
+            .unwrap();
+
+        response(Ok((self, withdrawable_response)));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_bonding_rewards(
+        &mut self,
+        address: String,
+        response: impl Fn(StdResult<(&mut Self, RewardsResponse)>),
+    ) -> &mut Self {
+        let rewards_response: RewardsResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(&self.bonding_manager_addr, &QueryMsg::Rewards { address })
+            .unwrap();
+
+        response(Ok((self, rewards_response)));
+
+        self
+    }
+}
 
 //------------------------------------//
 
@@ -374,14 +606,589 @@ impl TestingSuite {
 //------------------------------------//
 
 /// incentive manager actions
-impl TestingSuite {}
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn manage_incentive(
+        &mut self,
+        sender: Addr,
+        action: IncentiveAction,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::incentive_manager::ExecuteMsg::ManageIncentive { action };
+
+        result(self.app.execute_contract(
+            sender,
+            self.incentive_manager_addr.clone(),
+            &msg,
+            &funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn manage_position(
+        &mut self,
+        sender: Addr,
+        action: PositionAction,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::incentive_manager::ExecuteMsg::ManagePosition { action };
+
+        result(self.app.execute_contract(
+            sender,
+            self.incentive_manager_addr.clone(),
+            &msg,
+            &funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn claim_incentive_rewards(
+        &mut self,
+        sender: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::incentive_manager::ExecuteMsg::Claim;
+
+        result(self.app.execute_contract(
+            sender,
+            self.incentive_manager_addr.clone(),
+            &msg,
+            &funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_incentives(
+        &mut self,
+        filter_by: Option<IncentivesBy>,
+        start_after: Option<String>,
+        limit: Option<u32>,
+        result: impl Fn(StdResult<IncentivesResponse>),
+    ) -> &mut Self {
+        let incentives_response: StdResult<IncentivesResponse> = self.app.wrap().query_wasm_smart(
+            &self.incentive_manager_addr,
+            &white_whale_std::incentive_manager::QueryMsg::Incentives {
+                filter_by,
+                start_after,
+                limit,
+            },
+        );
+
+        result(incentives_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_positions(
+        &mut self,
+        address: Addr,
+        open_state: Option<bool>,
+        result: impl Fn(StdResult<PositionsResponse>),
+    ) -> &mut Self {
+        let positions_response: StdResult<PositionsResponse> = self.app.wrap().query_wasm_smart(
+            &self.incentive_manager_addr,
+            &white_whale_std::incentive_manager::QueryMsg::Positions {
+                address: address.to_string(),
+                open_state,
+            },
+        );
+
+        result(positions_response);
+
+        self
+    }
+    #[track_caller]
+    pub(crate) fn query_incentive_rewards(
+        &mut self,
+        address: Addr,
+        result: impl Fn(StdResult<white_whale_std::incentive_manager::RewardsResponse>),
+    ) -> &mut Self {
+        let rewards_response: StdResult<white_whale_std::incentive_manager::RewardsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.incentive_manager_addr,
+                &white_whale_std::incentive_manager::QueryMsg::Rewards {
+                    address: address.to_string(),
+                },
+            );
+
+        result(rewards_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_lp_weight(
+        &mut self,
+        denom: &str,
+        epoch_id: u64,
+        result: impl Fn(StdResult<LpWeightResponse>),
+    ) -> &mut Self {
+        let rewards_response: StdResult<LpWeightResponse> = self.app.wrap().query_wasm_smart(
+            &self.incentive_manager_addr,
+            &white_whale_std::incentive_manager::QueryMsg::LPWeight {
+                address: self.incentive_manager_addr.to_string(),
+                denom: denom.to_string(),
+                epoch_id,
+            },
+        );
+
+        result(rewards_response);
+
+        self
+    }
+}
 
 //------------------------------------//
 
 /// pool manager actions
-impl TestingSuite {}
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn provide_liquidity(
+        &mut self,
+        sender: Addr,
+        pool_identifier: String,
+        unlocking_duration: Option<u64>,
+        lock_position_identifier: Option<String>,
+        max_spread: Option<Decimal>,
+        receiver: Option<String>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
+            pool_identifier,
+            slippage_tolerance: None,
+            max_spread,
+            receiver,
+            unlocking_duration,
+            lock_position_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn swap(
+        &mut self,
+        sender: Addr,
+        ask_asset_denom: String,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        receiver: Option<String>,
+        pool_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
+            ask_asset_denom,
+            belief_price,
+            max_spread,
+            receiver,
+            pool_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn execute_swap_operations(
+        &mut self,
+        sender: Addr,
+        operations: Vec<SwapOperation>,
+        minimum_receive: Option<Uint128>,
+        receiver: Option<String>,
+        max_spread: Option<Decimal>,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ExecuteSwapOperations {
+            operations,
+            minimum_receive,
+            receiver,
+            max_spread,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn create_pool(
+        &mut self,
+        sender: Addr,
+        asset_denoms: Vec<String>,
+        asset_decimals: Vec<u8>,
+        pool_fees: PoolFee,
+        pool_type: PoolType,
+        pool_identifier: Option<String>,
+        pool_creation_fee_funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePool {
+            asset_denoms,
+            asset_decimals,
+            pool_fees,
+            pool_type,
+            pool_identifier,
+        };
+
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &msg,
+            &pool_creation_fee_funds,
+        ));
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn withdraw_liquidity(
+        &mut self,
+        sender: Addr,
+        pool_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::WithdrawLiquidity { pool_identifier };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    /// Adds swap routes to the pool manager contract.
+    #[track_caller]
+    pub(crate) fn add_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
+
+    /// Removes swap routes from the pool manager contract.
+    #[track_caller]
+    pub(crate) fn remove_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &white_whale_std::pool_manager::ExecuteMsg::RemoveSwapRoutes { swap_routes },
+            &[],
+        ));
+
+        self
+    }
+
+    pub(crate) fn query_pool_info(
+        &self,
+        pool_identifier: String,
+        result: impl Fn(StdResult<PoolInfoResponse>),
+    ) -> &Self {
+        let pool_info_response: StdResult<PoolInfoResponse> = self.app.wrap().query_wasm_smart(
+            &self.pool_manager_addr,
+            &white_whale_std::pool_manager::QueryMsg::Pool { pool_identifier },
+        );
+
+        result(pool_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_simulation(
+        &mut self,
+        pool_identifier: String,
+        offer_asset: Coin,
+        ask_asset_denom: String,
+        result: impl Fn(StdResult<SimulationResponse>),
+    ) -> &mut Self {
+        let pool_info_response: StdResult<SimulationResponse> = self.app.wrap().query_wasm_smart(
+            &self.pool_manager_addr,
+            &white_whale_std::pool_manager::QueryMsg::Simulation {
+                offer_asset,
+                ask_asset_denom,
+                pool_identifier,
+            },
+        );
+
+        result(pool_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_reverse_simulation(
+        &mut self,
+        pool_identifier: String,
+        ask_asset: Coin,
+        offer_asset_denom: String,
+        result: impl Fn(StdResult<ReverseSimulationResponse>),
+    ) -> &mut Self {
+        let pool_info_response: StdResult<ReverseSimulationResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::ReverseSimulation {
+                    ask_asset,
+                    offer_asset_denom,
+                    pool_identifier,
+                },
+            );
+
+        result(pool_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_simulate_swap_operations(
+        &mut self,
+        offer_amount: Uint128,
+        operations: Vec<SwapOperation>,
+        result: impl Fn(StdResult<SimulateSwapOperationsResponse>),
+    ) -> &mut Self {
+        let pool_info_response: StdResult<SimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::SimulateSwapOperations {
+                    offer_amount,
+                    operations,
+                },
+            );
+
+        result(pool_info_response);
+
+        self
+    }
+
+    pub(crate) fn query_reverse_simulate_swap_operations(
+        &mut self,
+        ask_amount: Uint128,
+        operations: Vec<SwapOperation>,
+        result: impl Fn(StdResult<ReverseSimulateSwapOperationsResponse>),
+    ) -> &mut Self {
+        let pool_info_response: StdResult<ReverseSimulateSwapOperationsResponse> =
+            self.app.wrap().query_wasm_smart(
+                &self.pool_manager_addr,
+                &white_whale_std::pool_manager::QueryMsg::ReverseSimulateSwapOperations {
+                    ask_amount,
+                    operations,
+                },
+            );
+
+        result(pool_info_response);
+
+        self
+    }
+
+    /// Retrieves the swap routes for a given pool of assets.
+    pub(crate) fn query_swap_routes(
+        &mut self,
+        result: impl Fn(StdResult<SwapRoutesResponse>),
+    ) -> &mut Self {
+        let swap_routes_response: StdResult<SwapRoutesResponse> = self.app.wrap().query_wasm_smart(
+            &self.pool_manager_addr,
+            &white_whale_std::pool_manager::QueryMsg::SwapRoutes,
+        );
+
+        result(swap_routes_response);
+
+        self
+    }
+}
 
 //------------------------------------//
 
 /// vault manager actions
-impl TestingSuite {}
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn create_vault(
+        &mut self,
+        sender: Addr,
+        asset_denom: String,
+        vault_identifier: Option<String>,
+        fees: white_whale_std::vault_manager::VaultFee,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::CreateVault {
+            asset_denom,
+            fees,
+            vault_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn vault_deposit(
+        &mut self,
+        sender: Addr,
+        vault_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Deposit { vault_identifier };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn vault_withdraw(
+        &mut self,
+        sender: Addr,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::Withdraw {};
+        let vault_manager = self.vault_manager_addr.clone();
+
+        result(
+            self.app
+                .execute_contract(sender, vault_manager, &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn flashloan(
+        &mut self,
+        sender: Addr,
+        asset: Coin,
+        vault_identifier: String,
+        payload: Vec<CosmosMsg>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::vault_manager::ExecuteMsg::FlashLoan {
+            asset,
+            vault_identifier,
+            payload,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.vault_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_vault(
+        &mut self,
+        filter_by: FilterVaultBy,
+        result: impl Fn(StdResult<VaultsResponse>),
+    ) -> &mut Self {
+        let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale_std::vault_manager::QueryMsg::Vault { filter_by },
+        );
+
+        result(vaults_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_vaults(
+        &mut self,
+        start_after: Option<Vec<u8>>,
+        limit: Option<u32>,
+        result: impl Fn(StdResult<VaultsResponse>),
+    ) -> &mut Self {
+        let vaults_response: StdResult<VaultsResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale_std::vault_manager::QueryMsg::Vaults { start_after, limit },
+        );
+
+        result(vaults_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_vault_share(
+        &mut self,
+        lp_share: Coin,
+        result: impl Fn(StdResult<ShareResponse>),
+    ) -> &mut Self {
+        let response: StdResult<ShareResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale_std::vault_manager::QueryMsg::Share { lp_share },
+        );
+
+        result(response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn query_flashloan_payback(
+        &mut self,
+        asset: Coin,
+        vault_identifier: String,
+        result: impl Fn(StdResult<PaybackAssetResponse>),
+    ) -> &mut Self {
+        let response: StdResult<PaybackAssetResponse> = self.app.wrap().query_wasm_smart(
+            &self.vault_manager_addr,
+            &white_whale_std::vault_manager::QueryMsg::PaybackAmount {
+                asset,
+                vault_identifier,
+            },
+        );
+
+        result(response);
+
+        self
+    }
+}
