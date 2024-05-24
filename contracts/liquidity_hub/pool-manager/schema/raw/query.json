@@ -217,20 +217,37 @@
       "additionalProperties": false
     },
     {
-      "description": "Retrieves the pool information for the given pool identifier.",
+      "description": "Retrieves the pools information.",
       "type": "object",
       "required": [
-        "pool"
+        "pools"
       ],
       "properties": {
-        "pool": {
+        "pools": {
           "type": "object",
-          "required": [
-            "pool_identifier"
-          ],
           "properties": {
+            "limit": {
+              "description": "An optional parameter specifying the maximum number of pools to return.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
             "pool_identifier": {
-              "type": "string"
+              "description": "If provided, the query will return the pool with the given identifier, otherwise, it will return all pools.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start_after": {
+              "description": "An optional parameter specifying what pool identifier to start searching after.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false

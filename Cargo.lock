@@ -800,6 +800,8 @@ dependencies = [
  "epoch-manager",
  "incentive-manager",
  "pool-manager",
+ "proptest",
+ "rand",
  "vault-manager",
  "white-whale-std",
  "white-whale-testing",

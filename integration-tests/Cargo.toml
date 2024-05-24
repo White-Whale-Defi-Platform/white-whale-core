@@ -24,3 +24,7 @@ white-whale-std.workspace = true
 white-whale-testing.workspace = true
 cosmwasm-std.workspace = true
 cw-ownable.workspace = true
+
+[dev-dependencies]
+proptest = "1.4"
+rand = "0.8"

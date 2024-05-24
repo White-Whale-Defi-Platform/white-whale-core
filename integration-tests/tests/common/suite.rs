@@ -7,11 +7,11 @@ use cw_multi_test::{
     App, AppBuilder, AppResponse, BankKeeper, DistributionKeeper, Executor, FailingModule,
     GovFailingModule, IbcFailingModule, StakeKeeper, WasmKeeper,
 };
+
 use white_whale_std::bonding_manager::{
     BondedResponse, ClaimableRewardBucketsResponse, ExecuteMsg, GlobalIndex, QueryMsg,
     RewardBucket, RewardsResponse, UnbondingResponse, WithdrawableResponse,
 };
-
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
 use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::{
@@ -32,6 +32,9 @@ use crate::common::suite_contracts::{
     bonding_manager_contract, epoch_manager_contract, incentive_manager_contract,
     pool_manager_contract, vault_manager_contract,
 };
+
+pub const BWHALE: &str = "factory/migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75/bWHALE";
+pub const AMPWHALE: &str = "factory/migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40/ampWHALE";
 
 type OsmosisTokenFactoryApp = App<
     BankKeeper,
@@ -54,8 +57,8 @@ pub struct TestingSuite {
     pub incentive_manager_addr: Addr,
     pub pool_manager_addr: Addr,
     pub vault_manager_addr: Addr,
-    pub pools: Vec<Addr>,
-    pub vaults: Vec<Addr>,
+    pub pool_identifiers: Vec<String>,
+    pub vault_identifiers: Vec<String>,
 }
 
 /// TestingSuite helpers
@@ -89,8 +92,16 @@ impl TestingSuite {
         self
     }
 
+    pub(crate) fn add_epochs(&mut self, n: u64) -> &mut Self {
+        for _ in 0..n {
+            self.add_one_epoch();
+        }
+
+        self
+    }
+
     #[track_caller]
-    pub(crate) fn query_balance(
+    pub(crate) fn _query_balance(
         &mut self,
         denom: String,
         address: Addr,
@@ -102,7 +113,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_all_balances(
+    pub(crate) fn _query_all_balances(
         &mut self,
         addr: String,
         result: impl Fn(StdResult<Vec<Coin>>),
@@ -117,7 +128,27 @@ impl TestingSuite {
 
 /// Instantiate
 impl TestingSuite {
-    pub(crate) fn default_with_balances(initial_balance: Vec<Coin>) -> Self {
+    pub(crate) fn default_with_balances() -> Self {
+        let initial_balance = vec![
+            coin(1_000_000_000_000u128, "uwhale"),
+            coin(1_000_000_000_000u128, "uosmo"),
+            coin(1_000_000_000_000u128, "uusdc"),
+            coin(1_000_000_000_000u128, "uusdt"),
+            // ibc token is stablecoin
+            coin(
+                1_000_000_000_000u128,
+                "ibc/BEFB9AB13AB43157A0AF6254AD4B1F565AC0CA0C1760B8339BE7B9E2996F7752",
+            ),
+            coin(1_000_000_000_000u128, AMPWHALE),
+            coin(1_000_000_000_000u128, BWHALE),
+            coin(
+                1_000_000_000_000u128,
+                "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5",
+            ),
+            coin(1_000_000_000_000_000u128, "btc"),
+            coin(1_000_000_000_000_000_000_000_000u128, "inj"),
+        ];
+
         let sender_1 = Addr::unchecked("migaloo1h3s5np57a8cxaca3rdjlgu8jzmr2d2zz55s5y3");
         let sender_2 = Addr::unchecked("migaloo193lk767456jhkzddnz7kf5jvuzfn67gyfvhc40");
         let sender_3 = Addr::unchecked("migaloo1ludaslnu24p5eftw499f7ngsc2jkzqdsrvxt75");
@@ -153,18 +184,35 @@ impl TestingSuite {
             incentive_manager_addr: Addr::unchecked(""),
             pool_manager_addr: Addr::unchecked(""),
             vault_manager_addr: Addr::unchecked(""),
-            pools: vec![],
-            vaults: vec![],
+            pool_identifiers: vec![],
+            vault_identifiers: vec![],
         }
     }
 
     #[track_caller]
     pub(crate) fn instantiate(&mut self) -> &mut Self {
+        let creator = self.creator().clone();
+
         self.create_epoch_manager();
         self.create_bonding_manager();
         self.create_incentive_manager();
         self.create_pool_manager();
         self.create_vault_manager();
+
+        self.update_bonding_manager_contract_addresses(creator.clone(), |response| {
+            response.unwrap();
+        });
+
+        let bonding_manager_addr = self.bonding_manager_addr.clone();
+        let incentive_manager_addr = self.incentive_manager_addr.clone();
+
+        self.add_hook(creator.clone(), bonding_manager_addr, |result| {
+            result.unwrap();
+        });
+
+        self.add_hook(creator, incentive_manager_addr, |result| {
+            result.unwrap();
+        });
 
         // May 23th 2024 15:00:00 UTC
         let timestamp = Timestamp::from_seconds(1716476400u64);
@@ -183,7 +231,7 @@ impl TestingSuite {
             distribution_denom: "uwhale".to_string(),
             unbonding_period: 1u64,
             growth_rate: Decimal::one(),
-            bonding_assets: vec!["ampWHALE".to_string(), "bWHALE".to_string()],
+            bonding_assets: vec![AMPWHALE.to_string(), BWHALE.to_string()],
             grace_period: 21,
             epoch_manager_addr,
         };
@@ -265,6 +313,7 @@ impl TestingSuite {
             )
             .unwrap();
     }
+
     fn create_pool_manager(&mut self) {
         let pool_manager_contract = self.app.store_code(pool_manager_contract());
 
@@ -291,6 +340,7 @@ impl TestingSuite {
             )
             .unwrap();
     }
+
     fn create_vault_manager(&mut self) {
         let vault_manager_contract = self.app.store_code(vault_manager_contract());
 
@@ -324,16 +374,18 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn bond(
         &mut self,
-        sender: Addr,
+        sender: &Addr,
         funds: &[Coin],
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::Bond;
 
-        response(
-            self.app
-                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, funds),
-        );
+        response(self.app.execute_contract(
+            sender.clone(),
+            self.bonding_manager_addr.clone(),
+            &msg,
+            funds,
+        ));
 
         self
     }
@@ -358,21 +410,23 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn claim_bonding_rewards(
         &mut self,
-        sender: Addr,
+        sender: &Addr,
         response: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = ExecuteMsg::Claim {};
 
-        response(
-            self.app
-                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
-        );
+        response(self.app.execute_contract(
+            sender.clone(),
+            self.bonding_manager_addr.clone(),
+            &msg,
+            &[],
+        ));
 
         self
     }
 
     #[track_caller]
-    pub(crate) fn withdraw(
+    pub(crate) fn _withdraw(
         &mut self,
         sender: Addr,
         denom: String,
@@ -389,7 +443,31 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_global_index(
+    pub(crate) fn update_bonding_manager_contract_addresses(
+        &mut self,
+        sender: Addr,
+        response: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let epoch_manager_addr = self.epoch_manager_addr.to_string();
+        let pool_manager_addr = self.pool_manager_addr.to_string();
+
+        let msg = ExecuteMsg::UpdateConfig {
+            epoch_manager_addr: Some(epoch_manager_addr),
+            pool_manager_addr: Some(pool_manager_addr),
+            unbonding_period: None,
+            growth_rate: None,
+        };
+
+        response(
+            self.app
+                .execute_contract(sender, self.bonding_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn _query_global_index(
         &mut self,
         reward_bucket_id: Option<u64>,
         response: impl Fn(StdResult<(&mut Self, GlobalIndex)>),
@@ -411,7 +489,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn query_claimable_reward_buckets(
         &mut self,
-        address: Option<Addr>,
+        address: Option<&Addr>,
         response: impl Fn(StdResult<(&mut Self, Vec<RewardBucket>)>),
     ) -> &mut Self {
         let address = if let Some(address) = address {
@@ -449,7 +527,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_unbonding(
+    pub(crate) fn _query_unbonding(
         &mut self,
         address: String,
         denom: String,
@@ -477,7 +555,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_withdrawable(
+    pub(crate) fn _query_withdrawable(
         &mut self,
         address: String,
         denom: String,
@@ -555,7 +633,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn remove_hook(
+    pub(crate) fn _remove_hook(
         &mut self,
         sender: Addr,
         contract_addr: Addr,
@@ -587,8 +665,21 @@ impl TestingSuite {
 
         self
     }
+
     #[track_caller]
-    pub(crate) fn query_hooks(
+    pub(crate) fn _query_current_time(
+        &mut self,
+        mut result: impl FnMut(StdResult<Timestamp>),
+    ) -> &mut Self {
+        let current_time_response: StdResult<Timestamp> = Ok(self.app.block_info().time);
+
+        result(current_time_response);
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn _query_hooks(
         &mut self,
         mut result: impl FnMut(StdResult<EpochResponse>),
     ) -> &mut Self {
@@ -628,7 +719,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn manage_position(
+    pub(crate) fn _manage_position(
         &mut self,
         sender: Addr,
         action: PositionAction,
@@ -648,7 +739,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn claim_incentive_rewards(
+    pub(crate) fn _claim_incentive_rewards(
         &mut self,
         sender: Addr,
         funds: Vec<Coin>,
@@ -667,7 +758,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_incentives(
+    pub(crate) fn _query_incentives(
         &mut self,
         filter_by: Option<IncentivesBy>,
         start_after: Option<String>,
@@ -689,7 +780,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_positions(
+    pub(crate) fn _query_positions(
         &mut self,
         address: Addr,
         open_state: Option<bool>,
@@ -708,7 +799,7 @@ impl TestingSuite {
         self
     }
     #[track_caller]
-    pub(crate) fn query_incentive_rewards(
+    pub(crate) fn _query_incentive_rewards(
         &mut self,
         address: Addr,
         result: impl Fn(StdResult<white_whale_std::incentive_manager::RewardsResponse>),
@@ -727,7 +818,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_lp_weight(
+    pub(crate) fn _query_lp_weight(
         &mut self,
         denom: &str,
         epoch_id: u64,
@@ -755,7 +846,7 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn provide_liquidity(
         &mut self,
-        sender: Addr,
+        sender: &Addr,
         pool_identifier: String,
         unlocking_duration: Option<u64>,
         lock_position_identifier: Option<String>,
@@ -773,10 +864,12 @@ impl TestingSuite {
             lock_position_identifier,
         };
 
-        result(
-            self.app
-                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
-        );
+        result(self.app.execute_contract(
+            sender.clone(),
+            self.pool_manager_addr.clone(),
+            &msg,
+            &funds,
+        ));
 
         self
     }
@@ -812,7 +905,7 @@ impl TestingSuite {
 
     #[track_caller]
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn execute_swap_operations(
+    pub(crate) fn _execute_swap_operations(
         &mut self,
         sender: Addr,
         operations: Vec<SwapOperation>,
@@ -869,7 +962,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn withdraw_liquidity(
+    pub(crate) fn _withdraw_liquidity(
         &mut self,
         sender: Addr,
         pool_identifier: String,
@@ -906,7 +999,7 @@ impl TestingSuite {
 
     /// Removes swap routes from the pool manager contract.
     #[track_caller]
-    pub(crate) fn remove_swap_routes(
+    pub(crate) fn _remove_swap_routes(
         &mut self,
         sender: Addr,
         swap_routes: Vec<SwapRoute>,
@@ -922,7 +1015,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_pool_info(
+    pub(crate) fn _query_pool(
         &self,
         pool_identifier: String,
         result: impl Fn(StdResult<PoolInfoResponse>),
@@ -937,7 +1030,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_simulation(
+    pub(crate) fn _query_simulation(
         &mut self,
         pool_identifier: String,
         offer_asset: Coin,
@@ -958,7 +1051,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_reverse_simulation(
+    pub(crate) fn _query_reverse_simulation(
         &mut self,
         pool_identifier: String,
         ask_asset: Coin,
@@ -980,7 +1073,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_simulate_swap_operations(
+    pub(crate) fn _query_simulate_swap_operations(
         &mut self,
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
@@ -1000,7 +1093,7 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_reverse_simulate_swap_operations(
+    pub(crate) fn _query_reverse_simulate_swap_operations(
         &mut self,
         ask_amount: Uint128,
         operations: Vec<SwapOperation>,
@@ -1021,7 +1114,7 @@ impl TestingSuite {
     }
 
     /// Retrieves the swap routes for a given pool of assets.
-    pub(crate) fn query_swap_routes(
+    pub(crate) fn _query_swap_routes(
         &mut self,
         result: impl Fn(StdResult<SwapRoutesResponse>),
     ) -> &mut Self {
@@ -1065,7 +1158,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn vault_deposit(
+    pub(crate) fn _vault_deposit(
         &mut self,
         sender: Addr,
         vault_identifier: String,
@@ -1083,7 +1176,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn vault_withdraw(
+    pub(crate) fn _vault_withdraw(
         &mut self,
         sender: Addr,
         funds: Vec<Coin>,
@@ -1101,7 +1194,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn flashloan(
+    pub(crate) fn _flashloan(
         &mut self,
         sender: Addr,
         asset: Coin,
@@ -1124,7 +1217,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_vault(
+    pub(crate) fn _query_vault(
         &mut self,
         filter_by: FilterVaultBy,
         result: impl Fn(StdResult<VaultsResponse>),
@@ -1157,7 +1250,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_vault_share(
+    pub(crate) fn _query_vault_share(
         &mut self,
         lp_share: Coin,
         result: impl Fn(StdResult<ShareResponse>),
@@ -1173,7 +1266,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn query_flashloan_payback(
+    pub(crate) fn _query_flashloan_payback(
         &mut self,
         asset: Coin,
         vault_identifier: String,
