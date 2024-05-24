@@ -9,8 +9,8 @@ use std::fmt::{Display, Formatter};
 pub struct InstantiateMsg {
     /// The owner of the contract
     pub owner: String,
-    /// The whale lair address, where protocol fees are distributed
-    pub whale_lair_addr: String,
+    /// The bonding manager address, where protocol fees are distributed
+    pub bonding_manager_addr: String,
     /// The fee to create a vault
     pub vault_creation_fee: Coin,
 }
@@ -18,8 +18,8 @@ pub struct InstantiateMsg {
 /// Configuration for the contract (manager)
 #[cw_serde]
 pub struct Config {
-    /// The whale lair contract address
-    pub whale_lair_addr: Addr,
+    /// The bonding manager contract address
+    pub bonding_manager_addr: Addr,
     /// The fee to create a new vault
     pub vault_creation_fee: Coin,
     /// If flash-loans are enabled
@@ -92,7 +92,7 @@ pub enum ExecuteMsg {
     /// Updates the configuration of the vault manager.
     /// If a field is not specified, it will not be modified.
     UpdateConfig {
-        whale_lair_addr: Option<String>,
+        bonding_manager_addr: Option<String>,
         vault_creation_fee: Option<Coin>,
         flash_loan_enabled: Option<bool>,
         deposit_enabled: Option<bool>,

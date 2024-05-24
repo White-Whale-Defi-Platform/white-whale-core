@@ -43,7 +43,7 @@ pub fn instantiate(
 
     let config = Config {
         epoch_manager_addr: deps.api.addr_validate(&msg.epoch_manager_addr)?,
-        whale_lair_addr: deps.api.addr_validate(&msg.bonding_manager_addr)?,
+        bonding_manager_addr: deps.api.addr_validate(&msg.bonding_manager_addr)?,
         create_incentive_fee: msg.create_incentive_fee,
         max_concurrent_incentives: msg.max_concurrent_incentives,
         max_incentive_epoch_buffer: msg.max_incentive_epoch_buffer,
@@ -60,7 +60,10 @@ pub fn instantiate(
         ("action", "instantiate".to_string()),
         ("owner", msg.owner),
         ("epoch_manager_addr", config.epoch_manager_addr.to_string()),
-        ("whale_lair_addr", config.whale_lair_addr.to_string()),
+        (
+            "bonding_manager_addr",
+            config.bonding_manager_addr.to_string(),
+        ),
         ("create_flow_fee", config.create_incentive_fee.to_string()),
         (
             "max_concurrent_flows",
@@ -134,7 +137,7 @@ pub fn execute(
             }
         },
         ExecuteMsg::UpdateConfig {
-            whale_lair_addr,
+            bonding_manager_addr,
             epoch_manager_addr,
             create_incentive_fee,
             max_concurrent_incentives,
@@ -147,7 +150,7 @@ pub fn execute(
             manager::commands::update_config(
                 deps,
                 info,
-                whale_lair_addr,
+                bonding_manager_addr,
                 epoch_manager_addr,
                 create_incentive_fee,
                 max_concurrent_incentives,

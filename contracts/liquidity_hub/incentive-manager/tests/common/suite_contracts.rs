@@ -25,6 +25,30 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
     Box::new(contract)
 }
 
+/// Creates the whale lair contract
+pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        bonding_manager::contract::execute,
+        bonding_manager::contract::instantiate,
+        bonding_manager::contract::query,
+    )
+    .with_migrate(bonding_manager::contract::migrate);
+
+    Box::new(contract)
+}
+
+/// Creates the pool manager contract
+pub fn pool_manager_contract() -> Box<dyn Contract<Empty>> {
+    let contract = ContractWrapper::new(
+        pool_manager::contract::execute,
+        pool_manager::contract::instantiate,
+        pool_manager::contract::query,
+    )
+    .with_migrate(pool_manager::contract::migrate);
+
+    Box::new(contract)
+}
+
 /// Creates the epoch manager contract
 pub fn epoch_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(

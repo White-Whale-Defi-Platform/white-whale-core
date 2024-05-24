@@ -47,8 +47,8 @@ pub enum ExecuteMsg {
     Claim,
     /// Updates the config of the contract
     UpdateConfig {
-        /// The address to of the whale lair, to send fees to.
-        whale_lair_addr: Option<String>,
+        /// The address to of the bonding manager, to send fees to.
+        bonding_manager_addr: Option<String>,
         /// The epoch manager address, where the epochs are managed
         epoch_manager_addr: Option<String>,
         /// The fee that must be paid to create an incentive.
@@ -129,7 +129,7 @@ pub enum IncentivesBy {
 #[cw_serde]
 pub struct Config {
     /// The address to of the whale lair, to send fees to.
-    pub whale_lair_addr: Addr,
+    pub bonding_manager_addr: Addr,
     /// The epoch manager address, where the epochs are managed
     pub epoch_manager_addr: Addr,
     /// The fee that must be paid to create an incentive.

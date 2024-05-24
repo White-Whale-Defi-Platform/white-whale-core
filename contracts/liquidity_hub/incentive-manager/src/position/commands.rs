@@ -242,11 +242,11 @@ pub(crate) fn withdraw_position(
             amount: penalty_fee,
         };
 
-        let whale_lair_addr = CONFIG.load(deps.storage)?.whale_lair_addr;
+        let bonding_manager_addr = CONFIG.load(deps.storage)?.bonding_manager_addr;
 
-        // send penalty to whale lair for distribution
+        // send penalty to bonding manager for distribution
         messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
-            whale_lair_addr.into_string(),
+            bonding_manager_addr.into_string(),
             vec![penalty],
         )?);
 

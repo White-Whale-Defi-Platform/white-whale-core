@@ -8,15 +8,19 @@ use cw_multi_test::{
 
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
+use white_whale_std::fee::{Fee, PoolFee};
 use white_whale_std::incentive_manager::{
     Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, LpWeightResponse,
     PositionAction, PositionsResponse, RewardsResponse,
 };
-use white_whale_std::pool_network::asset::AssetInfo;
+use white_whale_std::pool_manager::PoolType;
+use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
-    epoch_manager_contract, incentive_manager_contract, whale_lair_contract,
+    bonding_manager_contract, epoch_manager_contract, incentive_manager_contract,
+    pool_manager_contract,
 };
 
 type OsmosisTokenFactoryApp = App<
@@ -36,7 +40,8 @@ pub struct TestingSuite {
     app: OsmosisTokenFactoryApp,
     pub senders: [Addr; 3],
     pub incentive_manager_addr: Addr,
-    pub whale_lair_addr: Addr,
+    pub bonding_manager_addr: Addr,
+    pub pool_manager_addr: Addr,
     pub epoch_manager_addr: Addr,
     pub pools: Vec<Addr>,
 }
@@ -103,7 +108,8 @@ impl TestingSuite {
             app,
             senders: [sender_1, sender_2, sender_3],
             incentive_manager_addr: Addr::unchecked(""),
-            whale_lair_addr: Addr::unchecked(""),
+            bonding_manager_addr: Addr::unchecked(""),
+            pool_manager_addr: Addr::unchecked(""),
             epoch_manager_addr: Addr::unchecked(""),
             pools: vec![],
         }
@@ -111,8 +117,8 @@ impl TestingSuite {
 
     #[track_caller]
     pub(crate) fn instantiate_default(&mut self) -> &mut Self {
-        self.create_whale_lair();
         self.create_epoch_manager();
+        self.create_bonding_manager();
 
         // April 4th 2024 15:00:00 UTC
         let timestamp = Timestamp::from_seconds(1712242800u64);
@@ -120,7 +126,7 @@ impl TestingSuite {
 
         // instantiates the incentive manager contract
         self.instantiate(
-            self.whale_lair_addr.to_string(),
+            self.bonding_manager_addr.to_string(),
             self.epoch_manager_addr.to_string(),
             Coin {
                 denom: "uwhale".to_string(),
@@ -131,10 +137,54 @@ impl TestingSuite {
             86_400,
             31_536_000,
             Decimal::percent(10), //10% penalty
-        )
+        );
+        // self.create_pool_manager();
+        // let empty_fee = Fee {
+        //     share: Decimal::percent(0),
+        // };
+        // let sender = self.senders[3].clone();
+
+        // self.app.wrap().query_all_balances(self.senders[3].clone()).unwrap();
+        // println!("balances for {:?}: {:?}", self.senders[3], self.app.wrap().query_all_balances(self.senders[3].clone()).unwrap());
+        // for each of ['osmo', 'lab'] make a pair against uwhale
+        // for asset in vec!["uosmo", "ulab"] {
+        //     self.create_pair(
+        //         sender.clone(),
+        //         vec![asset.to_string(), "uwhale".to_string()],
+        //         PoolFee {
+        //             protocol_fee: empty_fee.clone(),
+        //             swap_fee: empty_fee.clone(),
+        //             burn_fee: empty_fee.clone(),
+        //             extra_fees: vec![],
+        //         },
+        //         PoolType::ConstantProduct,
+        //         Some(format!("{}-uwhale", asset)),
+        //         vec![],
+        //         |res| {
+        //             res.unwrap();
+        //         },
+        //     );
+        // }
+
+        // // For each of ['uosmo', 'ulab'] provide liquidity
+        // for asset in vec!["uosmo", "ulab"] {
+        //     self.provide_liquidity(
+        //         sender.clone(),
+        //         format!("{}-uwhale", asset),
+        //         vec![
+        //             coin(1_000_000_000, asset),
+        //             coin(999998000/2, "uwhale"),
+        //         ],
+        //         |res| {
+        //             res.unwrap();
+        //         },
+        //     );
+        // }
+
+        self
     }
 
-    fn create_whale_lair(&mut self) {
+    fn create_bonding_manager(&mut self) {
         let whale_lair_id = self.app.store_code(whale_lair_contract());
 
         // create whale lair
@@ -150,10 +200,21 @@ impl TestingSuite {
                 },
             ],
         };
+        // let msg = white_whale_std::bonding_manager::InstantiateMsg {
+        //     unbonding_period: Uint64::new(86400u64).u64(),
+        //     growth_rate: Decimal::one(),
+        //     bonding_assets: vec![
+        //         "bWHALE".to_string(),
+        //         "ampWHALE".to_string(),
+        //     ],
+        //     distribution_denom: "uwhale".to_string(),
+        //     grace_period: Uint64::new(21).u64(),
+        //     epoch_manager_addr: self.epoch_manager_addr.to_string(),
+        // };
 
         let creator = self.creator().clone();
 
-        self.whale_lair_addr = self
+        self.bonding_manager_addr = self
             .app
             .instantiate_contract(
                 whale_lair_id,
@@ -192,6 +253,35 @@ impl TestingSuite {
                 &msg,
                 &[],
                 "Epoch Manager".to_string(),
+                Some(creator.to_string()),
+            )
+            .unwrap();
+    }
+
+    #[allow(clippy::inconsistent_digit_grouping)]
+    fn create_pool_manager(&mut self) {
+        let pool_manager_contract = self.app.store_code(pool_manager_contract());
+
+        // create epoch manager
+        let msg = white_whale_std::pool_manager::InstantiateMsg {
+            bonding_manager_addr: self.bonding_manager_addr.to_string(),
+            incentive_manager_addr: self.incentive_manager_addr.to_string(),
+            pool_creation_fee: Coin {
+                denom: "uwhale".to_string(),
+                amount: Uint128::new(1000u128),
+            },
+        };
+
+        let creator = self.creator().clone();
+
+        self.pool_manager_addr = self
+            .app
+            .instantiate_contract(
+                pool_manager_contract,
+                creator.clone(),
+                &msg,
+                &[],
+                "Pool Manager".to_string(),
                 Some(creator.to_string()),
             )
             .unwrap();
@@ -307,7 +397,7 @@ impl TestingSuite {
     pub(crate) fn update_config(
         &mut self,
         sender: Addr,
-        whale_lair_addr: Option<String>,
+        bonding_manager_addr: Option<String>,
         epoch_manager_addr: Option<String>,
         create_incentive_fee: Option<Coin>,
         max_concurrent_incentives: Option<u32>,
@@ -319,7 +409,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::incentive_manager::ExecuteMsg::UpdateConfig {
-            whale_lair_addr,
+            bonding_manager_addr,
             epoch_manager_addr,
             create_incentive_fee,
             max_concurrent_incentives,
@@ -596,6 +686,107 @@ impl TestingSuite {
         );
 
         result(current_epoch_response);
+
+        self
+    }
+}
+
+impl TestingSuite {
+    #[track_caller]
+    pub(crate) fn provide_liquidity(
+        &mut self,
+        sender: Addr,
+        pool_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::ProvideLiquidity {
+            pool_identifier,
+            slippage_tolerance: None,
+            receiver: None,
+            lock_position_identifier: None,
+            unlocking_duration: None,
+            max_spread: None,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn swap(
+        &mut self,
+        sender: Addr,
+        _offer_asset: Coin,
+        ask_asset_denom: String,
+        belief_price: Option<Decimal>,
+        max_spread: Option<Decimal>,
+        receiver: Option<String>,
+        pool_identifier: String,
+        funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::Swap {
+            ask_asset_denom,
+            belief_price,
+            max_spread,
+            receiver,
+            pool_identifier,
+        };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &funds),
+        );
+
+        self
+    }
+
+    #[track_caller]
+    pub(crate) fn add_swap_routes(
+        &mut self,
+        sender: Addr,
+        swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::AddSwapRoutes { swap_routes };
+
+        result(
+            self.app
+                .execute_contract(sender, self.pool_manager_addr.clone(), &msg, &[]),
+        );
+
+        self
+    }
+    #[track_caller]
+    pub(crate) fn create_pair(
+        &mut self,
+        sender: Addr,
+        asset_denoms: Vec<String>,
+        pool_fees: PoolFee,
+        pool_type: PoolType,
+        pool_identifier: Option<String>,
+        pair_creation_fee_funds: Vec<Coin>,
+        result: impl Fn(Result<AppResponse, anyhow::Error>),
+    ) -> &mut Self {
+        let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePool {
+            asset_denoms,
+            pool_fees,
+            pool_type,
+            pool_identifier,
+            asset_decimals: vec![6, 6],
+        };
+
+        result(self.app.execute_contract(
+            sender,
+            self.pool_manager_addr.clone(),
+            &msg,
+            &pair_creation_fee_funds,
+        ));
 
         self
     }

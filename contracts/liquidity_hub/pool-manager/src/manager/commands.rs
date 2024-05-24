@@ -103,15 +103,16 @@ pub fn create_pool(
 
     // Prepare the sending of pool creation fee
     let mut messages: Vec<CosmosMsg> = vec![];
+    if !config.pool_creation_fee.amount.is_zero() {
+        // send pool creation fee to bonding manager
+        let creation_fee = vec![config.pool_creation_fee];
 
-    // send pool creation fee to whale lair
-    let creation_fee = vec![config.pool_creation_fee];
-
-    // send pool creation fee to the bonding manager
-    messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
-        config.bonding_manager_addr.into_string(),
-        creation_fee,
-    )?);
+        // send pool creation fee to the bonding manager
+        messages.push(white_whale_std::bonding_manager::fill_rewards_msg(
+            config.bonding_manager_addr.into_string(),
+            creation_fee,
+        )?);
+    }
 
     // Check if the asset infos are the same
     if asset_denoms
