@@ -842,7 +842,7 @@ impl TestingSuite {
     pub(crate) fn create_pool(
         &mut self,
         sender: Addr,
-        asset_denoms: Vec<String>,
+        asset_denoms: Vec<&str>,
         asset_decimals: Vec<u8>,
         pool_fees: PoolFee,
         pool_type: PoolType,
@@ -851,7 +851,7 @@ impl TestingSuite {
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::pool_manager::ExecuteMsg::CreatePool {
-            asset_denoms,
+            asset_denoms: asset_denoms.iter().map(|&s| s.to_string()).collect(),
             asset_decimals,
             pool_fees,
             pool_type,
@@ -1044,14 +1044,14 @@ impl TestingSuite {
     pub(crate) fn create_vault(
         &mut self,
         sender: Addr,
-        asset_denom: String,
+        asset_denom: &str,
         vault_identifier: Option<String>,
         fees: white_whale_std::vault_manager::VaultFee,
         funds: Vec<Coin>,
         result: impl Fn(Result<AppResponse, anyhow::Error>),
     ) -> &mut Self {
         let msg = white_whale_std::vault_manager::ExecuteMsg::CreateVault {
-            asset_denom,
+            asset_denom: asset_denom.to_string(),
             fees,
             vault_identifier,
         };
