@@ -253,12 +253,12 @@ impl TestingSuite {
     #[track_caller]
     pub(crate) fn instantiate(
         &mut self,
-        whale_lair_addr: String,
+        bonding_manager_addr: String,
         vault_creation_fee: Coin,
     ) -> &mut Self {
         let msg = InstantiateMsg {
             owner: self.creator().to_string(),
-            bonding_manager_addr: whale_lair_addr,
+            bonding_manager_addr,
             vault_creation_fee,
         };
 
