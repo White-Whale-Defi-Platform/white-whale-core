@@ -283,6 +283,16 @@ pub fn provide_liquidity(
                         ));
                     }
 
+                    // mint the lp tokens to the contract
+                    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+                        liquidity_token.clone(),
+                        &env.contract.address,
+                        &env.contract.address,
+                        // TODO: check if the minimum liquidity amount is correct.
+                        // min_lp_token_amount VS MINIMUM_LIQUIDITY_AMOUNT
+                        min_lp_token_amount,
+                    )?);
+
                     share
                 } else {
                     let amount = compute_mint_amount_for_deposit(
