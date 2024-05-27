@@ -799,13 +799,6 @@ pub fn compute_mint_amount_for_deposit(
     }
 }
 
-/*
-############ trying to fix tests
-*/
-
-/// Number of coins in a swap. Hardcoded to 3 to reuse previous tests
-pub const N_COINS: u8 = 3;
-
 /// Compute the swap amount `y` in proportion to `x`.
 ///
 /// Solve for `y`:
@@ -816,13 +809,14 @@ pub const N_COINS: u8 = 3;
 /// ```
 #[allow(clippy::many_single_char_names, clippy::unwrap_used)]
 pub fn compute_y_raw(
+    n_coins: u8,
     amp_factor: &u64,
     swap_in: Uint128,
     //swap_out: Uint128,
     no_swap: Uint128,
     d: Uint256,
 ) -> Option<Uint256> {
-    let ann = amp_factor.checked_mul(N_COINS.into())?; // A * n ** n
+    let ann = amp_factor.checked_mul(n_coins.into())?; // A * n ** n
 
     // sum' = prod' = x
     // c =  D ** (n + 1) / (n ** (2 * n) * prod' * A)
@@ -831,18 +825,18 @@ pub fn compute_y_raw(
     c = c
         .checked_mul(d)
         .unwrap()
-        .checked_div(swap_in.checked_mul(N_COINS.into()).unwrap().into())
+        .checked_div(swap_in.checked_mul(n_coins.into()).unwrap().into())
         .unwrap();
 
     c = c
         .checked_mul(d)
         .unwrap()
-        .checked_div(no_swap.checked_mul(N_COINS.into()).unwrap().into())
+        .checked_div(no_swap.checked_mul(n_coins.into()).unwrap().into())
         .unwrap();
     c = c
         .checked_mul(d)
         .unwrap()
-        .checked_div(ann.checked_mul(N_COINS.into()).unwrap().into())
+        .checked_div(ann.checked_mul(n_coins.into()).unwrap().into())
         .unwrap();
     // b = sum(swap_in, no_swap) + D // Ann - D
     // not subtracting D here because that could result in a negative.
@@ -882,14 +876,21 @@ pub fn compute_y_raw(
 
 /// Computes the swap amount `y` in proportion to `x`.
 #[allow(clippy::unwrap_used)]
-pub fn compute_y(amp_factor: &u64, x: Uint128, no_swap: Uint128, d: Uint256) -> Option<Uint128> {
-    let amount = compute_y_raw(&amp_factor, x, no_swap, d)?;
+pub fn compute_y(
+    n_coins: u8,
+    amp_factor: &u64,
+    x: Uint128,
+    no_swap: Uint128,
+    d: Uint256,
+) -> Option<Uint128> {
+    let amount = compute_y_raw(n_coins, &amp_factor, x, no_swap, d)?;
     Some(Uint128::try_from(amount).unwrap())
 }
 
 /// Compute SwapResult after an exchange
 #[allow(clippy::unwrap_used)]
 pub fn swap_to(
+    n_coins: u8,
     amp_factor: &u64,
     source_amount: Uint128,
     swap_source_amount: Uint128,
@@ -902,6 +903,7 @@ pub fn swap_to(
         coin(unswaped_amount.u128(), "denom3"),
     ];
     let y = compute_y(
+        n_coins,
         amp_factor,
         swap_source_amount.checked_add(source_amount).unwrap(),
         unswaped_amount,
@@ -948,6 +950,9 @@ mod tests {
     /// Maximum number of tokens to swap at once.
     pub const MAX_TOKENS_IN: Uint128 = Uint128::new(2u128 << 110);
 
+    /// Number of coins in a swap. Hardcoded to 3 to reuse previous tests
+    pub const N_COINS: u8 = 3;
+
     fn check_d(model: &Model, amount_a: u128, amount_b: u128, amount_c: u128) -> Uint256 {
         let deposits = vec![
             coin(amount_a, "denom1"),
@@ -961,6 +966,7 @@ mod tests {
 
     fn check_y(model: &Model, swap_in: u128, no_swap: u128, d: Uint256) {
         let y = compute_y_raw(
+            N_COINS,
             &model.amp_factor,
             Uint128::new(swap_in),
             Uint128::new(no_swap),
@@ -1077,6 +1083,7 @@ mod tests {
                 amount_swapped,
                 ..
             } = swap_to(
+                N_COINS,
                 &self.amp_factor,
                 source_amount,
                 swap_source_amount,
@@ -1286,7 +1293,7 @@ mod tests {
 
             let d0 = compute_d(&amp_factor, &deposits).unwrap();
 
-            let swap_result = swap_to(&amp_factor, source_token_amount.into(), swap_source_amount.into(), swap_destination_amount.into(), unswapped_amount.into());
+            let swap_result = swap_to(N_COINS, &amp_factor, source_token_amount.into(), swap_source_amount.into(), swap_destination_amount.into(), unswapped_amount.into());
             prop_assume!(swap_result.is_some());
 
             let swap_result = swap_result.unwrap();
