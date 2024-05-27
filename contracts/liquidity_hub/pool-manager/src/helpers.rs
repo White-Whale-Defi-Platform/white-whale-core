@@ -489,6 +489,7 @@ pub struct OfferAmountComputation {
     pub osmosis_fee_amount: Uint128,
 }
 
+// TODO: make this work with n_coins being dynamic
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
     deposits: &[Coin],

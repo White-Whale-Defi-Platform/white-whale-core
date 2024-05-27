@@ -2023,10 +2023,8 @@ mod swapping {
         );
     }
 
-    // TODO: make sure stableswap test works when pool has ONLY 2 assets
-
     #[test]
-    fn basic_swapping_test_stable_swap() {
+    fn basic_swapping_test_stable_swap_two_assets() {
         let mut suite = TestingSuite::default_with_balances(vec![
             coin(1_000_000_001u128, "uwhale".to_string()),
             coin(1_000_000_000u128, "uluna".to_string()),
@@ -2071,7 +2069,7 @@ mod swapping {
             extra_fees: vec![],
         };
 
-        // Create a pool
+        // Create a stableswap pool with amp = 100
         suite.instantiate_default().create_pool(
             creator.clone(),
             asset_infos,
