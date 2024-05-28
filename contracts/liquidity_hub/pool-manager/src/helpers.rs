@@ -531,6 +531,12 @@ pub fn assert_slippage_tolerance(
                 }
             }
             PoolType::ConstantProduct => {
+                if deposits.len() != 2 || pools.len() != 2 {
+                    return Err(ContractError::InvalidPoolAssetsLength {
+                        expected: 2,
+                        actual: deposits.len(),
+                    });
+                }
                 if Decimal256::from_ratio(deposits[0], deposits[1]) * one_minus_slippage_tolerance
                     > Decimal256::from_ratio(pools[0], pools[1])
                     || Decimal256::from_ratio(deposits[1], deposits[0])
