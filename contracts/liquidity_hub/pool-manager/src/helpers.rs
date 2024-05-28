@@ -490,10 +490,11 @@ pub struct OfferAmountComputation {
 }
 
 // TODO: make this work with n_coins being dynamic
+
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
-    deposits: &[Coin],
-    pools: &[Coin],
+    deposits: &Vec<Coin>,
+    pools: &Vec<Coin>,
     pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,
@@ -505,14 +506,19 @@ pub fn assert_slippage_tolerance(
         }
 
         let one_minus_slippage_tolerance = Decimal256::one() - slippage_tolerance;
-        let deposits: [Uint256; 2] = [deposits[0].amount.into(), deposits[1].amount.into()];
-        let pools: [Uint256; 2] = [pools[0].amount.into(), pools[1].amount.into()];
+        let deposits: Vec<Uint256> = deposits.iter().map(|coin| coin.amount.into()).collect();
+        let pools: Vec<Uint256> = pools.iter().map(|coin| coin.amount.into()).collect();
 
         // Ensure each prices are not dropped as much as slippage tolerance rate
         match pool_type {
             PoolType::StableSwap { .. } => {
-                let pools_total = pools[0].checked_add(pools[1])?;
-                let deposits_total = deposits[0].checked_add(deposits[1])?;
+                // TODO: shouldn't be necessary to handle unwraps properly as they come from Uint128, but doublecheck!
+                let pools_total: Uint256 = pools
+                    .into_iter()
+                    .fold(Uint256::zero(), |acc, x| acc.checked_add(x).unwrap());
+                let deposits_total: Uint256 = deposits
+                    .into_iter()
+                    .fold(Uint256::zero(), |acc, x| acc.checked_add(x).unwrap());
 
                 let pool_ratio = Decimal256::from_ratio(pools_total, pool_token_supply);
                 let deposit_ratio = Decimal256::from_ratio(deposits_total, amount);
