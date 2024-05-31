@@ -97,6 +97,7 @@ pub mod tasks {
                 member.name != "fee-distributor-mock"
                     && member.name != "stableswap-3pool"
                     && member.name != "stable-swap-sim"
+                    && member.name != "stable-swap-sim1"
             });
 
         for contract in contracts {

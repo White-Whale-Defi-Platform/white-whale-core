@@ -6,7 +6,7 @@ authors = ["Paul Stelzig paul@irulast.com>"]
 edition = "2021"
 
 [lib]
-name = "sim"
+name = "sim1"
 
 [dependencies]
 pyo3 = { version = "0.17.3", features = ["auto-initialize"] }

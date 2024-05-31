@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{coin, ensure, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128, Uint256};
+use cosmwasm_std::{
+    coin, ensure, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128, Uint256,
+};
 
 use white_whale_std::pool_manager::{
     AssetDecimalsResponse, Config, PoolInfoResponse, PoolType, ReverseSimulationResponse,

@@ -493,8 +493,8 @@ pub struct OfferAmountComputation {
 
 pub fn assert_slippage_tolerance(
     slippage_tolerance: &Option<Decimal>,
-    deposits: &Vec<Coin>,
-    pools: &Vec<Coin>,
+    deposits: &[Coin],
+    pools: &[Coin],
     pool_type: PoolType,
     amount: Uint128,
     pool_token_supply: Uint128,
@@ -695,7 +695,7 @@ pub fn get_asset_indexes_in_pool(
 
 // TODO: handle unwraps properly
 #[allow(clippy::unwrap_used)]
-pub fn compute_d(amp_factor: &u64, deposits: &Vec<Coin>) -> Option<Uint256> {
+pub fn compute_d(amp_factor: &u64, deposits: &[Coin]) -> Option<Uint256> {
     let n_coins = Uint128::from(deposits.len() as u128);
 
     // sum(x_i), a.k.a S
@@ -777,8 +777,8 @@ fn compute_next_d(
 #[allow(clippy::unwrap_used, clippy::too_many_arguments)]
 pub fn compute_mint_amount_for_deposit(
     amp_factor: &u64,
-    deposits: &Vec<Coin>,
-    swaps: &Vec<Coin>,
+    deposits: &[Coin],
+    swaps: &[Coin],
     pool_token_supply: Uint128,
 ) -> Option<Uint128> {
     // Initial invariant
@@ -895,7 +895,7 @@ pub fn compute_y(
     no_swap: Uint128,
     d: Uint256,
 ) -> Option<Uint128> {
-    let amount = compute_y_raw(n_coins, &amp_factor, x, no_swap, d)?;
+    let amount = compute_y_raw(n_coins, amp_factor, x, no_swap, d)?;
     Some(Uint128::try_from(amount).unwrap())
 }
 

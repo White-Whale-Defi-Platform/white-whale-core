@@ -394,7 +394,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use rand::Rng;
-    use sim::Model;
+    use sim1::Model;
     use std::cmp;
 
     /// Timestamp at 0
