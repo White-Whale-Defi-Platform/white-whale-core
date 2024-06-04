@@ -221,10 +221,7 @@ pub fn provide_liquidity(
                         .integer_sqrt()
                         .as_u128(),
                     )
-                    .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                    .map_err(|_| {
-                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
-                    })?;
+                    .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
 
                     // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
                     if share.is_zero() {
@@ -268,18 +265,13 @@ pub fn provide_liquidity(
                 if total_share == Uint128::zero() {
                     // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
                     // depositor preventing small liquidity providers from joining the pool
-                    let min_lp_token_amount =
-                        MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(pool_assets.len() as u128);
                     let share = Uint128::try_from(compute_d(amp_factor, &deposits).unwrap())?
-                        .checked_sub(min_lp_token_amount)
-                        .map_err(|_| {
-                            ContractError::InvalidInitialLiquidityAmount(min_lp_token_amount)
-                        })?;
+                        .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
 
                     // share should be above zero after subtracting the min_lp_token_amount
                     if share.is_zero() {
                         return Err(ContractError::InvalidInitialLiquidityAmount(
-                            min_lp_token_amount,
+                            MINIMUM_LIQUIDITY_AMOUNT,
                         ));
                     }
 
@@ -288,9 +280,7 @@ pub fn provide_liquidity(
                         liquidity_token.clone(),
                         &env.contract.address,
                         &env.contract.address,
-                        // TODO: check if the minimum liquidity amount is correct.
-                        // min_lp_token_amount VS MINIMUM_LIQUIDITY_AMOUNT
-                        min_lp_token_amount,
+                        MINIMUM_LIQUIDITY_AMOUNT,
                     )?);
 
                     share

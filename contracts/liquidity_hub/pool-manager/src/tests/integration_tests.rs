@@ -241,12 +241,14 @@ mod pool_creation_failures {
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
-                match err {
-                    ContractError::InvalidPoolCreationFee { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::InvalidPoolCreationFee"),
-                }
-            },
-        );
+                    match err {
+                        ContractError::InvalidPoolCreationFee { .. } => {}
+                        _ => panic!(
+                            "Wrong error type, should return ContractError::InvalidPoolCreationFee"
+                        ),
+                    }
+                },
+            );
     }
 
     #[test]
@@ -3958,22 +3960,28 @@ mod provide_liquidity {
             vec![
                 Coin {
                     denom: "uwhale".to_string(),
-                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                    amount: MINIMUM_LIQUIDITY_AMOUNT
+                        .checked_div(Uint128::new(3u128))
+                        .unwrap(),
                 },
                 Coin {
                     denom: "uluna".to_string(),
-                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                    amount: MINIMUM_LIQUIDITY_AMOUNT
+                        .checked_div(Uint128::new(3u128))
+                        .unwrap(),
                 },
                 Coin {
                     denom: "uusd".to_string(),
-                    amount: Uint128::from(MINIMUM_LIQUIDITY_AMOUNT),
+                    amount: MINIMUM_LIQUIDITY_AMOUNT
+                        .checked_div(Uint128::new(3u128))
+                        .unwrap(),
                 },
             ],
             |result| {
                 assert_eq!(
                     result.unwrap_err().downcast_ref::<ContractError>(),
                     Some(&ContractError::InvalidInitialLiquidityAmount(
-                        MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(3u128)
+                        MINIMUM_LIQUIDITY_AMOUNT
                     ))
                 );
             },
