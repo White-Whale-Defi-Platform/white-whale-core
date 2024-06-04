@@ -240,7 +240,6 @@ mod pool_creation_failures {
                 vec![coin(90, "uusd")],
                 |result| {
                     let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
                     match err {
                         ContractError::InvalidPoolCreationFee { .. } => {}
                         _ => panic!(
