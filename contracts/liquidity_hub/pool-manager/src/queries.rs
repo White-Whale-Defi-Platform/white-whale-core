@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 
-use cosmwasm_std::{coin, ensure, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128};
+use cosmwasm_std::{
+    coin, ensure, Coin, Decimal256, Deps, Fraction, Order, StdResult, Uint128, Uint256,
+};
 
 use white_whale_std::pool_manager::{
     AssetDecimalsResponse, Config, PoolInfoResponse, PoolType, ReverseSimulationResponse,
@@ -55,6 +57,7 @@ pub fn query_simulation(
         get_asset_indexes_in_pool(&pool_info, offer_asset.denom, ask_asset_denom)?;
 
     let swap_computation = helpers::compute_swap(
+        Uint256::from(pool_info.assets.len() as u128),
         offer_asset_in_pool.amount,
         ask_asset_in_pool.amount,
         offer_asset.amount,
@@ -161,6 +164,7 @@ pub fn query_reverse_simulation(
             let max_precision = offer_decimal.max(ask_decimal);
 
             let new_offer_pool_amount = calculate_stableswap_y(
+                Uint256::from(pool_info.assets.len() as u128),
                 offer_pool,
                 ask_pool,
                 before_fees,

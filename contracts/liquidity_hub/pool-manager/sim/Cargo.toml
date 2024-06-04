@@ -1,12 +1,12 @@
 [package]
-name = "stable-swap-sim1"
+name = "stable-swap-sim"
 version = "0.1.0"
 description = "Simulations of the StableSwap invariant compared to Curve's reference implementation."
 authors = ["Paul Stelzig paul@irulast.com>"]
 edition = "2021"
 
 [lib]
-name = "sim1"
+name = "sim"
 
 [dependencies]
 pyo3 = { version = "0.17.3", features = ["auto-initialize"] }

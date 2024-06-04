@@ -167,6 +167,16 @@ impl StableSwap {
             let amount_b_times_coins = amount_b.checked_mul(N_COINS.into()).unwrap();
             let amount_c_times_coins = amount_c.checked_mul(N_COINS.into()).unwrap();
 
+            if amount_a_times_coins == Uint128::zero()
+                || amount_b_times_coins == Uint128::zero()
+                || amount_c_times_coins == Uint128::zero()
+            {
+                println!(
+                    "amount_a_times_coins: {}, amount_b_times_coins: {}, amount_c_times_coins: {}",
+                    amount_a_times_coins, amount_b_times_coins, amount_c_times_coins
+                );
+            }
+
             // Newton's method to approximate D
             let mut d_prev: Uint256;
             let mut d: Uint256 = sum_x.into();
@@ -217,6 +227,7 @@ impl StableSwap {
     ) -> Option<Uint128> {
         // Initial invariant
         let d_0 = self.compute_d(swap_amount_a, swap_amount_b, swap_amount_c)?;
+
         let new_balances = [
             swap_amount_a.checked_add(deposit_amount_a).unwrap(),
             swap_amount_b.checked_add(deposit_amount_b).unwrap(),
@@ -383,7 +394,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use rand::Rng;
-    use sim::Model;
+    use sim1::Model;
     use std::cmp;
 
     /// Timestamp at 0
@@ -776,6 +787,7 @@ mod tests {
             let start_ramp_ts = cmp::max(0, current_ts - MIN_RAMP_DURATION);
             let stop_ramp_ts = cmp::min(u64::MAX, current_ts + MIN_RAMP_DURATION);
             let invariant = StableSwap::new(amp_factor, amp_factor, current_ts, start_ramp_ts, stop_ramp_ts);
+
             let d0 = invariant.compute_d(Uint128::new(swap_token_a_amount), Uint128::new(swap_token_b_amount), Uint128::new(swap_token_c_amount)).unwrap();
 
             let mint_amount = invariant.compute_mint_amount_for_deposit(
@@ -793,6 +805,7 @@ mod tests {
             let new_swap_token_b_amount = swap_token_b_amount + deposit_amount_b;
             let new_swap_token_c_amount = swap_token_c_amount + deposit_amount_c;
             let new_pool_token_supply = pool_token_supply + mint_amount.unwrap().u128();
+
             let d1 = invariant.compute_d(Uint128::new(new_swap_token_a_amount), Uint128::new(new_swap_token_b_amount), Uint128::new(new_swap_token_c_amount)).unwrap();
 
             assert!(d0 < d1);

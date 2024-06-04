@@ -47,4 +47,4 @@ cosmwasm-schema.workspace = true
 [dev-dependencies]
 proptest = "1.0.0"
 rand = "0.8.4"
-stable-swap-sim = { path = "./sim", version = "^0.1" }
+stable-swap-sim1 = { path = "./sim", version = "^0.1" }

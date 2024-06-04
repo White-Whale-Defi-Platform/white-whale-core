@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     coin, coins, ensure, to_json_binary, wasm_execute, BankMsg, Coin, CosmosMsg, DepsMut, Env,
-    MessageInfo, Response, StdError, SubMsg,
+    MessageInfo, Response, SubMsg,
 };
 use cosmwasm_std::{Decimal, OverflowError, Uint128};
 
@@ -23,7 +23,7 @@ use crate::{
 // After writing create_pool I see this can get quite verbose so attempting to
 // break it down into smaller modules which house some things like swap, liquidity etc
 use crate::contract::SINGLE_SIDE_LIQUIDITY_PROVISION_REPLY_ID;
-use crate::helpers::aggregate_outgoing_fees;
+use crate::helpers::{aggregate_outgoing_fees, compute_d, compute_mint_amount_for_deposit};
 use crate::queries::query_simulation;
 use crate::state::{
     LiquidityProvisionData, SingleSideLiquidityProvisionBuffer,
@@ -221,10 +221,7 @@ pub fn provide_liquidity(
                         .integer_sqrt()
                         .as_u128(),
                     )
-                    .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-                    .map_err(|_| {
-                        ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
-                    })?;
+                    .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
 
                     // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
                     if share.is_zero() {
@@ -251,22 +248,11 @@ pub fn provide_liquidity(
                             .multiply_ratio(total_share, pool_assets[1].amount),
                     );
 
-                    let deposits_as: [Uint128; 2] = deposits
-                        .iter()
-                        .map(|coin| coin.amount)
-                        .collect::<Vec<_>>()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-                    let pools_as: [Coin; 2] = pool_assets
-                        .to_vec()
-                        .try_into()
-                        .map_err(|_| StdError::generic_err("Error converting vector to array"))?;
-
                     // assert slippage tolerance
                     helpers::assert_slippage_tolerance(
                         &slippage_tolerance,
-                        &deposits_as,
-                        &pools_as,
+                        &deposits,
+                        &pool_assets,
                         pool.pool_type.clone(),
                         amount,
                         total_share,
@@ -275,10 +261,47 @@ pub fn provide_liquidity(
                     amount
                 }
             }
-            PoolType::StableSwap { amp: _ } => {
-                // TODO: Handle stableswap
+            PoolType::StableSwap { amp: amp_factor } => {
+                if total_share == Uint128::zero() {
+                    // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                    // depositor preventing small liquidity providers from joining the pool
+                    let share = Uint128::try_from(compute_d(amp_factor, &deposits).unwrap())?
+                        .saturating_sub(MINIMUM_LIQUIDITY_AMOUNT);
 
-                Uint128::one()
+                    // share should be above zero after subtracting the min_lp_token_amount
+                    if share.is_zero() {
+                        return Err(ContractError::InvalidInitialLiquidityAmount(
+                            MINIMUM_LIQUIDITY_AMOUNT,
+                        ));
+                    }
+
+                    // mint the lp tokens to the contract
+                    messages.push(white_whale_std::lp_common::mint_lp_token_msg(
+                        liquidity_token.clone(),
+                        &env.contract.address,
+                        &env.contract.address,
+                        MINIMUM_LIQUIDITY_AMOUNT,
+                    )?);
+
+                    share
+                } else {
+                    let amount = compute_mint_amount_for_deposit(
+                        amp_factor,
+                        &deposits,
+                        &pool_assets,
+                        total_share,
+                    )
+                    .unwrap();
+                    helpers::assert_slippage_tolerance(
+                        &slippage_tolerance,
+                        &deposits,
+                        &pool_assets,
+                        pool.pool_type.clone(),
+                        amount,
+                        total_share,
+                    )?;
+                    amount
+                }
             }
         };
 
