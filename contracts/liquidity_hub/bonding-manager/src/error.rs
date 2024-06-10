@@ -77,6 +77,9 @@ pub enum ContractError {
         "Invalid reward amount. Reward: {reward}, but only {available} available in the reward bucket."
     )]
     InvalidReward { reward: Uint128, available: Uint128 },
+
+    #[error("The reward bucket is empty")]
+    RewardBucketIsEmpty,
 }
 
 impl From<semver::Error> for ContractError {

@@ -162,6 +162,8 @@ pub enum ContractError {
 
     #[error("Invalid pool assets length, expected {expected} got {actual}")]
     InvalidPoolAssetsLength { expected: usize, actual: usize },
+    #[error("The pool has no assets")]
+    PoolHasNoAssets,
 }
 
 impl From<semver::Error> for ContractError {
