@@ -53,7 +53,9 @@ pub(crate) fn on_epoch_created(
     let mut upcoming_bucket = UPCOMING_REWARD_BUCKET.load(deps.storage)?;
 
     // Remove all zero amounts from the upcoming bucket
-    upcoming_bucket.total.retain(|coin| coin.amount > Uint128::zero());
+    upcoming_bucket
+        .total
+        .retain(|coin| coin.amount > Uint128::zero());
 
     let mut new_reward_bucket = RewardBucket {
         id: current_epoch.id,
