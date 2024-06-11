@@ -284,10 +284,7 @@ pub(crate) fn validate_buckets_not_empty(deps: &DepsMut) -> Result<(), ContractE
         .keys(deps.storage, None, None, Order::Descending)
         .collect::<StdResult<Vec<_>>>()?;
 
-    ensure!(
-        !reward_buckets.is_empty(),
-        ContractError::RewardBucketIsEmpty
-    );
+    ensure!(!reward_buckets.is_empty(), ContractError::Unauthorized);
 
     Ok(())
 }

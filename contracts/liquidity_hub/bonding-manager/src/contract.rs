@@ -38,7 +38,7 @@ pub fn instantiate(
 
     let config = Config {
         pool_manager_addr: Addr::unchecked(""),
-        epoch_manager_addr: Addr::unchecked(""),
+        epoch_manager_addr: Addr::unchecked(""), // deps.api.addr_validate(&msg.epoch_manager_addr)?,
         distribution_denom: msg.distribution_denom,
         unbonding_period: msg.unbonding_period,
         growth_rate: msg.growth_rate,
