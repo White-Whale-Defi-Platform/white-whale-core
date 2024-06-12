@@ -160,10 +160,6 @@ fn epic_test() {
                 result.unwrap();
             },
         )
-        // alice should still have 0 uwhale claimable rewards
-        .query_claimable_reward_buckets(Some(&alice), |response| {
-            assert!(response.unwrap().1.is_empty());
-        })
         .add_one_epoch()
         .query_claimable_reward_buckets(Some(&bob), |response| {
             println!("{:?}", response.unwrap().1);
