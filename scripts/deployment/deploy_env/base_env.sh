@@ -7,7 +7,7 @@ output_flag=json
 
 case $chain in
 
-local | juno | juno-testnet | terra | terra-testnet | archway-testnet | comdex | comdex-testnet | sei | sei-testnet | stargaze-testnet | osmosis | osmosis-testnet | orai)
+local | juno | juno-testnet | terra | terra-testnet | archway-testnet | comdex | comdex-testnet | sei | sei-testnet | stargaze-testnet | osmosis | osmosis-testnet | orai | neutron | neutron)
 	if [ -n "$ZSH_VERSION" ]; then
 		# Using an array for TXFLAG
 		TXFLAG=(--node $RPC --chain-id $CHAIN_ID --gas-prices 0.15$DENOM --gas auto --gas-adjustment 1.2 -y -b $b_flag --output $output_flag)
