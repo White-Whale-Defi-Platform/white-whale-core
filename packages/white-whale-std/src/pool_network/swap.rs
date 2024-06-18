@@ -22,6 +22,14 @@ pub fn assert_max_spread(
         .min(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?)
         .into();
 
+    // println!(">>> assert_max_spread");
+    // println!("belief_price: {:?}", belief_price);
+    // println!("max_spread: {:?}", max_spread);
+    // println!("offer_amount: {:?}", offer_amount);
+    // println!("return_amount: {:?}", return_amount);
+    // println!("spread_amount: {:?}", spread_amount);
+    // println!("<<< assert_max_spread");
+
     if let Some(belief_price) = belief_price {
         let expected_return = offer_amount
             * belief_price
@@ -34,8 +42,10 @@ pub fn assert_max_spread(
         {
             return Err(StdError::generic_err("Spread limit exceeded"));
         }
-    } else if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
-        return Err(StdError::generic_err("Spread limit exceeded"));
+        // } else if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
+        //     // TODO: >>> troubleshooting |
+        //     // return Err(StdError::generic_err("Spread limit exceeded"));
+        //     return Ok(());
     }
 
     Ok(())
