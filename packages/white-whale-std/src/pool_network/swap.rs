@@ -15,7 +15,7 @@ pub fn assert_max_spread(
     max_spread: Option<Decimal>,
     offer_amount: Uint128,
     return_amount: Uint128,
-    spread_amount: Uint128,
+    _spread_amount: Uint128,
 ) -> StdResult<()> {
     let max_spread: Decimal256 = max_spread
         .unwrap_or(Decimal::from_str(DEFAULT_SLIPPAGE)?)
