@@ -1,6 +1,6 @@
 [package]
 name = "white-whale-std"
-version = "1.1.4"
+version = "1.1.5"
 edition.workspace = true
 authors = [
   "Kerber0x <kerber0x@protonmail.com>",
