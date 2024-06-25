@@ -97,7 +97,9 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
             }))?;
 
         for fee in epoch.total.iter() {
-            let reward = fee.amount * bonding_weight_response.share;
+            let reward = fee
+                .amount
+                .checked_mul_floor(bonding_weight_response.share)?;
 
             if reward.is_zero() {
                 // nothing to claim
