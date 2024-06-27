@@ -48,7 +48,7 @@ osmosis)
 	fi
 
 	;;
-juno | terra | chihuahua | migaloo)
+juno | terra | chihuahua | migaloo | neutron)
 	flag="-osmosis_token_factory"
 	;;
 injective)
