@@ -1,4 +1,6 @@
-use cosmwasm_std::{DivideByZeroError, OverflowError, StdError, Uint64};
+use cosmwasm_std::{
+    CheckedMultiplyFractionError, DivideByZeroError, OverflowError, StdError, Uint64,
+};
 use cw_utils::ParseReplyError;
 use semver::Version;
 use thiserror::Error;
@@ -52,6 +54,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     ParseReplyError(#[from] ParseReplyError),
+
+    #[error("{0}")]
+    CheckedMultiplyFractionError(#[from] CheckedMultiplyFractionError),
 
     #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
     MigrateInvalidVersion {
