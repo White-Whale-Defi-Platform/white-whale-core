@@ -1,12 +1,15 @@
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
-use crate::state::{BONDING_ASSETS_LIMIT, BOND_COUNTER, CONFIG, UPCOMING_REWARD_BUCKET};
+use crate::state::{
+    BONDING_ASSETS_LIMIT, BOND_COUNTER, CONFIG, TMP_BOND_ACTION, UPCOMING_REWARD_BUCKET,
+};
 use crate::{bonding, commands, queries, rewards};
 use cosmwasm_std::{ensure, entry_point, Addr, Reply};
 use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version};
 use white_whale_std::bonding_manager::{
-    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, UpcomingRewardBucket,
+    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TemporalBondAction,
+    UpcomingRewardBucket,
 };
 
 // version info for migration info
@@ -14,6 +17,8 @@ const CONTRACT_NAME: &str = "white_whale-bonding_manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const LP_WITHDRAWAL_REPLY_ID: u64 = 0;
+pub const CLAIM_REPLY_ID: u64 = 1;
+pub const NEW_EPOCH_CREATION_REPLY_ID: u64 = 2;
 
 #[entry_point]
 pub fn instantiate(
@@ -59,9 +64,40 @@ pub fn instantiate(
 
 // Reply entrypoint handling LP withdraws from fill_rewards
 #[entry_point]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         LP_WITHDRAWAL_REPLY_ID => rewards::commands::handle_lp_withdrawal_reply(deps, msg),
+        NEW_EPOCH_CREATION_REPLY_ID => {
+            let TemporalBondAction {
+                sender,
+                coin,
+                is_bond,
+            } = TMP_BOND_ACTION.load(deps.storage)?;
+
+            TMP_BOND_ACTION.remove(deps.storage);
+
+            if is_bond {
+                bonding::commands::bond(
+                    deps,
+                    &MessageInfo {
+                        sender,
+                        funds: vec![coin.clone()],
+                    },
+                    env,
+                    &coin,
+                )
+            } else {
+                bonding::commands::unbond(
+                    deps,
+                    &MessageInfo {
+                        sender,
+                        funds: vec![],
+                    },
+                    env,
+                    &coin,
+                )
+            }
+        }
         _ => Err(ContractError::Unauthorized),
     }
 }
@@ -76,11 +112,11 @@ pub fn execute(
     match msg {
         ExecuteMsg::Bond => {
             let asset_to_bond = helpers::validate_funds(&deps, &info)?;
-            bonding::commands::bond(deps, info, env, asset_to_bond)
+            bonding::commands::bond(deps, &info, env, &asset_to_bond)
         }
         ExecuteMsg::Unbond { asset } => {
             cw_utils::nonpayable(&info)?;
-            bonding::commands::unbond(deps, info, env, asset)
+            bonding::commands::unbond(deps, &info, env, &asset)
         }
         ExecuteMsg::Withdraw { denom } => {
             cw_utils::nonpayable(&info)?;

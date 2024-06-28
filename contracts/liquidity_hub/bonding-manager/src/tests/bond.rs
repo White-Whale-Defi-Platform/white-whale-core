@@ -82,7 +82,7 @@ fn test_same_bond_multiple_times() {
 }
 
 #[test]
-fn test_bonding_without_creating_new_epoch_on_time() {
+fn test_bonding_unbonding_without_creating_new_epoch_on_time() {
     let mut suite = TestingSuite::default();
     let creator = suite.senders[0].clone();
 
@@ -100,39 +100,11 @@ fn test_bonding_without_creating_new_epoch_on_time() {
             },
         )
         .fast_forward(1)
-        // tries to bond when the new epoch should had been created, but it hasn't
-        .bond(
-            creator.clone(),
-            &vec![coin(2_000u128, "bWHALE")],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::EpochNotCreatedYet { .. } => {}
-                    _ => {
-                        panic!("Wrong error type, should return ContractError::EpochNotCreatedYet")
-                    }
-                }
-            },
-        )
-        // the time moves on, and nobody triggers a new epoch...
-        .fast_forward(43_200)
-        // it can't still bond
-        .bond(
-            creator.clone(),
-            &vec![coin(2_000u128, "bWHALE")],
-            |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::EpochNotCreatedYet { .. } => {}
-                    _ => {
-                        panic!("Wrong error type, should return ContractError::EpochNotCreatedYet")
-                    }
-                }
-            },
-        )
-        .create_new_epoch()
+        // tries to bond when the new epoch should have been created, but since it wasn't it is triggered
+        // by the contract via a submsg/reply
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 1u64);
+        })
         .bond(
             creator.clone(),
             &vec![coin(2_000u128, "bWHALE")],
@@ -140,10 +112,28 @@ fn test_bonding_without_creating_new_epoch_on_time() {
                 result.unwrap();
             },
         )
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 2u64);
+        })
         .query_bonded(Some(creator.clone().to_string()), |res| {
             assert_eq!(
                 res.unwrap().1.bonded_assets,
                 vec![coin(3_000u128, "bWHALE")]
             );
+        });
+
+    // now try unbonding
+
+    suite
+        .add_one_day()
+        .fast_forward(60) //one minute past when the new epoch should have been created
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 2u64);
+        })
+        .unbond(creator.clone(), coin(3_000u128, "bWHALE"), |result| {
+            result.unwrap();
+        })
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 3u64);
         });
 }

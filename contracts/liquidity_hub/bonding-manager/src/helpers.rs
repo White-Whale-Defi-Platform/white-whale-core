@@ -1,13 +1,13 @@
 use std::collections::{HashMap, VecDeque};
 
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env,
-    MessageInfo, Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    ensure, to_json_binary, wasm_execute, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut,
+    Env, MessageInfo, Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
 
 use white_whale_std::bonding_manager::{
-    ClaimableRewardBucketsResponse, Config, GlobalIndex, RewardBucket,
+    ClaimableRewardBucketsResponse, Config, GlobalIndex, RewardBucket, TemporalBondAction,
 };
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
@@ -17,11 +17,12 @@ use white_whale_std::pool_manager::{
 use white_whale_std::pool_network::asset;
 use white_whale_std::pool_network::asset::aggregate_coins;
 
-use crate::contract::LP_WITHDRAWAL_REPLY_ID;
+use crate::contract::{LP_WITHDRAWAL_REPLY_ID, NEW_EPOCH_CREATION_REPLY_ID};
 use crate::error::ContractError;
 use crate::queries::query_claimable;
 use crate::state::{
-    get_bonds_by_receiver, get_weight, CONFIG, REWARD_BUCKETS, UPCOMING_REWARD_BUCKET,
+    get_bonds_by_receiver, get_weight, CONFIG, REWARD_BUCKETS, TMP_BOND_ACTION,
+    UPCOMING_REWARD_BUCKET,
 };
 
 /// Validates that the growth rate is between 0 and 1.
@@ -65,7 +66,7 @@ pub fn validate_funds(deps: &DepsMut, info: &MessageInfo) -> Result<Coin, Contra
 pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), ContractError> {
     // Do a smart query for Claimable
     let claimable_rewards: ClaimableRewardBucketsResponse =
-        query_claimable(&deps.as_ref(), Some(info.sender.to_string())).unwrap();
+        query_claimable(&deps.as_ref(), Some(info.sender.to_string()))?;
     // ensure the user has nothing to claim
     ensure!(
         claimable_rewards.reward_buckets.is_empty(),
@@ -490,6 +491,39 @@ pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> 
         upcoming_bucket.total = asset::aggregate_coins(&upcoming_bucket.total, &vec![funds])?;
         Ok(upcoming_bucket)
     })?;
+
+    Ok(())
+}
+
+/// Creates a [SubMsg] to create a new epoch with the code NEW_EPOCH_CREATION_REPLY_ID. Used to trigger
+/// epoch creation when the user is bonding/unbonding and the epoch has not been created yet.
+pub fn create_epoch_submsg(config: Config) -> Result<SubMsg, ContractError> {
+    Ok(SubMsg::reply_on_success(
+        wasm_execute(
+            config.epoch_manager_addr,
+            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
+            vec![],
+        )?,
+        NEW_EPOCH_CREATION_REPLY_ID,
+    ))
+}
+
+/// Stores the temporal bond action. Used when triggering the
+/// epoch creation when the user is bonding/unbonding and the epoch has not been created yet.
+pub fn save_temporal_bond_action(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    asset: &Coin,
+    is_bond: bool,
+) -> Result<(), ContractError> {
+    TMP_BOND_ACTION.save(
+        deps.storage,
+        &TemporalBondAction {
+            sender: info.sender.clone(),
+            coin: asset.clone(),
+            is_bond,
+        },
+    )?;
 
     Ok(())
 }

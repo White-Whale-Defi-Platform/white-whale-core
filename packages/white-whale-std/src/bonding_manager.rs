@@ -263,6 +263,13 @@ pub struct ClaimableRewardBucketsResponse {
     pub reward_buckets: Vec<RewardBucket>,
 }
 
+#[cw_serde]
+pub struct TemporalBondAction {
+    pub sender: Addr,
+    pub coin: Coin,
+    pub is_bond: bool,
+}
+
 /// Creates a message to fill rewards on the whale lair contract.
 pub fn fill_rewards_msg(contract_addr: String, assets: Vec<Coin>) -> StdResult<CosmosMsg> {
     Ok(CosmosMsg::Wasm(WasmMsg::Execute {

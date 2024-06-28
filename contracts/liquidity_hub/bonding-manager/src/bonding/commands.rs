@@ -15,15 +15,24 @@ use crate::{helpers, ContractError};
 /// Bonds the provided asset.
 pub(crate) fn bond(
     mut deps: DepsMut,
-    info: MessageInfo,
+    info: &MessageInfo,
     env: Env,
-    asset: Coin,
+    asset: &Coin,
 ) -> Result<Response, ContractError> {
     helpers::validate_buckets_not_empty(&deps)?;
-    helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    helpers::validate_claimed(&deps, info)?;
 
     let config = CONFIG.load(deps.storage)?;
+
+    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
+        helpers::save_temporal_bond_action(&mut deps, info, asset, true)?;
+
+        // new epoch must be created
+        return Ok(Response::default()
+            .add_submessage(helpers::create_epoch_submsg(config)?)
+            .add_attributes(vec![("action", "bond".to_string())]));
+    }
+
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
         deps.querier.query_wasm_smart(
             config.epoch_manager_addr,
@@ -101,17 +110,27 @@ pub(crate) fn bond(
 /// Unbonds the provided amount of tokens
 pub(crate) fn unbond(
     mut deps: DepsMut,
-    info: MessageInfo,
+    info: &MessageInfo,
     env: Env,
-    asset: Coin,
+    asset: &Coin,
 ) -> Result<Response, ContractError> {
     ensure!(
         asset.amount > Uint128::zero(),
         ContractError::InvalidUnbondingAmount
     );
 
-    helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
+    helpers::validate_claimed(&deps, info)?;
+
+    let config = CONFIG.load(deps.storage)?;
+
+    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
+        helpers::save_temporal_bond_action(&mut deps, info, asset, false)?;
+
+        // new epoch must be created
+        return Ok(Response::default()
+            .add_submessage(helpers::create_epoch_submsg(config)?)
+            .add_attributes(vec![("action", "unbond".to_string())]));
+    }
 
     let bonds_by_receiver = get_bonds_by_receiver(
         deps.storage,
@@ -138,7 +157,6 @@ pub(crate) fn unbond(
             ContractError::InsufficientBond
         );
 
-        let config = CONFIG.load(deps.storage)?;
         let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
             deps.querier.query_wasm_smart(
                 config.epoch_manager_addr,
