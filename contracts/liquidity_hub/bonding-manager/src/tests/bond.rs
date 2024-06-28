@@ -80,3 +80,70 @@ fn test_same_bond_multiple_times() {
             );
         });
 }
+
+#[test]
+fn test_bonding_without_creating_new_epoch_on_time() {
+    let mut suite = TestingSuite::default();
+    let creator = suite.senders[0].clone();
+
+    suite
+        .instantiate_default()
+        .add_one_day()
+        .create_new_epoch()
+        .fast_forward(86_399)
+        // bonds the last second before the new epoch kicks in
+        .bond(
+            creator.clone(),
+            &vec![coin(1_000u128, "bWHALE")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .fast_forward(1)
+        // tries to bond when the new epoch should had been created, but it hasn't
+        .bond(
+            creator.clone(),
+            &vec![coin(2_000u128, "bWHALE")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::EpochNotCreatedYet { .. } => {}
+                    _ => {
+                        panic!("Wrong error type, should return ContractError::EpochNotCreatedYet")
+                    }
+                }
+            },
+        )
+        // the time moves on, and nobody triggers a new epoch...
+        .fast_forward(43_200)
+        // it can't still bond
+        .bond(
+            creator.clone(),
+            &vec![coin(2_000u128, "bWHALE")],
+            |result| {
+                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+                match err {
+                    ContractError::EpochNotCreatedYet { .. } => {}
+                    _ => {
+                        panic!("Wrong error type, should return ContractError::EpochNotCreatedYet")
+                    }
+                }
+            },
+        )
+        .create_new_epoch()
+        .bond(
+            creator.clone(),
+            &vec![coin(2_000u128, "bWHALE")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_bonded(Some(creator.clone().to_string()), |res| {
+            assert_eq!(
+                res.unwrap().1.bonded_assets,
+                vec![coin(3_000u128, "bWHALE")]
+            );
+        });
+}

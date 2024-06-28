@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
 use cosmwasm_std::{
-    ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, MessageInfo,
-    Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    ensure, to_json_binary, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env,
+    MessageInfo, Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
 };
 use cw_utils::PaymentError;
 
@@ -77,12 +77,27 @@ pub fn validate_claimed(deps: &DepsMut, info: &MessageInfo) -> Result<(), Contra
 
 /// Validates that the current time is not more than a day after the epoch start time. Helps preventing
 /// global_index timestamp issues when querying the weight.
-pub fn validate_bonding_for_current_epoch(deps: &DepsMut) -> Result<(), ContractError> {
+pub fn validate_bonding_for_current_epoch(deps: &DepsMut, env: &Env) -> Result<(), ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let epoch_response: EpochResponse = deps.querier.query_wasm_smart(
         config.epoch_manager_addr.to_string(),
         &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch {},
     )?;
+
+    let epoch_manager_config: white_whale_std::epoch_manager::epoch_manager::ConfigResponse =
+        deps.querier.query_wasm_smart(
+            config.epoch_manager_addr.to_string(),
+            &white_whale_std::epoch_manager::epoch_manager::QueryMsg::Config {},
+        )?;
+
+    // Ensure that the current time is not more than the epoch duration after the epoch start time,
+    // otherwise it means a new epoch must be created before the user can bond.
+    ensure!(
+        Uint64::new(env.block.time.nanos())
+            .checked_sub(Uint64::new(epoch_response.epoch.start_time.nanos()))?
+            < epoch_manager_config.epoch_config.duration,
+        ContractError::EpochNotCreatedYet
+    );
 
     let reward_bucket = REWARD_BUCKETS.may_load(deps.storage, epoch_response.epoch.id)?;
 

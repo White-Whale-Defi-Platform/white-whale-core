@@ -16,12 +16,12 @@ use crate::{helpers, ContractError};
 pub(crate) fn bond(
     mut deps: DepsMut,
     info: MessageInfo,
-    _env: Env,
+    env: Env,
     asset: Coin,
 ) -> Result<Response, ContractError> {
     helpers::validate_buckets_not_empty(&deps)?;
     helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     let config = CONFIG.load(deps.storage)?;
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
@@ -111,7 +111,7 @@ pub(crate) fn unbond(
     );
 
     helpers::validate_claimed(&deps, &info)?;
-    helpers::validate_bonding_for_current_epoch(&deps)?;
+    helpers::validate_bonding_for_current_epoch(&deps, &env)?;
 
     let bonds_by_receiver = get_bonds_by_receiver(
         deps.storage,

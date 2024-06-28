@@ -40,7 +40,7 @@ fn test_queries() {
         });
 
     suite
-        .fast_forward(259_200)
+        .add_one_day()
         // epoch 1
         .create_new_epoch()
         .create_pair(
@@ -95,6 +95,7 @@ fn test_queries() {
                 result.unwrap();
             },
         )
+        .add_one_day()
         // epoch 2
         .create_new_epoch()
         .bond(creator.clone(), &coins(1_000u128, "ampWHALE"), |res| {
@@ -134,7 +135,7 @@ fn test_queries() {
         );
 
     // epoch 3
-    suite.create_new_epoch();
+    suite.add_one_day().create_new_epoch();
 
     suite
         .query_global_index(None, |result| {
