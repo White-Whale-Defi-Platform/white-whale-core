@@ -3,7 +3,7 @@ use cosmwasm_std::{
     Uint128,
 };
 
-use white_whale_std::bonding_manager::{Bond, BondAction, TemporalBondAction};
+use white_whale_std::bonding_manager::{Bond, BondAction, Config, TemporalBondAction};
 use white_whale_std::pool_network::asset;
 
 use crate::helpers::temporal_bond_action_response;
@@ -23,30 +23,10 @@ pub(crate) fn bond(
     helpers::validate_buckets_not_empty(&deps)?;
     let config = CONFIG.load(deps.storage)?;
 
-    if helpers::validate_claimed(&deps, info).is_err() {
-        return temporal_bond_action_response(
-            &mut deps,
-            env.contract.address,
-            TemporalBondAction {
-                sender: info.sender.clone(),
-                coin: asset.clone(),
-                action: BondAction::Bond,
-            },
-            ContractError::UnclaimedRewards,
-        );
-    }
-
-    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
-        return temporal_bond_action_response(
-            &mut deps,
-            config.epoch_manager_addr,
-            TemporalBondAction {
-                sender: info.sender.clone(),
-                coin: asset.clone(),
-                action: BondAction::Bond,
-            },
-            ContractError::EpochNotCreatedYet,
-        );
+    if let Some(temporal_bond_action_response) =
+        validate_bond_operation(&mut deps, info, &env, asset, &config, BondAction::Bond)
+    {
+        return temporal_bond_action_response;
     }
 
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
@@ -137,30 +117,10 @@ pub(crate) fn unbond(
 
     let config = CONFIG.load(deps.storage)?;
 
-    if helpers::validate_claimed(&deps, info).is_err() {
-        return temporal_bond_action_response(
-            &mut deps,
-            env.contract.address,
-            TemporalBondAction {
-                sender: info.sender.clone(),
-                coin: asset.clone(),
-                action: BondAction::Unbond,
-            },
-            ContractError::UnclaimedRewards,
-        );
-    }
-
-    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
-        return temporal_bond_action_response(
-            &mut deps,
-            config.epoch_manager_addr,
-            TemporalBondAction {
-                sender: info.sender.clone(),
-                coin: asset.clone(),
-                action: BondAction::Unbond,
-            },
-            ContractError::EpochNotCreatedYet,
-        );
+    if let Some(temporal_bond_action_response) =
+        validate_bond_operation(&mut deps, info, &env, asset, &config, BondAction::Unbond)
+    {
+        return temporal_bond_action_response;
     }
 
     let bonds_by_receiver = get_bonds_by_receiver(
@@ -290,4 +250,46 @@ pub(crate) fn withdraw(
             ("denom", denom),
             ("refund_amount", refund_amount.to_string()),
         ]))
+}
+
+/// Validates the bond operation. Makes sure the user has claimed pending rewards and that the current
+/// epoch is valid. If any of these operations fail, the contract will resolve them by triggering
+/// the claim rewards operation on behalf of the user, or by sending a message to the epoch manager
+/// to create a new epoch.
+///
+/// Used during both Bond and Unbond.
+fn validate_bond_operation(
+    deps: &mut DepsMut,
+    info: &MessageInfo,
+    env: &Env,
+    asset: &Coin,
+    config: &Config,
+    bond_action: BondAction,
+) -> Option<Result<Response, ContractError>> {
+    if helpers::validate_claimed(deps, info).is_err() {
+        return Some(temporal_bond_action_response(
+            deps,
+            &env.contract.address,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: bond_action,
+            },
+            ContractError::UnclaimedRewards,
+        ));
+    }
+
+    if helpers::validate_bonding_for_current_epoch(deps, env).is_err() {
+        return Some(temporal_bond_action_response(
+            deps,
+            &config.epoch_manager_addr,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: bond_action,
+            },
+            ContractError::EpochNotCreatedYet,
+        ));
+    }
+    None
 }

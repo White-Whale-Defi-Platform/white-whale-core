@@ -501,7 +501,7 @@ pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> 
 /// Creates a [SubMsg] for the given [TemporalBondAction].
 pub fn temporal_bond_action_response(
     deps: &mut DepsMut,
-    contract_addr: Addr,
+    contract_addr: &Addr,
     temporal_bond_action: TemporalBondAction,
     error: ContractError,
 ) -> Result<Response, ContractError> {
@@ -532,7 +532,7 @@ pub fn temporal_bond_action_response(
 /// If there are unclaimed rewards, creates a [SubMsg] to claim rewards. Used to trigger when the
 /// user is bonding/unbonding, and it hasn't claimed pending rewards yet.
 fn create_temporal_bond_action_submsg(
-    contract_addr: Addr,
+    contract_addr: &Addr,
     msg: &impl Serialize,
 ) -> Result<SubMsg, ContractError> {
     Ok(SubMsg::reply_on_success(
