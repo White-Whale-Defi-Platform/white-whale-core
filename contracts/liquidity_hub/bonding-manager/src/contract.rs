@@ -1,24 +1,25 @@
+use cosmwasm_std::{ensure, entry_point, Addr, Reply};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
+use cw2::{get_contract_version, set_contract_version};
+
+use white_whale_std::bonding_manager::{
+    BondAction, Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TemporalBondAction,
+    UpcomingRewardBucket,
+};
+
 use crate::error::ContractError;
 use crate::helpers::{self, validate_growth_rate};
 use crate::state::{
     BONDING_ASSETS_LIMIT, BOND_COUNTER, CONFIG, TMP_BOND_ACTION, UPCOMING_REWARD_BUCKET,
 };
 use crate::{bonding, commands, queries, rewards};
-use cosmwasm_std::{ensure, entry_point, Addr, Reply};
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw2::{get_contract_version, set_contract_version};
-use white_whale_std::bonding_manager::{
-    Config, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, TemporalBondAction,
-    UpcomingRewardBucket,
-};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "white_whale-bonding_manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const LP_WITHDRAWAL_REPLY_ID: u64 = 0;
-pub const CLAIM_REPLY_ID: u64 = 1;
-pub const NEW_EPOCH_CREATION_REPLY_ID: u64 = 2;
+pub const NEW_EPOCH_CREATION_REPLY_ID: u64 = 1;
 
 #[entry_point]
 pub fn instantiate(
@@ -71,13 +72,13 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
             let TemporalBondAction {
                 sender,
                 coin,
-                is_bond,
+                action,
             } = TMP_BOND_ACTION.load(deps.storage)?;
 
             TMP_BOND_ACTION.remove(deps.storage);
 
-            if is_bond {
-                bonding::commands::bond(
+            match action {
+                BondAction::Bond => bonding::commands::bond(
                     deps,
                     &MessageInfo {
                         sender,
@@ -85,9 +86,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     },
                     env,
                     &coin,
-                )
-            } else {
-                bonding::commands::unbond(
+                ),
+                BondAction::Unbond => bonding::commands::unbond(
                     deps,
                     &MessageInfo {
                         sender,
@@ -95,7 +95,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     },
                     env,
                     &coin,
-                )
+                ),
             }
         }
         _ => Err(ContractError::Unauthorized),
@@ -139,7 +139,25 @@ pub fn execute(
             )
         }
         ExecuteMsg::FillRewards => rewards::commands::fill_rewards(deps, env, info),
-        ExecuteMsg::Claim => rewards::commands::claim(deps, info),
+        ExecuteMsg::Claim => {
+            cw_utils::nonpayable(&info)?;
+            rewards::commands::claim(deps, info)
+        }
+        ExecuteMsg::ClaimForAddr { address } => {
+            cw_utils::nonpayable(&info)?;
+            ensure!(
+                info.sender == env.contract.address,
+                ContractError::Unauthorized
+            );
+            let sender = deps.api.addr_validate(&address)?;
+            rewards::commands::claim(
+                deps,
+                MessageInfo {
+                    sender,
+                    funds: vec![],
+                },
+            )
+        }
         ExecuteMsg::EpochChangedHook { current_epoch } => {
             rewards::commands::on_epoch_created(deps, info, current_epoch)
         }

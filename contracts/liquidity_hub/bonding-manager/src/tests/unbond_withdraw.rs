@@ -436,17 +436,7 @@ fn test_unbonding_withdraw() {
 
     suite
         .unbond(creator.clone(), coin(1_000u128, "bWHALE"), |result| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            // can't unbond if there are rewards to claim
-            match err {
-                ContractError::UnclaimedRewards { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
-            }
-        })
-        .claim(creator.clone(), |result| {
-            result.unwrap();
-        })
-        .unbond(creator.clone(), coin(1_000u128, "bWHALE"), |result| {
+            // this is claiming the pending rewards, and then trying to unbond the asset it doesn't have
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
             // can't unbond an asset the user never bonded
             match err {
@@ -699,20 +689,24 @@ fn test_unbonding_withdraw() {
         .create_new_epoch();
 
     suite
-        .unbond(another_sender.clone(), coin(700u128, "bWHALE"), |result| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            // can't unbond if there are rewards to claim
-            match err {
-                ContractError::UnclaimedRewards { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
-            }
+        .query_rewards(another_sender.clone().to_string(), |res| {
+            let (_, rewards) = res.unwrap();
+            assert_eq!(rewards.rewards.len(), 1);
+            assert_eq!(rewards.rewards[0].amount, Uint128::new(539u128));
         })
-        .claim(another_sender.clone(), |result| {
-            result.unwrap();
+        .query_balance("uwhale".to_string(), another_sender.clone(), |balance| {
+            *another_sender_balance.borrow_mut() = balance;
         })
         .unbond(another_sender.clone(), coin(300u128, "bWHALE"), |result| {
+            // Claims pending rewards
             // partial unbond
             result.unwrap();
+        })
+        .query_balance("uwhale".to_string(), another_sender.clone(), |balance| {
+            assert_eq!(
+                another_sender_balance.clone().into_inner() + Uint128::new(539u128),
+                balance
+            );
         })
         .fast_forward(1)
         .unbond(another_sender.clone(), coin(200u128, "bWHALE"), |result| {
@@ -973,17 +967,7 @@ fn test_unbonding_withdraw() {
             );
         })
         .unbond(another_sender.clone(), coin(200u128, "bWHALE"), |result| {
-            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-            // can't unbond if there are rewards to claim
-            match err {
-                ContractError::UnclaimedRewards { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
-            }
-        })
-        .claim(another_sender.clone(), |result| {
-            result.unwrap();
-        })
-        .unbond(another_sender.clone(), coin(200u128, "bWHALE"), |result| {
+            // This will claim the pending rewards
             // total unbond
             result.unwrap();
         });

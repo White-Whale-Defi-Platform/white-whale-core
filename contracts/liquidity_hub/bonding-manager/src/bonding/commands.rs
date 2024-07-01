@@ -3,9 +3,10 @@ use cosmwasm_std::{
     Uint128,
 };
 
-use white_whale_std::bonding_manager::Bond;
+use white_whale_std::bonding_manager::{Bond, BondAction, TemporalBondAction};
 use white_whale_std::pool_network::asset;
 
+use crate::helpers::temporal_bond_action_response;
 use crate::state::{
     get_bonds_by_receiver, update_bond_weight, update_global_weight, BONDS, BOND_COUNTER, CONFIG,
     GLOBAL, LAST_CLAIMED_EPOCH, MAX_LIMIT,
@@ -20,17 +21,32 @@ pub(crate) fn bond(
     asset: &Coin,
 ) -> Result<Response, ContractError> {
     helpers::validate_buckets_not_empty(&deps)?;
-    helpers::validate_claimed(&deps, info)?;
-
     let config = CONFIG.load(deps.storage)?;
 
-    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
-        helpers::save_temporal_bond_action(&mut deps, info, asset, true)?;
+    if helpers::validate_claimed(&deps, info).is_err() {
+        return temporal_bond_action_response(
+            &mut deps,
+            env.contract.address,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: BondAction::Bond,
+            },
+            ContractError::UnclaimedRewards,
+        );
+    }
 
-        // new epoch must be created
-        return Ok(Response::default()
-            .add_submessage(helpers::create_epoch_submsg(config)?)
-            .add_attributes(vec![("action", "bond".to_string())]));
+    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
+        return temporal_bond_action_response(
+            &mut deps,
+            config.epoch_manager_addr,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: BondAction::Bond,
+            },
+            ContractError::EpochNotCreatedYet,
+        );
     }
 
     let current_epoch: white_whale_std::epoch_manager::epoch_manager::EpochResponse =
@@ -119,17 +135,32 @@ pub(crate) fn unbond(
         ContractError::InvalidUnbondingAmount
     );
 
-    helpers::validate_claimed(&deps, info)?;
-
     let config = CONFIG.load(deps.storage)?;
 
-    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
-        helpers::save_temporal_bond_action(&mut deps, info, asset, false)?;
+    if helpers::validate_claimed(&deps, info).is_err() {
+        return temporal_bond_action_response(
+            &mut deps,
+            env.contract.address,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: BondAction::Unbond,
+            },
+            ContractError::UnclaimedRewards,
+        );
+    }
 
-        // new epoch must be created
-        return Ok(Response::default()
-            .add_submessage(helpers::create_epoch_submsg(config)?)
-            .add_attributes(vec![("action", "unbond".to_string())]));
+    if helpers::validate_bonding_for_current_epoch(&deps, &env).is_err() {
+        return temporal_bond_action_response(
+            &mut deps,
+            config.epoch_manager_addr,
+            TemporalBondAction {
+                sender: info.sender.clone(),
+                coin: asset.clone(),
+                action: BondAction::Unbond,
+            },
+            ContractError::EpochNotCreatedYet,
+        );
     }
 
     let bonds_by_receiver = get_bonds_by_receiver(

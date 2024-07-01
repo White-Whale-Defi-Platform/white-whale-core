@@ -2,10 +2,13 @@ use std::collections::{HashMap, VecDeque};
 
 use cosmwasm_std::{
     ensure, to_json_binary, wasm_execute, Addr, Attribute, Coin, CosmosMsg, Decimal, Deps, DepsMut,
-    Env, MessageInfo, Order, ReplyOn, StdError, StdResult, SubMsg, Uint128, Uint64, WasmMsg,
+    Env, MessageInfo, Order, ReplyOn, Response, StdError, StdResult, SubMsg, Uint128, Uint64,
+    WasmMsg,
 };
 use cw_utils::PaymentError;
+use serde::Serialize;
 
+use white_whale_std::bonding_manager::ExecuteMsg::ClaimForAddr;
 use white_whale_std::bonding_manager::{
     ClaimableRewardBucketsResponse, Config, GlobalIndex, RewardBucket, TemporalBondAction,
 };
@@ -495,35 +498,45 @@ pub fn fill_upcoming_reward_bucket(deps: DepsMut, funds: Coin) -> StdResult<()> 
     Ok(())
 }
 
-/// Creates a [SubMsg] to create a new epoch with the code NEW_EPOCH_CREATION_REPLY_ID. Used to trigger
-/// epoch creation when the user is bonding/unbonding and the epoch has not been created yet.
-pub fn create_epoch_submsg(config: Config) -> Result<SubMsg, ContractError> {
-    Ok(SubMsg::reply_on_success(
-        wasm_execute(
-            config.epoch_manager_addr,
-            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
-            vec![],
+/// Creates a [SubMsg] for the given [TemporalBondAction].
+pub fn temporal_bond_action_response(
+    deps: &mut DepsMut,
+    contract_addr: Addr,
+    temporal_bond_action: TemporalBondAction,
+    error: ContractError,
+) -> Result<Response, ContractError> {
+    TMP_BOND_ACTION.save(deps.storage, &temporal_bond_action)?;
+
+    let submsg = match error {
+        ContractError::UnclaimedRewards => create_temporal_bond_action_submsg(
+            contract_addr,
+            &ClaimForAddr {
+                address: temporal_bond_action.sender.to_string(),
+            },
         )?,
-        NEW_EPOCH_CREATION_REPLY_ID,
-    ))
+        ContractError::EpochNotCreatedYet => create_temporal_bond_action_submsg(
+            contract_addr,
+            &white_whale_std::epoch_manager::epoch_manager::ExecuteMsg::CreateEpoch,
+        )?,
+        _ => panic!("Can't enter here. Invalid error"),
+    };
+
+    Ok(Response::default()
+        .add_submessage(submsg)
+        .add_attributes(vec![("action", temporal_bond_action.action.to_string())]))
 }
 
-/// Stores the temporal bond action. Used when triggering the
+/// If there is a new epoch to be created, creates a [SubMsg] to create a new epoch. Used to trigger
 /// epoch creation when the user is bonding/unbonding and the epoch has not been created yet.
-pub fn save_temporal_bond_action(
-    deps: &mut DepsMut,
-    info: &MessageInfo,
-    asset: &Coin,
-    is_bond: bool,
-) -> Result<(), ContractError> {
-    TMP_BOND_ACTION.save(
-        deps.storage,
-        &TemporalBondAction {
-            sender: info.sender.clone(),
-            coin: asset.clone(),
-            is_bond,
-        },
-    )?;
-
-    Ok(())
+///
+/// If there are unclaimed rewards, creates a [SubMsg] to claim rewards. Used to trigger when the
+/// user is bonding/unbonding, and it hasn't claimed pending rewards yet.
+fn create_temporal_bond_action_submsg(
+    contract_addr: Addr,
+    msg: &impl Serialize,
+) -> Result<SubMsg, ContractError> {
+    Ok(SubMsg::reply_on_success(
+        wasm_execute(contract_addr, msg, vec![])?,
+        NEW_EPOCH_CREATION_REPLY_ID,
+    ))
 }
