@@ -80,3 +80,60 @@ fn test_same_bond_multiple_times() {
             );
         });
 }
+
+#[test]
+fn test_bonding_unbonding_without_creating_new_epoch_on_time() {
+    let mut suite = TestingSuite::default();
+    let creator = suite.senders[0].clone();
+
+    suite
+        .instantiate_default()
+        .add_one_day()
+        .create_new_epoch()
+        .fast_forward(86_399)
+        // bonds the last second before the new epoch kicks in
+        .bond(
+            creator.clone(),
+            &vec![coin(1_000u128, "bWHALE")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .fast_forward(1)
+        // tries to bond when the new epoch should have been created, but since it wasn't it is triggered
+        // by the contract via a submsg/reply
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 1u64);
+        })
+        .bond(
+            creator.clone(),
+            &vec![coin(2_000u128, "bWHALE")],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 2u64);
+        })
+        .query_bonded(Some(creator.clone().to_string()), |res| {
+            assert_eq!(
+                res.unwrap().1.bonded_assets,
+                vec![coin(3_000u128, "bWHALE")]
+            );
+        });
+
+    // now try unbonding
+
+    suite
+        .add_one_day()
+        .fast_forward(60) //one minute past when the new epoch should have been created
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 2u64);
+        })
+        .unbond(creator.clone(), coin(3_000u128, "bWHALE"), |result| {
+            result.unwrap();
+        })
+        .query_current_epoch(|res| {
+            assert_eq!(res.unwrap().1.epoch.id, 3u64);
+        });
+}

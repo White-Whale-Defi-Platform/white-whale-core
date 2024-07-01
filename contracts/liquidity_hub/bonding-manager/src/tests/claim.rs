@@ -498,12 +498,9 @@ fn test_claim_successfully() {
             another_sender.clone(),
             &coins(1_000u128, "bWHALE"),
             |result| {
-                let err = result.unwrap_err().downcast::<ContractError>().unwrap();
-
-                match err {
-                    ContractError::UnclaimedRewards { .. } => {}
-                    _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
-                }
+                // this one had pending claims, but the contract should claim them automatically
+                // on behalf of the user
+                result.unwrap();
             },
         )
         .bond(
@@ -556,7 +553,7 @@ fn test_claim_successfully() {
                         claimed: vec![],
                         global_index: GlobalIndex {
                             epoch_id: 6,
-                            bonded_amount: Uint128::new(1_000 + 5_000 + 700),
+                            bonded_amount: Uint128::new(1_000 + 5_000 + 700 + 1000),
                             bonded_assets: vec![
                                 Coin {
                                     denom: "ampWHALE".to_string(),
@@ -564,11 +561,11 @@ fn test_claim_successfully() {
                                 },
                                 Coin {
                                     denom: "bWHALE".to_string(),
-                                    amount: Uint128::new(5_000 + 700),
+                                    amount: Uint128::new(5_000 + 700 + 1000),
                                 },
                             ],
                             last_updated: 5,
-                            last_weight: Uint128::new(9_400),
+                            last_weight: Uint128::new(9_400 + 1000),
                         },
                     },
                     RewardBucket {
@@ -580,9 +577,12 @@ fn test_claim_successfully() {
                         }],
                         available: vec![Coin {
                             denom: "uwhale".to_string(),
-                            amount: Uint128::new(999),
+                            amount: Uint128::new(999 - 317),
                         }],
-                        claimed: vec![],
+                        claimed: vec![Coin {
+                            denom: "uwhale".to_string(),
+                            amount: Uint128::new(317),
+                        }],
                         global_index: GlobalIndex {
                             epoch_id: 5,
                             bonded_amount: Uint128::new(1_000 + 700),
@@ -669,17 +669,17 @@ fn test_claim_successfully() {
         .query_rewards(creator.clone().to_string(), |res| {
             let (_, rewards) = res.unwrap();
             assert_eq!(rewards.rewards.len(), 1);
-            assert_eq!(rewards.rewards[0].amount, Uint128::new(1078u128));
+            assert_eq!(rewards.rewards[0].amount, Uint128::new(1056u128));
         })
         .query_rewards(another_sender.clone().to_string(), |res| {
             let (_, rewards) = res.unwrap();
             assert_eq!(rewards.rewards.len(), 1);
-            assert_eq!(rewards.rewards[0].amount, Uint128::new(421u128));
+            assert_eq!(rewards.rewards[0].amount, Uint128::new(180u128));
         })
         .query_rewards(yet_another_sender.clone().to_string(), |res| {
             let (_, rewards) = res.unwrap();
             assert_eq!(rewards.rewards.len(), 1);
-            assert_eq!(rewards.rewards[0].amount, Uint128::new(496u128));
+            assert_eq!(rewards.rewards[0].amount, Uint128::new(441u128));
         });
 
     // let's claim now
@@ -705,15 +705,17 @@ fn test_claim_successfully() {
 
     suite
         .bond(creator.clone(), &coins(1_000u128, "bWHALE"), |result| {
+            // this one had pending claims, but the contract should claim them automatically
+            // on behalf of the user
+            result.unwrap();
+        })
+        .claim(creator.clone(), |result| {
             let err = result.unwrap_err().downcast::<ContractError>().unwrap();
 
             match err {
-                ContractError::UnclaimedRewards { .. } => {}
-                _ => panic!("Wrong error type, should return ContractError::UnclaimedRewards"),
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
             }
-        })
-        .claim(creator.clone(), |result| {
-            result.unwrap();
         })
         .bond(creator.clone(), &coins(1_000u128, "bWHALE"), |result| {
             result.unwrap();
@@ -736,13 +738,13 @@ fn test_claim_successfully() {
     suite
         .query_balance("uwhale".to_string(), creator.clone(), |balance| {
             assert_eq!(
-                creator_balance.clone().into_inner() + Uint128::new(1078u128),
+                creator_balance.clone().into_inner() + Uint128::new(1056u128),
                 balance
             );
         })
         .query_balance("uwhale".to_string(), another_sender.clone(), |balance| {
             assert_eq!(
-                another_sender_balance.clone().into_inner() + Uint128::new(421u128),
+                another_sender_balance.clone().into_inner() + Uint128::new(180u128),
                 balance
             );
         })
@@ -751,7 +753,7 @@ fn test_claim_successfully() {
             yet_another_sender.clone(),
             |balance| {
                 assert_eq!(
-                    yet_another_sender_balance.clone().into_inner() + Uint128::new(496u128),
+                    yet_another_sender_balance.clone().into_inner() + Uint128::new(441u128),
                     balance
                 );
             },
@@ -772,15 +774,15 @@ fn test_claim_successfully() {
                     }],
                     available: vec![Coin {
                         denom: "uwhale".to_string(),
-                        amount: Uint128::new(1),
+                        amount: Uint128::new(2),
                     }],
                     claimed: vec![Coin {
                         denom: "uwhale".to_string(),
-                        amount: Uint128::new(798),
+                        amount: Uint128::new(797),
                     }],
                     global_index: GlobalIndex {
                         epoch_id: 6,
-                        bonded_amount: Uint128::new(1_000 + 5_000 + 700),
+                        bonded_amount: Uint128::new(1_000 + 5_000 + 700 + 1000),
                         bonded_assets: vec![
                             Coin {
                                 denom: "ampWHALE".to_string(),
@@ -788,11 +790,11 @@ fn test_claim_successfully() {
                             },
                             Coin {
                                 denom: "bWHALE".to_string(),
-                                amount: Uint128::new(5_000 + 700),
+                                amount: Uint128::new(5_000 + 700 + 1000),
                             },
                         ],
                         last_updated: 5,
-                        last_weight: Uint128::new(9_400),
+                        last_weight: Uint128::new(9_400 + 1000),
                     },
                 },
                 RewardBucket {

@@ -2,13 +2,14 @@ use cosmwasm_std::{Addr, Decimal, DepsMut, Order, StdError, StdResult, Storage, 
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 
 use white_whale_std::bonding_manager::{
-    Bond, Config, GlobalIndex, RewardBucket, UpcomingRewardBucket,
+    Bond, Config, GlobalIndex, RewardBucket, TemporalBondAction, UpcomingRewardBucket,
 };
 
 use crate::ContractError;
 
 pub const BONDING_ASSETS_LIMIT: usize = 2;
 pub const CONFIG: Item<Config> = Item::new("config");
+pub const TMP_BOND_ACTION: Item<TemporalBondAction> = Item::new("temporal_bond_action");
 
 /// A monotonically increasing counter to generate unique bond ids.
 pub const BOND_COUNTER: Item<u64> = Item::new("bond_counter");

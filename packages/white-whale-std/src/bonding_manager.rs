@@ -1,4 +1,5 @@
 use crate::epoch_manager::epoch_manager::Epoch;
+use std::fmt::Display;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
@@ -154,6 +155,8 @@ pub enum ExecuteMsg {
     },
     /// Claims the available rewards
     Claim,
+    /// Claims the available rewards on behalf of the specified address. Only executable by the contract.
+    ClaimForAddr { address: String },
     /// Fills the contract with new rewards.
     FillRewards,
     /// Epoch Changed hook implementation. Creates a new reward bucket for the rewards flowing from
@@ -261,6 +264,28 @@ pub struct WithdrawableResponse {
 pub struct ClaimableRewardBucketsResponse {
     /// The reward buckets that can be claimed by the address.
     pub reward_buckets: Vec<RewardBucket>,
+}
+
+#[cw_serde]
+pub struct TemporalBondAction {
+    pub sender: Addr,
+    pub coin: Coin,
+    pub action: BondAction,
+}
+
+#[cw_serde]
+pub enum BondAction {
+    Bond,
+    Unbond,
+}
+
+impl Display for BondAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BondAction::Bond => write!(f, "bond"),
+            BondAction::Unbond => write!(f, "unbond"),
+        }
+    }
 }
 
 /// Creates a message to fill rewards on the whale lair contract.

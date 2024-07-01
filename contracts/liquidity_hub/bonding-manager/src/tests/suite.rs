@@ -14,7 +14,7 @@ use white_whale_std::bonding_manager::{
     UnbondingResponse, WithdrawableResponse,
 };
 use white_whale_std::bonding_manager::{ClaimableRewardBucketsResponse, RewardBucket};
-use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig};
+use white_whale_std::epoch_manager::epoch_manager::{Epoch as EpochV2, EpochConfig, EpochResponse};
 use white_whale_std::pool_manager::PoolType;
 
 pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
@@ -578,6 +578,27 @@ impl TestingSuite {
             .unwrap();
 
         response(Ok((self, rewards_response)));
+
+        self
+    }
+
+    // Epoch Manager queries
+
+    #[track_caller]
+    pub(crate) fn query_current_epoch(
+        &mut self,
+        response: impl Fn(StdResult<(&mut Self, EpochResponse)>),
+    ) -> &mut Self {
+        let epoch_response: EpochResponse = self
+            .app
+            .wrap()
+            .query_wasm_smart(
+                &self.epoch_manager_addr,
+                &white_whale_std::epoch_manager::epoch_manager::QueryMsg::CurrentEpoch,
+            )
+            .unwrap();
+
+        response(Ok((self, epoch_response)));
 
         self
     }

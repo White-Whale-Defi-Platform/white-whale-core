@@ -178,6 +178,28 @@
         ]
       },
       {
+        "description": "Claims the available rewards on behalf of the specified address. Only executable by the contract.",
+        "type": "object",
+        "required": [
+          "claim_for_addr"
+        ],
+        "properties": {
+          "claim_for_addr": {
+            "type": "object",
+            "required": [
+              "address"
+            ],
+            "properties": {
+              "address": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Fills the contract with new rewards.",
         "type": "string",
         "enum": [
