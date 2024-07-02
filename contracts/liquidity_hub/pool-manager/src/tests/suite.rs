@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::MockStorage;
 use std::cell::RefCell;
 use white_whale_std::pool_manager::{
-    Config, FeatureToggle, PoolInfoResponse, ReverseSimulateSwapOperationsResponse,
+    Config, FeatureToggle, PoolsResponse, ReverseSimulateSwapOperationsResponse,
     ReverseSimulationResponse, SimulateSwapOperationsResponse, SimulationResponse, SwapOperation,
     SwapRoute, SwapRouteCreatorResponse, SwapRouteResponse, SwapRoutesResponse,
 };
@@ -610,17 +610,23 @@ impl TestingSuite {
         self
     }
 
-    pub(crate) fn query_pool_info(
+    pub(crate) fn query_pools(
         &self,
-        pool_identifier: String,
-        result: impl Fn(StdResult<PoolInfoResponse>),
+        pool_identifier: Option<String>,
+        start_after: Option<String>,
+        limit: Option<u32>,
+        result: impl Fn(StdResult<PoolsResponse>),
     ) -> &Self {
-        let pool_info_response: StdResult<PoolInfoResponse> = self.app.wrap().query_wasm_smart(
+        let pools_response: StdResult<PoolsResponse> = self.app.wrap().query_wasm_smart(
             &self.pool_manager_addr,
-            &white_whale_std::pool_manager::QueryMsg::Pool { pool_identifier },
+            &white_whale_std::pool_manager::QueryMsg::Pools {
+                pool_identifier,
+                start_after,
+                limit,
+            },
         );
 
-        result(pool_info_response);
+        result(pools_response);
 
         self
     }
@@ -715,13 +721,15 @@ impl TestingSuite {
         result: impl Fn(StdResult<Uint128>),
     ) -> &mut Self {
         // Get the LP token from Config
-        let lp_token_response: PoolInfoResponse = self
+        let lp_token_response: PoolsResponse = self
             .app
             .wrap()
             .query_wasm_smart(
                 &self.pool_manager_addr,
-                &white_whale_std::pool_manager::QueryMsg::Pool {
-                    pool_identifier: identifier,
+                &white_whale_std::pool_manager::QueryMsg::Pools {
+                    pool_identifier: Some(identifier),
+                    start_after: None,
+                    limit: None,
                 },
             )
             .unwrap();
@@ -731,7 +739,7 @@ impl TestingSuite {
         let balance: Uint128 = self
             .app
             .wrap()
-            .query_balance(sender, lp_token_response.pool_info.lp_denom)
+            .query_balance(sender, &lp_token_response.pools[0].pool_info.lp_denom)
             .unwrap()
             .amount;
 
@@ -834,9 +842,9 @@ impl TestingSuite {
     ) -> &mut Self {
         let lp_denom = RefCell::new("".to_string());
 
-        self.query_pool_info(identifier.clone(), |res| {
+        self.query_pools(Some(identifier.clone()), None, None, |res| {
             let response = res.unwrap();
-            *lp_denom.borrow_mut() = response.pool_info.lp_denom.clone();
+            *lp_denom.borrow_mut() = response.pools[0].pool_info.lp_denom.clone();
         });
 
         let supply_response = self.app.wrap().query_supply(lp_denom.into_inner());

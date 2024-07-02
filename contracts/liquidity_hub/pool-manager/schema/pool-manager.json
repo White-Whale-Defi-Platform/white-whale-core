@@ -965,7 +965,7 @@
         "additionalProperties": false
       },
       {
-        "description": "Retrieves the pools information.",
+        "description": "Retrieves the pool information for the given pool identifier.",
         "type": "object",
         "required": [
           "pools"
@@ -975,7 +975,7 @@
             "type": "object",
             "properties": {
               "limit": {
-                "description": "An optional parameter specifying the maximum number of pools to return.",
+                "description": "The amount of pools to return. If unspecified, will default to a value specified by the contract.",
                 "type": [
                   "integer",
                   "null"
@@ -984,14 +984,14 @@
                 "minimum": 0.0
               },
               "pool_identifier": {
-                "description": "If provided, the query will return the pool with the given identifier, otherwise, it will return all pools.",
+                "description": "An optional parameter specifying the pool identifier to do the query for. If not provided, it will return all pools based on the pagination parameters.",
                 "type": [
                   "string",
                   "null"
                 ]
               },
               "start_after": {
-                "description": "An optional parameter specifying what pool identifier to start searching after.",
+                "description": "An optional parameter specifying what pool (identifier) to start searching after.",
                 "type": [
                   "string",
                   "null"
@@ -1356,7 +1356,7 @@
       ],
       "properties": {
         "pools": {
-          "description": "The pools on the contract.",
+          "description": "The pools information responses.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/PoolInfoResponse"
@@ -1447,7 +1447,6 @@
             "asset_decimals",
             "asset_denoms",
             "assets",
-            "identifier",
             "lp_denom",
             "pool_fees",
             "pool_type"
@@ -1476,9 +1475,6 @@
                 "$ref": "#/definitions/Coin"
               }
             },
-            "identifier": {
-              "type": "string"
-            },
             "lp_denom": {
               "description": "The LP denom of the pool.",
               "type": "string"
@@ -1503,7 +1499,6 @@
           "additionalProperties": false
         },
         "PoolInfoResponse": {
-          "description": "The response for the `Pool` query.",
           "type": "object",
           "required": [
             "pool_info",

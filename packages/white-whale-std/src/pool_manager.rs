@@ -333,8 +333,17 @@ pub enum QueryMsg {
         operations: Vec<SwapOperation>,
     },
     /// Retrieves the pool information for the given pool identifier.
-    #[returns(PoolInfoResponse)]
-    Pool { pool_identifier: String },
+    #[returns(PoolsResponse)]
+    Pools {
+        /// An optional parameter specifying the pool identifier to do the query for. If not
+        /// provided, it will return all pools based on the pagination parameters.
+        pool_identifier: Option<String>,
+        /// An optional parameter specifying what pool (identifier) to start searching after.
+        start_after: Option<String>,
+        /// The amount of pools to return. If unspecified, will default to a value specified by
+        /// the contract.
+        limit: Option<u32>,
+    },
     /// Retrieves the creator of the swap route to get from offer to ask asset. The creator of
     /// the swap route can remove it.
     #[returns(SwapRouteCreatorResponse)]
@@ -360,7 +369,13 @@ pub struct SwapRoutesResponse {
     pub swap_routes: Vec<SwapRoute>,
 }
 
-/// The response for the `Pool` query.
+/// The response for the `Pools` query.
+#[cw_serde]
+pub struct PoolsResponse {
+    /// The pools information responses.
+    pub pools: Vec<PoolInfoResponse>,
+}
+
 #[cw_serde]
 pub struct PoolInfoResponse {
     /// The pool information for the given pool identifier.

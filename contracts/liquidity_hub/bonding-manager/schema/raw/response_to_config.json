@@ -54,7 +54,7 @@
       ]
     },
     "unbonding_period": {
-      "description": "Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can be withdrawn",
+      "description": "Unbonding period in epochs. The time (in epochs) that needs to pass before an unbonded position can be withdrawn",
       "type": "integer",
       "format": "uint64",
       "minimum": 0.0

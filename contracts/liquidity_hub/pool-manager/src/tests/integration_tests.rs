@@ -1918,8 +1918,11 @@ mod swapping {
             );
 
         // Query pool info to ensure the query is working fine
-        suite.query_pool_info("whale-uluna".to_string(), |result| {
-            assert_eq!(result.unwrap().pool_info.asset_decimals, vec![6u8, 6u8]);
+        suite.query_pools(Some("whale-uluna".to_string()), None, None, |result| {
+            assert_eq!(
+                result.unwrap().pools[0].pool_info.asset_decimals,
+                vec![6u8, 6u8]
+            );
         });
 
         // Lets try to add liquidity
@@ -1953,12 +1956,12 @@ mod swapping {
                     }));
                 },
             )
-            .query_pool_info("whale-uluna".to_string(), |result| {
+            .query_pools(Some("whale-uluna".to_string()), None, None, |result| {
                 let response = result.unwrap();
                 assert_eq!(
-                    response.total_share,
+                    response.pools[0].total_share,
                     Coin {
-                        denom: response.pool_info.lp_denom,
+                        denom: response.pools[0].pool_info.lp_denom.clone(),
                         amount: Uint128::from(1_000_000u128),
                     }
                 );
@@ -3235,16 +3238,16 @@ mod provide_liquidity {
                 // 1_000 to the contract, and 1_000_000 to the second, single-side LP
                 assert_eq!(res.unwrap().amount, Uint128::from(2_000_000u128));
             })
-            .query_pool_info("whale-uluna".to_string(), |res| {
+            .query_pools(Some("whale-uluna".to_string()), None, None, |res| {
                 let response = res.unwrap();
 
-                let whale = response
+                let whale = response.pools[0]
                     .pool_info
                     .assets
                     .iter()
                     .find(|coin| coin.denom == "uwhale".to_string())
                     .unwrap();
-                let luna = response
+                let luna = response.pools[0]
                     .pool_info
                     .assets
                     .iter()
@@ -4319,9 +4322,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+            .query_pools(Some("whale-uluna-pool-1".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 1000 uwhale
                 // fees:
@@ -4362,9 +4365,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+            .query_pools(Some("whale-uluna-pool-1".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 2000 uluna
                 // fees:
@@ -4415,9 +4418,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+            .query_pools(Some("whale-uluna-pool-2".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 1000 uwhale
                 // fees:
@@ -4451,9 +4454,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+            .query_pools(Some("whale-uluna-pool-2".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 2000 uluna
                 // fees:
@@ -4505,9 +4508,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+            .query_pools(Some("uluna-uusd-pool-1".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 3000 uluna
                 // fees:
@@ -4546,9 +4549,9 @@ mod multiple_pools {
                     result.unwrap();
                 },
             )
-            .query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+            .query_pools(Some("uluna-uusd-pool-1".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // swapped 1500 uusd
                 // fees:
@@ -4650,9 +4653,9 @@ mod multiple_pools {
             |result| {
                 result.unwrap();
             },
-        ).query_pool_info("whale-uluna-pool-1".to_string(), |result| {
+        ).query_pools(Some("whale-uluna-pool-1".to_string()), None, None, |result| {
             let response = result.unwrap();
-            let pool_info = response.pool_info;
+            let pool_info = response.pools[0].pool_info.clone();
 
             // this should have not changed since last time, since we didn't touch this pool
             assert_eq!(pool_info, PoolInfo {
@@ -4664,9 +4667,9 @@ mod multiple_pools {
                 pool_fees: pool_fees_1.clone(),
             });
         })
-            .query_pool_info("whale-uluna-pool-2".to_string(), |result| {
+            .query_pools(Some("whale-uluna-pool-2".to_string()), None, None, |result| {
                 let response = result.unwrap();
-                let pool_info = response.pool_info;
+                let pool_info = response.pools[0].pool_info.clone();
 
                 // the swap above was:
                 // SwapComputation { return_amount: Uint128(3988),
@@ -4681,9 +4684,9 @@ mod multiple_pools {
                     pool_type: PoolType::ConstantProduct,
                     pool_fees: pool_fees_2.clone(),
                 });
-            }).query_pool_info("uluna-uusd-pool-1".to_string(), |result| {
+            }).query_pools(Some("uluna-uusd-pool-1".to_string()),None, None, |result| {
             let response = result.unwrap();
-            let pool_info = response.pool_info;
+            let pool_info = response.pools[0].pool_info.clone();
 
             // the swap above was:
             // SwapComputation { return_amount: Uint128(3169),
