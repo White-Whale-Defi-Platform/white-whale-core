@@ -116,6 +116,8 @@ pub struct StableSwapParams {
 /// Contains the pool information
 #[cw_serde]
 pub struct PoolInfo {
+    /// The identifier for the pool.
+    pub pool_identifier: String,
     /// The asset denoms for the pool.
     pub asset_denoms: Vec<String>,
     /// The LP denom of the pool.

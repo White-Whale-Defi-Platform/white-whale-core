@@ -4335,6 +4335,7 @@ mod multiple_pools {
                 // Going out of the pool is 99 (bonding manager) + 29 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "whale-uluna-pool-1".to_string(),
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4378,6 +4379,7 @@ mod multiple_pools {
                 // Going out of the pool is 199 (bonding manager) + 59 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "whale-uluna-pool-1".to_string(),
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4431,6 +4433,7 @@ mod multiple_pools {
                 // Going out of the pool is 49 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "whale-uluna-pool-2".to_string(),
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4467,6 +4470,7 @@ mod multiple_pools {
                 // Going out of the pool is 99 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "whale-uluna-pool-2".to_string(),
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4521,6 +4525,7 @@ mod multiple_pools {
                 // Going out of the pool is 299 (bonding manager) + 89 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "uluna-uusd-pool-1".to_string(),
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4562,6 +4567,7 @@ mod multiple_pools {
                 // Going out of the pool is 150 (bonding manager) + 45 (burned)
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "uluna-uusd-pool-1".to_string(),
                     asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4659,6 +4665,7 @@ mod multiple_pools {
 
             // this should have not changed since last time, since we didn't touch this pool
             assert_eq!(pool_info, PoolInfo {
+                pool_identifier: "whale-uluna-pool-1".to_string(),
                 asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                 lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
@@ -4677,6 +4684,7 @@ mod multiple_pools {
                 // protocol_fee_amount: Uint128(0), burn_fee_amount: Uint128(249) }
 
                 assert_eq!(pool_info, PoolInfo {
+                    pool_identifier: "whale-uluna-pool-2".to_string(),
                     asset_denoms: vec!["uwhale".to_string(), "uluna".to_string()],
                     lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uwhale-uluna.pool.whale-uluna-pool-2.uLP".to_string(),
                     asset_decimals: vec![6u8, 6u8],
@@ -4694,6 +4702,7 @@ mod multiple_pools {
             // protocol_fee_amount: Uint128(396), burn_fee_amount: Uint128(118) }
 
             assert_eq!(pool_info, PoolInfo {
+                pool_identifier: "uluna-uusd-pool-1".to_string(),
                 asset_denoms: vec!["uluna".to_string(), "uusd".to_string()],
                 lp_denom: "factory/migaloo1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqqhavvl/uluna-uusd.pool.uluna-uusd-pool-1.uLP".to_string(),
                 asset_decimals: vec![6u8, 6u8],
@@ -4756,5 +4765,66 @@ mod multiple_pools {
                 ]);
             },
         );
+
+        // query pools with pagination
+        suite
+            .query_pools(None, None, None, |result| {
+                let response = result.unwrap();
+                assert_eq!(response.pools.len(), 3);
+                assert_eq!(
+                    response.pools[0].pool_info.pool_identifier,
+                    "uluna-uusd-pool-1"
+                );
+                assert_eq!(
+                    response.pools[1].pool_info.pool_identifier,
+                    "whale-uluna-pool-1"
+                );
+                assert_eq!(
+                    response.pools[2].pool_info.pool_identifier,
+                    "whale-uluna-pool-2"
+                );
+            })
+            .query_pools(None, None, Some(2), |result| {
+                let response = result.unwrap();
+                assert_eq!(response.pools.len(), 2);
+                assert_eq!(
+                    response.pools[0].pool_info.pool_identifier,
+                    "uluna-uusd-pool-1"
+                );
+                assert_eq!(
+                    response.pools[1].pool_info.pool_identifier,
+                    "whale-uluna-pool-1"
+                );
+            })
+            .query_pools(
+                None,
+                Some("uluna-uusd-pool-1".to_string()),
+                None,
+                |result| {
+                    let response = result.unwrap();
+                    assert_eq!(response.pools.len(), 2);
+                    assert_eq!(
+                        response.pools[0].pool_info.pool_identifier,
+                        "whale-uluna-pool-1"
+                    );
+                    assert_eq!(
+                        response.pools[1].pool_info.pool_identifier,
+                        "whale-uluna-pool-2"
+                    );
+                },
+            )
+            .query_pools(
+                None,
+                Some("whale-uluna-pool-1".to_string()),
+                None,
+                |result| {
+                    let response = result.unwrap();
+                    assert_eq!(response.pools.len(), 1);
+                    assert_eq!(
+                        response.pools[0].pool_info.pool_identifier,
+                        "whale-uluna-pool-2"
+                    );
+                },
+            );
     }
 }

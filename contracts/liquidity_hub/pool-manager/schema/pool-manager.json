@@ -1449,6 +1449,7 @@
             "assets",
             "lp_denom",
             "pool_fees",
+            "pool_identifier",
             "pool_type"
           ],
           "properties": {
@@ -1486,6 +1487,10 @@
                   "$ref": "#/definitions/PoolFee"
                 }
               ]
+            },
+            "pool_identifier": {
+              "description": "The identifier for the pool.",
+              "type": "string"
             },
             "pool_type": {
               "description": "The type of pool to create.",
