@@ -8,7 +8,7 @@
   ],
   "properties": {
     "pools": {
-      "description": "The pools on the contract.",
+      "description": "The pools information responses.",
       "type": "array",
       "items": {
         "$ref": "#/definitions/PoolInfoResponse"
@@ -99,9 +99,9 @@
         "asset_decimals",
         "asset_denoms",
         "assets",
-        "identifier",
         "lp_denom",
         "pool_fees",
+        "pool_identifier",
         "pool_type"
       ],
       "properties": {
@@ -128,9 +128,6 @@
             "$ref": "#/definitions/Coin"
           }
         },
-        "identifier": {
-          "type": "string"
-        },
         "lp_denom": {
           "description": "The LP denom of the pool.",
           "type": "string"
@@ -142,6 +139,10 @@
               "$ref": "#/definitions/PoolFee"
             }
           ]
+        },
+        "pool_identifier": {
+          "description": "The identifier for the pool.",
+          "type": "string"
         },
         "pool_type": {
           "description": "The type of pool to create.",
@@ -155,7 +156,6 @@
       "additionalProperties": false
     },
     "PoolInfoResponse": {
-      "description": "The response for the `Pool` query.",
       "type": "object",
       "required": [
         "pool_info",

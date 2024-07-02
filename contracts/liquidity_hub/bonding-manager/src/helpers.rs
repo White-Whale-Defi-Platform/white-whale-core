@@ -15,12 +15,12 @@ use white_whale_std::bonding_manager::{
 use white_whale_std::constants::LP_SYMBOL;
 use white_whale_std::epoch_manager::epoch_manager::EpochResponse;
 use white_whale_std::pool_manager::{
-    PoolInfoResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
+    PoolsResponse, SimulateSwapOperationsResponse, SwapRouteResponse,
 };
 use white_whale_std::pool_network::asset;
 use white_whale_std::pool_network::asset::aggregate_coins;
 
-use crate::contract::{LP_WITHDRAWAL_REPLY_ID, NEW_EPOCH_CREATION_REPLY_ID};
+use crate::contract::{LP_WITHDRAWAL_REPLY_ID, TEMPORAL_BOND_ACTION_REPLY_ID};
 use crate::error::ContractError;
 use crate::queries::query_claimable;
 use crate::state::{
@@ -128,14 +128,16 @@ pub fn handle_lp_tokens_rewards(
             extract_pool_identifier(&lp_token.denom).ok_or(ContractError::AssetMismatch)?;
 
         // make sure a pool with the given identifier exists
-        let pool: StdResult<PoolInfoResponse> = deps.querier.query_wasm_smart(
+        let pools_response: StdResult<PoolsResponse> = deps.querier.query_wasm_smart(
             config.pool_manager_addr.to_string(),
-            &white_whale_std::pool_manager::QueryMsg::Pool {
-                pool_identifier: pool_identifier.to_string(),
+            &white_whale_std::pool_manager::QueryMsg::Pools {
+                pool_identifier: Some(pool_identifier.to_string()),
+                start_after: None,
+                limit: None,
             },
         );
 
-        if pool.is_err() {
+        if pools_response.is_err() || pools_response?.pools.is_empty() {
             continue;
         }
 
@@ -221,25 +223,33 @@ pub fn swap_coins_to_main_token(
         // check if the pool has any assets, if not skip the swap
         // Note we are only checking the first operation here.
         // Might be better to another loop to check all operations
-        let pool_query = white_whale_std::pool_manager::QueryMsg::Pool {
-            pool_identifier: swap_routes
-                .swap_route
-                .swap_operations
-                .first()
-                .unwrap()
-                .get_pool_identifer(),
+        let pools_query = white_whale_std::pool_manager::QueryMsg::Pools {
+            pool_identifier: Some(
+                swap_routes
+                    .swap_route
+                    .swap_operations
+                    .first()
+                    .unwrap()
+                    .get_pool_identifer(),
+            ),
+            start_after: None,
+            limit: None,
         };
         let mut skip_swap = false;
         // Query for the pool to check if it has any assets
-        let resp: PoolInfoResponse = deps
+        let pools_response: PoolsResponse = deps
             .querier
-            .query_wasm_smart(config.pool_manager_addr.to_string(), &pool_query)?;
+            .query_wasm_smart(config.pool_manager_addr.to_string(), &pools_query)?;
         // Check pair 'assets' and if either one has 0 amount then don't do swaps
-        resp.pool_info.assets.iter().for_each(|asset| {
-            if asset.amount.is_zero() {
-                skip_swap = true;
-            }
-        });
+        pools_response.pools[0]
+            .pool_info
+            .assets
+            .iter()
+            .for_each(|asset| {
+                if asset.amount.is_zero() {
+                    skip_swap = true;
+                }
+            });
 
         let simulate_swap_operations_response: SimulateSwapOperationsResponse =
             deps.querier.query_wasm_smart(
@@ -537,6 +547,6 @@ fn create_temporal_bond_action_submsg(
 ) -> Result<SubMsg, ContractError> {
     Ok(SubMsg::reply_on_success(
         wasm_execute(contract_addr, msg, vec![])?,
-        NEW_EPOCH_CREATION_REPLY_ID,
+        TEMPORAL_BOND_ACTION_REPLY_ID,
     ))
 }

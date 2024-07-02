@@ -19,7 +19,7 @@ const CONTRACT_NAME: &str = "white_whale-bonding_manager";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub const LP_WITHDRAWAL_REPLY_ID: u64 = 0;
-pub const NEW_EPOCH_CREATION_REPLY_ID: u64 = 1;
+pub const TEMPORAL_BOND_ACTION_REPLY_ID: u64 = 1;
 
 #[entry_point]
 pub fn instantiate(
@@ -68,7 +68,7 @@ pub fn instantiate(
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractError> {
     match msg.id {
         LP_WITHDRAWAL_REPLY_ID => rewards::commands::handle_lp_withdrawal_reply(deps, msg),
-        NEW_EPOCH_CREATION_REPLY_ID => {
+        TEMPORAL_BOND_ACTION_REPLY_ID => {
             let TemporalBondAction {
                 sender,
                 coin,
