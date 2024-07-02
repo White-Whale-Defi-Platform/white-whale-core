@@ -244,9 +244,16 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         )?)?),
         QueryMsg::SwapRoutes => Ok(to_json_binary(&queries::get_swap_routes(deps)?)?),
         QueryMsg::Ownership {} => Ok(to_json_binary(&cw_ownable::get_ownership(deps.storage)?)?),
-        QueryMsg::Pool { pool_identifier } => {
-            Ok(to_json_binary(&queries::get_pool(deps, pool_identifier)?)?)
-        }
+        QueryMsg::Pools {
+            pool_identifier,
+            start_after,
+            limit,
+        } => Ok(to_json_binary(&queries::get_pools(
+            deps,
+            pool_identifier,
+            start_after,
+            limit,
+        )?)?),
         QueryMsg::SwapRouteCreator {
             offer_asset_denom,
             ask_asset_denom,

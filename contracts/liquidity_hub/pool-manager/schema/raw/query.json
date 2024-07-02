@@ -220,17 +220,34 @@
       "description": "Retrieves the pool information for the given pool identifier.",
       "type": "object",
       "required": [
-        "pool"
+        "pools"
       ],
       "properties": {
-        "pool": {
+        "pools": {
           "type": "object",
-          "required": [
-            "pool_identifier"
-          ],
           "properties": {
+            "limit": {
+              "description": "The amount of pools to return. If unspecified, will default to a value specified by the contract.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
             "pool_identifier": {
-              "type": "string"
+              "description": "An optional parameter specifying the pool identifier to do the query for. If not provided, it will return all pools based on the pagination parameters.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "start_after": {
+              "description": "An optional parameter specifying what pool (identifier) to start searching after.",
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false
