@@ -20,7 +20,7 @@ use white_whale_std::pool_manager::{
 use white_whale_std::pool_network::asset;
 use white_whale_std::pool_network::asset::aggregate_coins;
 
-use crate::contract::{LP_WITHDRAWAL_REPLY_ID, NEW_EPOCH_CREATION_REPLY_ID};
+use crate::contract::{LP_WITHDRAWAL_REPLY_ID, TEMPORAL_BOND_ACTION_REPLY_ID};
 use crate::error::ContractError;
 use crate::queries::query_claimable;
 use crate::state::{
@@ -547,6 +547,6 @@ fn create_temporal_bond_action_submsg(
 ) -> Result<SubMsg, ContractError> {
     Ok(SubMsg::reply_on_success(
         wasm_execute(contract_addr, msg, vec![])?,
-        NEW_EPOCH_CREATION_REPLY_ID,
+        TEMPORAL_BOND_ACTION_REPLY_ID,
     ))
 }
