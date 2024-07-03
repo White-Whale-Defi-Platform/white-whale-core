@@ -1,9 +1,10 @@
 use cosmwasm_std::StdError;
 use cw_controllers::{AdminError, HookError};
+use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_utils::PaymentError;
-use semver::Version;
 use thiserror::Error;
 
+#[cw_migrate_invalid_version_error]
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -23,12 +24,6 @@ pub enum ContractError {
 
     #[error("Semver parsing error: {0}")]
     SemVer(String),
-
-    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
-    MigrateInvalidVersion {
-        new_version: Version,
-        current_version: Version,
-    },
 
     #[error("The current epoch epoch has not expired yet.")]
     CurrentEpochNotExpired,

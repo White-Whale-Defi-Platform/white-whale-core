@@ -35,3 +35,4 @@ thiserror.workspace = true
 white-whale-std.workspace = true
 cw-controllers.workspace = true
 cw-utils.workspace = true
+cw-migrate-error-derive.workspace = true

@@ -1,9 +1,10 @@
 use cosmwasm_std::{ConversionOverflowError, DivideByZeroError, OverflowError, StdError, Uint128};
+use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
-use semver::Version;
 use thiserror::Error;
 
+#[cw_migrate_invalid_version_error]
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
@@ -24,12 +25,6 @@ pub enum ContractError {
     ExistingVault {
         asset_denom: String,
         identifier: String,
-    },
-
-    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
-    MigrateInvalidVersion {
-        new_version: Version,
-        current_version: Version,
     },
 
     #[error("Vault doesn't exist")]
