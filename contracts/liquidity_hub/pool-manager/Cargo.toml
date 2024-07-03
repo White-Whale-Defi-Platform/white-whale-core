@@ -48,6 +48,7 @@ cw-utils.workspace = true
 cw-ownable.workspace = true
 sha2.workspace = true
 semver.workspace = true
+cw-migrate-error-derive.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

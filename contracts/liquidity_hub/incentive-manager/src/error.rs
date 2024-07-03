@@ -2,13 +2,14 @@ use cosmwasm_std::{
     CheckedFromRatioError, CheckedMultiplyFractionError, ConversionOverflowError,
     DivideByZeroError, OverflowError, StdError, Uint128,
 };
+use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
-use semver::Version;
 use thiserror::Error;
 
 use white_whale_std::incentive_manager::EpochId;
 
+#[cw_migrate_invalid_version_error]
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
@@ -148,12 +149,6 @@ pub enum ContractError {
 
     #[error("There's no snapshot of the LP weight in the contract for the epoch {epoch_id}")]
     LpWeightNotFound { epoch_id: EpochId },
-
-    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
-    MigrateInvalidVersion {
-        new_version: Version,
-        current_version: Version,
-    },
 }
 
 impl From<semver::Error> for ContractError {

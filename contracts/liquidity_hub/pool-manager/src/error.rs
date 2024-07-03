@@ -4,12 +4,13 @@ use cosmwasm_std::{
     ConversionOverflowError, DivideByZeroError, Instantiate2AddressError, OverflowError, StdError,
     Uint128,
 };
+use cw_migrate_error_derive::cw_migrate_invalid_version_error;
 use cw_ownable::OwnershipError;
 use cw_utils::PaymentError;
-use semver::Version;
 use thiserror::Error;
 use white_whale_std::pool_manager::SwapRoute;
 
+#[cw_migrate_invalid_version_error]
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     // Handle all normal errors from the StdError
@@ -37,12 +38,6 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("The provided assets are both the same")]
     SameAsset,
-
-    #[error("Attempt to migrate to version {new_version}, but contract is on a higher version {current_version}")]
-    MigrateInvalidVersion {
-        new_version: Version,
-        current_version: Version,
-    },
 
     #[error(
         "Assertion failed; minimum receive amount: {minimum_receive}, swap amount: {swap_amount}"
