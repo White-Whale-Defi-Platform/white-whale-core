@@ -257,11 +257,17 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
-    Ok(Response::default()
+    // Create the response based on whether there are claimable rewards to avoid sending empty coins
+    let mut response = Response::default()
         .add_attributes(vec![("action", "claim".to_string())])
-        .add_attributes(attributes)
-        .add_message(CosmosMsg::Bank(BankMsg::Send {
+        .add_attributes(attributes);
+
+    if !total_claimable_rewards.is_empty() {
+        response = response.add_message(CosmosMsg::Bank(BankMsg::Send {
             to_address: info.sender.to_string(),
             amount: total_claimable_rewards,
-        })))
+        }));
+    }
+
+    Ok(response)
 }

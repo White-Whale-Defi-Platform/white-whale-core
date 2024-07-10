@@ -232,9 +232,9 @@ proptest! {
             suite.query_current_epoch(|response| {
                 current_epoch = response.unwrap().epoch.id;
             });
-            // suite.query_claimable_reward_buckets(None, |response| {
-            //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS {:?}", response.unwrap().1);
-            // });
+            suite.query_claimable_reward_buckets(None, |response| {
+                println!(">>> [{current_epoch}] CLAIMABLE REWARDS {:?}", response.unwrap().1);
+            });
 
             match action {
                 Action::Swap(user, from_token, to_token, amount) => {
@@ -320,9 +320,9 @@ proptest! {
                     suite.query_bonding_rewards(user.to_string(), |response| {
                         let contract_rewards = &response.as_ref().unwrap().1.rewards;
                         let has_contract_rewards = !contract_rewards.is_empty();
-                        // println!("____________");
-                        // println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
-                        // println!(">>> [{current_epoch}] CLAIMABLE REWARDS TEST {:?}", claimable_rewards.borrow());
+                        println!("____________");
+                        println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
+                        println!(">>> [{current_epoch}] CLAIMABLE REWARDS TEST {:?}", claimable_rewards.borrow());
                         assert_eq!(has_pending_rewards, has_contract_rewards);
                     });
 
