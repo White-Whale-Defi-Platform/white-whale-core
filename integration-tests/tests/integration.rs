@@ -179,6 +179,7 @@ proptest! {
             ]
         ), 1..100)
     ) {
+        println!(">>> ------------------- STARTING TEST --------------------");
         let mut suite = TestingSuite::default_with_balances();
         suite.instantiate();
 
@@ -232,14 +233,15 @@ proptest! {
             suite.query_current_epoch(|response| {
                 current_epoch = response.unwrap().epoch.id;
             });
-            suite.query_claimable_reward_buckets(None, |response| {
-                println!(">>> [{current_epoch}] CLAIMABLE REWARDS {:?}", response.unwrap().1);
-            });
+            // suite.query_claimable_reward_buckets(None, |response| {
+            //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS {:?}", response.unwrap().1);
+            // });
 
             match action {
                 Action::Swap(user, from_token, to_token, amount) => {
-                    println!(">>> [{current_epoch}] [{user}] SWAP");
                     if from_token == to_token {
+                        println!(">>> [{current_epoch}] [{user}] SWAP FAILED [{amount} {from_token} -> {to_token}]");
+
                         suite.swap(
                             user.clone(),
                             to_token.clone(),
@@ -260,6 +262,8 @@ proptest! {
 
                         // enter the normal swap flow if the pool exists
                         if available_pools.contains(&pool_identifier) {
+                            println!(">>> [{current_epoch}] [{user}] SWAP [{amount} {from_token} -> {to_token}]");
+
                             swaps_in_epoch = true;
                             suite.swap(
                                 user.clone(),
@@ -287,6 +291,8 @@ proptest! {
 
                             // Mark claimable rewards for users bonded during this epoch
                             let bonded_amounts = bonded_amounts.borrow();
+                            println!(">>> [{current_epoch}] BONDED AMOUNTS {:?}", bonded_amounts);
+
                             for user in bonded_amounts.keys() {
                                 claimable_rewards.borrow_mut().insert((user.clone(), current_epoch), true);
                             }
@@ -310,49 +316,37 @@ proptest! {
                     }
                 }
                 Action::Bond(user, token, amount) => {
-                    let mut has_pending_rewards = false;
+                    // bond the user
+                    suite.bond(&user, &coins(amount, &token), |result| {
+                        println!(">>> [{current_epoch}] [{user}] BOND [{amount} {}]", token.split('/').nth(2).unwrap());
+                        result.unwrap();
+                    });
+
+                    let mut test_has_rewards = false;
+                    // check if the user has pending rewards in the test map
                     for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
-                        if test_user == &user && *epoch != current_epoch && *has_rewards {
-                            has_pending_rewards = true;
+                        if test_user == &user && *epoch < current_epoch && *has_rewards {
+                            test_has_rewards = true;
                             break;
                         }
                     }
 
-                    suite.bond(&user, &coins(amount, &token), |result| {
-                        println!(">>> [{current_epoch}] [{user}] BOND [{amount}]");
-                        result.unwrap();
-                    });
-
-                    // bond with pending rewards should trigger a claim
-                    if has_pending_rewards {
+                    // if user bonded with pending rewards, the contract will claim them first so we need to remove them from the test map
+                    if test_has_rewards {
                         for epoch in 0..current_epoch {
                             claimable_rewards.borrow_mut().remove(&(user.clone(), epoch));
                         }
                     }
 
-                    // suite.query_bonding_rewards(user.to_string(), |response| {
-                    //     let contract_rewards = &response.as_ref().unwrap().1.rewards;
-                    //     let has_contract_rewards = !contract_rewards.is_empty();
-                    //     println!("____________");
-                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
-                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS TEST {:?}", claimable_rewards.borrow());
-                    //     assert_eq!(has_pending_rewards, has_contract_rewards);
-                    // });
-
                     suite.query_bonding_rewards(user.to_string(), |response| {
+                        // >>> TODO: MAKE SURE THE CONTRACT IS UPDATING STATE CORRECTLY AFTER BONDING WITH PENDING REWARDS
                         let contract_rewards = response.unwrap().1.rewards;
                         let has_contract_rewards = !contract_rewards.is_empty();
 
-                        // if we bonded with pending rewards, the contract will claim them first so we remove them from the test map
-                        if has_pending_rewards {
-                            for epoch in 0..current_epoch {
-                                claimable_rewards.borrow_mut().remove(&(user.clone(), epoch));
-                            }
-                        }
-
+                        // re-calculate if the user has pending rewards in the test map
                         let mut has_rewards_in_test_map = false;
                         for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
-                            if test_user == &user && *epoch != current_epoch && *has_rewards {
+                            if test_user == &user && *epoch < current_epoch && *has_rewards {
                                 has_rewards_in_test_map = true;
                                 break;
                             }
@@ -379,24 +373,32 @@ proptest! {
                         bonded_sorted.sort_by(|a, b| a.denom.cmp(&b.denom));
                         assert_eq!(bonded_sorted, expected_bonded);
                     });
-
                 }
                 Action::Unbond(user, token, amount) => {
-                    println!(">>> [{current_epoch}] [{user}] UNBOND [{amount}]");
-
-                    let mut has_pending_rewards = false;
-                    for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
-                        if test_user == &user && *epoch != current_epoch && *has_rewards {
-                            has_pending_rewards = true;
-                            break;
-                        }
-                    }
-
+                    // TODO: >>> check if this is creating an entry in the bonded_amounts map when it shouldn't ???
                     let mut bonded_amounts = bonded_amounts.borrow_mut();
                     let user_bonds = bonded_amounts.entry(user.clone()).or_insert_with(HashMap::new);
 
                     if let Some(bonded) = user_bonds.get_mut(&token) {
                         if *bonded >= amount {
+                            println!(">>> [{current_epoch}] [{user}] UNBOND [{amount} {}]", token.split('/').nth(2).unwrap());
+
+                            let mut test_has_rewards = false;
+                            // check if the user has pending rewards in the test map
+                            for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
+                                if test_user == &user && *epoch < current_epoch && *has_rewards {
+                                    test_has_rewards = true;
+                                    break;
+                                }
+                            }
+
+                            // if user bonded with pending rewards, the contract will claim them first so we need to remove them from the test map
+                            if test_has_rewards {
+                                for epoch in 0..current_epoch {
+                                    claimable_rewards.borrow_mut().remove(&(user.clone(), epoch));
+                                }
+                            }
+
                             suite.unbond(user.clone(), coin(amount, &token), |result| {
                                 result.unwrap();
                             });
@@ -406,16 +408,9 @@ proptest! {
                                 let contract_rewards = response.unwrap().1.rewards;
                                 let has_contract_rewards = !contract_rewards.is_empty();
 
-                                // if we unbonded with pending rewards, the contract will claim them first so we remove them from the test map
-                                if has_pending_rewards {
-                                    for epoch in 0..current_epoch {
-                                        claimable_rewards.borrow_mut().remove(&(user.clone(), epoch));
-                                    }
-                                }
-
                                 let mut has_rewards_in_test_map = false;
                                 for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
-                                    if test_user == &user && *epoch != current_epoch && *has_rewards {
+                                    if test_user == &user && *epoch < current_epoch && *has_rewards {
                                         has_rewards_in_test_map = true;
                                         break;
                                     }
@@ -424,6 +419,8 @@ proptest! {
                                 assert_eq!(has_rewards_in_test_map, has_contract_rewards);
                             });
                         } else {
+                            println!(">>> [{current_epoch}] [{user}] UNBOND FAILED (insufficient bond) [{amount} {}]", token.split('/').nth(2).unwrap());
+
                             suite.unbond(user.clone(), coin(amount, &token), |result| {
                                 assert_eq!(
                                     result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),
@@ -432,6 +429,8 @@ proptest! {
                             });
                         }
                     } else {
+                        println!(">>> [{current_epoch}] [{user}] UNBOND FAILED (nothing to unbond) [{amount} {}]", token.split('/').nth(2).unwrap());
+
                         suite.unbond(user.clone(), coin(amount, &token), |result| {
                             assert_eq!(
                                 result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),
@@ -442,17 +441,25 @@ proptest! {
 
                 }
                 Action::Claim(user) => {
-                    println!(">>> [{current_epoch}] [{user}] CLAIM");
-
                     let mut has_pending_rewards = false;
                     for ((test_user, epoch), has_rewards) in claimable_rewards.borrow().iter() {
-                        if test_user == &user && *epoch != current_epoch && *has_rewards {
+                        if test_user == &user && *epoch < current_epoch && *has_rewards {
                             has_pending_rewards = true;
                             break;
                         }
                     }
 
+                    // suite.query_bonding_rewards(user.to_string(), |response| {
+                    //     let contract_rewards = &response.as_ref().unwrap().1.rewards;
+                    //     let has_contract_rewards = !contract_rewards.is_empty();
+                    //     println!(">>>");
+                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
+                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS PROPTEST {:?}", claimable_rewards.borrow());
+                    //     assert_eq!(has_pending_rewards, has_contract_rewards);
+                    // });
+
                     if has_pending_rewards {
+                        println!(">>> [{current_epoch}] [{user}] CLAIM");
                         suite.query_bonding_rewards(user.to_string(), |response| {
                             println!(">>> [{current_epoch}] BONDING REWARDS {:?}", response.unwrap().1);
                         });
@@ -466,6 +473,8 @@ proptest! {
                             claimable_rewards.borrow_mut().remove(&(user.clone(), epoch));
                         }
                     } else {
+                        println!(">>> [{current_epoch}] [{user}] CLAIM FAILED (nothing to claim)");
+
                         suite.claim_bonding_rewards(&user, |result| {
                             assert_eq!(
                                 result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),

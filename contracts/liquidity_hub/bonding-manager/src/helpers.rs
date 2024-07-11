@@ -390,6 +390,9 @@ pub fn calculate_rewards(
             total_claimable_rewards =
                 aggregate_coins(&total_claimable_rewards, &vec![reward.clone()])?;
 
+            // filter out rewards with zero amount
+            total_claimable_rewards.retain(|coin| coin.amount > Uint128::zero());
+
             if is_claim {
                 claimed_rewards_from_bucket =
                     aggregate_coins(&claimed_rewards_from_bucket, &vec![reward])?;
