@@ -293,8 +293,10 @@ proptest! {
                             let bonded_amounts = bonded_amounts.borrow();
                             println!(">>> [{current_epoch}] BONDED AMOUNTS {:?}", bonded_amounts);
 
-                            for user in bonded_amounts.keys() {
-                                claimable_rewards.borrow_mut().insert((user.clone(), current_epoch), true);
+                            for (user, token_amounts) in bonded_amounts.iter() {
+                                if token_amounts.values().any(|&amount| amount > 0) {
+                                    claimable_rewards.borrow_mut().insert((user.clone(), current_epoch), true);
+                                }
                             }
                         } else {
                             suite.swap(
@@ -449,14 +451,14 @@ proptest! {
                         }
                     }
 
-                    // suite.query_bonding_rewards(user.to_string(), |response| {
-                    //     let contract_rewards = &response.as_ref().unwrap().1.rewards;
-                    //     let has_contract_rewards = !contract_rewards.is_empty();
-                    //     println!(">>>");
-                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
-                    //     println!(">>> [{current_epoch}] CLAIMABLE REWARDS PROPTEST {:?}", claimable_rewards.borrow());
-                    //     assert_eq!(has_pending_rewards, has_contract_rewards);
-                    // });
+                    suite.query_bonding_rewards(user.to_string(), |response| {
+                        let contract_rewards = &response.as_ref().unwrap().1.rewards;
+                        let has_contract_rewards = !contract_rewards.is_empty();
+                        println!(">>>");
+                        println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
+                        println!(">>> [{current_epoch}] CLAIMABLE REWARDS PROPTEST {:?}", claimable_rewards.borrow());
+                        // assert_eq!(has_pending_rewards, has_contract_rewards);
+                    });
 
                     if has_pending_rewards {
                         println!(">>> [{current_epoch}] [{user}] CLAIM");
