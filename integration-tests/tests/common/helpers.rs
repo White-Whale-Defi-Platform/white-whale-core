@@ -214,7 +214,7 @@ pub mod pools {
                 vec![6, 6],
                 helpers::fees::pool_fees_03(),
                 PoolType::ConstantProduct,
-                Some("uwhale-uusdc-cheap".to_string()),
+                Some("uwhale-uusdc".to_string()),
                 vec![coin(1_000u128, "uwhale")],
                 |result| {
                     result.unwrap();
@@ -325,7 +325,7 @@ pub mod pools {
             )
             .provide_liquidity(
                 &sender,
-                "uwhale-uusdc-cheap".to_string(),
+                "uwhale-uusdc".to_string(),
                 None,
                 None,
                 None,
@@ -448,7 +448,7 @@ pub mod pools {
                             SwapOperation::WhaleSwap {
                                 token_in_denom: "uusdc".to_string(),
                                 token_out_denom: "uwhale".to_string(),
-                                pool_identifier: "uwhale-uusdc-cheap".to_string(),
+                                pool_identifier: "uwhale-uusdc".to_string(),
                             }
                         ],
                     },
@@ -475,7 +475,7 @@ pub mod pools {
                             SwapOperation::WhaleSwap {
                                 token_in_denom: "uusdc".to_string(),
                                 token_out_denom: "uwhale".to_string(),
-                                pool_identifier: "uwhale-uusdc-cheap".to_string(),
+                                pool_identifier: "uwhale-uusdc".to_string(),
                             },
                         ],
                     },
@@ -491,7 +491,7 @@ pub mod pools {
                             SwapOperation::WhaleSwap {
                                 token_in_denom: "uusdc".to_string(),
                                 token_out_denom: "uwhale".to_string(),
-                                pool_identifier: "uwhale-uusdc-cheap".to_string(),
+                                pool_identifier: "uwhale-uusdc".to_string(),
                             },
                         ],
                     },
@@ -529,7 +529,7 @@ pub mod pools {
                             SwapOperation::WhaleSwap {
                                 token_in_denom: "uusdc".to_string(),
                                 token_out_denom: "uwhale".to_string(),
-                                pool_identifier: "uwhale-uusdc-cheap".to_string(),
+                                pool_identifier: "uwhale-uusdc".to_string(),
                             },
                         ],
                     },
@@ -543,7 +543,7 @@ pub mod pools {
 
         pool_identifiers.borrow_mut().extend(vec![
             "uwhale-uusdc-free".to_string(),
-            "uwhale-uusdc-cheap".to_string(),
+            "uwhale-uusdc".to_string(),
             "uwhale-uusdc-expensive".to_string(),
             "uwhale-uosmo-cheap".to_string(),
             "3pool-stable".to_string(),

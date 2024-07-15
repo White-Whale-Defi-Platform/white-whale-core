@@ -196,6 +196,7 @@ pub fn swap_coins_to_main_token(
             !coin.denom.contains(".pool.")
                 & !coin.denom.contains(LP_SYMBOL)
                 & !coin.denom.eq(distribution_denom)
+                & !config.bonding_assets.contains(&coin.denom)
         })
         .collect();
     for coin in coins_to_swap {

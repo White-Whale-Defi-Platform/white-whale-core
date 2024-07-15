@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use bonding_manager::ContractError;
@@ -108,7 +108,7 @@ fn epic_test() {
             None,
             None,
             None,
-            "uwhale-uusdc-cheap".to_string(),
+            "uwhale-uusdc".to_string(),
             coins(10_000, "uwhale"),
             |result| {
                 result.as_ref().unwrap().events.iter().for_each(|event| {
@@ -154,7 +154,7 @@ fn epic_test() {
             None,
             None,
             None,
-            "uwhale-uusdc-cheap".to_string(),
+            "uwhale-uusdc".to_string(),
             coins(10_000, "uusdc"),
             |result| {
                 result.unwrap();
@@ -219,12 +219,8 @@ proptest! {
         let current_rewards = Rc::new(RefCell::new(0));
         let bonded_amounts = Rc::new(RefCell::new(HashMap::<Addr, HashMap<String, u128>>::new()));
         let claimable_rewards = Rc::new(RefCell::new(HashMap::<(Addr, u64), bool>::new()));
-        let available_pools: HashSet<String> = vec![
-            "peggy-uusdc".to_string(),
-            "uwhale-btc".to_string(),
-            "uwhale-inj".to_string(),
-            "uusdc-uusdt".to_string(),
-        ].into_iter().collect();
+        let available_pools = suite.pool_identifiers.clone();
+
         let last_claimed = Rc::new(RefCell::new(HashMap::<Addr, u64>::new()));
         let mut swaps_in_epoch = false;
 
@@ -248,7 +244,7 @@ proptest! {
                             None,
                             None,
                             None,
-                            "uwhale-uusdc-cheap".to_string(),
+                            "uwhale-uusdc".to_string(),
                             coins(amount, from_token),
                             move |result| {
                                 assert_eq!(
@@ -457,7 +453,7 @@ proptest! {
                         println!(">>>");
                         println!(">>> [{current_epoch}] CLAIMABLE REWARDS CONTRACT {:?}", contract_rewards);
                         println!(">>> [{current_epoch}] CLAIMABLE REWARDS PROPTEST {:?}", claimable_rewards.borrow());
-                        // assert_eq!(has_pending_rewards, has_contract_rewards);
+                        assert_eq!(has_pending_rewards, has_contract_rewards);
                     });
 
                     if has_pending_rewards {
@@ -547,7 +543,8 @@ fn action_strategy(users: Vec<Addr>) -> impl Strategy<Value = Action> {
     let bond_unbond_token_strategy =
         prop_oneof![Just(BWHALE.to_string()), Just(AMPWHALE.to_string())];
 
-    let amount_strategy = 100_u128..100_000_u128;
+    const MIN_AMOUNT: u128 = 1_000;
+    let amount_strategy = MIN_AMOUNT..100_000_u128;
 
     prop_oneof![
         (

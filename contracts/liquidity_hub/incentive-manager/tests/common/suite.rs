@@ -8,19 +8,18 @@ use cw_multi_test::{
 
 use white_whale_std::epoch_manager::epoch_manager::{Epoch, EpochConfig, EpochResponse};
 use white_whale_std::epoch_manager::hooks::EpochChangedHookMsg;
-use white_whale_std::fee::{Fee, PoolFee};
+use white_whale_std::fee::PoolFee;
 use white_whale_std::incentive_manager::{
     Config, IncentiveAction, IncentivesBy, IncentivesResponse, InstantiateMsg, LpWeightResponse,
     PositionAction, PositionsResponse, RewardsResponse,
 };
 use white_whale_std::pool_manager::PoolType;
-use white_whale_std::pool_network::asset::{Asset, AssetInfo};
+use white_whale_std::pool_network::asset::AssetInfo;
 use white_whale_testing::integration::contracts::whale_lair_contract;
 use white_whale_testing::multi_test::stargate_mock::StargateMock;
 
 use crate::common::suite_contracts::{
-    bonding_manager_contract, epoch_manager_contract, incentive_manager_contract,
-    pool_manager_contract,
+    _pool_manager_contract, epoch_manager_contract, incentive_manager_contract,
 };
 
 type OsmosisTokenFactoryApp = App<
@@ -259,8 +258,8 @@ impl TestingSuite {
     }
 
     #[allow(clippy::inconsistent_digit_grouping)]
-    fn create_pool_manager(&mut self) {
-        let pool_manager_contract = self.app.store_code(pool_manager_contract());
+    fn _create_pool_manager(&mut self) {
+        let pool_manager_contract = self.app.store_code(_pool_manager_contract());
 
         // create epoch manager
         let msg = white_whale_std::pool_manager::InstantiateMsg {
@@ -693,7 +692,7 @@ impl TestingSuite {
 
 impl TestingSuite {
     #[track_caller]
-    pub(crate) fn provide_liquidity(
+    pub(crate) fn _provide_liquidity(
         &mut self,
         sender: Addr,
         pool_identifier: String,
@@ -718,7 +717,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn swap(
+    pub(crate) fn _swap(
         &mut self,
         sender: Addr,
         _offer_asset: Coin,
@@ -747,7 +746,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn add_swap_routes(
+    pub(crate) fn _add_swap_routes(
         &mut self,
         sender: Addr,
         swap_routes: Vec<white_whale_std::pool_manager::SwapRoute>,
@@ -763,7 +762,7 @@ impl TestingSuite {
         self
     }
     #[track_caller]
-    pub(crate) fn create_pair(
+    pub(crate) fn _create_pair(
         &mut self,
         sender: Addr,
         asset_denoms: Vec<String>,
