@@ -426,7 +426,7 @@ impl TestingSuite {
     }
 
     #[track_caller]
-    pub(crate) fn _withdraw_after_unbond(
+    pub(crate) fn withdraw_after_unbond(
         &mut self,
         sender: Addr,
         denom: String,

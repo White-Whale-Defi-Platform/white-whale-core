@@ -211,13 +211,19 @@ proptest! {
         suite.unbond(alice.clone(), coin(10_000, AMPWHALE), |result| {
             result.unwrap();
         });
-        suite.add_epochs(79);
+        suite.add_epochs(1);
+        suite.withdraw_after_unbond(alice.clone(), AMPWHALE.to_string(), |result| {
+            result.unwrap();
+        });
+        suite.add_epochs(78);
         suite.query_claimable_reward_buckets(None, |response| {
             assert!(response.unwrap().1.is_empty());
         });
 
         let current_rewards = Rc::new(RefCell::new(0));
         let bonded_amounts = Rc::new(RefCell::new(HashMap::<Addr, HashMap<String, u128>>::new()));
+        let unbond_id_counter = Rc::new(RefCell::new(0));
+        let unbonding_amounts = Rc::new(RefCell::new(HashMap::<Addr, HashMap<(String, u64), u64>>::new()));
         let claimable_rewards = Rc::new(RefCell::new(HashMap::<(Addr, u64), bool>::new()));
         let available_pools = suite.pool_identifiers.clone();
         let claimed = Rc::new(RefCell::new(HashSet::new()));
@@ -229,8 +235,8 @@ proptest! {
             suite.query_current_epoch(|response| {
                 current_epoch = response.unwrap().epoch.id;
             });
-            // TODO: >>> remove this once 
-            if current_epoch > 120 {
+            // TODO: >>> remove this once
+            if current_epoch > 121 {
                 break;
             }
 
@@ -373,7 +379,6 @@ proptest! {
                     });
                 }
                 Action::Unbond(user, token, amount) => {
-                    // TODO: >>> check if this is creating an entry in the bonded_amounts map when it shouldn't ???
                     let mut bonded_amounts = bonded_amounts.borrow_mut();
                     let user_bonds = bonded_amounts.entry(user.clone()).or_insert_with(HashMap::new);
 
@@ -403,6 +408,12 @@ proptest! {
                             });
                             *bonded -= amount;
 
+                            let mut unbonding_amounts = unbonding_amounts.borrow_mut();
+                            let user_unbonds = unbonding_amounts.entry(user.clone()).or_insert_with(HashMap::new);
+                            let unbond_id = *unbond_id_counter.borrow_mut() + 1;
+                            *unbond_id_counter.borrow_mut() = unbond_id;
+                            user_unbonds.insert((token.clone(), unbond_id), current_epoch);
+
                             suite.query_bonding_rewards(user.to_string(), |response| {
                                 let contract_rewards = response.unwrap().1.rewards;
                                 let has_contract_rewards = !contract_rewards.is_empty();
@@ -422,8 +433,8 @@ proptest! {
 
                             suite.unbond(user.clone(), coin(amount, &token), |result| {
                                 assert_eq!(
-                                    result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),
-                                    bonding_manager::ContractError::InsufficientBond
+                                    result.unwrap_err().downcast::<ContractError>().unwrap(),
+                                    ContractError::InsufficientBond
                                 );
                             });
                         }
@@ -432,12 +443,51 @@ proptest! {
 
                         suite.unbond(user.clone(), coin(amount, &token), |result| {
                             assert_eq!(
-                                result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),
-                                bonding_manager::ContractError::NothingToUnbond
+                                result.unwrap_err().downcast::<ContractError>().unwrap(),
+                                ContractError::NothingToUnbond
                             );
                         });
                     }
+                }
+                Action::Withdraw(user, token) => {
+                    let mut unbonding_amounts = unbonding_amounts.borrow_mut();
+                    let user_unbonds: Vec<((String, u64), u64)> = unbonding_amounts.get(&user)
+                        .map(|user_unbonds| {
+                            user_unbonds.iter()
+                                .filter_map(|(&(ref tok, unbond_id), &epoch)| {
+                                    if tok == &token && epoch < current_epoch {
+                                        Some(((tok.clone(), unbond_id), epoch))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect()
+                        })
+                        .unwrap_or_default();
 
+                    println!(">>> user_unbonds: {:?}", user_unbonds);
+
+                    if !user_unbonds.is_empty() {
+                        println!(">>> [{current_epoch}] [{user}] WITHDRAW [{} {}]", user_unbonds.len(), token.split('/').nth(2).unwrap());
+
+                        suite.withdraw_after_unbond(user.clone(), token.clone(), |result| {
+                            result.unwrap();
+                        });
+
+                        // clear withdrawn unbonds from the unbonding_amounts map
+                        for ((tok, unbond_id), _) in user_unbonds {
+                            unbonding_amounts.get_mut(&user).unwrap().remove(&(tok, unbond_id));
+                        }
+                    } else {
+                        println!(">>> [{current_epoch}] [{user}] WITHDRAW FAILED (nothing to withdraw)");
+
+                        suite.withdraw_after_unbond(user.clone(), token.clone(), |result| {
+                            assert_eq!(
+                                result.unwrap_err().downcast::<ContractError>().unwrap(),
+                                ContractError::NothingToWithdraw
+                            );
+                        });
+                    }
                 }
                 Action::Claim(user) => {
                     let mut has_pending_rewards = false;
@@ -465,8 +515,8 @@ proptest! {
 
                         suite.claim_bonding_rewards(&user, |result| {
                             assert_eq!(
-                                result.unwrap_err().downcast::<bonding_manager::ContractError>().unwrap(),
-                                bonding_manager::ContractError::NothingToClaim
+                                result.unwrap_err().downcast::<ContractError>().unwrap(),
+                                ContractError::NothingToClaim
                             );
                         });
                     }
@@ -510,6 +560,7 @@ enum Action {
     Swap(Addr, String, String, u128),
     Bond(Addr, String, u128),
     Unbond(Addr, String, u128),
+    Withdraw(Addr, String),
     Claim(Addr),
 }
 
@@ -536,7 +587,7 @@ fn action_strategy(users: Vec<Addr>) -> impl Strategy<Value = Action> {
         prop_oneof![Just(BWHALE.to_string()), Just(AMPWHALE.to_string())];
 
     const MIN_AMOUNT: u128 = 10_000;
-    let amount_strategy = MIN_AMOUNT..1_000_000_u128;
+    let amount_strategy = MIN_AMOUNT..100_000_000_u128;
 
     prop_oneof![
         (
@@ -560,6 +611,8 @@ fn action_strategy(users: Vec<Addr>) -> impl Strategy<Value = Action> {
             amount_strategy.clone()
         )
             .prop_map(|(user, token, amount)| Action::Unbond(user, token, amount)),
+        (user_strategy.clone(), bond_unbond_token_strategy.clone())
+            .prop_map(|(user, token)| Action::Withdraw(user, token)),
         user_strategy.clone().prop_map(|user| Action::Claim(user)),
     ]
 }
