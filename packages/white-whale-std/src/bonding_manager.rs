@@ -15,7 +15,7 @@ pub struct Config {
     pub epoch_manager_addr: Addr,
     /// Distribution denom for the rewards
     pub distribution_denom: String,
-    /// Unbonding period in nanoseconds. The time that needs to pass before an unbonded position can
+    /// Unbonding period in epochs. The time (in epochs) that needs to pass before an unbonded position can
     /// be withdrawn
     pub unbonding_period: u64,
     /// A fraction that controls the effect of time on the weight of a bond. If the growth rate is set

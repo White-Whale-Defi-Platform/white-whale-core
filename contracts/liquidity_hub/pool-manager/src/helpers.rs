@@ -176,7 +176,8 @@ pub fn compute_swap(
                 * Decimal256::from_ratio(ask_pool.mul(offer_amount), offer_pool + offer_amount);
 
             // calculate spread, swap and protocol fees
-            let exchange_rate = Decimal256::from_ratio(ask_pool, offer_pool);
+            let exchange_rate = Decimal256::checked_from_ratio(ask_pool, offer_pool)
+                .map_err(|_| ContractError::PoolHasNoAssets)?;
             let spread_amount: Uint256 = (offer_amount * exchange_rate) - return_amount;
 
             let fees_computation = compute_fees(pool_fees, return_amount)?;

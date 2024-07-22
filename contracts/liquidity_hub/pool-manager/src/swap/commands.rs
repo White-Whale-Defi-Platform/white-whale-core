@@ -30,6 +30,12 @@ pub fn swap(
 
     let offer_asset = cw_utils::one_coin(&info)?;
 
+    // ensure offer asset is not the same as ask asset
+    ensure!(
+        offer_asset.denom != ask_asset_denom,
+        ContractError::SameAsset
+    );
+
     // verify that the assets sent match the ones from the pool
     let pool = get_pool_by_identifier(&deps.as_ref(), &pool_identifier)?;
     ensure!(

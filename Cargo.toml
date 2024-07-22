@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+  "integration-tests",
   "packages/*",
   "contracts/liquidity_hub/pool-network/*",
   "contracts/liquidity_hub/fee_collector",
@@ -73,6 +74,7 @@ terraswap-token = { path = "./contracts/liquidity_hub/pool-network/terraswap_tok
 terraswap-pair = { path = "./contracts/liquidity_hub/pool-network/terraswap_pair" }
 incentive-manager = { path = "./contracts/liquidity_hub/incentive-manager" }
 bonding-manager = { path = "./contracts/liquidity_hub/bonding-manager" }
+vault-manager = { path = "./contracts/liquidity_hub/vault-manager" }
 
 [workspace.metadata.dylint]
 libraries = [{ git = "https://github.com/0xFable/cw-lint" }]

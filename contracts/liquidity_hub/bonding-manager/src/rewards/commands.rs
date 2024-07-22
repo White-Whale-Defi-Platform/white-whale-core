@@ -24,6 +24,7 @@ pub(crate) fn on_epoch_created(
 
     // A new epoch has been created, update rewards bucket and forward the expiring bucket
     let config = CONFIG.load(deps.storage)?;
+
     ensure!(
         info.sender == config.epoch_manager_addr,
         ContractError::Unauthorized
@@ -49,7 +50,13 @@ pub(crate) fn on_epoch_created(
 
     // Create a new reward bucket for the current epoch with the total rewards accrued in the
     // upcoming bucket item
-    let upcoming_bucket = UPCOMING_REWARD_BUCKET.load(deps.storage)?;
+    let mut upcoming_bucket = UPCOMING_REWARD_BUCKET.load(deps.storage)?;
+
+    // Remove all zero amounts from the upcoming bucket
+    upcoming_bucket
+        .total
+        .retain(|coin| coin.amount > Uint128::zero());
+
     let mut new_reward_bucket = RewardBucket {
         id: current_epoch.id,
         epoch_start_time: current_epoch.start_time,
@@ -250,11 +257,17 @@ pub fn claim(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError
 
     LAST_CLAIMED_EPOCH.save(deps.storage, &info.sender, &current_epoch.epoch.id)?;
 
-    Ok(Response::default()
+    // Create the response based on whether there are claimable rewards to avoid sending empty coins
+    let mut response = Response::default()
         .add_attributes(vec![("action", "claim".to_string())])
-        .add_attributes(attributes)
-        .add_message(CosmosMsg::Bank(BankMsg::Send {
+        .add_attributes(attributes);
+
+    if !total_claimable_rewards.is_empty() {
+        response = response.add_message(CosmosMsg::Bank(BankMsg::Send {
             to_address: info.sender.to_string(),
             amount: total_claimable_rewards,
-        })))
+        }));
+    }
+
+    Ok(response)
 }

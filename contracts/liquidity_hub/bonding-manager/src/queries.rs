@@ -166,6 +166,11 @@ pub fn query_claimable(
         claimable_reward_buckets.retain(|bucket| !bucket.available.is_empty());
     }
 
+    // println!(
+    //     ">>> claimable_reward_buckets_2: {:?}",
+    //     claimable_reward_buckets
+    // );
+
     Ok(ClaimableRewardBucketsResponse {
         reward_buckets: claimable_reward_buckets,
     })
@@ -173,8 +178,9 @@ pub fn query_claimable(
 
 /// Returns the rewards that can be claimed by the given address.
 pub(crate) fn query_rewards(deps: Deps, address: String) -> Result<RewardsResponse, ContractError> {
-    let (rewards, _, _) =
+    let (mut rewards, _, _) =
         helpers::calculate_rewards(&deps, deps.api.addr_validate(&address)?, false)?;
+    rewards.retain(|coin| coin.amount > Uint128::zero());
 
     Ok(RewardsResponse { rewards })
 }

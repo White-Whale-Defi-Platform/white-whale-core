@@ -93,6 +93,16 @@ on the Epoch Manager, as the rewards distribution is done based on epochs.
 The Epoch Manager is the contract that manages the epochs in the protocol. Its single responsibility is to create the epochs,
 which are used by the Incentive and Bonding Managers for distributing incentives and fees.
 
+## Instantiation
+
+Based on the dependencies between the contracts, the instantiation of the contracts is as follows:
+
+- Epoch Manager
+- Bonding Manager
+- Incentive Manager
+- Pool Manager
+- Vault Manager
+
 ---
 
 ## Deployed contracts

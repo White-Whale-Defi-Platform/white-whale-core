@@ -164,6 +164,7 @@ pub fn create_pool(
         deps.storage,
         &identifier,
         &PoolInfo {
+            pool_identifier: identifier.clone(),
             asset_denoms,
             pool_type: pool_type.clone(),
             lp_denom: lp_asset.clone(),
