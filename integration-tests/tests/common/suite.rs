@@ -232,7 +232,7 @@ impl TestingSuite {
             unbonding_period: 1u64,
             growth_rate: Decimal::one(),
             bonding_assets: vec![AMPWHALE.to_string(), BWHALE.to_string()],
-            grace_period: 21,
+            grace_period: 101,
             epoch_manager_addr,
         };
 

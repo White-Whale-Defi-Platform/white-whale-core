@@ -57,9 +57,9 @@ fn epic_test() {
             result.unwrap();
         })
         // create 20 more epochs, should not let alice claim any rewards
-        .add_epochs(20)
+        .add_epochs(100)
         .query_current_epoch(|result| {
-            assert_eq!(result.unwrap().epoch.id, 22);
+            assert_eq!(result.unwrap().epoch.id, 102);
         })
         .query_claimable_reward_buckets(Some(&alice), |response| {
             assert!(response.unwrap().1.is_empty());
@@ -67,7 +67,7 @@ fn epic_test() {
         // create 1 more epoch should let alice claim 19_000 uwhale from the initial setup
         .add_epochs(1)
         .query_current_epoch(|result| {
-            assert_eq!(result.unwrap().epoch.id, 23);
+            assert_eq!(result.unwrap().epoch.id, 103);
         })
         .query_claimable_reward_buckets(Some(&alice), |response| {
             assert_eq!(response.unwrap().1[0].available, coins(19_000, "uwhale"));
@@ -100,7 +100,7 @@ fn epic_test() {
         .add_one_epoch()
         // check we're on epoch 24
         .query_current_epoch(|result| {
-            assert_eq!(result.unwrap().epoch.id, 24);
+            assert_eq!(result.unwrap().epoch.id, 104);
         })
         .swap(
             carol.clone(),
@@ -164,6 +164,12 @@ fn epic_test() {
         .query_claimable_reward_buckets(Some(&bob), |response| {
             println!("{:?}", response.unwrap().1);
         });
+
+    // check we're on epoch 200
+    suite.add_epochs(93);
+    suite.query_current_epoch(|result| {
+        assert_eq!(result.unwrap().epoch.id, 200);
+    });
 }
 
 proptest! {
@@ -222,10 +228,14 @@ proptest! {
 
         let current_rewards = Rc::new(RefCell::new(0));
         let bonded_amounts = Rc::new(RefCell::new(HashMap::<Addr, HashMap<String, u128>>::new()));
+        // simple counter that increments every time a user unbonds
         let unbond_id_counter = Rc::new(RefCell::new(0));
+        // user => (bonded_token, unbond_id_counter) => epoch
         let unbonding_amounts = Rc::new(RefCell::new(HashMap::<Addr, HashMap<(String, u64), u64>>::new()));
+        // (user, epoch) => bool
         let claimable_rewards = Rc::new(RefCell::new(HashMap::<(Addr, u64), bool>::new()));
         let available_pools = suite.pool_identifiers.clone();
+        // list of the users that claimed in the current epoch (either by executing claim or bond/unbond with pending rewards)
         let claimed = Rc::new(RefCell::new(HashSet::new()));
 
         let mut swaps_in_epoch = false;
@@ -235,10 +245,6 @@ proptest! {
             suite.query_current_epoch(|response| {
                 current_epoch = response.unwrap().epoch.id;
             });
-            // TODO: >>> remove this once
-            if current_epoch > 121 {
-                break;
-            }
 
             match action {
                 Action::Swap(user, from_token, to_token, amount) => {
@@ -297,6 +303,7 @@ proptest! {
                             for (user, token_amounts) in bonded_amounts.iter() {
                                 if token_amounts.values().any(|&amount| amount > 0) {
                                     claimable_rewards.borrow_mut().insert((user.clone(), current_epoch), true);
+                                    //
                                 }
                             }
                         } else {
@@ -343,7 +350,6 @@ proptest! {
                     }
 
                     suite.query_bonding_rewards(user.to_string(), |response| {
-                        // >>> TODO: MAKE SURE THE CONTRACT IS UPDATING STATE CORRECTLY AFTER BONDING WITH PENDING REWARDS
                         let contract_rewards = response.unwrap().1.rewards;
                         let has_contract_rewards = !contract_rewards.is_empty();
 
@@ -464,8 +470,6 @@ proptest! {
                                 .collect()
                         })
                         .unwrap_or_default();
-
-                    println!(">>> user_unbonds: {:?}", user_unbonds);
 
                     if !user_unbonds.is_empty() {
                         println!(">>> [{current_epoch}] [{user}] WITHDRAW [{} {}]", user_unbonds.len(), token.split('/').nth(2).unwrap());
