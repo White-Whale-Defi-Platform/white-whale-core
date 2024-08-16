@@ -129,7 +129,7 @@ pub fn claim(deps: &mut DepsMut, info: &MessageInfo) -> Result<Vec<CosmosMsg>, C
             // record the emitted tokens for this epoch if it hasn't been recorded before.
             // emitted tokens for this epoch is the total emitted tokens in previous epoch + the ones
             // that where emitted in this epoch
-            if flow.emitted_tokens.get(&epoch_id).is_none() {
+            if !flow.emitted_tokens.contains_key(&epoch_id) {
                 flow.emitted_tokens
                     .insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
             }

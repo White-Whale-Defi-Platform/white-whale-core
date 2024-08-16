@@ -113,7 +113,7 @@ pub fn get_rewards(deps: Deps, address: String) -> Result<RewardsResponse, Contr
             // record the emitted tokens for this epoch if it hasn't been recorded before.
             // emitted tokens for this epoch is the total emitted tokens in previous epoch + the ones
             // that where emitted in this epoch
-            if flow_emitted_tokens.get(&epoch_id).is_none() {
+            if !flow_emitted_tokens.contains_key(&epoch_id) {
                 flow_emitted_tokens
                     .insert(epoch_id, emission_per_epoch.checked_add(emitted_tokens)?);
             }
