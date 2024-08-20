@@ -57,7 +57,7 @@ fn deposit_and_withdraw_sanity_check() {
             share: Decimal::zero(),
         },
         osmosis_fee: Fee {
-            share: Decimal::zero(),
+            share: Decimal::permille(1),
         },
         extra_fees: vec![],
     };
@@ -250,6 +250,84 @@ mod pool_creation_failures {
             );
     }
 
+    // Wrong osmosis fee on pool creation; 0.01 instead of 0.001
+    #[test]
+    fn wrong_osmosis_fee_on_pool_creation() {
+        let mut suite = TestingSuite::default_with_balances(vec![
+            coin(1_000_000_001u128, "uwhale".to_string()),
+            coin(1_000_000_000u128, "uluna".to_string()),
+            coin(1_000_000_001u128, "uusd".to_string()),
+        ]);
+        let creator = suite.creator();
+        let _other = suite.senders[1].clone();
+        let _unauthorized = suite.senders[2].clone();
+        // Asset infos with uwhale and cw20
+
+        let asset_infos = vec!["uwhale".to_string()];
+
+        #[cfg(not(feature = "osmosis"))]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            extra_fees: vec![],
+        };
+
+        #[cfg(feature = "osmosis")]
+        let pool_fees = PoolFee {
+            protocol_fee: Fee {
+                share: Decimal::zero(),
+            },
+            swap_fee: Fee {
+                share: Decimal::zero(),
+            },
+            burn_fee: Fee {
+                share: Decimal::zero(),
+            },
+            osmosis_fee: Fee {
+                share: Decimal::permille(1),
+            },
+            extra_fees: vec![],
+        };
+        // Create a pool
+        suite
+            .instantiate_default()
+            .add_one_day()
+            .create_new_epoch(|result| {
+                result.unwrap();
+            })
+            .create_pool(
+                creator.clone(),
+                asset_infos,
+                vec![6u8, 6u8],
+                pool_fees,
+                PoolType::ConstantProduct,
+                None,
+                vec![coin(1000, "uusd")],
+                |result| {
+                    #[cfg(feature = "osmosis")]
+                    {
+                        let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+                        match err {
+                            ContractError::InvalidPoolCreationFee { .. } => {}
+                            _ => panic!(
+                                "Wrong error type, should return ContractError::InvalidPoolCreationFee"
+                            ),
+                        }
+                    }
+                    #[cfg(not(feature = "osmosis"))]
+                    result.unwrap();
+
+                },
+            );
+    }
+
     #[test]
     fn cant_recreate_existing_poo() {
         let mut suite = TestingSuite::default_with_balances(vec![
@@ -290,7 +368,7 @@ mod pool_creation_failures {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -334,7 +412,7 @@ mod pool_creation_failures {
 }
 
 mod router {
-    use cosmwasm_std::{Event, StdError};
+    use cosmwasm_std::{assert_approx_eq, Event, StdError};
 
     use white_whale_std::pool_manager::{SwapRoute, SwapRouteCreatorResponse};
 
@@ -380,7 +458,7 @@ mod router {
                 share: Decimal::bps(50),
             },
             osmosis_fee: Fee {
-                share: Decimal::bps(50),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -578,7 +656,7 @@ mod router {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_000u128),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -726,7 +804,7 @@ mod router {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_000u128),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -890,7 +968,7 @@ mod router {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_000u128),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -1123,7 +1201,7 @@ mod router {
                 share: Decimal::bps(50),
             },
             osmosis_fee: Fee {
-                share: Decimal::bps(50),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -1294,7 +1372,7 @@ mod router {
                 share: Decimal::bps(50),
             },
             osmosis_fee: Fee {
-                share: Decimal::bps(50),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -1464,7 +1542,7 @@ mod router {
                 share: Decimal::bps(50),
             },
             osmosis_fee: Fee {
-                share: Decimal::bps(50),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -1666,7 +1744,7 @@ mod router {
                 share: Decimal::bps(50),
             },
             osmosis_fee: Fee {
-                share: Decimal::bps(50),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -1826,7 +1904,7 @@ mod router {
             swap_operations.clone(),
             |result| {
                 let result = result.unwrap();
-                assert_eq!(result.amount.u128(), 1_007);
+                assert_approx_eq!(result.amount.u128(), 1_007, "0.1");
             },
         );
 
@@ -1892,7 +1970,7 @@ mod swapping {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::from_ratio(1u128, 100_000u128),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -2319,7 +2397,7 @@ mod swapping {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -2415,7 +2493,7 @@ mod swapping {
                 assert_approx_eq!(
                     offer_amount.parse::<u128>().unwrap(),
                     return_amount.parse::<u128>().unwrap(),
-                    "0.01"
+                    "0.011"
                 );
             },
         );
@@ -2615,7 +2693,7 @@ mod locking_lp {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -2811,7 +2889,7 @@ mod locking_lp {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -3014,7 +3092,7 @@ mod provide_liquidity {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::zero(),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };
@@ -3469,7 +3547,7 @@ mod provide_liquidity {
                 share: Decimal::zero(),
             },
             osmosis_fee: Fee {
-                share: Decimal::percent(10),
+                share: Decimal::permille(1),
             },
             extra_fees: vec![],
         };

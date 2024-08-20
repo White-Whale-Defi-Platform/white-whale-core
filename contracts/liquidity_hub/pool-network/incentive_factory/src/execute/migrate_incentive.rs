@@ -34,7 +34,7 @@ pub fn migrate_incentives(
             res = res
                 .add_attribute("incentive", &incentive.to_string())
                 .add_message(migrate_incentive_msg(
-                    deps.api.addr_validate(&incentive.to_string())?,
+                    deps.api.addr_validate(incentive.as_ref())?,
                     code_id,
                 )?)
         }
