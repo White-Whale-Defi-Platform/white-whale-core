@@ -282,7 +282,7 @@ pub fn aggregate_fees(
                         deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
                             contract_addr: config.pool_router.to_string(),
                             msg: to_json_binary(&router::QueryMsg::SimulateSwapOperations {
-                                offer_amount: balance.clone(),
+                                offer_amount: balance,
                                 operations: operations.clone(),
                             })?,
                         }));
