@@ -273,35 +273,57 @@ pub fn aggregate_fees(
                 Ok(operations) => {
                     let execute_swap_operations_msg =
                         to_json_binary(&router::ExecuteMsg::ExecuteSwapOperations {
-                            operations,
+                            operations: operations.clone(),
                             minimum_receive: None,
                             to: None,
                             max_spread: Some(Decimal::percent(50u64)),
                         })?;
+                    let operations_simulation: StdResult<router::SimulateSwapOperationsResponse> =
+                        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+                            contract_addr: config.pool_router.to_string(),
+                            msg: to_json_binary(&router::QueryMsg::SimulateSwapOperations {
+                                offer_amount: balance.clone(),
+                                operations: operations.clone(),
+                            })?,
+                        }));
 
-                    match offer_asset_info.clone() {
-                        AssetInfo::Token { contract_addr } => {
-                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                                contract_addr,
-                                funds: vec![],
-                                msg: to_json_binary(&Cw20ExecuteMsg::Send {
-                                    contract: config.pool_router.to_string(),
-                                    amount: balance,
-                                    msg: execute_swap_operations_msg,
-                                })?,
-                            }));
+                    match operations_simulation {
+                        Ok(_) => {
+                            if balance < MINIMUM_AGGREGABLE_BALANCE {
+                                continue;
+                            }
+                            match offer_asset_info.clone() {
+                                AssetInfo::Token { contract_addr } => {
+                                    aggregate_fees_messages.push(CosmosMsg::Wasm(
+                                        WasmMsg::Execute {
+                                            contract_addr,
+                                            funds: vec![],
+                                            msg: to_json_binary(&Cw20ExecuteMsg::Send {
+                                                contract: config.pool_router.to_string(),
+                                                amount: balance,
+                                                msg: execute_swap_operations_msg,
+                                            })?,
+                                        },
+                                    ));
+                                }
+                                AssetInfo::NativeToken { denom } => {
+                                    aggregate_fees_messages.push(CosmosMsg::Wasm(
+                                        WasmMsg::Execute {
+                                            contract_addr: config.pool_router.to_string(),
+                                            funds: vec![Coin {
+                                                denom,
+                                                amount: balance,
+                                            }],
+                                            msg: execute_swap_operations_msg,
+                                        },
+                                    ));
+                                }
+                            };
                         }
-                        AssetInfo::NativeToken { denom } => {
-                            aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                                contract_addr: config.pool_router.to_string(),
-                                funds: vec![Coin {
-                                    denom,
-                                    amount: balance,
-                                }],
-                                msg: execute_swap_operations_msg,
-                            }));
+                        Err(_) => {
+                            continue;
                         }
-                    };
+                    }
                 }
                 Err(_) => {
                     // if there is no swap route, skip swap and keep the asset in contract
