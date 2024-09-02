@@ -55,7 +55,7 @@ fn get_ethereum_bridged_asset_label(denom: &str) -> StdResult<String> {
 }
 
 /// Verifies if the given denom is an ibc token or not
-fn is_ibc_token(denom: &str) -> bool {
+pub fn is_ibc_token(denom: &str) -> bool {
     let split: Vec<&str> = denom.splitn(2, '/').collect();
 
     if split[0] == IBC_PREFIX && split.len() == 2 {
