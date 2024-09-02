@@ -19,7 +19,7 @@ fn test_claim_successfully() {
     let asset_denoms = vec!["uwhale".to_string(), "uusdc".to_string()];
 
     #[cfg(feature = "osmosis")]
-        let pool_fees = PoolFee {
+    let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::from_ratio(1u128, 100u128),
         },
@@ -913,7 +913,7 @@ fn test_rewards_forwarding() {
     };
 
     #[cfg(feature = "osmosis")]
-        let pool_fees = PoolFee {
+    let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::from_ratio(1u128, 100u128),
         },

@@ -35,7 +35,7 @@ fn test_unbonding_withdraw() {
     };
 
     #[cfg(feature = "osmosis")]
-        let pool_fees = PoolFee {
+    let pool_fees = PoolFee {
         protocol_fee: Fee {
             share: Decimal::from_ratio(1u128, 100u128),
         },
