@@ -30,7 +30,7 @@ injective = ["white-whale-std/injective"]
 token_factory = ["white-whale-std/token_factory"]
 osmosis = ["osmosis_token_factory"]
 osmosis_token_factory = ["white-whale-std/osmosis_token_factory"]
-
+tarpaulin_include = []
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -48,6 +48,7 @@ cw-utils.workspace = true
 cw-ownable.workspace = true
 sha2.workspace = true
 semver.workspace = true
+cw-migrate-error-derive.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

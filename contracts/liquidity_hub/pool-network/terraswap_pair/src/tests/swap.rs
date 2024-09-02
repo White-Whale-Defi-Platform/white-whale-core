@@ -507,6 +507,9 @@ fn try_swap_invalid_token() {
 
 #[test]
 fn try_token_to_native() {
+    #[cfg(feature = "osmosis")]
+    use anybuf::Anybuf;
+
     let total_share = Uint128::from(20_000_000_000u128);
     let asset_pool_amount = Uint128::from(30_000_000_000u128);
     let collateral_pool_amount = Uint128::from(20_000_000_000u128);

@@ -24,12 +24,9 @@ pub fn get_current_epoch(deps: Deps) -> StdResult<EpochResponse> {
 
 /// Returns the [Epoch] with the given id.
 pub fn get_epoch(deps: Deps, id: Uint64) -> StdResult<EpochResponse> {
-    let option = EPOCHS.may_load(deps.storage, &id.to_be_bytes())?;
-
-    let epoch = match option {
-        Some(epoch) => epoch,
-        None => Epoch::default(),
-    };
+    let epoch = EPOCHS
+        .may_load(deps.storage, &id.to_be_bytes())?
+        .unwrap_or_default();
 
     Ok(EpochResponse { epoch })
 }

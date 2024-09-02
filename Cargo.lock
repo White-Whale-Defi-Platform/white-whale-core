@@ -107,6 +107,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-migrate-error-derive",
  "cw-multi-test",
  "cw-ownable",
  "cw-storage-plus",
@@ -287,6 +288,19 @@ dependencies = [
  "cw-utils",
  "schemars",
  "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-migrate-error-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "431d51e7f8b028e8a09d2125be3c6b8661b512ba40daadf6e0ffc4aadcef604b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "semver",
+ "syn 2.0.68",
  "thiserror",
 ]
 
@@ -528,6 +542,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-controllers",
+ "cw-migrate-error-derive",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -755,6 +770,7 @@ dependencies = [
  "bonding-manager",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-migrate-error-derive",
  "cw-multi-test",
  "cw-ownable",
  "cw-storage-plus",
@@ -963,6 +979,7 @@ dependencies = [
  "bonding-manager",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-migrate-error-derive",
  "cw-multi-test",
  "cw-ownable",
  "cw-storage-plus",
@@ -1699,6 +1716,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "cw-migrate-error-derive",
  "cw-multi-test",
  "cw-ownable",
  "cw-storage-plus",

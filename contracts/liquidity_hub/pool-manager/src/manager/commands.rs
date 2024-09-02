@@ -2,6 +2,9 @@ use cosmwasm_std::{
     attr, Attribute, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, Uint128,
 };
 
+#[cfg(feature = "osmosis")]
+use cosmwasm_std::Decimal;
+
 use white_whale_std::fee::PoolFee;
 
 use crate::state::{get_pool_by_identifier, POOL_COUNTER};
@@ -14,6 +17,9 @@ use white_whale_std::lp_common::LP_SYMBOL;
 use white_whale_std::pool_manager::{PoolInfo, PoolType};
 
 pub const MAX_ASSETS_PER_POOL: usize = 4;
+
+#[cfg(feature = "osmosis")]
+pub const OSMOSIS_FEE_AMOUNT: Decimal = Decimal::permille(1);
 
 /// Creates a pool with 2, 3, or N assets. The function dynamically handles different numbers of assets,
 /// allowing for the creation of pools with varying configurations. The maximum number of assets per pool is defined by
@@ -120,6 +126,15 @@ pub fn create_pool(
         .any(|asset| asset_denoms.iter().filter(|&a| a == asset).count() > 1)
     {
         return Err(ContractError::SameAsset);
+    }
+
+    // ensure that osmosis fee is 0.001
+    #[cfg(feature = "osmosis")]
+    if pool_fees.osmosis_fee.share != OSMOSIS_FEE_AMOUNT {
+        return Err(ContractError::InvalidOsmosisFee {
+            expected: OSMOSIS_FEE_AMOUNT,
+            got: pool_fees.osmosis_fee.share,
+        });
     }
 
     // Verify pool fees

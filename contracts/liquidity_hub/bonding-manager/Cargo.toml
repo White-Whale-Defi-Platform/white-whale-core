@@ -41,6 +41,7 @@ white-whale-std.workspace = true
 cw-utils.workspace = true
 pool-manager.workspace = true
 cw-ownable.workspace = true
+cw-migrate-error-derive.workspace = true
 
 [dev-dependencies]
 cw-multi-test.workspace = true

@@ -28,6 +28,23 @@ fn test_queries() {
         extra_fees: vec![],
     };
 
+    #[cfg(feature = "osmosis")]
+    let pool_fees = PoolFee {
+        protocol_fee: Fee {
+            share: Decimal::from_ratio(1u128, 100u128),
+        },
+        swap_fee: Fee {
+            share: Decimal::from_ratio(1u128, 100u128),
+        },
+        burn_fee: Fee {
+            share: Decimal::zero(),
+        },
+        extra_fees: vec![],
+        osmosis_fee: Fee {
+            share: Decimal::permille(1),
+        },
+    };
+
     suite
         .instantiate_default()
         .bond(creator.clone(), &coins(1_000u128, "ampWHALE"), |result| {

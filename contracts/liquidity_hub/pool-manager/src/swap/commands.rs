@@ -105,7 +105,7 @@ pub fn swap(
         #[cfg(feature = "osmosis")]
         (
             "osmosis_fee_amount",
-            swap_result.osmosis_fee_amount.to_string(),
+            swap_result.osmosis_fee_asset.amount.to_string(),
         ),
         (
             "swap_type",
