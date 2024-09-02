@@ -1,5 +1,6 @@
-use cosmwasm_std::{Decimal, Decimal256, Fraction, StdError, StdResult, Uint128};
 use std::str::FromStr;
+
+use cosmwasm_std::{Decimal, Decimal256, Fraction, StdError, StdResult, Uint128};
 
 /// Default swap slippage in case max_spread is not specified
 pub const DEFAULT_SLIPPAGE: &str = "0.01";
@@ -15,20 +16,12 @@ pub fn assert_max_spread(
     max_spread: Option<Decimal>,
     offer_amount: Uint128,
     return_amount: Uint128,
-    _spread_amount: Uint128,
+    spread_amount: Uint128,
 ) -> StdResult<()> {
     let max_spread: Decimal256 = max_spread
         .unwrap_or(Decimal::from_str(DEFAULT_SLIPPAGE)?)
         .min(Decimal::from_str(MAX_ALLOWED_SLIPPAGE)?)
         .into();
-
-    // println!(">>> assert_max_spread");
-    // println!("belief_price: {:?}", belief_price);
-    // println!("max_spread: {:?}", max_spread);
-    // println!("offer_amount: {:?}", offer_amount);
-    // println!("return_amount: {:?}", return_amount);
-    // println!("spread_amount: {:?}", spread_amount);
-    // println!("<<< assert_max_spread");
 
     if let Some(belief_price) = belief_price {
         let expected_return = offer_amount
@@ -42,10 +35,8 @@ pub fn assert_max_spread(
         {
             return Err(StdError::generic_err("Spread limit exceeded"));
         }
-        // } else if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
-        //     // TODO: >>> troubleshooting |
-        //     // return Err(StdError::generic_err("Spread limit exceeded"));
-        //     return Ok(());
+    } else if Decimal256::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
+        return Err(StdError::generic_err("Spread limit exceeded"));
     }
 
     Ok(())
