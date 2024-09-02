@@ -54,7 +54,7 @@ juno | terra | chihuahua | migaloo | neutron)
 injective)
 	flag="-injective"
 	;;
-comdex | orai | sei | vanilla) ;;
+comdex | orai | sei | archway | vanilla) ;;
 
 \*)
 	echo "Network $chain not defined"
