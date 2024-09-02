@@ -1,5 +1,6 @@
 use cosmwasm_std::{
-    attr, coin, ensure, Addr, BankMsg, Coin, Decimal, DepsMut, MessageInfo, Response, Uint128,
+    attr, coin, ensure, Addr, BankMsg, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, Response,
+    Uint128,
 };
 use white_whale_std::coin::burn_coin_msg;
 use white_whale_std::common::validate_addr_or_default;
@@ -140,12 +141,17 @@ pub fn execute_swap_operations(
         }
     }
 
-    // send output to recipient
-    Ok(Response::new()
-        .add_message(BankMsg::Send {
+    let mut bank_msg: Vec<CosmosMsg> = vec![];
+    if !receiver_balance.is_zero() {
+        bank_msg.push(CosmosMsg::Bank(BankMsg::Send {
             to_address: receiver.clone(),
             amount: vec![coin(receiver_balance.u128(), target_asset_denom.clone())],
-        })
+        }));
+    }
+
+    // send output to recipient
+    Ok(Response::new()
+        .add_messages(bank_msg)
         .add_messages(fee_messages)
         .add_attributes(vec![
             attr("action", "execute_swap_operations".to_string()),

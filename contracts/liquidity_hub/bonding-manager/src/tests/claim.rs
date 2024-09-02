@@ -1099,4 +1099,37 @@ fn test_rewards_forwarding() {
             }
         );
     });
+
+    suite
+        .swap(
+            creator.clone(),
+            coin(80_000u128, "uusdc"),
+            "uwhale".to_string(),
+            None,
+            None,
+            None,
+            "whale-uusdc".to_string(),
+            vec![Coin {
+                denom: "uusdc".to_string(),
+                amount: Uint128::from(80_000u128),
+            }],
+            |result| {
+                result.unwrap();
+            },
+        )
+        .add_one_day()
+        .create_new_epoch()
+        .claim(creator.clone(), |result| {
+            result.unwrap();
+        })
+        .add_one_day()
+        .create_new_epoch()
+        .claim(creator.clone(), |result| {
+            let err = result.unwrap_err().downcast::<ContractError>().unwrap();
+
+            match err {
+                ContractError::NothingToClaim { .. } => {}
+                _ => panic!("Wrong error type, should return ContractError::NothingToClaim"),
+            }
+        });
 }

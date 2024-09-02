@@ -162,6 +162,18 @@ pub(crate) fn unbond(
 
         if unbond.asset.amount.is_zero() {
             BONDS.remove(deps.storage, unbond.id)?;
+            // check if there are other bonded assets, if not, remove the last claimed epoch to reset the user
+            let other_bonds_by_receiver = get_bonds_by_receiver(
+                deps.storage,
+                info.sender.to_string(),
+                Some(true),
+                None,
+                None,
+                None,
+            )?;
+            if other_bonds_by_receiver.is_empty() {
+                LAST_CLAIMED_EPOCH.remove(deps.storage, &info.sender);
+            }
         } else {
             BONDS.save(deps.storage, unbond.id, &unbond)?;
         }

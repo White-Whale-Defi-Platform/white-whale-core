@@ -161,6 +161,9 @@ pub enum ContractError {
     #[error("Invalid pool assets length, expected {expected} got {actual}")]
     InvalidPoolAssetsLength { expected: usize, actual: usize },
 
+    #[error("The pool has no assets")]
+    PoolHasNoAssets,
+
     #[cfg(feature = "osmosis")]
     #[error("Invalid osmosis fee, expected: {expected} got: {got}")]
     InvalidOsmosisFee { expected: Decimal, got: Decimal },

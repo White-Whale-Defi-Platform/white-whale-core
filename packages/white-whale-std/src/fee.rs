@@ -62,6 +62,7 @@ impl VaultFee {
     }
 }
 
+//todo to move into pool_manager.rs ?
 /// Represents the fee structure for transactions within a pool.
 ///
 ///

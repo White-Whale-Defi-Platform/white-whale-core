@@ -968,17 +968,34 @@
         "description": "Retrieves the pool information for the given pool identifier.",
         "type": "object",
         "required": [
-          "pool"
+          "pools"
         ],
         "properties": {
-          "pool": {
+          "pools": {
             "type": "object",
-            "required": [
-              "pool_identifier"
-            ],
             "properties": {
+              "limit": {
+                "description": "The amount of pools to return. If unspecified, will default to a value specified by the contract.",
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "uint32",
+                "minimum": 0.0
+              },
               "pool_identifier": {
-                "type": "string"
+                "description": "An optional parameter specifying the pool identifier to do the query for. If not provided, it will return all pools based on the pagination parameters.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "start_after": {
+                "description": "An optional parameter specifying what pool (identifier) to start searching after.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "additionalProperties": false
@@ -1329,31 +1346,21 @@
         }
       }
     },
-    "pool": {
+    "pools": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PoolInfoResponse",
-      "description": "The response for the `Pool` query.",
+      "title": "PoolsResponse",
+      "description": "The response for the `Pools` query.",
       "type": "object",
       "required": [
-        "pool_info",
-        "total_share"
+        "pools"
       ],
       "properties": {
-        "pool_info": {
-          "description": "The pool information for the given pool identifier.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/PoolInfo"
-            }
-          ]
-        },
-        "total_share": {
-          "description": "The total LP tokens in the pool.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/Coin"
-            }
-          ]
+        "pools": {
+          "description": "The pools information responses.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PoolInfoResponse"
+          }
         }
       },
       "additionalProperties": false,
@@ -1442,6 +1449,7 @@
             "assets",
             "lp_denom",
             "pool_fees",
+            "pool_identifier",
             "pool_type"
           ],
           "properties": {
@@ -1480,11 +1488,41 @@
                 }
               ]
             },
+            "pool_identifier": {
+              "description": "The identifier for the pool.",
+              "type": "string"
+            },
             "pool_type": {
               "description": "The type of pool to create.",
               "allOf": [
                 {
                   "$ref": "#/definitions/PoolType"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "PoolInfoResponse": {
+          "type": "object",
+          "required": [
+            "pool_info",
+            "total_share"
+          ],
+          "properties": {
+            "pool_info": {
+              "description": "The pool information for the given pool identifier.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/PoolInfo"
+                }
+              ]
+            },
+            "total_share": {
+              "description": "The total LP tokens in the pool.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Coin"
                 }
               ]
             }

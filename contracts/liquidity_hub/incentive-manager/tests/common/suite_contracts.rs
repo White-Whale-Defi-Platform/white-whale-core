@@ -14,7 +14,7 @@ pub fn incentive_manager_contract() -> Box<dyn Contract<Empty>> {
 }
 
 /// Creates the whale lair contract
-pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
+pub fn _whale_lair_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         whale_lair::contract::execute,
         whale_lair::contract::instantiate,
@@ -26,7 +26,7 @@ pub fn whale_lair_contract() -> Box<dyn Contract<Empty>> {
 }
 
 /// Creates the whale lair contract
-pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
+pub fn _bonding_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         bonding_manager::contract::execute,
         bonding_manager::contract::instantiate,
@@ -38,7 +38,7 @@ pub fn bonding_manager_contract() -> Box<dyn Contract<Empty>> {
 }
 
 /// Creates the pool manager contract
-pub fn pool_manager_contract() -> Box<dyn Contract<Empty>> {
+pub fn _pool_manager_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
         pool_manager::contract::execute,
         pool_manager::contract::instantiate,
