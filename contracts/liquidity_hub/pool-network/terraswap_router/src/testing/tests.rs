@@ -469,6 +469,7 @@ fn query_buy_with_routes() {
     let empty_operations_msg = QueryMsg::SimulateSwapOperations {
         offer_amount: Uint128::from(1000000u128),
         operations: vec![],
+        max_spread: None,
     };
 
     let error = query(deps.as_ref(), mock_env(), empty_operations_msg).unwrap_err();
@@ -498,6 +499,7 @@ fn query_buy_with_routes() {
                 },
             },
         ],
+        max_spread: None,
     };
 
     deps.querier.with_pool_factory(

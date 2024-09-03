@@ -121,6 +121,7 @@ pub enum QueryMsg {
     SimulateSwapOperations {
         offer_amount: Uint128,
         operations: Vec<SwapOperation>,
+        max_spread: Option<Decimal>,
     },
     /// Simulates a reverse swap operations, i.e. given the ask asset, how much of the offer asset
     /// is needed to perform the swap.

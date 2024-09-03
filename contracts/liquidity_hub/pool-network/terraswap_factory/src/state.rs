@@ -57,7 +57,7 @@ pub fn trio_key(asset_infos: &[AssetInfoRaw; 3]) -> Vec<u8> {
 }
 
 // settings for pagination
-const MAX_LIMIT: u32 = 30;
+const MAX_LIMIT: u32 = 60;
 const DEFAULT_LIMIT: u32 = 10;
 pub fn read_pairs(
     storage: &dyn Storage,
