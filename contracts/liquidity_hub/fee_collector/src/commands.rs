@@ -231,7 +231,7 @@ pub fn aggregate_fees(
                         })?,
                     }))?;
 
-                if balance_response.balance > Uint128::zero() {
+                if balance_response.balance > MINIMUM_AGGREGABLE_BALANCE {
                     // if balance is greater than zero, some swap will occur
                     // Increase the allowance for the cw20 token so the router can perform the swap
                     aggregate_fees_messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -284,6 +284,7 @@ pub fn aggregate_fees(
                             msg: to_json_binary(&router::QueryMsg::SimulateSwapOperations {
                                 offer_amount: balance,
                                 operations: operations.clone(),
+                                max_spread: Some(Decimal::percent(50u64)),
                             })?,
                         }));
 
@@ -365,7 +366,7 @@ pub fn forward_fees(
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
-                        limit: Some(30u32),
+                        limit: Some(60u32),
                     },
                 },
             })?,
@@ -384,7 +385,7 @@ pub fn forward_fees(
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
-                        limit: Some(30u32),
+                        limit: Some(60u32),
                     },
                 },
             })?,
@@ -404,7 +405,7 @@ pub fn forward_fees(
                     factory_addr: config.vault_factory.to_string(),
                     factory_type: FactoryType::Vault {
                         start_after: None,
-                        limit: Some(30u32),
+                        limit: Some(60u32),
                     },
                 },
             })?,
@@ -423,7 +424,7 @@ pub fn forward_fees(
                     factory_addr: config.pool_factory.to_string(),
                     factory_type: FactoryType::Pool {
                         start_after: None,
-                        limit: Some(30u32),
+                        limit: Some(60u32),
                     },
                 },
             })?,
