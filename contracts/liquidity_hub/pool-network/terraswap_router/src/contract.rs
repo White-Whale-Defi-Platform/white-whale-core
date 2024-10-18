@@ -103,6 +103,9 @@ pub fn execute(
         ExecuteMsg::AddSwapRoutes { swap_routes } => {
             add_swap_routes(deps, env, info.sender, swap_routes)
         }
+        ExecuteMsg::RemoveSwapRoutes { swap_routes } => {
+            remove_swap_routes(deps, env, info.sender, swap_routes)
+        }
     }
 }
 
@@ -274,6 +277,54 @@ fn add_swap_routes(
 
     Ok(Response::new()
         .add_attribute("action", "add_swap_routes")
+        .add_attributes(attributes))
+}
+
+fn remove_swap_routes(
+    deps: DepsMut<TerraQuery>,
+    env: Env,
+    sender: Addr,
+    swap_routes: Vec<SwapRoute>,
+) -> Result<Response, ContractError> {
+    let contract_info = deps
+        .querier
+        .query_wasm_contract_info(env.contract.address)?;
+    if let Some(admin) = contract_info.admin {
+        if sender != deps.api.addr_validate(admin.as_str())? {
+            return Err(ContractError::Unauthorized {});
+        }
+    }
+
+    let mut attributes = vec![];
+
+    for swap_route in swap_routes {
+        let swap_route_key = SWAP_ROUTES.key((
+            swap_route
+                .clone()
+                .offer_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+            swap_route
+                .clone()
+                .ask_asset_info
+                .get_label(&deps.as_ref())?
+                .as_str(),
+        ));
+
+        // Remove the swap route if it exists
+        if swap_route_key.has(deps.storage) {
+            swap_route_key.remove(deps.storage);
+            attributes.push(attr("swap_route", swap_route.clone().to_string()));
+        } else {
+            return Err(ContractError::NoSwapRouteForAssets {
+                offer_asset: swap_route.offer_asset_info.get_label(&deps.as_ref())?,
+                ask_asset: swap_route.ask_asset_info.get_label(&deps.as_ref())?,
+            });
+        }
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "remove_swap_routes")
         .add_attributes(attributes))
 }
 
