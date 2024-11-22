@@ -83,9 +83,9 @@ docker_options=(
 
 # Optimized builds
 if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
-	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer-arm64:0.15.1$flag")
+	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer-arm64:0.16.0$flag")
 else
-	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer:0.15.1$flag")
+	docker_command=("docker" "run" "${docker_options[@]}" "cosmwasm/optimizer:0.16.0$flag")
 fi
 
 echo "${docker_command[@]}"
