@@ -27,7 +27,8 @@ pub fn next_loan(
         &white_whale_std::vault_network::vault_factory::QueryMsg::Vault {
             asset_info: source_vault_asset,
         },
-    )? else {
+    )?
+    else {
         return Err(VaultRouterError::Unauthorized {});
     };
 

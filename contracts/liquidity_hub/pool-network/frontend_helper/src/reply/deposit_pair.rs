@@ -110,7 +110,11 @@ pub fn deposit_pair(
             },
         )?;
     let has_existing_position = positions.positions.into_iter().any(|position| {
-        let QueryPosition::OpenPosition { unbonding_duration: position_unbonding_duration, .. } = position else {
+        let QueryPosition::OpenPosition {
+            unbonding_duration: position_unbonding_duration,
+            ..
+        } = position
+        else {
             return false;
         };
 

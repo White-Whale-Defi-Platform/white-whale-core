@@ -41,6 +41,14 @@ pub fn collect_fees(
                 // skip broken base-uluna pool
                 if contract.address
                     == "terra1znxah0scl3xq747wtuzjg3k0tlml3fvvmxgt0m3jywcmqwn5867s7x29tx"
+                    ||
+                    // skip broken frg pool
+                    contract.address
+                        == "terra1gk4z4hx32nx5zwgjz3ya6q88fzscl24ws0vy0fckkuwur8d57nhs60mug8"
+                    ||
+                    // skip broken frog pool
+                    contract.address
+                        == "terra1lepapewkdnt9mclq6gp8zmtsvhpuzhvg4dg9pastdk4rvjcw6gaqpaqvpf"
                 {
                     continue;
                 }
