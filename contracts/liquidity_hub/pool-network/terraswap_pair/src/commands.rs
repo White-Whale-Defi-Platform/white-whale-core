@@ -411,29 +411,12 @@ pub fn swap(
         amount: swap_computation.return_amount,
     };
 
-    let fees = {
-        let base_fees = swap_computation
-            .swap_fee_amount
-            .checked_add(swap_computation.protocol_fee_amount)?
-            .checked_add(swap_computation.burn_fee_amount)?;
-
-        #[cfg(feature = "osmosis")]
-        {
-            base_fees.checked_add(swap_computation.osmosis_fee_amount)?
-        }
-
-        #[cfg(not(feature = "osmosis"))]
-        {
-            base_fees
-        }
-    };
-
     // check max spread limit if exist
     swap::assert_max_spread(
         belief_price,
         max_spread,
         offer_asset.amount,
-        return_asset.amount.checked_add(fees)?,
+        return_asset.amount,
         swap_computation.spread_amount,
     )?;
 

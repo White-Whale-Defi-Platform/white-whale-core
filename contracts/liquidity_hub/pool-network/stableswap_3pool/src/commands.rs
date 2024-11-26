@@ -455,17 +455,12 @@ pub fn swap(
         amount: swap_computation.return_amount,
     };
 
-    let fees = swap_computation
-        .swap_fee_amount
-        .checked_add(swap_computation.protocol_fee_amount)?
-        .checked_add(swap_computation.burn_fee_amount)?;
-
     // check max spread limit if exist
     swap::assert_max_spread(
         belief_price,
         max_spread,
         offer_asset.amount,
-        return_asset.amount.checked_add(fees)?,
+        return_asset.amount,
         swap_computation.spread_amount,
     )?;
 
