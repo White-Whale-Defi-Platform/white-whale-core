@@ -5,7 +5,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::CosmosMsg;
 use cosmwasm_std::{
     to_json_binary, Decimal, Decimal256, DepsMut, Env, ReplyOn, Response, StdError, StdResult,
-    Storage, SubMsg, Uint128, Uint256, WasmMsg,
+    Storage, SubMsg, Uint128, Uint256, Uint512, WasmMsg,
 };
 use cw20::MinterResponse;
 use cw_storage_plus::Item;
@@ -99,6 +99,95 @@ pub enum StableSwapDirection {
     ReverseSimulate,
 }
 
+/// Computes the Stable Swap invariant (D).
+///
+/// The invariant is defined as follows:
+///
+/// ```text
+/// A * sum(x_i) * n**n + D = A * D * n**n + D**(n+1) / (n**n * prod(x_i))
+/// ```
+///
+/// # Arguments
+///
+/// - `amount_a` - The amount of token A owned by the LP pool. (i.e. token A reserves)
+/// - `amount_b` - The amount of token B owned by the LP pool. (i.e. token B reserves)
+///
+#[allow(clippy::unwrap_used)]
+pub fn compute_d(amp_factor: &u64, amount_a: Uint128, amount_b: Uint128) -> Option<Uint512> {
+    let sum_x = amount_a.checked_add(amount_b).unwrap(); // sum(x_i), a.k.a S
+
+    // a and b
+    let n_coins = Uint128::new(2);
+
+    if sum_x == Uint128::zero() {
+        Some(Uint512::zero())
+    } else {
+        let amount_a_times_coins = amount_a.checked_mul(n_coins).unwrap();
+        let amount_b_times_coins = amount_b.checked_mul(n_coins).unwrap();
+
+        // Newton's method to approximate D
+        let mut d_prev: Uint512;
+        let mut d: Uint512 = sum_x.into();
+        for _ in 0..256 {
+            let mut d_prod = d;
+            d_prod = d_prod
+                .checked_mul(d)
+                .unwrap()
+                .checked_div(amount_a_times_coins.into())
+                .unwrap();
+            d_prod = d_prod
+                .checked_mul(d)
+                .unwrap()
+                .checked_div(amount_b_times_coins.into())
+                .unwrap();
+            d_prev = d;
+            d = compute_next_d(amp_factor, d, d_prod, sum_x, n_coins).unwrap();
+            // Equality with the precision of 1
+            if d > d_prev {
+                if d.checked_sub(d_prev).unwrap() <= Uint512::one() {
+                    break;
+                }
+            } else if d_prev.checked_sub(d).unwrap() <= Uint512::one() {
+                break;
+            }
+        }
+
+        Some(d)
+    }
+}
+
+#[allow(clippy::unwrap_used)]
+fn compute_next_d(
+    amp_factor: &u64,
+    d_init: Uint512,
+    d_prod: Uint512,
+    sum_x: Uint128,
+    n_coins: Uint128,
+) -> Option<Uint512> {
+    let ann = amp_factor.checked_mul(n_coins.u128() as u64)?;
+    let leverage = Uint512::from(sum_x).checked_mul(ann.into()).unwrap();
+    // d = (ann * sum_x + d_prod * n_coins) * d / ((ann - 1) * d + (n_coins + 1) * d_prod)
+    let numerator = d_init
+        .checked_mul(
+            d_prod
+                .checked_mul(n_coins.into())
+                .unwrap()
+                .checked_add(leverage)
+                .unwrap(),
+        )
+        .unwrap();
+    let denominator = d_init
+        .checked_mul(ann.checked_sub(1)?.into())
+        .unwrap()
+        .checked_add(
+            d_prod
+                .checked_mul((n_coins.checked_add(1u128.into()).unwrap()).into())
+                .unwrap(),
+        )
+        .unwrap();
+    Some(numerator.checked_div(denominator).unwrap())
+}
+
 /// Calculates the new pool amount given the current pools and swap size.
 pub fn calculate_stableswap_y(
     offer_pool: Decimal256,
@@ -149,6 +238,36 @@ pub fn calculate_stableswap_y(
     }
 
     Err(ContractError::ConvergeError {})
+}
+
+/// Computes the amount of pool tokens to mint after a deposit.
+#[allow(clippy::unwrap_used, clippy::too_many_arguments)]
+pub fn compute_lp_mint_amount_for_stableswap_deposit(
+    amp_factor: &u64,
+    deposit_amount_a: Uint128,
+    deposit_amount_b: Uint128,
+    swap_amount_a: Uint128,
+    swap_amount_b: Uint128,
+    pool_token_supply: Uint128,
+) -> Option<Uint128> {
+    // Initial invariant
+    let d_0 = compute_d(amp_factor, swap_amount_a, swap_amount_b)?;
+    let new_balances = [
+        swap_amount_a.checked_add(deposit_amount_a).unwrap(),
+        swap_amount_b.checked_add(deposit_amount_b).unwrap(),
+    ];
+    // Invariant after change
+    let d_1 = compute_d(amp_factor, new_balances[0], new_balances[1])?;
+    if d_1 <= d_0 {
+        None
+    } else {
+        let amount = Uint512::from(pool_token_supply)
+            .checked_mul(d_1.checked_sub(d_0).unwrap())
+            .unwrap()
+            .checked_div(d_0)
+            .unwrap();
+        Some(Uint128::try_from(amount).unwrap())
+    }
 }
 
 pub fn compute_swap(

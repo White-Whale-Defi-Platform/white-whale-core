@@ -11,7 +11,8 @@ use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 #[cfg(any(feature = "osmosis_token_factory", feature = "injective"))]
 use white_whale_std::pool_network::asset::is_factory_token;
 use white_whale_std::pool_network::asset::{
-    get_total_share, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, MINIMUM_LIQUIDITY_AMOUNT,
+    get_total_share, Asset, AssetInfo, AssetInfoRaw, PairInfoRaw, PairType,
+    MINIMUM_LIQUIDITY_AMOUNT,
 };
 #[cfg(feature = "injective")]
 use white_whale_std::pool_network::denom_injective::{Coin, MsgBurn, MsgMint};
@@ -22,7 +23,9 @@ use white_whale_std::pool_network::{swap, U256};
 
 use crate::error::ContractError;
 use crate::helpers;
-use crate::helpers::get_protocol_fee_for_asset;
+use crate::helpers::{
+    compute_d, compute_lp_mint_amount_for_stableswap_deposit, get_protocol_fee_for_asset,
+};
 use crate::state::{
     store_fee, ALL_TIME_BURNED_FEES, ALL_TIME_COLLECTED_PROTOCOL_FEES, COLLECTED_PROTOCOL_FEES,
     CONFIG, PAIR_INFO,
@@ -194,56 +197,112 @@ pub fn provide_liquidity(
     };
 
     let total_share = get_total_share(&deps.as_ref(), liquidity_token.clone())?;
-    let share = if total_share == Uint128::zero() {
-        // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
-        // depositor preventing small liquidity providers from joining the pool
-        let share = Uint128::new(
-            (U256::from(deposits[0].u128())
-                .checked_mul(U256::from(deposits[1].u128()))
-                .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
-            .integer_sqrt()
-            .as_u128(),
-        )
-        .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
-        .map_err(|_| ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT))?;
 
-        messages.append(&mut mint_lp_token_msg(
-            liquidity_token.clone(),
-            env.contract.address.to_string(),
-            env.contract.address.to_string(),
-            MINIMUM_LIQUIDITY_AMOUNT,
-        )?);
+    let share = match &pair_info.pair_type {
+        PairType::StableSwap { amp } => {
+            if total_share == Uint128::zero() {
+                // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                // depositor preventing small liquidity providers from joining the pool
+                let min_lp_token_amount = MINIMUM_LIQUIDITY_AMOUNT * Uint128::from(2u8);
 
-        // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
-        if share.is_zero() {
-            return Err(ContractError::InvalidInitialLiquidityAmount(
-                MINIMUM_LIQUIDITY_AMOUNT,
-            ));
+                let share = Uint128::try_from(compute_d(amp, deposits[0], deposits[1]).unwrap())?
+                    .saturating_sub(min_lp_token_amount);
+
+                messages.append(&mut mint_lp_token_msg(
+                    liquidity_token.clone(),
+                    env.contract.address.to_string(),
+                    env.contract.address.to_string(),
+                    min_lp_token_amount,
+                )?);
+
+                // share should be above zero after subtracting the min_lp_token_amount
+                if share.is_zero() {
+                    return Err(ContractError::InvalidInitialLiquidityAmount(
+                        min_lp_token_amount,
+                    ));
+                }
+
+                share
+            } else {
+                let amount = compute_lp_mint_amount_for_stableswap_deposit(
+                    amp,
+                    deposits[0],
+                    deposits[1],
+                    pools[0].amount,
+                    pools[1].amount,
+                    total_share,
+                )
+                .unwrap();
+
+                // assert slippage tolerance
+                helpers::assert_slippage_tolerance(
+                    &slippage_tolerance,
+                    &deposits,
+                    &pools,
+                    pair_info.pair_type,
+                    amount,
+                    total_share,
+                )?;
+
+                amount
+            }
         }
+        PairType::ConstantProduct => {
+            if total_share == Uint128::zero() {
+                // Make sure at least MINIMUM_LIQUIDITY_AMOUNT is deposited to mitigate the risk of the first
+                // depositor preventing small liquidity providers from joining the pool
+                let share = Uint128::new(
+                    (U256::from(deposits[0].u128())
+                        .checked_mul(U256::from(deposits[1].u128()))
+                        .ok_or::<ContractError>(ContractError::LiquidityShareComputation {}))?
+                    .integer_sqrt()
+                    .as_u128(),
+                )
+                .checked_sub(MINIMUM_LIQUIDITY_AMOUNT)
+                .map_err(|_| {
+                    ContractError::InvalidInitialLiquidityAmount(MINIMUM_LIQUIDITY_AMOUNT)
+                })?;
 
-        share
-    } else {
-        // min(1, 2)
-        // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
-        // == deposit_0 * total_share / pool_0
-        // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
-        // == deposit_1 * total_share / pool_1
-        let amount = std::cmp::min(
-            deposits[0].multiply_ratio(total_share, pools[0].amount),
-            deposits[1].multiply_ratio(total_share, pools[1].amount),
-        );
+                messages.append(&mut mint_lp_token_msg(
+                    liquidity_token.clone(),
+                    env.contract.address.to_string(),
+                    env.contract.address.to_string(),
+                    MINIMUM_LIQUIDITY_AMOUNT,
+                )?);
 
-        // assert slippage tolerance
-        helpers::assert_slippage_tolerance(
-            &slippage_tolerance,
-            &deposits,
-            &pools,
-            pair_info.pair_type,
-            amount,
-            total_share,
-        )?;
+                // share should be above zero after subtracting the MINIMUM_LIQUIDITY_AMOUNT
+                if share.is_zero() {
+                    return Err(ContractError::InvalidInitialLiquidityAmount(
+                        MINIMUM_LIQUIDITY_AMOUNT,
+                    ));
+                }
 
-        amount
+                share
+            } else {
+                // min(1, 2)
+                // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
+                // == deposit_0 * total_share / pool_0
+                // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
+                // == deposit_1 * total_share / pool_1
+                //todo fix the index stuff here
+                let amount = std::cmp::min(
+                    deposits[0].multiply_ratio(total_share, pools[0].amount),
+                    deposits[1].multiply_ratio(total_share, pools[1].amount),
+                );
+
+                // assert slippage tolerance
+                helpers::assert_slippage_tolerance(
+                    &slippage_tolerance,
+                    &deposits,
+                    &pools,
+                    pair_info.pair_type,
+                    amount,
+                    total_share,
+                )?;
+
+                amount
+            }
+        }
     };
 
     // mint LP token to sender
