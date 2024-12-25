@@ -814,7 +814,7 @@ fn collect_cw20_fees_for_specific_contracts_successfully() {
                 amount: Uint128::new(200_000u128),
                 msg: to_json_binary(&pool_network::pair::Cw20HookMsg::Swap {
                     belief_price: None,
-                    max_spread: Some(Decimal::percent(30u64)),
+                    max_spread: Some(Decimal::percent(50u64)),
                     to: None,
                 })
                 .unwrap(),
@@ -3311,7 +3311,7 @@ fn collect_and_distribute_fees_successfully() {
                     amount: Uint128::new(200_000u128),
                 },
                 belief_price: None,
-                max_spread: Some(Decimal::percent(30u64)),
+                max_spread: Some(Decimal::percent(50u64)),
                 to: None,
             },
             &[Coin {
@@ -4737,7 +4737,7 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
                 amount: Uint128::new(200_000u128),
             },
             belief_price: None,
-            max_spread: Some(Decimal::percent(30u64)),
+            max_spread: Some(Decimal::percent(50u64)),
             to: None,
         },
         &[Coin {

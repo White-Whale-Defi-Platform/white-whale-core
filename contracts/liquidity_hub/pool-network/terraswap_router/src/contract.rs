@@ -17,6 +17,7 @@ use white_whale_std::pool_network::router::{
     ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
     SimulateSwapOperationsResponse, SwapOperation, SwapRoute, SwapRouteResponse,
 };
+use white_whale_std::pool_network::swap;
 
 use crate::error::ContractError;
 use crate::error::ContractError::MigrateInvalidVersion;
@@ -248,6 +249,7 @@ fn add_swap_routes(
             deps.as_ref(),
             Uint128::one(),
             swap_route.clone().swap_operations,
+            None,
         )
         .map_err(|_| ContractError::InvalidSwapRoute(swap_route.clone()))?;
 
@@ -299,10 +301,12 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::SimulateSwapOperations {
             offer_amount,
             operations,
+            max_spread,
         } => Ok(to_json_binary(&simulate_swap_operations(
             deps,
             offer_amount,
             operations,
+            max_spread,
         )?)?),
         QueryMsg::ReverseSimulateSwapOperations {
             ask_amount,
@@ -338,6 +342,7 @@ fn simulate_swap_operations(
     deps: Deps,
     offer_amount: Uint128,
     operations: Vec<SwapOperation>,
+    max_spread: Option<Decimal>,
 ) -> Result<SimulateSwapOperationsResponse, ContractError> {
     let config: Config = CONFIG.load(deps.storage)?;
     let terraswap_factory = deps.api.addr_humanize(&config.terraswap_factory)?;
@@ -368,6 +373,16 @@ fn simulate_swap_operations(
                         amount: offer_amount,
                     },
                 )?;
+
+                if max_spread.is_some() && res.return_amount > Uint128::zero() {
+                    swap::assert_max_spread(
+                        None,
+                        max_spread,
+                        offer_amount,
+                        res.return_amount,
+                        res.spread_amount,
+                    )?;
+                }
 
                 offer_amount = res.return_amount;
             }
