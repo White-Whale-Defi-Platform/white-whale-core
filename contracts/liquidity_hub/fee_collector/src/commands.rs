@@ -1,6 +1,7 @@
 use cosmwasm_std::{
-    to_json_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut, Env,
-    MessageInfo, QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg, WasmQuery,
+    ensure, to_json_binary, Addr, BalanceResponse, BankQuery, Coin, CosmosMsg, Decimal, DepsMut,
+    Env, MessageInfo, QueryRequest, ReplyOn, Response, StdResult, SubMsg, Uint128, WasmMsg,
+    WasmQuery,
 };
 use cw20::{Cw20ExecuteMsg, Cw20QueryMsg};
 
@@ -111,6 +112,7 @@ fn collect_fees_for_factory(
     Ok(result)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_config(
     deps: DepsMut,
     info: MessageInfo,
@@ -119,6 +121,9 @@ pub fn update_config(
     fee_distributor: Option<String>,
     pool_factory: Option<String>,
     vault_factory: Option<String>,
+    take_rate: Option<Decimal>,
+    take_rate_dao_address: Option<String>,
+    is_take_rate_active: Option<bool>,
 ) -> Result<Response, ContractError> {
     let mut config: Config = CONFIG.load(deps.storage)?;
 
@@ -150,6 +155,22 @@ pub fn update_config(
     if let Some(vault_factory) = vault_factory {
         let vault_factory = deps.api.addr_validate(&vault_factory)?;
         config.vault_factory = vault_factory;
+    }
+
+    if let Some(take_rate) = take_rate {
+        ensure!(
+            take_rate < Decimal::one(),
+            ContractError::InvalidTakeRate {}
+        );
+        config.take_rate = take_rate;
+    }
+
+    if let Some(take_rate_dao_address) = take_rate_dao_address {
+        config.take_rate_dao_address = deps.api.addr_validate(&take_rate_dao_address)?;
+    }
+
+    if let Some(is_take_rate_active) = is_take_rate_active {
+        config.is_take_rate_active = is_take_rate_active;
     }
 
     CONFIG.save(deps.storage, &config)?;

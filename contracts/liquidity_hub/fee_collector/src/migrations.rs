@@ -1,21 +1,16 @@
 #![cfg(not(tarpaulin_include))]
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, DepsMut, StdError};
+use cosmwasm_std::{Addr, Decimal, DepsMut, StdError};
 use cw_storage_plus::Item;
 use white_whale_std::fee_collector::Config;
 
 use crate::state::CONFIG;
 
-/// Migrates state from v1.0.5 and lower to v1.1.0, which includes different contract addresses
-/// in the Config.
-pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
+/// Migrates state from pre v1.2.0, which includes the take rate, the take rate dao address and the
+/// feature flag for the take rate
+pub fn migrate_to_v120(deps: DepsMut) -> Result<(), StdError> {
     #[cw_serde]
-    struct ConfigV105 {
-        pub owner: Addr,
-    }
-
-    #[cw_serde]
-    struct ConfigV110 {
+    struct ConfigPreV120 {
         pub owner: Addr,
         pub pool_router: Addr,
         pub fee_distributor: Addr,
@@ -23,15 +18,18 @@ pub fn migrate_to_v110(deps: DepsMut) -> Result<(), StdError> {
         pub vault_factory: Addr,
     }
 
-    const CONFIGV105: Item<ConfigV105> = Item::new("config");
-    let config_v105 = CONFIGV105.load(deps.storage)?;
+    const CONFIGPREV120: Item<ConfigPreV120> = Item::new("config");
+    let config_pre_v120 = CONFIGPREV120.load(deps.storage)?;
 
     let config = Config {
-        owner: config_v105.owner,
-        pool_router: Addr::unchecked(""),
-        fee_distributor: Addr::unchecked(""),
-        pool_factory: Addr::unchecked(""),
-        vault_factory: Addr::unchecked(""),
+        owner: config_pre_v120.owner,
+        pool_router: config_pre_v120.pool_router,
+        fee_distributor: config_pre_v120.fee_distributor,
+        pool_factory: config_pre_v120.pool_factory,
+        vault_factory: config_pre_v120.vault_factory,
+        take_rate: Decimal::zero(),
+        take_rate_dao_address: Addr::unchecked(""),
+        is_take_rate_active: false,
     };
 
     CONFIG.save(deps.storage, &config)?;

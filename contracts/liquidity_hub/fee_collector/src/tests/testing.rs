@@ -1,7 +1,8 @@
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_json, Addr, DepsMut, MessageInfo, Response};
+use cosmwasm_std::{from_json, Addr, Decimal, DepsMut, MessageInfo, Response};
 use cw2::{get_contract_version, set_contract_version, ContractVersion};
 use std::env;
+use std::str::FromStr;
 
 use crate::contract::{execute, instantiate, migrate, query};
 use white_whale_std::pool_network::mock_querier::mock_dependencies;
@@ -44,6 +45,9 @@ fn test_update_config_successfully() {
         fee_distributor: None,
         pool_factory: None,
         vault_factory: None,
+        take_rate: Some(Decimal::from_str("0.5").unwrap()),
+        take_rate_dao_address: Some("take_rate_dao_address".to_string()),
+        is_take_rate_active: Some(true),
     };
 
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -52,17 +56,42 @@ fn test_update_config_successfully() {
     let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("new_owner"));
     assert_eq!(config_res.pool_router, Addr::unchecked("new_router"));
+    assert_eq!(
+        config_res.take_rate_dao_address,
+        Addr::unchecked("take_rate_dao_address")
+    );
+    assert_eq!(config_res.is_take_rate_active, true);
+    assert_eq!(config_res.take_rate, Decimal::from_str("0.5").unwrap());
 }
 
 #[test]
 fn test_update_config_unsuccessfully_unauthorized() {
     let mut deps = mock_dependencies(&[]);
     let info = mock_info("owner", &[]);
-    mock_instantiation(deps.as_mut(), info).unwrap();
+    mock_instantiation(deps.as_mut(), info.clone()).unwrap();
 
     let query_res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_res: Config = from_json(&query_res).unwrap();
     assert_eq!(config_res.owner, Addr::unchecked("owner"));
+
+    let msg = ExecuteMsg::UpdateConfig {
+        owner: None,
+        pool_router: None,
+        fee_distributor: None,
+        pool_factory: None,
+        vault_factory: None,
+        take_rate: Some(Decimal::one()),
+        take_rate_dao_address: None,
+        is_take_rate_active: None,
+    };
+
+    let err = execute(deps.as_mut(), mock_env(), info, msg);
+
+    match err {
+        Ok(_) => panic!("should return ContractError::InvalidTakeRate"),
+        Err(ContractError::InvalidTakeRate {}) => (),
+        _ => panic!("should return ContractError::InvalidTakeRate"),
+    }
 
     let info = mock_info("unauthorized", &[]);
     let msg = ExecuteMsg::UpdateConfig {
@@ -71,6 +100,9 @@ fn test_update_config_unsuccessfully_unauthorized() {
         fee_distributor: None,
         pool_factory: None,
         vault_factory: None,
+        take_rate: None,
+        take_rate_dao_address: None,
+        is_take_rate_active: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), info, msg);
