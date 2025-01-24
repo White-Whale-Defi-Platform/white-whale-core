@@ -1,7 +1,7 @@
 use crate::fee_distributor::Epoch;
 use crate::pool_network::asset::{Asset, AssetInfo};
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Decimal};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint64};
 
 #[cw_serde]
 pub struct InstantiateMsg {}
@@ -54,6 +54,9 @@ pub enum QueryMsg {
         query_fees_for: FeesFor,
         all_time: Option<bool>,
     },
+    /// Queries the take rate taken for the given epoch id.
+    #[returns(Coin)]
+    TakeRateHistory { epoch_id: Uint64 },
 }
 
 #[cw_serde]
