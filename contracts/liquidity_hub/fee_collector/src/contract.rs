@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Decimal, Deps,
-    DepsMut, Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
+    coin, to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Decimal,
+    Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -14,7 +14,7 @@ use white_whale_std::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 use crate::error::ContractError;
 use crate::queries::query_distribution_asset;
-use crate::state::{CONFIG, TMP_EPOCH};
+use crate::state::{CONFIG, TAKE_RATE_HISTORY, TMP_EPOCH};
 use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, migrations, queries};
 
@@ -97,6 +97,12 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
                     }]
                     .to_coins()?,
                 }));
+
+                TAKE_RATE_HISTORY.save(
+                    deps.storage,
+                    epoch.id.u64(),
+                    &coin(take_rate_fee.u128(), asset_info.to_string()),
+                )?;
             }
         }
 
@@ -181,6 +187,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             query_fees_for,
             all_time.unwrap_or(false),
         )?),
+        QueryMsg::TakeRateHistory { epoch_id } => {
+            to_json_binary(&queries::query_take_rate_history(deps, epoch_id)?)
+        }
     }
 }
 

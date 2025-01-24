@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_json_binary, Addr, Deps, QueryRequest, StdResult, WasmQuery};
+use cosmwasm_std::{to_json_binary, Addr, Coin, Deps, QueryRequest, StdResult, Uint64, WasmQuery};
 
 use white_whale_std::fee_collector::{Config, ContractType, FactoryType, FeesFor};
 use white_whale_std::pool_network;
@@ -8,12 +8,18 @@ use white_whale_std::pool_network::pair::ProtocolFeesResponse as ProtocolPairFee
 use white_whale_std::vault_network::vault::ProtocolFeesResponse as ProtocolVaultFeesResponse;
 use white_whale_std::vault_network::vault_factory::VaultsResponse;
 
-use crate::state::CONFIG;
+use crate::state::{CONFIG, TAKE_RATE_HISTORY};
 
 /// Queries the [Config], which contains the owner address
 pub fn query_config(deps: Deps) -> StdResult<Config> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config)
+}
+
+/// Queries the take rate for the given epoch id
+pub fn query_take_rate_history(deps: Deps, epoch_id: Uint64) -> StdResult<Coin> {
+    let take_rate = TAKE_RATE_HISTORY.load(deps.storage, epoch_id.u64())?;
+    Ok(take_rate)
 }
 
 /// Queries the fees in [Asset] for contracts or Factories defined by [FeesFor]

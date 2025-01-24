@@ -9696,6 +9696,29 @@ fn test_take_rate_dao() {
 
     assert_eq!(uwhale_balance_on_dao, Uint128::new(506u128));
 
+    // check the take rate query
+    let take_rate: Coin = app
+        .wrap()
+        .query_wasm_smart(
+            fee_collector_address.clone(),
+            &QueryMsg::TakeRateHistory {
+                epoch_id: Uint64::one(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(take_rate, coin(Uint128::new(506u128).u128(), "uwhale"));
+
+    // this query should err cuz there's no take rate history for epoch 10
+    app.wrap()
+        .query_wasm_smart::<Coin>(
+            fee_collector_address.clone(),
+            &QueryMsg::TakeRateHistory {
+                epoch_id: Uint64::new(10),
+            },
+        )
+        .unwrap_err();
+
     // When creating the second epoch, the first one will be expiring since the grace_period was set to 1.
     // Make sure the available tokens on the expiring epoch are transferred to the second one.
     app.execute_contract(
