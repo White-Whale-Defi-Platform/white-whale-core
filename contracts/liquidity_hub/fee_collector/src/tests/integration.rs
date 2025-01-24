@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use cosmwasm_std::{
-    coin, coins, to_json_binary, Addr, BankMsg, BlockInfo, Coin, Decimal, Timestamp, Uint128,
-    Uint256, Uint64,
+    assert_approx_eq, coin, coins, to_json_binary, Addr, BankMsg, BlockInfo, Coin, Decimal,
+    Timestamp, Uint128, Uint256, Uint64,
 };
 use cw20::{BalanceResponse, Cw20Coin, Cw20ExecuteMsg, MinterResponse};
 use cw_multi_test::Executor;
@@ -102,6 +102,9 @@ fn collect_all_factories_cw20_fees_successfully() {
             fee_distributor: None,
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -434,6 +437,9 @@ fn collect_all_factories_cw20_fees_successfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -1105,6 +1111,9 @@ fn collect_pools_native_fees_successfully() {
             fee_distributor: None,
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -1423,6 +1432,9 @@ fn collect_pools_native_fees_successfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -2378,6 +2390,9 @@ fn aggregate_fees_for_vault() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -2501,6 +2516,9 @@ fn aggregate_fees_for_vault() {
             fee_distributor: None,
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -3149,6 +3167,9 @@ fn collect_and_distribute_fees_successfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -3566,6 +3587,9 @@ fn collect_and_dist_fees_where_one_bonder_is_increasing_weight_no_claims_until_e
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -4538,6 +4562,9 @@ fn collect_and_distribute_fees_with_expiring_epoch_successfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -5099,6 +5126,9 @@ fn create_epoch_unsuccessfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -5381,6 +5411,9 @@ fn aggregate_fees_unsuccessfully() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: None,
             vault_factory: None,
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -5604,6 +5637,9 @@ fn decrease_grace_period_fee_distributor() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -6039,6 +6075,9 @@ fn users_cannot_claim_rewards_from_past_epochs() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -6606,6 +6645,9 @@ fn user_can_claim_even_when_his_weight_increases_for_past_epochs() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -7265,6 +7307,9 @@ fn user_weight_accounts_for_unbondings() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -8121,6 +8166,9 @@ fn users_can_claim_even_when_global_index_was_taken_after_epoch_was_created() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -8644,6 +8692,9 @@ fn collect_distribute_with_unbonders() {
             fee_distributor: Some(fee_distributor_address.to_string()),
             pool_factory: Some(pool_factory_address.to_string()),
             vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: None,
+            take_rate_dao_address: None,
+            is_take_rate_active: None,
         },
         &[],
     )
@@ -9232,4 +9283,525 @@ fn collect_distribute_with_unbonders() {
     assert_eq!(user_1_whale_received, Uint128::new(352u128));
 
     assert_ne!(user_2_whale_received, user_1_whale_received);
+}
+
+#[cfg(not(feature = "osmosis"))]
+#[test]
+fn test_take_rate_dao() {
+    let creator = mock_creator();
+    let balances = vec![
+        (
+            creator.clone().sender,
+            vec![
+                coin(1_000_000_000, "usdc"),
+                coin(1_000_000_000, "uwhale"),
+                coin(1_000_000_000, "ampWHALE"),
+                coin(1_000_000_000, "bWHALE"),
+            ],
+        ),
+        (
+            Addr::unchecked("other"),
+            vec![
+                coin(1_000_000_000, "usdc"),
+                coin(1_000_000_000, "uwhale"),
+                coin(1_000_000_000, "ampWHALE"),
+                coin(1_000_000_000, "bWHALE"),
+            ],
+        ),
+    ];
+
+    let mut app = mock_app_with_balance(balances);
+
+    let fee_collector_id = store_fee_collector_code(&mut app);
+    let fee_distributor_id = store_fee_distributor_code(&mut app);
+    let whale_lair_id = store_whale_lair_code(&mut app);
+    let pool_factory_id = store_pool_factory_code(&mut app);
+    let pool_router_id = store_pool_router_code(&mut app);
+    let pair_id = store_pair_code(&mut app);
+    let trio_id = store_trio_code(&mut app);
+    let token_id = store_token_code(&mut app);
+    let vault_factory_id = store_vault_factory_code(&mut app);
+    let vault_id = store_vault_code(&mut app);
+
+    let fee_collector_address = app
+        .instantiate_contract(
+            fee_collector_id.clone(),
+            creator.clone().sender,
+            &InstantiateMsg {},
+            &[],
+            "fee_collector",
+            None,
+        )
+        .unwrap();
+
+    let dao_mock = app
+        .instantiate_contract(
+            fee_collector_id,
+            creator.clone().sender,
+            &InstantiateMsg {},
+            &[],
+            "take_rate_dao_mock",
+            None,
+        )
+        .unwrap();
+
+    #[cfg(not(feature = "osmosis"))]
+    let instantiate_msg = pool_network::factory::InstantiateMsg {
+        pair_code_id: pair_id,
+        trio_code_id: trio_id,
+        token_code_id: token_id,
+        fee_collector_addr: fee_collector_address.to_string(),
+    };
+
+    let pool_factory_address = app
+        .instantiate_contract(
+            pool_factory_id,
+            creator.clone().sender,
+            &instantiate_msg,
+            &[],
+            "fee_collector",
+            None,
+        )
+        .unwrap();
+
+    let pool_router_address = app
+        .instantiate_contract(
+            pool_router_id,
+            creator.clone().sender,
+            &pool_network::router::InstantiateMsg {
+                terraswap_factory: pool_factory_address.to_string(),
+            },
+            &[],
+            "pool_router",
+            None,
+        )
+        .unwrap();
+
+    let vault_factory_address = app
+        .instantiate_contract(
+            vault_factory_id,
+            creator.clone().sender,
+            &vault_network::vault_factory::InstantiateMsg {
+                owner: creator.clone().sender.to_string(),
+                vault_id,
+                token_id,
+                fee_collector_addr: fee_collector_address.to_string(),
+            },
+            &[],
+            "pool_router",
+            None,
+        )
+        .unwrap();
+
+    let whale_lair_address = app
+        .instantiate_contract(
+            whale_lair_id,
+            creator.clone().sender,
+            &white_whale_std::whale_lair::InstantiateMsg {
+                unbonding_period: Uint64::new(1u64),
+                growth_rate: Decimal::one(),
+                bonding_assets: vec![
+                    AssetInfo::NativeToken {
+                        denom: "ampWHALE".to_string(),
+                    },
+                    AssetInfo::NativeToken {
+                        denom: "bWHALE".to_string(),
+                    },
+                ],
+            },
+            &[],
+            "whale_lair",
+            None,
+        )
+        .unwrap();
+
+    let fee_distributor_address = app
+        .instantiate_contract(
+            fee_distributor_id,
+            creator.clone().sender,
+            &white_whale_std::fee_distributor::InstantiateMsg {
+                bonding_contract_addr: whale_lair_address.clone().to_string(),
+                fee_collector_addr: fee_collector_address.clone().to_string(),
+                grace_period: Uint64::new(1),
+                epoch_config: EpochConfig {
+                    duration: Uint64::new(86_400_000_000_000u64), // a day
+                    genesis_epoch: Uint64::new(1678802400_000000000u64), // March 14, 2023 2:00:00 PM
+                },
+                distribution_asset: AssetInfo::NativeToken {
+                    denom: "uwhale".to_string(),
+                },
+            },
+            &[],
+            "fee_distributor",
+            None,
+        )
+        .unwrap();
+
+    // add the fee distributor address to the whale lair contract so we can use it as a clock
+    app.execute_contract(
+        creator.sender.clone(),
+        whale_lair_address.clone(),
+        &white_whale_std::whale_lair::ExecuteMsg::UpdateConfig {
+            fee_distributor_addr: Some(fee_distributor_address.to_string()),
+            owner: None,
+            unbonding_period: None,
+            growth_rate: None,
+        },
+        &[],
+    )
+    .unwrap();
+
+    // add pool router address to the fee collector to be able to aggregate fees, also add take rate
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_collector_address.clone(),
+        &UpdateConfig {
+            owner: None,
+            pool_router: Some(pool_router_address.to_string()),
+            fee_distributor: Some(fee_distributor_address.to_string()),
+            pool_factory: Some(pool_factory_address.to_string()),
+            vault_factory: Some(vault_factory_address.to_string()),
+            take_rate: Some(Decimal::percent(50u64)),
+            take_rate_dao_address: Some(dao_mock.to_string()),
+            is_take_rate_active: Some(true),
+        },
+        &[],
+    )
+    .unwrap();
+
+    // add native tokens to the factory
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "uwhale".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "uwhale".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "usdc".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "usdc".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "ampWHALE".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "ampWHALE".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    app.execute_contract(
+        creator.sender.clone(),
+        pool_factory_address.clone(),
+        &AddNativeTokenDecimals {
+            denom: "bWHALE".to_string(),
+            decimals: 6,
+        },
+        &[Coin {
+            denom: "bWHALE".to_string(),
+            amount: Uint128::new(1u128),
+        }],
+    )
+    .unwrap();
+
+    // Create few pools
+    let native_tokens: Vec<&str> = vec!["usdc", "ampWHALE", "bWHALE"];
+    let mut pair_tokens: Vec<Addr> = Vec::new();
+    for native_token in native_tokens.clone() {
+        let res = app
+            .execute_contract(
+                creator.sender.clone(),
+                pool_factory_address.clone(),
+                &CreatePair {
+                    asset_infos: [
+                        AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        AssetInfo::NativeToken {
+                            denom: native_token.to_string(),
+                        },
+                    ],
+                    pool_fees: PoolFee {
+                        protocol_fee: Fee {
+                            share: Decimal::percent(5u64),
+                        },
+                        swap_fee: Fee {
+                            share: Decimal::percent(7u64),
+                        },
+                        burn_fee: Fee {
+                            share: Decimal::zero(),
+                        },
+                    },
+                    pair_type: PairType::ConstantProduct,
+                    token_factory_lp: false,
+                },
+                &[],
+            )
+            .unwrap();
+
+        let pair_address = Addr::unchecked(
+            res.events
+                .last()
+                .unwrap()
+                .attributes
+                .clone()
+                .get(1)
+                .unwrap()
+                .clone()
+                .value,
+        );
+        pair_tokens.push(pair_address);
+    }
+
+    // Provide liquidity into pools
+    for (i, native_token) in native_tokens.clone().iter().enumerate() {
+        app.execute_contract(
+            creator.sender.clone(),
+            pair_tokens[i].clone(),
+            &pool_network::pair::ExecuteMsg::ProvideLiquidity {
+                assets: [
+                    Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: "uwhale".to_string(),
+                        },
+                        amount: Uint128::new(500_000u128),
+                    },
+                    Asset {
+                        info: AssetInfo::NativeToken {
+                            denom: native_token.to_string(),
+                        },
+                        amount: Uint128::new(500_000u128),
+                    },
+                ],
+                slippage_tolerance: None,
+                receiver: None,
+            },
+            &[
+                Coin {
+                    denom: "uwhale".to_string(),
+                    amount: Uint128::new(500_000u128),
+                },
+                Coin {
+                    denom: native_token.to_string(),
+                    amount: Uint128::new(500_000u128),
+                },
+            ],
+        )
+        .unwrap();
+    }
+
+    let uwhale_balance_on_dao = app
+        .wrap()
+        .query_balance(dao_mock.clone(), "uwhale")
+        .unwrap()
+        .amount;
+
+    assert_eq!(uwhale_balance_on_dao, Uint128::zero());
+
+    // Create some epoch
+
+    // Create EPOCH 1 with over 1000 whale
+    // whale -> native
+    app.execute_contract(
+        creator.sender.clone(),
+        pair_tokens[0].clone(),
+        &pool_network::pair::ExecuteMsg::Swap {
+            offer_asset: Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(21_100u128),
+            },
+            belief_price: None,
+            max_spread: Some(Decimal::percent(30u64)),
+            to: None,
+        },
+        &[Coin {
+            denom: "usdc".to_string(),
+            amount: Uint128::new(21_100u128),
+        }],
+    )
+    .unwrap();
+
+    // advance the time to one day after the first epoch was created
+    app.set_block(BlockInfo {
+        height: 123456789u64,
+        time: Timestamp::from_nanos(1678888800_000000000u64),
+        chain_id: "".to_string(),
+    });
+
+    // Create new epoch, which triggers fee collection, aggregation and distribution
+    // Verify epoch 1
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_distributor_address.clone(),
+        &NewEpoch {},
+        &[],
+    )
+    .unwrap();
+
+    // check that a new epoch was created
+    let expiring_epoch_res: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+    assert_eq!(expiring_epoch_res.epoch.id, Uint64::one());
+    assert_eq!(
+        expiring_epoch_res.epoch.available,
+        expiring_epoch_res.epoch.total
+    );
+    assert!(expiring_epoch_res.epoch.claimed.is_empty());
+    // Verify  expiring_epoch_res.epoch.available, has 1_012 / 2 whale as an Asset
+    assert_eq!(
+        expiring_epoch_res.epoch.available,
+        vec![Asset {
+            info: AssetInfo::NativeToken {
+                denom: "uwhale".to_string(),
+            },
+            amount: Uint128::new(1_012u128 - 506u128),
+        }]
+    );
+
+    // the other half of the rewards went to the dao as per take rate
+    let uwhale_balance_on_dao = app
+        .wrap()
+        .query_balance(dao_mock.clone(), "uwhale")
+        .unwrap()
+        .amount;
+
+    assert_eq!(uwhale_balance_on_dao, Uint128::new(506u128));
+
+    // check the take rate query
+    let take_rate: Coin = app
+        .wrap()
+        .query_wasm_smart(
+            fee_collector_address.clone(),
+            &QueryMsg::TakeRateHistory {
+                epoch_id: Uint64::one(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(take_rate, coin(Uint128::new(506u128).u128(), "uwhale"));
+
+    // this query should err cuz there's no take rate history for epoch 10
+    app.wrap()
+        .query_wasm_smart::<Coin>(
+            fee_collector_address.clone(),
+            &QueryMsg::TakeRateHistory {
+                epoch_id: Uint64::new(10),
+            },
+        )
+        .unwrap_err();
+
+    // When creating the second epoch, the first one will be expiring since the grace_period was set to 1.
+    // Make sure the available tokens on the expiring epoch are transferred to the second one.
+    app.execute_contract(
+        creator.sender.clone(),
+        pair_tokens[0].clone(),
+        &pool_network::pair::ExecuteMsg::Swap {
+            offer_asset: Asset {
+                info: AssetInfo::NativeToken {
+                    denom: "usdc".to_string(),
+                },
+                amount: Uint128::new(25_000u128),
+            },
+            belief_price: None,
+            max_spread: Some(Decimal::percent(30u64)),
+            to: None,
+        },
+        &[Coin {
+            denom: "usdc".to_string(),
+            amount: Uint128::new(25_000u128),
+        }],
+    )
+    .unwrap();
+
+    // advance the time to one day after the first epoch was created
+    app.set_block(BlockInfo {
+        height: 123456789u64,
+        time: Timestamp::from_nanos(1678888800_000000000u64),
+        chain_id: "".to_string(),
+    });
+
+    // the other half of the rewards went to the dao as per take rate
+    let uwhale_balance_on_dao = app
+        .wrap()
+        .query_balance(dao_mock.clone(), "uwhale")
+        .unwrap()
+        .amount;
+
+    assert_eq!(uwhale_balance_on_dao, Uint128::new(506u128));
+
+    // Create new epoch, which triggers fee collection, aggregation and distribution
+    // Create EPOCH 2
+    app.execute_contract(
+        creator.sender.clone(),
+        fee_distributor_address.clone(),
+        &NewEpoch {},
+        &[],
+    )
+    .unwrap();
+
+    // check that the second epoch was created
+    let new_epoch_res: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale_std::fee_distributor::QueryMsg::CurrentEpoch {},
+        )
+        .unwrap();
+
+    assert_eq!(new_epoch_res.epoch.id, Uint64::new(2u64));
+    assert_eq!(new_epoch_res.epoch.available, new_epoch_res.epoch.total);
+    assert_approx_eq!(
+        new_epoch_res.epoch.total[0].amount,
+        Uint128::new(550u128 + 506u128),
+        "0.001"
+    );
+    assert!(new_epoch_res.epoch.claimed.is_empty());
+
+    // check that the available assets for the expired epoch are zero/empty
+    let expired_epoch_res: EpochResponse = app
+        .wrap()
+        .query_wasm_smart(
+            fee_distributor_address.clone(),
+            &white_whale_std::fee_distributor::QueryMsg::Epoch { id: Uint64::one() },
+        )
+        .unwrap();
+    assert!(expired_epoch_res.epoch.available.is_empty());
+
+    // the other half of the rewards went to the dao as per take rate
+    let uwhale_balance_on_dao = app
+        .wrap()
+        .query_balance(dao_mock.clone(), "uwhale")
+        .unwrap()
+        .amount;
+
+    assert_eq!(uwhale_balance_on_dao, Uint128::new(506u128 + 550u128));
 }

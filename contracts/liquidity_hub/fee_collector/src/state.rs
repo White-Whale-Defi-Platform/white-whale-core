@@ -1,4 +1,4 @@
-use cosmwasm_std::{DepsMut, Order, StdResult};
+use cosmwasm_std::{Coin, DepsMut, Order, StdResult};
 use cw_storage_plus::{Item, Map};
 use white_whale_std::fee_collector::Config;
 use white_whale_std::fee_distributor::Epoch;
@@ -7,6 +7,9 @@ use white_whale_std::pool_network::asset::AssetInfo;
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const TMP_ASSET_INFOS: Map<String, AssetInfo> = Map::new("tmp_asset_infos");
 pub const TMP_EPOCH: Item<Epoch> = Item::new("tmp_epoch");
+
+// The take rate history is a map containing how much was the take rate at a given epoch
+pub const TAKE_RATE_HISTORY: Map<u64, Coin> = Map::new("take_rate_history");
 
 pub fn store_temporal_asset_info(deps: DepsMut, asset_info: AssetInfo) -> StdResult<()> {
     let key = asset_info

@@ -31,6 +31,9 @@ pub enum ContractError {
 
     #[error("Can't handle the given reply id: {0}")]
     UnknownReplyId(u64),
+
+    #[error("The provided take rate is invalid, try a lower number.")]
+    InvalidTakeRate {},
 }
 
 impl From<semver::Error> for ContractError {

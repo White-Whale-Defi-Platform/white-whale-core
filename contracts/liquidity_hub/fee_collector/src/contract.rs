@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Deps, DepsMut,
-    Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
+    coin, to_json_binary, Addr, BalanceResponse, BankMsg, BankQuery, Binary, CosmosMsg, Decimal,
+    Deps, DepsMut, Env, MessageInfo, QueryRequest, Reply, Response, StdResult, Uint128,
 };
 use cw2::{get_contract_version, set_contract_version};
 use semver::Version;
@@ -14,7 +14,7 @@ use white_whale_std::pool_network::asset::{Asset, AssetInfo, ToCoins};
 
 use crate::error::ContractError;
 use crate::queries::query_distribution_asset;
-use crate::state::{CONFIG, TMP_EPOCH};
+use crate::state::{CONFIG, TAKE_RATE_HISTORY, TMP_EPOCH};
 use crate::ContractError::MigrateInvalidVersion;
 use crate::{commands, migrations, queries};
 
@@ -38,6 +38,9 @@ pub fn instantiate(
         fee_distributor: Addr::unchecked(""),
         pool_factory: Addr::unchecked(""),
         vault_factory: Addr::unchecked(""),
+        take_rate: Decimal::zero(),
+        take_rate_dao_address: Addr::unchecked(""),
+        is_take_rate_active: false,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -56,7 +59,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
 
         let asset_info = query_distribution_asset(deps.as_ref())?;
 
-        let token_balance: Uint128 = match asset_info.clone() {
+        let mut token_balance: Uint128 = match asset_info.clone() {
             AssetInfo::Token { .. } => {
                 return Err(ContractError::InvalidContractsFeeAggregation {})
             }
@@ -71,6 +74,37 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> Result<Response, ContractEr
         };
 
         let mut messages = vec![];
+
+        let config: Config = CONFIG.load(deps.storage)?;
+        // check if the take rate is active
+        if config.is_take_rate_active
+            && config.take_rate != Decimal::zero()
+            && !config.take_rate_dao_address.to_string().is_empty()
+        {
+            // take rate fee from token_balance and send it to dao
+            // in case there's an error in the calculation, default to zero so the operation doesn't fail
+            let take_rate_fee = token_balance
+                .checked_mul_floor(config.take_rate)
+                .unwrap_or(Uint128::zero());
+            token_balance = token_balance.saturating_sub(take_rate_fee);
+
+            if !take_rate_fee.is_zero() {
+                messages.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: config.take_rate_dao_address.to_string(),
+                    amount: vec![Asset {
+                        info: asset_info.clone(),
+                        amount: take_rate_fee,
+                    }]
+                    .to_coins()?,
+                }));
+
+                TAKE_RATE_HISTORY.save(
+                    deps.storage,
+                    epoch.id.u64(),
+                    &coin(take_rate_fee.u128(), asset_info.to_string()),
+                )?;
+            }
+        }
 
         // if not zero, it means there were fees aggregated
         if !token_balance.is_zero() {
@@ -119,6 +153,9 @@ pub fn execute(
             fee_distributor,
             pool_factory,
             vault_factory,
+            take_rate,
+            take_rate_dao_address,
+            is_take_rate_active,
         } => commands::update_config(
             deps,
             info,
@@ -127,6 +164,9 @@ pub fn execute(
             fee_distributor,
             pool_factory,
             vault_factory,
+            take_rate,
+            take_rate_dao_address,
+            is_take_rate_active,
         ),
         ExecuteMsg::AggregateFees { aggregate_fees_for } => {
             commands::aggregate_fees(deps, env, aggregate_fees_for)
@@ -147,6 +187,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             query_fees_for,
             all_time.unwrap_or(false),
         )?),
+        QueryMsg::TakeRateHistory { epoch_id } => {
+            to_json_binary(&queries::query_take_rate_history(deps, epoch_id)?)
+        }
     }
 }
 
@@ -167,8 +210,8 @@ pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Respons
 
     check_contract_name(deps.storage, CONTRACT_NAME.to_string())?;
 
-    if storage_version <= Version::parse("1.0.5")? {
-        migrations::migrate_to_v110(deps.branch())?;
+    if storage_version < Version::parse("1.2.0")? {
+        migrations::migrate_to_v120(deps.branch())?;
     }
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
