@@ -15,8 +15,8 @@
 
 
 [Discord invite]: https://discord.com/invite/tSxyyCWgYX
-[Discord badge]: https://img.shields.io/discord/908044702794801233
-[Twitter handle]: https://img.shields.io/twitter/follow/WhiteWhaleDefi.svg?style=social&label=Follow
+[Discord badge]: https://img.shields.io/badge/discord-join%20chat-5B5EA6
+[Twitter handle]: https://img.shields.io/twitter/follow/WhiteWhaleDefi
 [Twitter badge]: https://twitter.com/intent/follow?screen_name=WhiteWhaleDefi
 
 ## Getting started
